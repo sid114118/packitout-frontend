@@ -11,8 +11,9 @@ import ShopLogin from './ShopLogin.jsx';
 import UserDashboard from './UserDashboard.jsx';
 import UserAuth from './UserAuth.jsx';
 
-// 🛒 Shopping Feed
+// 🛒 Shopping Feed & Cart
 import ProductFeed from './ProductFeed.jsx';
+import Cart from './Cart.jsx'; // 👈 NEW IMPORT!
 
 export default function App() {
   const [currentView, setCurrentView] = useState("customer");
@@ -20,18 +21,34 @@ export default function App() {
   const [isAdminAuthenticated, setIsAdminAuthenticated] = useState(false);
   const [isShopAuthenticated, setIsShopAuthenticated] = useState(false);
   
-  // 🧠 SMART MEMORY: Checks if the user logged in previously!
   const [loggedInUser, setLoggedInUser] = useState(() => {
     const saved = localStorage.getItem("packitout_user");
     return saved ? JSON.parse(saved) : null;
   });
 
-  // 🕵️ Listens to the URL
+  // 🛒 NEW: CART STATE MEMORY
+  const [cart, setCart] = useState([]);
+
+  // ➕ Function to add items to cart
+  const handleAddToCart = (product) => {
+    setCart((prevCart) => {
+      const existingItem = prevCart.find(item => item._id === product._id);
+      if (existingItem) {
+        // If it's already in the cart, just increase the quantity by 1
+        return prevCart.map(item => item._id === product._id ? { ...item, qty: item.qty + 1 } : item);
+      } else {
+        // If it's new, add it with a quantity of 1
+        return [...prevCart, { ...product, qty: 1 }];
+      }
+    });
+  };
+
   useEffect(() => {
     const checkUrl = () => {
       if (window.location.hash === "#admin") setCurrentView("admin");
       else if (window.location.hash === "#shop") setCurrentView("shop");
       else if (window.location.hash === "#account") setCurrentView("account");
+      else if (window.location.hash === "#cart") setCurrentView("cart"); // 👈 NEW CART ROUTE
       else setCurrentView("customer");
     };
     checkUrl();
@@ -39,45 +56,48 @@ export default function App() {
     return () => window.removeEventListener("hashchange", checkUrl);
   }, []);
 
-  // 💾 Saves user to browser memory when they log in
   const handleUserLogin = (userData) => {
     localStorage.setItem("packitout_user", JSON.stringify(userData));
     setLoggedInUser(userData);
   };
 
-  // 🗑️ Clears memory when they log out
   const handleUserLogout = () => {
     localStorage.removeItem("packitout_user");
     setLoggedInUser(null);
     window.location.hash = "";
   };
 
-  // 🔴 SUPER ADMIN ROUTES
+  // 🔴 ROUTES
   if (currentView === "admin" && !isAdminAuthenticated) return <AdminLogin onLogin={() => setIsAdminAuthenticated(true)} />;
   if (currentView === "admin" && isAdminAuthenticated) return <AdminDashboard onExit={() => { setIsAdminAuthenticated(false); window.location.hash = ""; }} />;
 
-  // 🏪 SHOP PARTNER ROUTES
   if (currentView === "shop" && !isShopAuthenticated) return <ShopLogin onLogin={() => setIsShopAuthenticated(true)} />;
   if (currentView === "shop" && isShopAuthenticated) return <ShopDashboard onExit={() => { setIsShopAuthenticated(false); window.location.hash = ""; }} />;
 
-  // 👤 CUSTOMER ACCOUNT ROUTE
   if (currentView === "account") {
-    if (!loggedInUser) {
-      return <UserAuth onLoginSuccess={handleUserLogin} />;
-    }
+    if (!loggedInUser) return <UserAuth onLoginSuccess={handleUserLogin} />;
     return <UserDashboard user={loggedInUser} onExit={() => window.location.hash = ""} onLogout={handleUserLogout} />;
   }
 
+  // 🛒 NEW: SHOW CART SCREEN
+  if (currentView === "cart") {
+    return <Cart cart={cart} onBack={() => window.location.hash = ""} />;
+  }
+
+  // 🧮 Calculate total items and price for the sticky bottom bar
+  const cartTotalItems = cart.reduce((sum, item) => sum + item.qty, 0);
+  const cartTotalPrice = cart.reduce((sum, item) => sum + (item.mrp * item.qty), 0);
+
   // 🛍️ NORMAL CUSTOMER APP
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', fontFamily: 'sans-serif', backgroundColor: '#f4f7f6' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', fontFamily: 'sans-serif', backgroundColor: '#f4f7f6', paddingBottom: cart.length > 0 ? '80px' : '0' }}>
       <Header />
       <Categories />
       
       <main style={{ flex: 1, padding: '1rem 0 3rem 0', textAlign: 'center' }}>
         
-        {/* 🍎 Your live products feed! */}
-        <ProductFeed />
+        {/* 👇 WE PASS THE ADD TO CART FUNCTION TO THE FEED */}
+        <ProductFeed onAddToCart={handleAddToCart} />
         
         <button 
           onClick={() => window.location.hash = "#account"} 
@@ -85,10 +105,25 @@ export default function App() {
         >
           {loggedInUser ? `Go to My Profile (${loggedInUser.name}) 👤` : "Login / Sign Up 🛒"}
         </button>
-        
       </main>
       
       <Footer />
+
+      {/* 🟢 STICKY BOTTOM CART BAR (Only shows if items are in cart) */}
+      {cart.length > 0 && (
+        <div 
+          onClick={() => window.location.hash = "#cart"}
+          style={{ position: 'fixed', bottom: '15px', left: '15px', right: '15px', backgroundColor: '#10b981', color: 'white', padding: '15px 20px', borderRadius: '12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer', boxShadow: '0 10px 20px rgba(16, 185, 129, 0.4)', zIndex: 1000 }}
+        >
+          <div style={{ fontWeight: 'bold' }}>
+            {cartTotalItems} ITEM{cartTotalItems > 1 ? 'S' : ''} | ₹{cartTotalPrice}
+          </div>
+          <div style={{ fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '8px' }}>
+            View Cart 🛒 <span style={{ fontSize: '1.2rem' }}>➡️</span>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }
