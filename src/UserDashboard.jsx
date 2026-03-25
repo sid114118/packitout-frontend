@@ -1,70 +1,87 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
+import Header from './Header.jsx';
+import Categories from './Categories.jsx';
+import Footer from './Footer.jsx';
 
-// 👇 Now it accepts the 'user' data!
-export default function UserDashboard({ user, onExit }) {
+import AdminDashboard from './AdminDashboard.jsx';
+import AdminLogin from './AdminLogin.jsx';
+import ShopDashboard from './ShopDashboard.jsx';
+import ShopLogin from './ShopLogin.jsx';
+import UserDashboard from './UserDashboard.jsx';
+import UserAuth from './UserAuth.jsx';
+
+export default function App() {
+  const [currentView, setCurrentView] = useState("customer");
   
-  // Safety fallbacks just in case data loads slowly
-  const userName = user?.name || "Demo User";
-  const userPhone = user?.phone || "No Phone";
-  const userPincode = user?.pincode || "No Pincode";
+  const [isAdminAuthenticated, setIsAdminAuthenticated] = useState(false);
+  const [isShopAuthenticated, setIsShopAuthenticated] = useState(false);
+  
+  // 🧠 SMART MEMORY: Checks if the user logged in previously!
+  const [loggedInUser, setLoggedInUser] = useState(() => {
+    const saved = localStorage.getItem("packitout_user");
+    return saved ? JSON.parse(saved) : null;
+  });
 
+  // 🕵️ Listens to the URL
+  useEffect(() => {
+    const checkUrl = () => {
+      if (window.location.hash === "#admin") setCurrentView("admin");
+      else if (window.location.hash === "#shop") setCurrentView("shop");
+      else if (window.location.hash === "#account") setCurrentView("account");
+      else setCurrentView("customer");
+    };
+    checkUrl();
+    window.addEventListener("hashchange", checkUrl);
+    return () => window.removeEventListener("hashchange", checkUrl);
+  }, []);
+
+  // 💾 Saves user to browser memory when they log in
+  const handleUserLogin = (userData) => {
+    localStorage.setItem("packitout_user", JSON.stringify(userData));
+    setLoggedInUser(userData);
+  };
+
+  // 🗑️ Clears memory when they log out
+  const handleUserLogout = () => {
+    localStorage.removeItem("packitout_user");
+    setLoggedInUser(null);
+    window.location.hash = "";
+  };
+
+  // 🔴 SUPER ADMIN ROUTES
+  if (currentView === "admin" && !isAdminAuthenticated) return <AdminLogin onLogin={() => setIsAdminAuthenticated(true)} />;
+  if (currentView === "admin" && isAdminAuthenticated) return <AdminDashboard onExit={() => { setIsAdminAuthenticated(false); window.location.hash = ""; }} />;
+
+  // 🏪 SHOP PARTNER ROUTES
+  if (currentView === "shop" && !isShopAuthenticated) return <ShopLogin onLogin={() => setIsShopAuthenticated(true)} />;
+  if (currentView === "shop" && isShopAuthenticated) return <ShopDashboard onExit={() => { setIsShopAuthenticated(false); window.location.hash = ""; }} />;
+
+  // 👤 CUSTOMER ACCOUNT ROUTE
+  if (currentView === "account") {
+    if (!loggedInUser) {
+      return <UserAuth onLoginSuccess={handleUserLogin} />; // Passes data to memory
+    }
+    // 👇 Passes REAL data to the Dashboard!
+    return <UserDashboard user={loggedInUser} onExit={() => window.location.hash = ""} onLogout={handleUserLogout} />;
+  }
+
+  // 🛍️ NORMAL CUSTOMER APP
   return (
-    <div style={{ backgroundColor: '#f4f7f6', minHeight: '100vh', fontFamily: 'sans-serif', paddingBottom: '30px' }}>
-      
-      {/* 🔴 HEADER */}
-      <div style={{ background: 'linear-gradient(135deg, #ff6b6b, #ff4757)', padding: '20px 20px 30px 20px', color: 'white', borderBottomLeftRadius: '20px', borderBottomRightRadius: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', boxShadow: '0 4px 10px rgba(255, 71, 87, 0.2)' }}>
-        <div>
-          <h2 style={{ margin: '0 0 5px 0', fontSize: '1.4rem' }}>👤 My Profile</h2>
-          <p style={{ margin: 0, opacity: 0.9, fontSize: '0.9rem' }}>Manage your orders and parchi</p>
-        </div>
-        <button onClick={onExit} style={{ background: 'rgba(255,255,255,0.2)', color: 'white', border: 'none', padding: '8px 16px', borderRadius: '20px', fontWeight: 'bold', cursor: 'pointer' }}>
-          Back to Shop
+    <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', fontFamily: 'sans-serif', backgroundColor: '#f4f7f6' }}>
+      <Header />
+      <Categories />
+      <main style={{ flex: 1, padding: '2rem', textAlign: 'center' }}>
+        <h2 style={{ color: '#2c3e50', marginBottom: '1.5rem', fontSize: '1.2rem' }}>Shopping Area</h2>
+        <p>Products will load here!</p>
+        
+        <button 
+          onClick={() => window.location.hash = "#account"} 
+          style={{ marginTop: '20px', padding: '12px 24px', backgroundColor: '#ff4757', color: 'white', border: 'none', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer' }}
+        >
+          {loggedInUser ? `Go to My Profile (${loggedInUser.name}) 👤` : "Login / Sign Up 🛒"}
         </button>
-      </div>
-
-      {/* 💳 REAL USER INFO CARD */}
-      <div style={{ backgroundColor: 'white', padding: '20px', margin: '-20px 15px 15px 15px', borderRadius: '12px', boxShadow: '0 4px 12px rgba(0,0,0,0.08)', position: 'relative' }}>
-        
-        {/* 👇 DYNAMIC DATA INJECTED HERE! */}
-        <h3 style={{ margin: '0 0 5px 0', fontSize: '1.2rem', color: '#2f3640', textTransform: 'capitalize' }}>{userName}</h3>
-        <p style={{ margin: '0 0 15px 0', color: '#7f8fa6', fontSize: '0.9rem' }}>{userPhone} • Pincode: {userPincode}</p>
-        
-        <div style={{ display: 'flex', gap: '10px' }}>
-          <button style={{ flex: 1, padding: '10px', background: '#f5f6fa', color: '#2f3640', border: 'none', borderRadius: '8px', fontWeight: 'bold' }}>✏️ Edit Profile</button>
-          <button style={{ flex: 1, padding: '10px', background: '#fee2e2', color: '#ef4444', border: 'none', borderRadius: '8px', fontWeight: 'bold' }}>Log Out</button>
-        </div>
-      </div>
-
-      {/* 📦 ACTIVE ORDERS */}
-      <div style={{ margin: '0 15px 20px 15px' }}>
-        <h3 style={{ fontSize: '1.1rem', marginBottom: '10px', color: '#2f3640' }}>📦 Active Orders</h3>
-        <div style={{ backgroundColor: 'white', padding: '15px', borderRadius: '12px', borderLeft: '5px solid #e1b12c', boxShadow: '0 2px 8px rgba(0,0,0,0.05)' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px', alignItems: 'center' }}>
-            <span style={{ fontWeight: '800', color: '#2f3640' }}>Order #1043</span>
-            <span style={{ color: '#e1b12c', backgroundColor: '#fcf2ce', padding: '4px 8px', borderRadius: '6px', fontWeight: 'bold', fontSize: '0.75rem' }}>⏳ Packing...</span>
-          </div>
-          <p style={{ margin: '0 0 10px 0', color: '#7f8fa6', fontSize: '0.9rem' }}>Sharma Groceries • 3 Items (₹320)</p>
-          <div style={{ width: '100%', height: '6px', backgroundColor: '#f5f6fa', borderRadius: '10px', marginBottom: '15px' }}><div style={{ width: '50%', height: '100%', backgroundColor: '#e1b12c', borderRadius: '10px' }}></div></div>
-          <button style={{ width: '100%', padding: '12px', background: '#fff9e6', color: '#e1b12c', border: '1px solid #fcf2ce', borderRadius: '8px', fontWeight: 'bold' }}>Track Live Status</button>
-        </div>
-      </div>
-
-      {/* 🕒 ORDER HISTORY */}
-      <div style={{ margin: '0 15px' }}>
-        <h3 style={{ fontSize: '1.1rem', marginBottom: '10px', color: '#2f3640' }}>🕒 Past Purchases</h3>
-        <div style={{ backgroundColor: 'white', padding: '15px', borderRadius: '12px', boxShadow: '0 2px 8px rgba(0,0,0,0.05)' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px', alignItems: 'center' }}>
-            <span style={{ fontWeight: 'bold', color: '#2f3640' }}>Order #1021</span>
-            <span style={{ color: '#44bd32', fontWeight: 'bold', fontSize: '0.8rem' }}>✅ Delivered</span>
-          </div>
-          <p style={{ margin: '0 0 10px 0', color: '#7f8fa6', fontSize: '0.9rem' }}>Rahul Electronics • 1 Item • ₹1,200</p>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span style={{ fontSize: '0.8rem', color: '#a4b0be' }}>12 Oct 2023</span>
-            <button style={{ padding: '8px 16px', background: '#f5f6fa', color: '#ff4757', border: 'none', borderRadius: '6px', fontWeight: 'bold', fontSize: '0.85rem' }}>🔄 Reorder</button>
-          </div>
-        </div>
-      </div>
-
+      </main>
+      <Footer />
     </div>
   );
 }
