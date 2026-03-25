@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import Header from './Header.jsx';
-import HeroBanners from './HeroBanners.jsx';
 import Categories from './Categories.jsx';
 import Footer from './Footer.jsx';
 import AdminDashboard from './AdminDashboard.jsx';
