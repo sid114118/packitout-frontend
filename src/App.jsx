@@ -26,7 +26,6 @@ export default function App() {
 
   const [cart, setCart] = useState([]);
 
-  // 🛑 SECURITY CHECK ADDED HERE
   const handleAddToCart = (product) => {
     if (!loggedInUser) {
       alert("Please log in or sign up to add items to your cart! 🛒");
@@ -80,8 +79,19 @@ export default function App() {
     return <UserDashboard user={loggedInUser} onExit={() => window.location.hash = ""} onLogout={handleUserLogout} />;
   }
 
+  // 👇 THE NEW CART CHECKOUT LOGIC IS RIGHT HERE!
   if (currentView === "cart") {
-    return <Cart cart={cart} onBack={() => window.location.hash = ""} />;
+    return (
+      <Cart 
+        cart={cart} 
+        user={loggedInUser} 
+        onBack={() => window.location.hash = ""} 
+        onCheckoutSuccess={() => {
+          setCart([]); // Empties the basket!
+          window.location.hash = "#account"; // Sends them to their profile to track it!
+        }}
+      />
+    );
   }
 
   const cartTotalItems = cart.reduce((sum, item) => sum + item.qty, 0);
