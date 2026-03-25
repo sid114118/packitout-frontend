@@ -8,6 +8,7 @@ export default function AdminDashboard({ onExit }) {
   // Form States
   const [shopName, setShopName] = useState("");
   const [pincode, setPincode] = useState("");
+  
   const [mpName, setMpName] = useState("");
   const [mpBrand, setMpBrand] = useState("");
   const [mpCategory, setMpCategory] = useState("Grocery & Kitchen");
@@ -16,7 +17,7 @@ export default function AdminDashboard({ onExit }) {
   const [mpEmoji, setMpEmoji] = useState("");
   const [mpTags, setMpTags] = useState("");
 
-  // 🔔 FETCH PENDING REQUESTS FROM DATABASE
+  // 🔔 FETCH PENDING REQUESTS
   useEffect(() => {
     fetch("https://darkslategrey-snail-415133.hostingersite.com/product-requests")
       .then(res => res.json())
@@ -44,9 +45,21 @@ export default function AdminDashboard({ onExit }) {
         method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name: mpName, brand: mpBrand, category: mpCategory, mrp: Number(mpMrp), qnty: mpQnty, emoji: mpEmoji, searchTags: mpTags })
       });
-      if(res.ok) { setStatus("✅ Added to Master Catalog!"); setMpName(""); setMpBrand(""); setMpMrp(""); setMpQnty(""); setMpEmoji(""); setMpTags(""); setTimeout(() => {setStatus(""); setCurrentView("overview")}, 2000); }
+      if(res.ok) { 
+        setStatus("✅ Added to Master Catalog!"); 
+        setMpName(""); setMpBrand(""); setMpMrp(""); setMpQnty(""); setMpEmoji(""); setMpTags(""); 
+        setTimeout(() => {setStatus(""); setCurrentView("overview")}, 2000); 
+      }
     } catch (err) { setStatus("❌ Error"); }
   };
+
+  // 🚀 MAGIC FUNCTION: Pre-fills the form with the shop's request!
+  const handleReviewClick = (request) => {
+    setMpName(request.requestedName);
+    setMpMrp(request.requestedSellingPrice);
+    setCurrentView("addMasterProduct"); // Jumps to the form!
+  };
+
 
   // --- 🔴 VIEW: ADD SHOP ---
   if (currentView === "addShop") {
@@ -93,6 +106,41 @@ export default function AdminDashboard({ onExit }) {
     );
   }
 
+  // --- 🟡 VIEW: REVIEW REQUESTS ---
+  if (currentView === "reviewRequests") {
+    return (
+      <div style={{ backgroundColor: '#0f172a', minHeight: '100vh', color: '#f8fafc', padding: '20px', fontFamily: 'sans-serif' }}>
+        <button onClick={() => setCurrentView("overview")} style={{ background: '#334155', color: 'white', border: 'none', padding: '8px 16px', borderRadius: '6px', marginBottom: '20px' }}>⬅ Back</button>
+        <h2 style={{ color: '#ef4444', marginBottom: '20px' }}>🚨 Pending Approvals</h2>
+        
+        {pendingRequests.length === 0 ? (
+          <p style={{ color: '#94a3b8' }}>You are all caught up! No pending requests.</p>
+        ) : (
+          pendingRequests.map((req, index) => (
+            <div key={index} style={{ backgroundColor: '#1e293b', padding: '20px', borderRadius: '12px', marginBottom: '15px', borderLeft: '4px solid #ef4444', boxShadow: '0 4px 6px rgba(0,0,0,0.3)' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px' }}>
+                <span style={{ fontSize: '0.8rem', color: '#94a3b8', fontWeight: 'bold' }}>REQUESTED BY:</span>
+                <span style={{ backgroundColor: '#fef08a', color: '#854d0e', padding: '2px 8px', borderRadius: '4px', fontSize: '0.7rem', fontWeight: 'bold' }}>NEW</span>
+              </div>
+              <p style={{ margin: '0 0 5px 0', fontSize: '1rem', color: '#cbd5e1' }}>Shop: {req.shopId?.name || "Unknown Shop"}</p>
+              <h3 style={{ margin: '0 0 10px 0', fontSize: '1.4rem', color: '#f8fafc' }}>{req.requestedName}</h3>
+              <p style={{ margin: '0 0 20px 0', fontSize: '1rem', color: '#10b981', fontWeight: 'bold' }}>Suggested MRP: ₹{req.requestedSellingPrice}</p>
+              
+              <div style={{ display: 'flex', gap: '10px' }}>
+                <button onClick={() => handleReviewClick(req)} style={{ flex: 1, padding: '12px', backgroundColor: '#3b82f6', color: 'white', border: 'none', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer' }}>
+                  ✏️ Review & Approve
+                </button>
+                <button style={{ padding: '12px', backgroundColor: 'transparent', color: '#ef4444', border: '1px solid #ef4444', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer' }}>
+                  Reject
+                </button>
+              </div>
+            </div>
+          ))
+        )}
+      </div>
+    );
+  }
+
   // --- 🟢 VIEW: OVERVIEW ---
   return (
     <div style={{ backgroundColor: '#0f172a', minHeight: '100vh', color: '#f8fafc', padding: '20px', fontFamily: 'sans-serif' }}>
@@ -101,11 +149,11 @@ export default function AdminDashboard({ onExit }) {
         <button onClick={onExit} style={{ backgroundColor: '#ef4444', color: 'white', border: 'none', padding: '8px 16px', borderRadius: '6px', fontWeight: 'bold' }}>Exit</button>
       </div>
 
-      {/* 🚨 NOTIFICATION BADGE FOR PENDING REQUESTS */}
+      {/* 🚨 THE BUTTON NOW WORKS */}
       {pendingRequests.length > 0 && (
         <div style={{ backgroundColor: '#ef4444', color: 'white', padding: '12px', borderRadius: '10px', marginBottom: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', animation: 'pulse 2s infinite' }}>
           <span style={{ fontWeight: 'bold' }}>🚨 {pendingRequests.length} Shop Requests Pending</span>
-          <button style={{ background: 'white', color: '#ef4444', border: 'none', padding: '5px 10px', borderRadius: '5px', fontSize: '0.8rem', fontWeight: 'bold' }}>Review Now</button>
+          <button onClick={() => setCurrentView("reviewRequests")} style={{ background: 'white', color: '#ef4444', border: 'none', padding: '5px 10px', borderRadius: '5px', fontSize: '0.8rem', fontWeight: 'bold', cursor: 'pointer' }}>Review Now</button>
         </div>
       )}
 
@@ -116,25 +164,16 @@ export default function AdminDashboard({ onExit }) {
 
       <h3 style={{ color: '#94a3b8', fontSize: '1rem', marginBottom: '15px' }}>Management Tools</h3>
       <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-        <button onClick={() => setCurrentView("addMasterProduct")} style={{ padding: '16px', background: '#a855f7', color: 'white', border: 'none', borderRadius: '10px', fontWeight: 'bold', display: 'flex', justifyContent: 'space-between' }}>
+        <button onClick={() => setCurrentView("addMasterProduct")} style={{ padding: '16px', background: '#a855f7', color: 'white', border: 'none', borderRadius: '10px', fontWeight: 'bold', display: 'flex', justifyContent: 'space-between', cursor: 'pointer' }}>
           <span>📦 Global Catalog Manager</span> <span>+</span>
         </button>
-        <button onClick={() => setCurrentView("addShop")} style={{ padding: '16px', background: '#3b82f6', color: 'white', border: 'none', borderRadius: '10px', fontWeight: 'bold', display: 'flex', justifyContent: 'space-between' }}>
+        <button onClick={() => setCurrentView("addShop")} style={{ padding: '16px', background: '#3b82f6', color: 'white', border: 'none', borderRadius: '10px', fontWeight: 'bold', display: 'flex', justifyContent: 'space-between', cursor: 'pointer' }}>
           <span>🏪 Shop Registration</span> <span>+</span>
-        </button>
-        <button onClick={() => setCurrentView("analytics")} style={{ padding: '16px', background: '#f59e0b', color: 'white', border: 'none', borderRadius: '10px', fontWeight: 'bold', display: 'flex', justifyContent: 'space-between' }}>
-          <span>📊 Business Insights</span> <span>→</span>
         </button>
       </div>
 
-      <style>{`
-        @keyframes pulse {
-          0% { transform: scale(1); }
-          50% { transform: scale(1.02); }
-          100% { transform: scale(1); }
-        }
-      `}</style>
+      <style>{`@keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.02); } 100% { transform: scale(1); } }`}</style>
     </div>
   );
-        }
-              
+          }
+            
