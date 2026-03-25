@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import Header from './Header.jsx';
 import Footer from './Footer.jsx';
+import Categories from './Categories.jsx';
 
 export default function App() {
   // 1. The memory for our app
