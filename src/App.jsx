@@ -3,7 +3,6 @@ import Header from './Header.jsx';
 import Categories from './Categories.jsx';
 import Footer from './Footer.jsx';
 
-// 👑 Dashboards & Auth
 import AdminDashboard from './AdminDashboard.jsx';
 import AdminLogin from './AdminLogin.jsx';
 import ShopDashboard from './ShopDashboard.jsx';
@@ -11,9 +10,8 @@ import ShopLogin from './ShopLogin.jsx';
 import UserDashboard from './UserDashboard.jsx';
 import UserAuth from './UserAuth.jsx';
 
-// 🛒 Shopping Feed & Cart
 import ProductFeed from './ProductFeed.jsx';
-import Cart from './Cart.jsx'; // 👈 NEW IMPORT!
+import Cart from './Cart.jsx';
 
 export default function App() {
   const [currentView, setCurrentView] = useState("customer");
@@ -26,18 +24,14 @@ export default function App() {
     return saved ? JSON.parse(saved) : null;
   });
 
-  // 🛒 NEW: CART STATE MEMORY
   const [cart, setCart] = useState([]);
 
-  // ➕ Function to add items to cart
   const handleAddToCart = (product) => {
     setCart((prevCart) => {
       const existingItem = prevCart.find(item => item._id === product._id);
       if (existingItem) {
-        // If it's already in the cart, just increase the quantity by 1
         return prevCart.map(item => item._id === product._id ? { ...item, qty: item.qty + 1 } : item);
       } else {
-        // If it's new, add it with a quantity of 1
         return [...prevCart, { ...product, qty: 1 }];
       }
     });
@@ -48,7 +42,7 @@ export default function App() {
       if (window.location.hash === "#admin") setCurrentView("admin");
       else if (window.location.hash === "#shop") setCurrentView("shop");
       else if (window.location.hash === "#account") setCurrentView("account");
-      else if (window.location.hash === "#cart") setCurrentView("cart"); // 👈 NEW CART ROUTE
+      else if (window.location.hash === "#cart") setCurrentView("cart");
       else setCurrentView("customer");
     };
     checkUrl();
@@ -61,13 +55,14 @@ export default function App() {
     setLoggedInUser(userData);
   };
 
+  // 🧹 THE FIX IS HERE!
   const handleUserLogout = () => {
     localStorage.removeItem("packitout_user");
     setLoggedInUser(null);
+    setCart([]); // This dumps the groceries back on the shelf!
     window.location.hash = "";
   };
 
-  // 🔴 ROUTES
   if (currentView === "admin" && !isAdminAuthenticated) return <AdminLogin onLogin={() => setIsAdminAuthenticated(true)} />;
   if (currentView === "admin" && isAdminAuthenticated) return <AdminDashboard onExit={() => { setIsAdminAuthenticated(false); window.location.hash = ""; }} />;
 
@@ -79,26 +74,20 @@ export default function App() {
     return <UserDashboard user={loggedInUser} onExit={() => window.location.hash = ""} onLogout={handleUserLogout} />;
   }
 
-  // 🛒 NEW: SHOW CART SCREEN
   if (currentView === "cart") {
     return <Cart cart={cart} onBack={() => window.location.hash = ""} />;
   }
 
-  // 🧮 Calculate total items and price for the sticky bottom bar
   const cartTotalItems = cart.reduce((sum, item) => sum + item.qty, 0);
   const cartTotalPrice = cart.reduce((sum, item) => sum + (item.mrp * item.qty), 0);
 
-  // 🛍️ NORMAL CUSTOMER APP
   return (
     <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', fontFamily: 'sans-serif', backgroundColor: '#f4f7f6', paddingBottom: cart.length > 0 ? '80px' : '0' }}>
       <Header />
       <Categories />
       
       <main style={{ flex: 1, padding: '1rem 0 3rem 0', textAlign: 'center' }}>
-        
-        {/* 👇 WE PASS THE ADD TO CART FUNCTION TO THE FEED */}
         <ProductFeed onAddToCart={handleAddToCart} />
-        
         <button 
           onClick={() => window.location.hash = "#account"} 
           style={{ marginTop: '30px', padding: '12px 24px', backgroundColor: '#2f3640', color: 'white', border: 'none', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer', boxShadow: '0 4px 6px rgba(0,0,0,0.1)' }}
@@ -109,7 +98,6 @@ export default function App() {
       
       <Footer />
 
-      {/* 🟢 STICKY BOTTOM CART BAR (Only shows if items are in cart) */}
       {cart.length > 0 && (
         <div 
           onClick={() => window.location.hash = "#cart"}
@@ -123,7 +111,6 @@ export default function App() {
           </div>
         </div>
       )}
-
     </div>
   );
 }
