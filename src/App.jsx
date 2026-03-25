@@ -6,6 +6,10 @@ import Footer from './Footer.jsx';
 import AdminDashboard from './AdminDashboard.jsx';
 import AdminLogin from './AdminLogin.jsx';
 
+// 👇 Import your new Shop files!
+import ShopDashboard from './ShopDashboard.jsx';
+import ShopLogin from './ShopLogin.jsx';
+
 export default function App() {
   const [currentView, setCurrentView] = useState("customer");
   const [isAuthenticated, setIsAuthenticated] = useState(false);
