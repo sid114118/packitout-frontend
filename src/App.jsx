@@ -3,12 +3,16 @@ import Header from './Header.jsx';
 import Categories from './Categories.jsx';
 import Footer from './Footer.jsx';
 
+// 👑 Dashboards & Auth
 import AdminDashboard from './AdminDashboard.jsx';
 import AdminLogin from './AdminLogin.jsx';
 import ShopDashboard from './ShopDashboard.jsx';
 import ShopLogin from './ShopLogin.jsx';
 import UserDashboard from './UserDashboard.jsx';
 import UserAuth from './UserAuth.jsx';
+
+// 🛒 Shopping Feed
+import ProductFeed from './ProductFeed.jsx';
 
 export default function App() {
   const [currentView, setCurrentView] = useState("customer");
@@ -59,9 +63,8 @@ export default function App() {
   // 👤 CUSTOMER ACCOUNT ROUTE
   if (currentView === "account") {
     if (!loggedInUser) {
-      return <UserAuth onLoginSuccess={handleUserLogin} />; // Passes data to memory
+      return <UserAuth onLoginSuccess={handleUserLogin} />;
     }
-    // 👇 Passes REAL data to the Dashboard!
     return <UserDashboard user={loggedInUser} onExit={() => window.location.hash = ""} onLogout={handleUserLogout} />;
   }
 
@@ -70,17 +73,21 @@ export default function App() {
     <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', fontFamily: 'sans-serif', backgroundColor: '#f4f7f6' }}>
       <Header />
       <Categories />
-      <main style={{ flex: 1, padding: '2rem', textAlign: 'center' }}>
-        <h2 style={{ color: '#2c3e50', marginBottom: '1.5rem', fontSize: '1.2rem' }}>Shopping Area</h2>
-        <p>Products will load here!</p>
+      
+      <main style={{ flex: 1, padding: '1rem 0 3rem 0', textAlign: 'center' }}>
+        
+        {/* 🍎 Your live products feed! */}
+        <ProductFeed />
         
         <button 
           onClick={() => window.location.hash = "#account"} 
-          style={{ marginTop: '20px', padding: '12px 24px', backgroundColor: '#ff4757', color: 'white', border: 'none', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer' }}
+          style={{ marginTop: '30px', padding: '12px 24px', backgroundColor: '#2f3640', color: 'white', border: 'none', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer', boxShadow: '0 4px 6px rgba(0,0,0,0.1)' }}
         >
           {loggedInUser ? `Go to My Profile (${loggedInUser.name}) 👤` : "Login / Sign Up 🛒"}
         </button>
+        
       </main>
+      
       <Footer />
     </div>
   );
