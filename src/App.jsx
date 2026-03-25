@@ -8,18 +8,21 @@ import AdminLogin from './AdminLogin.jsx';
 import ShopDashboard from './ShopDashboard.jsx';
 import ShopLogin from './ShopLogin.jsx';
 import UserDashboard from './UserDashboard.jsx';
-import UserAuth from './UserAuth.jsx'; // 👈 Import the new Auth screen!
+import UserAuth from './UserAuth.jsx';
 
 export default function App() {
   const [currentView, setCurrentView] = useState("customer");
   
-  // Auth states
   const [isAdminAuthenticated, setIsAdminAuthenticated] = useState(false);
   const [isShopAuthenticated, setIsShopAuthenticated] = useState(false);
   
-  // 👤 Customer Auth State (Holds the actual logged-in user data)
-  const [loggedInUser, setLoggedInUser] = useState(null);
+  // 🧠 SMART MEMORY: Checks if the user logged in previously!
+  const [loggedInUser, setLoggedInUser] = useState(() => {
+    const saved = localStorage.getItem("packitout_user");
+    return saved ? JSON.parse(saved) : null;
+  });
 
+  // 🕵️ Listens to the URL
   useEffect(() => {
     const checkUrl = () => {
       if (window.location.hash === "#admin") setCurrentView("admin");
@@ -32,6 +35,19 @@ export default function App() {
     return () => window.removeEventListener("hashchange", checkUrl);
   }, []);
 
+  // 💾 Saves user to browser memory when they log in
+  const handleUserLogin = (userData) => {
+    localStorage.setItem("packitout_user", JSON.stringify(userData));
+    setLoggedInUser(userData);
+  };
+
+  // 🗑️ Clears memory when they log out
+  const handleUserLogout = () => {
+    localStorage.removeItem("packitout_user");
+    setLoggedInUser(null);
+    window.location.hash = "";
+  };
+
   // 🔴 SUPER ADMIN ROUTES
   if (currentView === "admin" && !isAdminAuthenticated) return <AdminLogin onLogin={() => setIsAdminAuthenticated(true)} />;
   if (currentView === "admin" && isAdminAuthenticated) return <AdminDashboard onExit={() => { setIsAdminAuthenticated(false); window.location.hash = ""; }} />;
@@ -40,14 +56,13 @@ export default function App() {
   if (currentView === "shop" && !isShopAuthenticated) return <ShopLogin onLogin={() => setIsShopAuthenticated(true)} />;
   if (currentView === "shop" && isShopAuthenticated) return <ShopDashboard onExit={() => { setIsShopAuthenticated(false); window.location.hash = ""; }} />;
 
-  // 👤 CUSTOMER ACCOUNT ROUTE (Now protected by UserAuth!)
+  // 👤 CUSTOMER ACCOUNT ROUTE
   if (currentView === "account") {
     if (!loggedInUser) {
-      // If not logged in, show the Login/Signup screen
-      return <UserAuth onLoginSuccess={(userData) => setLoggedInUser(userData)} />;
+      return <UserAuth onLoginSuccess={handleUserLogin} />; // Passes data to memory
     }
-    // If logged in, show their dashboard
-    return <UserDashboard onExit={() => window.location.hash = ""} />;
+    // 👇 Passes REAL data to the Dashboard!
+    return <UserDashboard user={loggedInUser} onExit={() => window.location.hash = ""} onLogout={handleUserLogout} />;
   }
 
   // 🛍️ NORMAL CUSTOMER APP
@@ -63,7 +78,7 @@ export default function App() {
           onClick={() => window.location.hash = "#account"} 
           style={{ marginTop: '20px', padding: '12px 24px', backgroundColor: '#ff4757', color: 'white', border: 'none', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer' }}
         >
-          {loggedInUser ? "Go to My Profile 👤" : "Login / Sign Up 🛒"}
+          {loggedInUser ? `Go to My Profile (${loggedInUser.name}) 👤` : "Login / Sign Up 🛒"}
         </button>
       </main>
       <Footer />
