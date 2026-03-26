@@ -9,6 +9,7 @@ export default function UserAuth({ onLoginSuccess }) {
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
   const [pincode, setPincode] = useState("");
+  const [referredBy, setReferredBy] = useState(""); // 👈 NEW: Referral State
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -17,7 +18,7 @@ export default function UserAuth({ onLoginSuccess }) {
     const endpoint = isLogin ? "login" : "register";
     const payload = isLogin 
       ? { phone, password } 
-      : { name, phone, password, pincode };
+      : { name, phone, password, pincode, referredBy }; // 👈 NEW: Send code to backend
 
     try {
       const response = await fetch(`https://darkslategrey-snail-415133.hostingersite.com/${endpoint}`, {
@@ -30,7 +31,6 @@ export default function UserAuth({ onLoginSuccess }) {
 
       if (response.ok) {
         setStatus("✅ Success!");
-        // Pass the actual user data to the main app so it knows WHO logged in
         setTimeout(() => onLoginSuccess(data), 1000); 
       } else {
         setStatus(`❌ ${data.error}`);
@@ -56,16 +56,18 @@ export default function UserAuth({ onLoginSuccess }) {
         
         <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
           
-          {/* Only show Name and Pincode if they are Registering */}
+          {/* Only show Name, Pincode, and Referral if they are Registering */}
           {!isLogin && (
             <>
-              <input type="text" placeholder="Full Name" value={name} onChange={e => setName(e.target.value)} required style={{ padding: '14px', borderRadius: '8px', border: '1px solid #dcdde1', outline: 'none', backgroundColor: '#f5f6fa' }} />
-              <input type="text" placeholder="Delivery Pincode (e.g. 110001)" value={pincode} onChange={e => setPincode(e.target.value)} required style={{ padding: '14px', borderRadius: '8px', border: '1px solid #dcdde1', outline: 'none', backgroundColor: '#f5f6fa' }} />
+              <input type="text" placeholder="Full Name" value={name} onChange={e => setName(e.target.value)} required style={inputStyle} />
+              <input type="text" placeholder="Delivery Pincode (e.g. 110001)" value={pincode} onChange={e => setPincode(e.target.value)} required style={inputStyle} />
+              {/* 👇 NEW: Referral Code Input */}
+              <input type="text" placeholder="Referral Code (Optional)" value={referredBy} onChange={e => setReferredBy(e.target.value.toUpperCase())} style={inputStyle} />
             </>
           )}
 
-          <input type="text" placeholder="Phone Number" value={phone} onChange={e => setPhone(e.target.value)} required style={{ padding: '14px', borderRadius: '8px', border: '1px solid #dcdde1', outline: 'none', backgroundColor: '#f5f6fa' }} />
-          <input type="password" placeholder="Password" value={password} onChange={e => setPassword(e.target.value)} required style={{ padding: '14px', borderRadius: '8px', border: '1px solid #dcdde1', outline: 'none', backgroundColor: '#f5f6fa' }} />
+          <input type="text" placeholder="Phone Number" value={phone} onChange={e => setPhone(e.target.value)} required style={inputStyle} />
+          <input type="password" placeholder="Password" value={password} onChange={e => setPassword(e.target.value)} required style={inputStyle} />
           
           <button type="submit" style={{ padding: '15px', backgroundColor: '#ff4757', color: 'white', border: 'none', borderRadius: '8px', fontWeight: 'bold', fontSize: '1rem', cursor: 'pointer', marginTop: '10px', boxShadow: '0 4px 6px rgba(255, 71, 87, 0.2)' }}>
             {isLogin ? "Login" : "Sign Up"}
@@ -86,3 +88,5 @@ export default function UserAuth({ onLoginSuccess }) {
     </div>
   );
 }
+
+const inputStyle = { padding: '14px', borderRadius: '8px', border: '1px solid #dcdde1', outline: 'none', backgroundColor: '#f5f6fa' };
