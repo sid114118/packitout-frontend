@@ -118,7 +118,7 @@ export default function Header({ user }) {
       {isChanging && (
         <div style={{ backgroundColor: '#2f3640', padding: '15px', borderTop: '1px solid #3d566e', boxShadow: 'inset 0 4px 6px rgba(0,0,0,0.1)' }}>
           
-          {/* 1. Enter Pincode */}
+          {/* 1. Select Shop*/}
           <div style={{ display: 'flex', gap: '8px', marginBottom: '10px' }}>
             <input 
               type="text" 
