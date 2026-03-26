@@ -9,10 +9,7 @@ import ShopDashboard from './ShopDashboard.jsx';
 import ShopLogin from './ShopLogin.jsx';
 import UserDashboard from './UserDashboard.jsx';
 import UserAuth from './UserAuth.jsx';
-
-// 👇 IMPORT OUR NEW DASHBOARD!
 import CustomerDashboard from './CustomerDashboard.jsx'; 
-
 import ProductFeed from './ProductFeed.jsx';
 import Cart from './Cart.jsx';
 
@@ -29,25 +26,19 @@ export default function App() {
 
   const [cart, setCart] = useState([]);
 
-  // 🛒 Cart Security Check (For Guests)
   const handleAddToCart = (product) => {
     if (!loggedInUser) {
       alert("Please log in or sign up to add items to your cart! 🛒");
       window.location.hash = "#account";
       return;
     }
-
     setCart((prevCart) => {
       const existingItem = prevCart.find(item => item._id === product._id);
-      if (existingItem) {
-        return prevCart.map(item => item._id === product._id ? { ...item, qty: item.qty + 1 } : item);
-      } else {
-        return [...prevCart, { ...product, qty: 1 }];
-      }
+      if (existingItem) return prevCart.map(item => item._id === product._id ? { ...item, qty: item.qty + 1 } : item);
+      return [...prevCart, { ...product, qty: 1 }];
     });
   };
 
-  // 🧭 URL Hash Routing
   useEffect(() => {
     const checkUrl = () => {
       if (window.location.hash === "#admin") setCurrentView("admin");
@@ -64,7 +55,7 @@ export default function App() {
   const handleUserLogin = (userData) => {
     localStorage.setItem("packitout_user", JSON.stringify(userData));
     setLoggedInUser(userData);
-    window.location.hash = ""; // Send them to home page after login
+    window.location.hash = ""; 
   };
 
   const handleUserLogout = () => {
@@ -74,88 +65,57 @@ export default function App() {
     window.location.hash = "";
   };
 
-  // --- VIEW RENDERING LOGIC ---
-
-  // 1. ADMIN VIEW
   if (currentView === "admin") {
     if (!isAdminAuthenticated) return <AdminLogin onLogin={() => setIsAdminAuthenticated(true)} />;
     return <AdminDashboard onExit={() => { setIsAdminAuthenticated(false); window.location.hash = ""; }} />;
   }
 
-  // 2. SHOP VIEW 
   if (currentView === "shop") {
-    if (!isShopAuthenticated) {
-      return <ShopLogin onLogin={(shopData) => setIsShopAuthenticated(shopData)} />;
-    }
-    return (
-      <ShopDashboard 
-        user={isShopAuthenticated} 
-        onExit={() => { setIsShopAuthenticated(null); window.location.hash = ""; }} 
-      />
-    );
+    if (!isShopAuthenticated) return <ShopLogin onLogin={(shopData) => setIsShopAuthenticated(shopData)} />;
+    return <ShopDashboard user={isShopAuthenticated} onExit={() => { setIsShopAuthenticated(null); window.location.hash = ""; }} />;
   }
 
-  // 3. USER ACCOUNT VIEW
   if (currentView === "account") {
     if (!loggedInUser) return <UserAuth onLoginSuccess={handleUserLogin} />;
     return <UserDashboard user={loggedInUser} onExit={() => window.location.hash = ""} onLogout={handleUserLogout} />;
   }
 
-  // 4. CART VIEW (Legacy Cart for generic feed)
   if (currentView === "cart") {
+    return <Cart cart={cart} user={loggedInUser} onBack={() => window.location.hash = ""} onCheckoutSuccess={() => { setCart([]); window.location.hash = "#account"; }} />;
+  }
+
+  // 🚀 THE FIX: PackItOut Shell wraps the Customer Dashboard!
+  if (loggedInUser) {
     return (
-      <Cart 
-        cart={cart} 
-        user={loggedInUser} 
-        onBack={() => window.location.hash = ""} 
-        onCheckoutSuccess={() => {
-          setCart([]);
-          window.location.hash = "#account";
-        }}
-      />
+      <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', backgroundColor: '#f4f7f6' }}>
+        <Header user={loggedInUser} />
+        <Categories />
+        <main style={{ flex: 1 }}>
+          <CustomerDashboard user={loggedInUser} onExit={handleUserLogout} />
+        </main>
+        <Footer />
+      </div>
     );
   }
 
-  // 5. CUSTOMER HOME VIEW
-  // 🚀 THE MAGIC: If they are logged in, show the NEW Custom Store!
-  if (loggedInUser) {
-    return <CustomerDashboard user={loggedInUser} onExit={handleUserLogout} />;
-  }
-
-  // 🧍‍♂️ FOR GUESTS: Show the generic un-priced feed until they log in
   const cartTotalItems = cart.reduce((sum, item) => sum + item.qty, 0);
   const cartTotalPrice = cart.reduce((sum, item) => sum + (item.mrp * item.qty), 0);
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', fontFamily: 'sans-serif', backgroundColor: '#f4f7f6', paddingBottom: cart.length > 0 ? '80px' : '0' }}>
-      
       <Header user={loggedInUser} />
       <Categories />
-      
       <main style={{ flex: 1, padding: '1rem 0 3rem 0', textAlign: 'center' }}>
         <ProductFeed onAddToCart={handleAddToCart} />
-        
-        <button 
-          onClick={() => window.location.hash = "#account"} 
-          style={{ marginTop: '30px', padding: '12px 24px', backgroundColor: '#2f3640', color: 'white', border: 'none', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer', boxShadow: '0 4px 6px rgba(0,0,0,0.1)' }}
-        >
+        <button onClick={() => window.location.hash = "#account"} style={{ marginTop: '30px', padding: '12px 24px', backgroundColor: '#2f3640', color: 'white', border: 'none', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer' }}>
           Login / Sign Up 🛒
         </button>
       </main>
-      
       <Footer />
-
       {cart.length > 0 && (
-        <div 
-          onClick={() => window.location.hash = "#cart"}
-          style={{ position: 'fixed', bottom: '15px', left: '15px', right: '15px', backgroundColor: '#10b981', color: 'white', padding: '15px 20px', borderRadius: '12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer', boxShadow: '0 10px 20px rgba(16, 185, 129, 0.4)', zIndex: 1000 }}
-        >
-          <div style={{ fontWeight: 'bold' }}>
-            {cartTotalItems} ITEM{cartTotalItems > 1 ? 'S' : ''} | ₹{cartTotalPrice}
-          </div>
-          <div style={{ fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '8px' }}>
-            View Cart 🛒 <span style={{ fontSize: '1.2rem' }}>➡️</span>
-          </div>
+        <div onClick={() => window.location.hash = "#cart"} style={{ position: 'fixed', bottom: '15px', left: '15px', right: '15px', backgroundColor: '#10b981', color: 'white', padding: '15px 20px', borderRadius: '12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer', zIndex: 1000 }}>
+          <div style={{ fontWeight: 'bold' }}>{cartTotalItems} ITEM{cartTotalItems > 1 ? 'S' : ''} | ₹{cartTotalPrice}</div>
+          <div style={{ fontWeight: 'bold' }}>View Cart 🛒 ➡️</div>
         </div>
       )}
     </div>
