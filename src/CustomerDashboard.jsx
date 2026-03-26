@@ -123,7 +123,10 @@ export default function CustomerDashboard({ user, onExit }) {
 
       <div style={{ padding: '20px', maxWidth: '800px', margin: '0 auto' }}>
         <h3 style={{ color: '#0f172a', marginBottom: '20px' }}>Store Menu</h3>
-
+<div style={{ backgroundColor: 'yellow', padding: '10px', fontWeight: 'bold' }}>
+  🚨 APP VERSION 2.0 - LIVE TEST 🚨
+</div>
+        
         {availableItems.length === 0 ? (
           <div style={{ textAlign: 'center', padding: '40px', color: '#64748b', backgroundColor: 'white', borderRadius: '12px', border: '1px dashed #cbd5e1' }}>
             This store hasn't added any products to their digital shelves yet!
