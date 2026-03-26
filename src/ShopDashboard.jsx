@@ -6,6 +6,17 @@ export default function ShopDashboard({ onExit }) {
 
   // 🔔 NEW: Controls what we see inside the "My Shelf" tab
   const [inventoryView, setInventoryView] = useState("menu"); // 'menu' or 'requestForm'
+
+const [orders, setOrders] = useState([]);
+
+useEffect(() => {
+  fetch("https://darkslategrey-snail-415133.hostingersite.com/orders")
+    .then(res => res.json())
+    .then(data => setOrders(data))
+    .catch(err => console.log(err));
+}, []);
+  
+  
   
   // Form State for Requesting Custom Items
   const [reqName, setReqName] = useState("");
