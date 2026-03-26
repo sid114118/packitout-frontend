@@ -11,7 +11,7 @@ export default function CustomerDashboard({ user, onExit }) {
     if (user?.primaryShop) {
       fetchShopMenu(user.primaryShop._id || user.primaryShop);
     } else {
-      setLoading(false); // No shop selected yet
+      setLoading(false); 
     }
   }, [user]);
 
@@ -28,13 +28,16 @@ export default function CustomerDashboard({ user, onExit }) {
   // 🛒 Cart Logic
   const addToCart = (item) => {
     const existing = cart.find(c => c.productId === item.product._id);
+    // Safe price fallback just in case
+    const activePrice = item.sellingPrice || item.product.mrp; 
+
     if (existing) {
       setCart(cart.map(c => c.productId === item.product._id ? { ...c, qty: c.qty + 1 } : c));
     } else {
       setCart([...cart, { 
         productId: item.product._id, 
         name: item.product.name, 
-        price: item.sellingPrice, 
+        price: activePrice, 
         qty: 1 
       }]);
     }
@@ -90,7 +93,6 @@ export default function CustomerDashboard({ user, onExit }) {
     </div>
   );
 
-  // Filter out items that are marked "Out of Stock" or have broken product links
   const availableItems = shopMenu.inventory?.filter(item => item.inStock && item.product) || [];
 
   return (
@@ -114,7 +116,7 @@ export default function CustomerDashboard({ user, onExit }) {
       </div>
 
       <div style={{ padding: '20px', maxWidth: '800px', margin: '0 auto' }}>
-        <h3 style={{ color: '#0f172a', marginBottom: '20px' }}>Freshly Stocked Items ({availableItems.length})</h3>
+        <h3 style={{ color: '#0f172a', marginBottom: '20px' }}>Freshly Stocked Items</h3>
 
         {availableItems.length === 0 ? (
           <div style={{ textAlign: 'center', padding: '40px', color: '#64748b', backgroundColor: 'white', borderRadius: '12px' }}>
@@ -124,29 +126,44 @@ export default function CustomerDashboard({ user, onExit }) {
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: '15px' }}>
             {availableItems.map(item => {
               const inCart = cart.find(c => c.productId === item.product._id);
-              const isDiscounted = item.sellingPrice < item.product.mrp;
+              
+              // 🛡️ Safe Price Logic
+              const mrp = item.product.mrp;
+              const currentPrice = item.sellingPrice || mrp; // If shopkeeper left it blank, default to MRP
+              const isDiscounted = currentPrice < mrp;
+              
+              // 🧮 Calculate Discount Percentage
+              const discountPercent = isDiscounted ? Math.round(((mrp - currentPrice) / mrp) * 100) : 0;
 
               return (
                 <div key={item._id} style={productCardStyle}>
-                  {/* Image */}
-                  <div style={{ height: '100px', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: '#f1f5f9', borderRadius: '8px', marginBottom: '10px' }}>
-                    {item.product.image ? <img src={item.product.image} style={{ maxHeight: '80px', maxWidth: '100%', objectFit: 'contain' }} alt={item.product.name} /> : <span style={{fontSize: '40px'}}>{item.product.emoji}</span>}
+                  {/* Image Container with Relative Positioning for the Badge */}
+                  <div style={{ height: '110px', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: '#f1f5f9', borderRadius: '8px', marginBottom: '10px', position: 'relative' }}>
+                    
+                    {/* 💥 THE DISTINCT DISCOUNT BADGE */}
+                    {isDiscounted && (
+                      <div style={{ position: 'absolute', top: '-8px', left: '-8px', backgroundColor: '#ef4444', color: 'white', fontSize: '0.75rem', fontWeight: 'bold', padding: '4px 8px', borderRadius: '6px', boxShadow: '0 2px 4px rgba(239, 68, 68, 0.4)', zIndex: 10 }}>
+                        {discountPercent}% OFF
+                      </div>
+                    )}
+
+                    {item.product.image ? <img src={item.product.image} style={{ maxHeight: '90px', maxWidth: '100%', objectFit: 'contain' }} alt={item.product.name} /> : <span style={{fontSize: '40px'}}>{item.product.emoji}</span>}
                   </div>
                   
                   {/* Product Details */}
                   <div style={{ fontSize: '0.75rem', color: '#94a3b8', textTransform: 'uppercase', fontWeight: 'bold' }}>{item.product.brand}</div>
-                  <div style={{ fontWeight: 'bold', color: '#0f172a', fontSize: '0.95rem', marginBottom: '5px', height: '40px', overflow: 'hidden' }}>{item.product.name}</div>
+                  <div style={{ fontWeight: 'bold', color: '#0f172a', fontSize: '0.95rem', marginBottom: '5px', height: '40px', overflow: 'hidden', lineHeight: '1.2' }}>{item.product.name}</div>
                   <div style={{ fontSize: '0.8rem', color: '#64748b', marginBottom: '10px' }}>{item.product.qnty}</div>
                   
-                  {/* Pricing (With Discount Logic) */}
+                  {/* Pricing (Now highly visible) */}
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '15px' }}>
-                    <span style={{ fontWeight: 'bold', fontSize: '1.1rem', color: '#0f172a' }}>₹{item.sellingPrice}</span>
-                    {isDiscounted && <span style={{ textDecoration: 'line-through', color: '#94a3b8', fontSize: '0.85rem' }}>₹{item.product.mrp}</span>}
+                    <span style={{ fontWeight: '900', fontSize: '1.25rem', color: '#0f172a' }}>₹{currentPrice}</span>
+                    {isDiscounted && <span style={{ textDecoration: 'line-through', color: '#94a3b8', fontSize: '0.9rem' }}>₹{mrp}</span>}
                   </div>
 
                   {/* Add to Cart Controls */}
                   {inCart ? (
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#10b981', color: 'white', borderRadius: '8px', padding: '5px', fontWeight: 'bold' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#10b981', color: 'white', borderRadius: '8px', padding: '5px', fontWeight: 'bold', boxShadow: '0 2px 4px rgba(16, 185, 129, 0.2)' }}>
                       <button onClick={() => removeFromCart(item.product._id)} style={qtyBtnStyle}>-</button>
                       <span>{inCart.qty}</span>
                       <button onClick={() => addToCart(item)} style={qtyBtnStyle}>+</button>
@@ -155,7 +172,7 @@ export default function CustomerDashboard({ user, onExit }) {
                     <button 
                       onClick={() => addToCart(item)} 
                       disabled={!shopMenu.isOpen}
-                      style={{ width: '100%', padding: '8px', backgroundColor: shopMenu.isOpen ? 'white' : '#f1f5f9', color: shopMenu.isOpen ? '#10b981' : '#cbd5e1', border: `1px solid ${shopMenu.isOpen ? '#10b981' : '#cbd5e1'}`, borderRadius: '8px', fontWeight: 'bold', cursor: shopMenu.isOpen ? 'pointer' : 'not-allowed' }}
+                      style={{ width: '100%', padding: '10px', backgroundColor: shopMenu.isOpen ? 'white' : '#f1f5f9', color: shopMenu.isOpen ? '#10b981' : '#cbd5e1', border: `2px solid ${shopMenu.isOpen ? '#10b981' : '#cbd5e1'}`, borderRadius: '8px', fontWeight: 'bold', cursor: shopMenu.isOpen ? 'pointer' : 'not-allowed', transition: '0.2s' }}
                     >
                       {shopMenu.isOpen ? "ADD" : "CLOSED"}
                     </button>
@@ -169,12 +186,12 @@ export default function CustomerDashboard({ user, onExit }) {
 
       {/* 🛍️ FLOATING CART BAR */}
       {cart.length > 0 && (
-        <div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, backgroundColor: 'white', padding: '15px 20px', boxShadow: '0 -4px 15px rgba(0,0,0,0.1)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', zIndex: 1000 }}>
+        <div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, backgroundColor: 'white', padding: '15px 20px', boxShadow: '0 -4px 20px rgba(0,0,0,0.15)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', zIndex: 1000 }}>
           <div>
             <div style={{ fontSize: '0.85rem', color: '#64748b', fontWeight: 'bold' }}>{getCartCount()} ITEMS</div>
-            <div style={{ fontSize: '1.2rem', fontWeight: 'bold', color: '#0f172a' }}>₹{getCartTotal()}</div>
+            <div style={{ fontSize: '1.3rem', fontWeight: '900', color: '#0f172a' }}>₹{getCartTotal()}</div>
           </div>
-          <button onClick={handleCheckout} style={{ backgroundColor: '#10b981', color: 'white', border: 'none', padding: '12px 25px', borderRadius: '8px', fontSize: '1.1rem', fontWeight: 'bold', cursor: 'pointer', boxShadow: '0 4px 6px rgba(16, 185, 129, 0.3)' }}>
+          <button onClick={handleCheckout} style={{ backgroundColor: '#10b981', color: 'white', border: 'none', padding: '12px 30px', borderRadius: '8px', fontSize: '1.1rem', fontWeight: 'bold', cursor: 'pointer', boxShadow: '0 4px 10px rgba(16, 185, 129, 0.4)' }}>
             Place Order ➔
           </button>
         </div>
@@ -185,6 +202,7 @@ export default function CustomerDashboard({ user, onExit }) {
 }
 
 // Styling Helpers
-const productCardStyle = { backgroundColor: 'white', padding: '15px', borderRadius: '12px', boxShadow: '0 2px 8px rgba(0,0,0,0.04)', border: '1px solid #f1f5f9', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' };
-const qtyBtnStyle = { background: 'none', border: 'none', color: 'white', fontSize: '1.2rem', cursor: 'pointer', padding: '0 10px', fontWeight: 'bold' };
+const productCardStyle = { backgroundColor: 'white', padding: '15px', borderRadius: '12px', boxShadow: '0 4px 10px rgba(0,0,0,0.05)', border: '1px solid #e2e8f0', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', position: 'relative' };
+const qtyBtnStyle = { background: 'none', border: 'none', color: 'white', fontSize: '1.3rem', cursor: 'pointer', padding: '0 12px', fontWeight: 'bold' };
 const actionBtnStyle = { padding: '10px 20px', backgroundColor: '#0f172a', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold', marginTop: '20px' };
+                  
