@@ -1,71 +1,72 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 
 export default function UserDashboard({ user, onExit, onLogout }) {
-  
-  // Safety fallbacks just in case data loads slowly
-  const userName = user?.name || "Demo User";
-  const userPhone = user?.phone || "No Phone";
-  const userPincode = user?.pincode || "No Pincode";
+  const [myOrders, setMyOrders] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  // 🛰️ FETCH REAL ORDERS FOR THIS USER
+  useEffect(() => {
+    fetch("https://darkslategrey-snail-415133.hostingersite.com/orders")
+      .then(res => res.json())
+      .then(data => {
+        // Filter only orders that belong to THIS user
+        const filtered = data.filter(order => order.userId?._id === user._id);
+        setMyOrders(filtered);
+        setLoading(false);
+      })
+      .catch(err => setLoading(false));
+  }, [user._id]);
 
   return (
     <div style={{ backgroundColor: '#f4f7f6', minHeight: '100vh', fontFamily: 'sans-serif', paddingBottom: '30px' }}>
       
-      {/* 🔴 HEADER */}
-      <div style={{ background: 'linear-gradient(135deg, #ff6b6b, #ff4757)', padding: '20px 20px 30px 20px', color: 'white', borderBottomLeftRadius: '20px', borderBottomRightRadius: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', boxShadow: '0 4px 10px rgba(255, 71, 87, 0.2)' }}>
+      {/* HEADER */}
+      <div style={{ background: 'linear-gradient(135deg, #ff6b6b, #ff4757)', padding: '20px', color: 'white', borderBottomLeftRadius: '20px', borderBottomRightRadius: '20px', display: 'flex', justifyContent: 'space-between' }}>
         <div>
-          <h2 style={{ margin: '0 0 5px 0', fontSize: '1.4rem' }}>👤 My Profile</h2>
-          <p style={{ margin: 0, opacity: 0.9, fontSize: '0.9rem' }}>Manage your orders and parchi</p>
+          <h2 style={{ margin: 0 }}>👤 {user.name}</h2>
+          <p style={{ margin: 0, opacity: 0.9 }}>{user.phone} • {user.pincode}</p>
         </div>
-        <button onClick={onExit} style={{ background: 'rgba(255,255,255,0.2)', color: 'white', border: 'none', padding: '8px 16px', borderRadius: '20px', fontWeight: 'bold', cursor: 'pointer' }}>
-          Back to Shop
-        </button>
+        <button onClick={onExit} style={{ background: 'rgba(255,255,255,0.2)', color: 'white', border: 'none', padding: '8px 15px', borderRadius: '20px', fontWeight: 'bold' }}>Shop</button>
       </div>
 
-      {/* 💳 REAL USER INFO CARD */}
-      <div style={{ backgroundColor: 'white', padding: '20px', margin: '-20px 15px 15px 15px', borderRadius: '12px', boxShadow: '0 4px 12px rgba(0,0,0,0.08)', position: 'relative' }}>
-        
-        {/* 👇 DYNAMIC DATA INJECTED HERE! */}
-        <h3 style={{ margin: '0 0 5px 0', fontSize: '1.2rem', color: '#2f3640', textTransform: 'capitalize' }}>{userName}</h3>
-        <p style={{ margin: '0 0 15px 0', color: '#7f8fa6', fontSize: '0.9rem' }}>{userPhone} • Pincode: {userPincode}</p>
-        
-        <div style={{ display: 'flex', gap: '10px' }}>
-          <button style={{ flex: 1, padding: '10px', background: '#f5f6fa', color: '#2f3640', border: 'none', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer' }}>✏️ Edit Profile</button>
-          
-          {/* 👇 LOGOUT BUTTON WIRED UP HERE! */}
-          <button onClick={onLogout} style={{ flex: 1, padding: '10px', background: '#fee2e2', color: '#ef4444', border: 'none', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer' }}>Log Out</button>
-        </div>
-      </div>
+      <div style={{ padding: '20px' }}>
+        <button onClick={onLogout} style={{ width: '100%', padding: '12px', background: '#fee2e2', color: '#ef4444', border: 'none', borderRadius: '12px', fontWeight: 'bold', marginBottom: '20px' }}>Log Out</button>
 
-      {/* 📦 ACTIVE ORDERS */}
-      <div style={{ margin: '0 15px 20px 15px' }}>
-        <h3 style={{ fontSize: '1.1rem', marginBottom: '10px', color: '#2f3640' }}>📦 Active Orders</h3>
-        <div style={{ backgroundColor: 'white', padding: '15px', borderRadius: '12px', borderLeft: '5px solid #e1b12c', boxShadow: '0 2px 8px rgba(0,0,0,0.05)' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px', alignItems: 'center' }}>
-            <span style={{ fontWeight: '800', color: '#2f3640' }}>Order #1043</span>
-            <span style={{ color: '#e1b12c', backgroundColor: '#fcf2ce', padding: '4px 8px', borderRadius: '6px', fontWeight: 'bold', fontSize: '0.75rem' }}>⏳ Packing...</span>
+        <h3 style={{ color: '#2f3640' }}>📦 My Parchis (Orders)</h3>
+
+        {loading ? (
+          <p>Loading your orders...</p>
+        ) : myOrders.length === 0 ? (
+          <div style={{ textAlign: 'center', padding: '40px', color: '#7f8fa6', background: 'white', borderRadius: '15px' }}>
+            <p>No orders yet. Start shopping!</p>
           </div>
-          <p style={{ margin: '0 0 10px 0', color: '#7f8fa6', fontSize: '0.9rem' }}>Sharma Groceries • 3 Items (₹320)</p>
-          <div style={{ width: '100%', height: '6px', backgroundColor: '#f5f6fa', borderRadius: '10px', marginBottom: '15px' }}><div style={{ width: '50%', height: '100%', backgroundColor: '#e1b12c', borderRadius: '10px' }}></div></div>
-          <button style={{ width: '100%', padding: '12px', background: '#fff9e6', color: '#e1b12c', border: '1px solid #fcf2ce', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer' }}>Track Live Status</button>
-        </div>
-      </div>
+        ) : (
+          myOrders.map((order, index) => (
+            <div key={index} style={{ backgroundColor: 'white', padding: '15px', borderRadius: '15px', marginBottom: '15px', boxShadow: '0 4px 10px rgba(0,0,0,0.05)', borderLeft: '5px solid #10b981' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px' }}>
+                <span style={{ fontWeight: 'bold' }}>Order #{order._id.slice(-5).toUpperCase()}</span>
+                <span style={{ color: '#10b981', fontWeight: 'bold' }}>{order.status}</span>
+              </div>
+              
+              {/* SHOW WHICH SHOP IT WENT TO */}
+              <p style={{ margin: '0 0 10px 0', fontSize: '0.9rem', color: '#7f8fa6' }}>
+                🏪 Shop: <strong>{order.shopId?.name || "Local Mart"}</strong>
+              </p>
 
-      {/* 🕒 ORDER HISTORY */}
-      <div style={{ margin: '0 15px' }}>
-        <h3 style={{ fontSize: '1.1rem', marginBottom: '10px', color: '#2f3640' }}>🕒 Past Purchases</h3>
-        <div style={{ backgroundColor: 'white', padding: '15px', borderRadius: '12px', boxShadow: '0 2px 8px rgba(0,0,0,0.05)' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px', alignItems: 'center' }}>
-            <span style={{ fontWeight: 'bold', color: '#2f3640' }}>Order #1021</span>
-            <span style={{ color: '#44bd32', fontWeight: 'bold', fontSize: '0.8rem' }}>✅ Delivered</span>
-          </div>
-          <p style={{ margin: '0 0 10px 0', color: '#7f8fa6', fontSize: '0.9rem' }}>Rahul Electronics • 1 Item • ₹1,200</p>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span style={{ fontSize: '0.8rem', color: '#a4b0be' }}>12 Oct 2023</span>
-            <button style={{ padding: '8px 16px', background: '#f5f6fa', color: '#ff4757', border: 'none', borderRadius: '6px', fontWeight: 'bold', fontSize: '0.85rem', cursor: 'pointer' }}>🔄 Reorder</button>
-          </div>
-        </div>
+              <div style={{ borderTop: '1px dashed #eee', paddingTop: '10px' }}>
+                {order.items.map((item, i) => (
+                  <div key={i} style={{ fontSize: '0.85rem', color: '#2f3640' }}>
+                    {item.emoji} {item.name} x {item.qty}
+                  </div>
+                ))}
+              </div>
+              <div style={{ marginTop: '10px', fontWeight: 'bold', textAlign: 'right' }}>
+                Total: ₹{order.totalAmount}
+              </div>
+            </div>
+          ))
+        )}
       </div>
-
     </div>
   );
 }
