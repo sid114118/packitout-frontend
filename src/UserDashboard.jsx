@@ -25,22 +25,21 @@ export default function UserDashboard({ user, onExit, onLogout }) {
       })
       .catch(err => setLoading(false));
 
-    // 2. Fetch Fresh Coin Balance
+    // 2. Fetch Fresh Coin Balance & Referral Code
     fetch(`https://darkslategrey-snail-415133.hostingersite.com/users/${user._id}`)
       .then(res => res.json())
       .then(data => {
-        if (data && data.coins !== undefined) {
-          setCoinBalance(data.coins);
+        if (data) {
+          if (data.coins !== undefined) setCoinBalance(data.coins);
           
-          // Update local storage so the rest of the app knows the new balance
-          const updatedUser = { ...user, coins: data.coins };
+          // Update local storage so the rest of the app knows the new balance and referral code
+          const updatedUser = { ...user, coins: data.coins, referralCode: data.referralCode };
           localStorage.setItem("packitout_user", JSON.stringify(updatedUser));
         }
       })
-      .catch(err => console.log("Failed to fetch fresh coin balance"));
+      .catch(err => console.log("Failed to fetch fresh profile data"));
   }, [user._id, user]);
 
-  // Separate active orders from past orders
   const activeOrders = orders.filter(o => o.status !== "Delivered ✅" && o.status !== "Done 🎉");
   const pastOrders = orders.filter(o => o.status === "Delivered ✅" || o.status === "Done 🎉");
 
@@ -70,7 +69,7 @@ export default function UserDashboard({ user, onExit, onLogout }) {
       <div style={{ padding: '0 20px 20px 20px', maxWidth: '600px', margin: '0 auto', marginTop: '-30px' }}>
 
         {/* 🪙 THE LOYALTY COIN BANNER */}
-        <div style={{ background: 'linear-gradient(135deg, #f59e0b, #d97706)', padding: '20px', borderRadius: '16px', color: 'white', display: 'flex', justifyContent: 'space-between', alignItems: 'center', boxShadow: '0 10px 20px rgba(245, 158, 11, 0.3)', marginBottom: '25px' }}>
+        <div style={{ background: 'linear-gradient(135deg, #f59e0b, #d97706)', padding: '20px', borderRadius: '16px', color: 'white', display: 'flex', justifyContent: 'space-between', alignItems: 'center', boxShadow: '0 10px 20px rgba(245, 158, 11, 0.3)', marginBottom: '15px' }}>
           <div>
             <span style={{ fontSize: '0.9rem', fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: '1px', opacity: 0.9 }}>PackIt Coins</span>
             <h3 style={{ margin: '5px 0 0 0', fontSize: '2rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -79,6 +78,31 @@ export default function UserDashboard({ user, onExit, onLogout }) {
           </div>
           <div style={{ textAlign: 'right', fontSize: '0.8rem', opacity: 0.9 }}>
             Earn 1 coin for<br/>every ₹10 spent!
+          </div>
+        </div>
+
+        {/* 📢 REFER & EARN BANNER (NEW) */}
+        <div style={{ background: 'white', padding: '15px 20px', borderRadius: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', boxShadow: '0 4px 10px rgba(0,0,0,0.03)', marginBottom: '25px', border: '1px solid #e2e8f0' }}>
+          <div>
+            <strong style={{ display: 'block', color: '#0f172a', fontSize: '1rem' }}>Refer & Earn 50 🪙</strong>
+            <span style={{ fontSize: '0.8rem', color: '#64748b' }}>Give 50 coins, get 50!</span>
+          </div>
+          <div style={{ background: '#f1f5f9', padding: '8px 15px', borderRadius: '8px', border: '1px dashed #94a3b8', display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <span style={{ fontWeight: '900', color: '#334155', letterSpacing: '1px' }}>{user?.referralCode || "GET CODE"}</span>
+            <button 
+              onClick={() => {
+                if(user?.referralCode) {
+                  navigator.clipboard.writeText(user.referralCode);
+                  alert("Referral Code Copied! Share it with friends.");
+                } else {
+                  alert("Code not ready. Try logging out and back in!");
+                }
+              }} 
+              style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '1.2rem' }}
+              title="Copy Code"
+            >
+              📋
+            </button>
           </div>
         </div>
 
