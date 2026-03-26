@@ -3,8 +3,11 @@ import React, { useState, useEffect } from 'react';
 export default function UserDashboard({ user, onExit, onLogout }) {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
+  
+  // 🪙 PackIt Coins State
+  const [coinBalance, setCoinBalance] = useState(user?.coins || 0);
 
-  // 🏠 Address Book State (Future-proofing for Delivery)
+  // 🏠 Address Book State
   const [addresses, setAddresses] = useState([
     { id: 1, label: "🏠 Home", detail: `Block A, Near Main Gate, ${user?.pincode}` }
   ]);
@@ -12,6 +15,7 @@ export default function UserDashboard({ user, onExit, onLogout }) {
   const [newAddress, setNewAddress] = useState("");
 
   useEffect(() => {
+    // 1. Fetch User's Orders
     fetch("https://darkslategrey-snail-415133.hostingersite.com/orders")
       .then(res => res.json())
       .then(data => {
@@ -20,7 +24,21 @@ export default function UserDashboard({ user, onExit, onLogout }) {
         setLoading(false);
       })
       .catch(err => setLoading(false));
-  }, [user._id]);
+
+    // 2. Fetch Fresh Coin Balance
+    fetch(`https://darkslategrey-snail-415133.hostingersite.com/users/${user._id}`)
+      .then(res => res.json())
+      .then(data => {
+        if (data && data.coins !== undefined) {
+          setCoinBalance(data.coins);
+          
+          // Update local storage so the rest of the app knows the new balance
+          const updatedUser = { ...user, coins: data.coins };
+          localStorage.setItem("packitout_user", JSON.stringify(updatedUser));
+        }
+      })
+      .catch(err => console.log("Failed to fetch fresh coin balance"));
+  }, [user._id, user]);
 
   // Separate active orders from past orders
   const activeOrders = orders.filter(o => o.status !== "Delivered ✅" && o.status !== "Done 🎉");
@@ -39,7 +57,7 @@ export default function UserDashboard({ user, onExit, onLogout }) {
     <div style={{ backgroundColor: '#f0f4f8', minHeight: '100vh', fontFamily: 'sans-serif', paddingBottom: '40px' }}>
       
       {/* 🟢 PREMIUM HEADER */}
-      <div style={{ background: 'linear-gradient(135deg, #10b981, #059669)', padding: '30px 20px', color: 'white', borderBottomLeftRadius: '25px', borderBottomRightRadius: '25px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', boxShadow: '0 4px 15px rgba(16, 185, 129, 0.3)' }}>
+      <div style={{ background: 'linear-gradient(135deg, #10b981, #059669)', padding: '30px 20px 50px 20px', color: 'white', borderBottomLeftRadius: '25px', borderBottomRightRadius: '25px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', boxShadow: '0 4px 15px rgba(16, 185, 129, 0.3)' }}>
         <div>
           <h2 style={{ margin: '0 0 5px 0', fontSize: '1.8rem' }}>{user?.name || "Customer"}</h2>
           <p style={{ margin: 0, opacity: 0.9, fontSize: '0.9rem' }}>📞 {user?.phone} | 📍 {user?.pincode}</p>
@@ -49,7 +67,20 @@ export default function UserDashboard({ user, onExit, onLogout }) {
         </button>
       </div>
 
-      <div style={{ padding: '20px', maxWidth: '600px', margin: '0 auto' }}>
+      <div style={{ padding: '0 20px 20px 20px', maxWidth: '600px', margin: '0 auto', marginTop: '-30px' }}>
+
+        {/* 🪙 THE LOYALTY COIN BANNER */}
+        <div style={{ background: 'linear-gradient(135deg, #f59e0b, #d97706)', padding: '20px', borderRadius: '16px', color: 'white', display: 'flex', justifyContent: 'space-between', alignItems: 'center', boxShadow: '0 10px 20px rgba(245, 158, 11, 0.3)', marginBottom: '25px' }}>
+          <div>
+            <span style={{ fontSize: '0.9rem', fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: '1px', opacity: 0.9 }}>PackIt Coins</span>
+            <h3 style={{ margin: '5px 0 0 0', fontSize: '2rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
+              🪙 {coinBalance}
+            </h3>
+          </div>
+          <div style={{ textAlign: 'right', fontSize: '0.8rem', opacity: 0.9 }}>
+            Earn 1 coin for<br/>every ₹10 spent!
+          </div>
+        </div>
 
         {/* 🚀 LIVE ORDER TRACKER */}
         {activeOrders.length > 0 && (
@@ -77,7 +108,7 @@ export default function UserDashboard({ user, onExit, onLogout }) {
           </div>
         )}
 
-        {/* 🏠 SAVED ADDRESSES (Ready for Delivery) */}
+        {/* 🏠 SAVED ADDRESSES */}
         <div style={{ marginBottom: '25px' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
             <h3 style={{ color: '#334155', fontSize: '1.1rem', margin: 0 }}>My Addresses</h3>
