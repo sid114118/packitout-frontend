@@ -1,11 +1,9 @@
 import React, { useState, useEffect } from 'react';
 
 export default function ShopDashboard({ user, onExit }) {
-  const [activeTab, setActiveTab] = useState("orders"); // orders, store, add
+  const [activeTab, setActiveTab] = useState("orders");
   const [orders, setOrders] = useState([]);
   const [masterCatalog, setMasterCatalog] = useState([]);
-  
-  // Local state for the shop to instantly reflect changes
   const [shopData, setShopData] = useState(user); 
 
   const BASE_URL = "https://darkslategrey-snail-415133.hostingersite.com";
@@ -19,7 +17,6 @@ export default function ShopDashboard({ user, onExit }) {
     try {
       const res = await fetch(`${BASE_URL}/orders`);
       const allOrders = await res.json();
-      // Filter so they ONLY see their own orders
       setOrders(allOrders.filter(o => o.shopId?._id === shopData._id));
     } catch (err) { console.log(err); }
   };
@@ -31,7 +28,6 @@ export default function ShopDashboard({ user, onExit }) {
     } catch (err) { console.log(err); }
   };
 
-  // 🏪 Toggle Shop Open/Closed
   const toggleShopStatus = async () => {
     const newStatus = !shopData.isOpen;
     try {
@@ -45,7 +41,6 @@ export default function ShopDashboard({ user, onExit }) {
     } catch (err) { console.log(err); }
   };
 
-  // 📜 Update Order Status
   const updateOrderStatus = async (orderId, newStatus) => {
     try {
       const res = await fetch(`${BASE_URL}/orders/${orderId}`, {
@@ -57,7 +52,7 @@ export default function ShopDashboard({ user, onExit }) {
     } catch (err) { console.log(err); }
   };
 
-  // 🛒 Add / Update Inventory Logic
+  // 🛡️ THE FIX: Safe update logic that won't blank out your screen
   const handleInventoryUpdate = async (productId, sellingPrice, inStock = true) => {
     try {
       const res = await fetch(`${BASE_URL}/shops/${shopData._id}/inventory`, {
@@ -65,21 +60,24 @@ export default function ShopDashboard({ user, onExit }) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ productId, sellingPrice: Number(sellingPrice), inStock })
       });
-      const updatedShop = await res.json();
-      setShopData(updatedShop);
-      // Optional: Add a little toast notification here instead of alert if you prefer
-      alert("✅ Store Updated!"); 
+      
+      if (res.ok) {
+        const updatedShop = await res.json();
+        setShopData(updatedShop);
+        alert("✅ Store Updated!"); 
+      } else {
+        const errorData = await res.json();
+        alert("❌ Error: " + (errorData.error || "Failed to update"));
+      }
     } catch (err) { console.log(err); }
   };
 
-  // 🧮 Filter out items the shop already has
   const shopProductIds = shopData.inventory?.filter(i => i.product).map(i => i.product._id) || [];
   const availableToAdd = masterCatalog.filter(m => !shopProductIds.includes(m._id));
 
   return (
     <div style={{ backgroundColor: '#f8fafc', minHeight: '100vh', paddingBottom: '70px', fontFamily: 'sans-serif' }}>
       
-      {/* 🟢 TOP HEADER (Sticky) */}
       <div style={{ backgroundColor: '#0f172a', color: 'white', padding: '15px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', position: 'sticky', top: 0, zIndex: 100, boxShadow: '0 2px 10px rgba(0,0,0,0.1)' }}>
         <div>
           <h2 style={{ margin: 0, fontSize: '1.2rem', color: '#10b981' }}>🏪 {shopData.name}</h2>
@@ -87,7 +85,6 @@ export default function ShopDashboard({ user, onExit }) {
         </div>
         
         <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
-          {/* THE MASTER SWITCH */}
           <button 
             onClick={toggleShopStatus}
             style={{ 
@@ -104,7 +101,6 @@ export default function ShopDashboard({ user, onExit }) {
 
       <div style={{ padding: '15px', maxWidth: '600px', margin: '0 auto' }}>
 
-        {/* --- TAB 1: LIVE ORDERS --- */}
         {activeTab === "orders" && (
           <div>
             <h3 style={{ marginTop: 0, color: '#0f172a' }}>Live Orders ({orders.length})</h3>
@@ -142,7 +138,6 @@ export default function ShopDashboard({ user, onExit }) {
           </div>
         )}
 
-        {/* --- TAB 2: MY STORE (Inventory Manager) --- */}
         {activeTab === "store" && (
           <div>
             <h3 style={{ marginTop: 0, color: '#0f172a' }}>My Store Pricing</h3>
@@ -159,19 +154,27 @@ export default function ShopDashboard({ user, onExit }) {
                   </div>
                   
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', alignItems: 'flex-end' }}>
+                    
+                    {/* 👇 THE FIX: Added a visible Save button to prevent accidental blank saves */}
                     <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
                       <span style={{ fontWeight: 'bold', color: '#64748b' }}>₹</span>
                       <input 
                         type="number" 
+                        id={`price-${item.product._id}`}
                         defaultValue={item.sellingPrice} 
-                        onBlur={(e) => {
-                          if(e.target.value !== String(item.sellingPrice)) {
-                            handleInventoryUpdate(item.product._id, e.target.value, item.inStock)
-                          }
-                        }}
                         style={{ width: '60px', padding: '6px', borderRadius: '6px', border: '1px solid #cbd5e1', textAlign: 'center', fontWeight: 'bold' }}
                       />
+                      <button 
+                        onClick={() => {
+                          const newPrice = document.getElementById(`price-${item.product._id}`).value;
+                          handleInventoryUpdate(item.product._id, newPrice, item.inStock);
+                        }}
+                        style={{ backgroundColor: '#0f172a', color: 'white', border: 'none', padding: '7px 10px', borderRadius: '6px', cursor: 'pointer', fontSize: '0.75rem', fontWeight: 'bold' }}
+                      >
+                        Save
+                      </button>
                     </div>
+
                     <button 
                       onClick={() => handleInventoryUpdate(item.product._id, item.sellingPrice, !item.inStock)}
                       style={{ fontSize: '0.75rem', background: item.inStock ? '#fee2e2' : '#d1fae5', border: 'none', color: item.inStock ? '#b91c1c' : '#059669', fontWeight: 'bold', cursor: 'pointer', padding: '4px 8px', borderRadius: '4px' }}
@@ -185,7 +188,6 @@ export default function ShopDashboard({ user, onExit }) {
           </div>
         )}
 
-        {/* --- TAB 3: ADD PRODUCTS (Master Catalog) --- */}
         {activeTab === "add" && (
           <div>
             <h3 style={{ marginTop: 0, color: '#0f172a' }}>Add from Master List</h3>
@@ -220,7 +222,6 @@ export default function ShopDashboard({ user, onExit }) {
 
       </div>
 
-      {/* 📱 BOTTOM TAB BAR (Mobile App Feel) */}
       <div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, backgroundColor: 'white', borderTop: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-around', padding: '12px 0', zIndex: 100, boxShadow: '0 -2px 10px rgba(0,0,0,0.05)' }}>
         <button onClick={() => setActiveTab("orders")} style={bottomTabStyle(activeTab === "orders")}>
           <span style={{ fontSize: '1.2rem' }}>📦</span><span>Orders</span>
@@ -237,11 +238,9 @@ export default function ShopDashboard({ user, onExit }) {
   );
 }
 
-// Visual Styles
 const cardStyle = { backgroundColor: 'white', padding: '15px', borderRadius: '12px', boxShadow: '0 2px 8px rgba(0,0,0,0.04)', marginBottom: '15px', border: '1px solid #f1f5f9' };
 const bottomTabStyle = (isActive) => ({ 
   background: 'none', border: 'none', fontSize: '0.75rem', fontWeight: 'bold', 
   color: isActive ? '#10b981' : '#94a3b8', display: 'flex', flexDirection: 'column', 
   alignItems: 'center', gap: '4px', cursor: 'pointer', flex: 1
 });
-                
