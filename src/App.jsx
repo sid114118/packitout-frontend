@@ -10,6 +10,9 @@ import ShopLogin from './ShopLogin.jsx';
 import UserDashboard from './UserDashboard.jsx';
 import UserAuth from './UserAuth.jsx';
 
+// 👇 IMPORT OUR NEW DASHBOARD!
+import CustomerDashboard from './CustomerDashboard.jsx'; 
+
 import ProductFeed from './ProductFeed.jsx';
 import Cart from './Cart.jsx';
 
@@ -17,8 +20,6 @@ export default function App() {
   const [currentView, setCurrentView] = useState("customer");
   
   const [isAdminAuthenticated, setIsAdminAuthenticated] = useState(false);
-  
-  // 🏪 This state now stores the WHOLE Shop object once logged in
   const [isShopAuthenticated, setIsShopAuthenticated] = useState(null);
   
   const [loggedInUser, setLoggedInUser] = useState(() => {
@@ -28,7 +29,7 @@ export default function App() {
 
   const [cart, setCart] = useState([]);
 
-  // 🛒 Cart Security Check
+  // 🛒 Cart Security Check (For Guests)
   const handleAddToCart = (product) => {
     if (!loggedInUser) {
       alert("Please log in or sign up to add items to your cart! 🛒");
@@ -63,6 +64,7 @@ export default function App() {
   const handleUserLogin = (userData) => {
     localStorage.setItem("packitout_user", JSON.stringify(userData));
     setLoggedInUser(userData);
+    window.location.hash = ""; // Send them to home page after login
   };
 
   const handleUserLogout = () => {
@@ -80,7 +82,7 @@ export default function App() {
     return <AdminDashboard onExit={() => { setIsAdminAuthenticated(false); window.location.hash = ""; }} />;
   }
 
-  // 2. SHOP VIEW (Corrected Data Handoff)
+  // 2. SHOP VIEW 
   if (currentView === "shop") {
     if (!isShopAuthenticated) {
       return <ShopLogin onLogin={(shopData) => setIsShopAuthenticated(shopData)} />;
@@ -99,7 +101,7 @@ export default function App() {
     return <UserDashboard user={loggedInUser} onExit={() => window.location.hash = ""} onLogout={handleUserLogout} />;
   }
 
-  // 4. CART VIEW
+  // 4. CART VIEW (Legacy Cart for generic feed)
   if (currentView === "cart") {
     return (
       <Cart 
@@ -115,32 +117,34 @@ export default function App() {
   }
 
   // 5. CUSTOMER HOME VIEW
+  // 🚀 THE MAGIC: If they are logged in, show the NEW Custom Store!
+  if (loggedInUser) {
+    return <CustomerDashboard user={loggedInUser} onExit={handleUserLogout} />;
+  }
+
+  // 🧍‍♂️ FOR GUESTS: Show the generic un-priced feed until they log in
   const cartTotalItems = cart.reduce((sum, item) => sum + item.qty, 0);
   const cartTotalPrice = cart.reduce((sum, item) => sum + (item.mrp * item.qty), 0);
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', fontFamily: 'sans-serif', backgroundColor: '#f4f7f6', paddingBottom: cart.length > 0 ? '80px' : '0' }}>
       
-      {/* 👇 UPGRADED: Passing the user data into the Header */}
       <Header user={loggedInUser} />
-      
       <Categories />
       
       <main style={{ flex: 1, padding: '1rem 0 3rem 0', textAlign: 'center' }}>
         <ProductFeed onAddToCart={handleAddToCart} />
         
-        {/* Profile / Login Button */}
         <button 
           onClick={() => window.location.hash = "#account"} 
           style={{ marginTop: '30px', padding: '12px 24px', backgroundColor: '#2f3640', color: 'white', border: 'none', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer', boxShadow: '0 4px 6px rgba(0,0,0,0.1)' }}
         >
-          {loggedInUser ? `Go to My Profile (${loggedInUser.name}) 👤` : "Login / Sign Up 🛒"}
+          Login / Sign Up 🛒
         </button>
       </main>
       
       <Footer />
 
-      {/* Floating Cart Bar */}
       {cart.length > 0 && (
         <div 
           onClick={() => window.location.hash = "#cart"}
