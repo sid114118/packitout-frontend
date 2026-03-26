@@ -1,71 +1,138 @@
 import React, { useState, useEffect } from 'react';
 
 export default function UserDashboard({ user, onExit, onLogout }) {
-  const [myOrders, setMyOrders] = useState([]);
+  const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  // 🛰️ FETCH REAL ORDERS FOR THIS USER
+  // 🏠 Address Book State (Future-proofing for Delivery)
+  const [addresses, setAddresses] = useState([
+    { id: 1, label: "🏠 Home", detail: `Block A, Near Main Gate, ${user?.pincode}` }
+  ]);
+  const [showAddressForm, setShowAddressForm] = useState(false);
+  const [newAddress, setNewAddress] = useState("");
+
   useEffect(() => {
     fetch("https://darkslategrey-snail-415133.hostingersite.com/orders")
       .then(res => res.json())
       .then(data => {
-        // Filter only orders that belong to THIS user
-        const filtered = data.filter(order => order.userId?._id === user._id);
-        setMyOrders(filtered);
+        const myOrders = data.filter(order => order.userId?._id === user._id);
+        setOrders(myOrders);
         setLoading(false);
       })
       .catch(err => setLoading(false));
   }, [user._id]);
 
+  // Separate active orders from past orders
+  const activeOrders = orders.filter(o => o.status !== "Delivered ✅" && o.status !== "Done 🎉");
+  const pastOrders = orders.filter(o => o.status === "Delivered ✅" || o.status === "Done 🎉");
+
+  const handleSaveAddress = (e) => {
+    e.preventDefault();
+    if (newAddress.trim() !== "") {
+      setAddresses([...addresses, { id: Date.now(), label: "📍 Saved", detail: newAddress }]);
+      setNewAddress("");
+      setShowAddressForm(false);
+    }
+  };
+
   return (
-    <div style={{ backgroundColor: '#f4f7f6', minHeight: '100vh', fontFamily: 'sans-serif', paddingBottom: '30px' }}>
+    <div style={{ backgroundColor: '#f0f4f8', minHeight: '100vh', fontFamily: 'sans-serif', paddingBottom: '40px' }}>
       
-      {/* HEADER */}
-      <div style={{ background: 'linear-gradient(135deg, #ff6b6b, #ff4757)', padding: '20px', color: 'white', borderBottomLeftRadius: '20px', borderBottomRightRadius: '20px', display: 'flex', justifyContent: 'space-between' }}>
+      {/* 🟢 PREMIUM HEADER */}
+      <div style={{ background: 'linear-gradient(135deg, #10b981, #059669)', padding: '30px 20px', color: 'white', borderBottomLeftRadius: '25px', borderBottomRightRadius: '25px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', boxShadow: '0 4px 15px rgba(16, 185, 129, 0.3)' }}>
         <div>
-          <h2 style={{ margin: 0 }}>👤 {user.name}</h2>
-          <p style={{ margin: 0, opacity: 0.9 }}>{user.phone} • {user.pincode}</p>
+          <h2 style={{ margin: '0 0 5px 0', fontSize: '1.8rem' }}>{user?.name || "Customer"}</h2>
+          <p style={{ margin: 0, opacity: 0.9, fontSize: '0.9rem' }}>📞 {user?.phone} | 📍 {user?.pincode}</p>
         </div>
-        <button onClick={onExit} style={{ background: 'rgba(255,255,255,0.2)', color: 'white', border: 'none', padding: '8px 15px', borderRadius: '20px', fontWeight: 'bold' }}>Shop</button>
+        <button onClick={onExit} style={{ background: 'rgba(255,255,255,0.2)', color: 'white', border: 'none', padding: '10px 15px', borderRadius: '12px', fontWeight: 'bold', cursor: 'pointer', backdropFilter: 'blur(5px)' }}>
+          Back to Shop
+        </button>
       </div>
 
-      <div style={{ padding: '20px' }}>
-        <button onClick={onLogout} style={{ width: '100%', padding: '12px', background: '#fee2e2', color: '#ef4444', border: 'none', borderRadius: '12px', fontWeight: 'bold', marginBottom: '20px' }}>Log Out</button>
+      <div style={{ padding: '20px', maxWidth: '600px', margin: '0 auto' }}>
 
-        <h3 style={{ color: '#2f3640' }}>📦 My Parchis (Orders)</h3>
+        {/* 🚀 LIVE ORDER TRACKER */}
+        {activeOrders.length > 0 && (
+          <div style={{ marginBottom: '25px' }}>
+            <h3 style={{ color: '#334155', fontSize: '1.1rem', marginBottom: '10px' }}>Live Parchi ⏳</h3>
+            {activeOrders.map((order, i) => (
+              <div key={i} style={{ background: 'white', padding: '20px', borderRadius: '16px', boxShadow: '0 10px 25px rgba(0,0,0,0.05)', border: '2px solid #10b981', position: 'relative', overflow: 'hidden' }}>
+                <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '4px', background: 'linear-gradient(90deg, #10b981, #34d399)' }}></div>
+                
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '15px' }}>
+                  <div>
+                    <span style={{ fontSize: '0.85rem', color: '#64748b', fontWeight: 'bold' }}>ORDER #{order._id.slice(-5).toUpperCase()}</span>
+                    <h4 style={{ margin: '5px 0 0 0', color: '#0f172a', fontSize: '1.2rem' }}>{order.shopId?.name || "Local Shop"}</h4>
+                  </div>
+                  <div style={{ background: '#ecfdf5', color: '#059669', padding: '8px 12px', borderRadius: '8px', fontWeight: '900', fontSize: '0.9rem' }}>
+                    {order.status}
+                  </div>
+                </div>
+                
+                <p style={{ fontSize: '0.9rem', color: '#475569', margin: 0 }}>
+                  <strong>{order.items.length} items</strong> • Total: ₹{order.totalAmount}
+                </p>
+              </div>
+            ))}
+          </div>
+        )}
 
+        {/* 🏠 SAVED ADDRESSES (Ready for Delivery) */}
+        <div style={{ marginBottom: '25px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+            <h3 style={{ color: '#334155', fontSize: '1.1rem', margin: 0 }}>My Addresses</h3>
+            <button onClick={() => setShowAddressForm(!showAddressForm)} style={{ color: '#10b981', background: 'none', border: 'none', fontWeight: 'bold', cursor: 'pointer' }}>+ Add New</button>
+          </div>
+
+          {showAddressForm && (
+            <form onSubmit={handleSaveAddress} style={{ background: 'white', padding: '15px', borderRadius: '12px', marginBottom: '15px', boxShadow: '0 4px 10px rgba(0,0,0,0.02)' }}>
+              <input 
+                type="text" 
+                placeholder="Flat, House no., Building, Landmark" 
+                value={newAddress} 
+                onChange={e => setNewAddress(e.target.value)} 
+                style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid #cbd5e1', marginBottom: '10px', boxSizing: 'border-box' }}
+                required 
+              />
+              <button type="submit" style={{ width: '100%', padding: '10px', background: '#0f172a', color: 'white', border: 'none', borderRadius: '8px', fontWeight: 'bold' }}>Save Address</button>
+            </form>
+          )}
+
+          <div style={{ display: 'flex', gap: '10px', overflowX: 'auto', paddingBottom: '5px' }}>
+            {addresses.map((addr) => (
+              <div key={addr.id} style={{ minWidth: '200px', background: 'white', padding: '15px', borderRadius: '12px', boxShadow: '0 4px 10px rgba(0,0,0,0.03)', border: '1px solid #e2e8f0' }}>
+                <strong style={{ color: '#0f172a', display: 'block', marginBottom: '5px' }}>{addr.label}</strong>
+                <span style={{ color: '#64748b', fontSize: '0.85rem', lineHeight: '1.4' }}>{addr.detail}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* 📜 PAST ORDERS */}
+        <h3 style={{ color: '#334155', fontSize: '1.1rem', marginBottom: '10px' }}>Past Orders</h3>
         {loading ? (
-          <p>Loading your orders...</p>
-        ) : myOrders.length === 0 ? (
-          <div style={{ textAlign: 'center', padding: '40px', color: '#7f8fa6', background: 'white', borderRadius: '15px' }}>
-            <p>No orders yet. Start shopping!</p>
+          <p style={{ color: '#64748b' }}>Loading history...</p>
+        ) : pastOrders.length === 0 ? (
+          <div style={{ background: 'white', padding: '20px', borderRadius: '12px', textAlign: 'center', color: '#94a3b8', border: '1px dashed #cbd5e1' }}>
+            No past orders found.
           </div>
         ) : (
-          myOrders.map((order, index) => (
-            <div key={index} style={{ backgroundColor: 'white', padding: '15px', borderRadius: '15px', marginBottom: '15px', boxShadow: '0 4px 10px rgba(0,0,0,0.05)', borderLeft: '5px solid #10b981' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px' }}>
-                <span style={{ fontWeight: 'bold' }}>Order #{order._id.slice(-5).toUpperCase()}</span>
-                <span style={{ color: '#10b981', fontWeight: 'bold' }}>{order.status}</span>
+          pastOrders.map((order, i) => (
+            <div key={i} style={{ background: 'white', padding: '15px', borderRadius: '12px', marginBottom: '10px', boxShadow: '0 2px 8px rgba(0,0,0,0.03)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div>
+                <strong style={{ color: '#0f172a' }}>{order.shopId?.name || "Local Shop"}</strong>
+                <div style={{ fontSize: '0.8rem', color: '#64748b', marginTop: '3px' }}>{new Date(order.createdAt).toLocaleDateString()} • ₹{order.totalAmount}</div>
               </div>
-              
-              {/* SHOW WHICH SHOP IT WENT TO */}
-              <p style={{ margin: '0 0 10px 0', fontSize: '0.9rem', color: '#7f8fa6' }}>
-                🏪 Shop: <strong>{order.shopId?.name || "Local Mart"}</strong>
-              </p>
-
-              <div style={{ borderTop: '1px dashed #eee', paddingTop: '10px' }}>
-                {order.items.map((item, i) => (
-                  <div key={i} style={{ fontSize: '0.85rem', color: '#2f3640' }}>
-                    {item.emoji} {item.name} x {item.qty}
-                  </div>
-                ))}
-              </div>
-              <div style={{ marginTop: '10px', fontWeight: 'bold', textAlign: 'right' }}>
-                Total: ₹{order.totalAmount}
-              </div>
+              <div style={{ color: '#10b981', fontSize: '1.2rem' }}>✅</div>
             </div>
           ))
         )}
+
+        {/* LOGOUT BUTTON */}
+        <button onClick={onLogout} style={{ width: '100%', padding: '15px', marginTop: '30px', background: '#fee2e2', color: '#b91c1c', border: 'none', borderRadius: '12px', fontWeight: 'bold', fontSize: '1rem', cursor: 'pointer' }}>
+          Log Out
+        </button>
+
       </div>
     </div>
   );
