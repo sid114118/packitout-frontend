@@ -18,6 +18,8 @@ export default function AdminDashboard({ onExit }) {
   // Forms
   const [form, setForm] = useState({ name: "", brand: "", category: "", mrp: "", qnty: "", emoji: "", image: "", searchTags: "" });
   const [shopForm, setShopForm] = useState({ name: "", pincode: "", phone: "", password: "" });
+  // 👇 NEW: State for adding a user manually
+  const [userForm, setUserForm] = useState({ name: "", phone: "", password: "", pincode: "" });
 
   const BASE_URL = "https://darkslategrey-snail-415133.hostingersite.com";
 
@@ -45,7 +47,7 @@ export default function AdminDashboard({ onExit }) {
     setLoading(false);
   };
 
-  // --- ACTIONS ---
+  // --- ADD ACTIONS ---
   const handleAddProduct = async (e) => {
     e.preventDefault();
     await fetch(`${BASE_URL}/master-products`, {
@@ -77,14 +79,52 @@ export default function AdminDashboard({ onExit }) {
     } catch (err) { console.log(err); }
   };
 
-  const openShopDrawer = async (shop) => {
-    setSelectedShop(shop);
-    setLoadingAnalysis(true);
+  const handleAddUser = async (e) => {
+    e.preventDefault();
     try {
-      const res = await fetch(`${BASE_URL}/admin/shop-analysis/${shop._id}`);
-      setShopAnalysis(await res.json());
-    } catch (err) { console.log("Error fetching analysis", err); }
-    setLoadingAnalysis(false);
+      const res = await fetch(`${BASE_URL}/register`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(userForm)
+      });
+      if (res.ok) {
+        setUserForm({ name: "", phone: "", password: "", pincode: "" });
+        fetchData();
+        alert("✅ User Successfully Registered!");
+      } else {
+        const data = await res.json();
+        alert("❌ " + data.error);
+      }
+    } catch (err) { console.log(err); }
+  };
+
+  // --- EDIT ACTIONS ---
+  const handleEditShop = async (shop) => {
+    const newName = prompt("Edit Shop Name:", shop.name);
+    if (newName === null) return; // User clicked Cancel
+    const newPincode = prompt("Edit Pincode:", shop.pincode);
+    const newPhone = prompt("Edit Phone:", shop.phone);
+
+    await fetch(`${BASE_URL}/shops/${shop._id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name: newName, pincode: newPincode, phone: newPhone })
+    });
+    fetchData();
+  };
+
+  const handleEditUser = async (user) => {
+    const newName = prompt("Edit User Name:", user.name);
+    if (newName === null) return; // User clicked Cancel
+    const newPhone = prompt("Edit Phone:", user.phone);
+    const newPincode = prompt("Edit Pincode:", user.pincode);
+
+    await fetch(`${BASE_URL}/users/${user._id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name: newName, phone: newPhone, pincode: newPincode })
+    });
+    fetchData();
   };
 
   const handleEditUserCoins = async (userId, currentCoins) => {
@@ -97,6 +137,17 @@ export default function AdminDashboard({ onExit }) {
       });
       fetchData();
     }
+  };
+
+  // --- VIEW ACTIONS ---
+  const openShopDrawer = async (shop) => {
+    setSelectedShop(shop);
+    setLoadingAnalysis(true);
+    try {
+      const res = await fetch(`${BASE_URL}/admin/shop-analysis/${shop._id}`);
+      setShopAnalysis(await res.json());
+    } catch (err) { console.log("Error fetching analysis", err); }
+    setLoadingAnalysis(false);
   };
 
   return (
@@ -142,7 +193,7 @@ export default function AdminDashboard({ onExit }) {
                <table style={tableStyle}>
                  <thead>
                    <tr style={tableHeaderStyle}>
-                     <th>Preview</th><th>Product Details</th><th>Price</th><th>Actions</th>
+                     <th>Preview</th><th>Product Details</th><th>Price</th>
                    </tr>
                  </thead>
                  <tbody>
@@ -151,9 +202,6 @@ export default function AdminDashboard({ onExit }) {
                        <td style={{ padding: '10px' }}>{p.image ? <img src={p.image} style={{ width: '40px', height: '40px', objectFit: 'contain' }} alt={p.name} /> : <span style={{fontSize: '24px'}}>{p.emoji}</span>}</td>
                        <td style={{ padding: '10px' }}><strong>{p.name}</strong><br/><span style={{ fontSize: '0.8rem', color: '#64748b' }}>{p.brand} | {p.category}</span></td>
                        <td style={{ padding: '10px' }}>₹{p.mrp}</td>
-                       <td style={{ padding: '10px' }}>
-                         <button style={actionBtnStyle('#3b82f6')}>✏️ Edit</button>
-                       </td>
                      </tr>
                    ))}
                  </tbody>
@@ -166,7 +214,7 @@ export default function AdminDashboard({ onExit }) {
         {activeTab === "shops" && (
           <div style={{ display: 'grid', gridTemplateColumns: '350px 1fr', gap: '30px' }}>
             
-            {/* 🆕 ADD SHOP FORM */}
+            {/* ADD SHOP FORM */}
             <div style={cardStyle}>
                <h3 style={{ marginTop: 0 }}>Register New Shop</h3>
                <form onSubmit={handleAddShop} style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
@@ -192,6 +240,7 @@ export default function AdminDashboard({ onExit }) {
                     
                     <div style={{ display: 'flex', gap: '10px' }}>
                       <button onClick={() => openShopDrawer(shop)} style={{ flex: 1, padding: '10px', backgroundColor: '#0f172a', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold' }}>👁️ View Details</button>
+                      <button onClick={() => handleEditShop(shop)} style={{ padding: '10px', backgroundColor: '#f1f5f9', border: '1px solid #cbd5e1', borderRadius: '8px', cursor: 'pointer' }}>✏️ Edit</button>
                     </div>
                   </div>
                 ))}
@@ -202,29 +251,44 @@ export default function AdminDashboard({ onExit }) {
 
         {/* --- TAB 3: USERS DB --- */}
         {activeTab === "users" && (
-          <div style={cardStyle}>
-            <h3 style={{ marginTop: 0 }}>Customer Database ({users.length})</h3>
-            <table style={tableStyle}>
-              <thead>
-                <tr style={tableHeaderStyle}>
-                  <th>User Info</th><th>Contact</th><th>Pincode</th><th>🪙 Coins</th><th>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {users.map(u => (
-                  <tr key={u._id} style={{ borderBottom: '1px solid #f8fafc' }}>
-                    <td style={{ padding: '10px' }}><strong>{u.name || "Guest"}</strong><br/><span style={{ fontSize: '0.8rem', color: '#64748b' }}>Ref: {u.referralCode || 'N/A'}</span></td>
-                    <td style={{ padding: '10px' }}>{u.phone}</td>
-                    <td style={{ padding: '10px' }}>{u.pincode || "Not Set"}</td>
-                    <td style={{ padding: '10px', fontWeight: 'bold', color: '#f59e0b' }}>{u.coins}</td>
-                    <td style={{ padding: '10px', display: 'flex', gap: '10px' }}>
-                      <button onClick={() => handleEditUserCoins(u._id, u.coins)} style={actionBtnStyle('#10b981')}>🪙 Edit Coins</button>
-                      <button style={actionBtnStyle('#3b82f6')}>👁️ View</button>
-                    </td>
+          <div style={{ display: 'grid', gridTemplateColumns: '350px 1fr', gap: '30px' }}>
+            
+            {/* 🆕 ADD USER FORM */}
+            <div style={cardStyle}>
+               <h3 style={{ marginTop: 0 }}>Register New User</h3>
+               <form onSubmit={handleAddUser} style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                 <input type="text" placeholder="Full Name" value={userForm.name} onChange={e => setUserForm({...userForm, name: e.target.value})} style={inputStyle} required />
+                 <input type="text" placeholder="Phone Number" value={userForm.phone} onChange={e => setUserForm({...userForm, phone: e.target.value})} style={inputStyle} required />
+                 <input type="text" placeholder="Pincode" value={userForm.pincode} onChange={e => setUserForm({...userForm, pincode: e.target.value})} style={inputStyle} required />
+                 <input type="text" placeholder="Password" value={userForm.password} onChange={e => setUserForm({...userForm, password: e.target.value})} style={inputStyle} required />
+                 <button type="submit" style={submitBtnStyle}>Register User</button>
+               </form>
+             </div>
+
+            <div style={cardStyle}>
+              <h3 style={{ marginTop: 0 }}>Customer Database ({users.length})</h3>
+              <table style={tableStyle}>
+                <thead>
+                  <tr style={tableHeaderStyle}>
+                    <th>User Info</th><th>Contact</th><th>Pincode</th><th>🪙 Coins</th><th>Actions</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {users.map(u => (
+                    <tr key={u._id} style={{ borderBottom: '1px solid #f8fafc' }}>
+                      <td style={{ padding: '10px' }}><strong>{u.name || "Guest"}</strong><br/><span style={{ fontSize: '0.8rem', color: '#64748b' }}>Ref: {u.referralCode || 'N/A'}</span></td>
+                      <td style={{ padding: '10px' }}>{u.phone}</td>
+                      <td style={{ padding: '10px' }}>{u.pincode || "Not Set"}</td>
+                      <td style={{ padding: '10px', fontWeight: 'bold', color: '#f59e0b' }}>{u.coins}</td>
+                      <td style={{ padding: '10px', display: 'flex', gap: '10px' }}>
+                        <button onClick={() => handleEditUserCoins(u._id, u.coins)} style={actionBtnStyle('#10b981')}>🪙 Coins</button>
+                        <button onClick={() => handleEditUser(u)} style={actionBtnStyle('#3b82f6')}>✏️ Edit</button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
         )}
 
@@ -235,7 +299,7 @@ export default function AdminDashboard({ onExit }) {
             <table style={tableStyle}>
               <thead>
                 <tr style={tableHeaderStyle}>
-                  <th>Order ID</th><th>Customer</th><th>Shop</th><th>Amount</th><th>Status</th><th>Actions</th>
+                  <th>Order ID</th><th>Customer</th><th>Shop</th><th>Amount</th><th>Status</th>
                 </tr>
               </thead>
               <tbody>
@@ -246,7 +310,6 @@ export default function AdminDashboard({ onExit }) {
                     <td style={{ padding: '10px' }}>{o.shopId?.name || "Unknown"}</td>
                     <td style={{ padding: '10px', fontWeight: 'bold' }}>₹{o.totalAmount}</td>
                     <td style={{ padding: '10px' }}><span style={{ padding: '4px 8px', borderRadius: '6px', fontSize: '0.8rem', fontWeight: 'bold', backgroundColor: o.status === 'Delivered ✅' ? '#d1fae5' : '#fef3c7', color: o.status === 'Delivered ✅' ? '#059669' : '#b45309' }}>{o.status}</span></td>
-                    <td style={{ padding: '10px' }}><button style={actionBtnStyle('#0f172a')}>👁️ View Items</button></td>
                   </tr>
                 ))}
               </tbody>
@@ -296,29 +359,4 @@ export default function AdminDashboard({ onExit }) {
                 ) : (
                   shopAnalysis.missingItems.map(item => (
                     <div key={item._id} style={{ display: 'flex', alignItems: 'center', gap: '15px', padding: '10px', border: '1px solid #e2e8f0', borderRadius: '8px' }}>
-                       {item.image ? <img src={item.image} style={{ width: '40px', height: '40px', objectFit: 'contain' }} alt={item.name} /> : <span style={{fontSize: '24px'}}>{item.emoji}</span>}
-                      <div>
-                        <div style={{ fontWeight: 'bold', fontSize: '0.9rem', color: '#334155' }}>{item.name}</div>
-                        <div style={{ fontSize: '0.75rem', color: '#94a3b8' }}>{item.brand} • {item.category}</div>
-                      </div>
-                    </div>
-                  ))
-                )}
-              </div>
-            </>
-          ) : <p>No data available.</p>}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// Styling Helpers
-const tabButtonStyle = (isActive) => ({ backgroundColor: isActive ? '#10b981' : 'transparent', color: isActive ? 'white' : '#94a3b8', border: 'none', padding: '8px 15px', borderRadius: '6px', fontWeight: 'bold', cursor: 'pointer', transition: '0.3s' });
-const cardStyle = { backgroundColor: 'white', padding: '25px', borderRadius: '16px', boxShadow: '0 4px 6px rgba(0,0,0,0.05)' };
-const inputStyle = { width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #e2e8f0', boxSizing: 'border-box' };
-const submitBtnStyle = { backgroundColor: '#10b981', color: 'white', border: 'none', padding: '12px', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer', marginTop: '10px' };
-const tableStyle = { width: '100%', borderCollapse: 'collapse', textAlign: 'left' };
-const tableHeaderStyle = { borderBottom: '2px solid #f1f5f9', color: '#64748b', paddingBottom: '10px' };
-const actionBtnStyle = (color) => ({ background: 'none', border: `1px solid ${color}`, color: color, padding: '4px 10px', borderRadius: '6px', cursor: 'pointer', fontSize: '0.8rem', fontWeight: 'bold' });
-                         
+              
