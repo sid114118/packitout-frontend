@@ -17,7 +17,9 @@ export default function App() {
   const [currentView, setCurrentView] = useState("customer");
   
   const [isAdminAuthenticated, setIsAdminAuthenticated] = useState(false);
-  const [isShopAuthenticated, setIsShopAuthenticated] = useState(false);
+  
+  // 🏪 This state now stores the WHOLE Shop object once logged in
+  const [isShopAuthenticated, setIsShopAuthenticated] = useState(null);
   
   const [loggedInUser, setLoggedInUser] = useState(() => {
     const saved = localStorage.getItem("packitout_user");
@@ -26,6 +28,7 @@ export default function App() {
 
   const [cart, setCart] = useState([]);
 
+  // 🛒 Cart Security Check
   const handleAddToCart = (product) => {
     if (!loggedInUser) {
       alert("Please log in or sign up to add items to your cart! 🛒");
@@ -43,6 +46,7 @@ export default function App() {
     });
   };
 
+  // 🧭 URL Hash Routing
   useEffect(() => {
     const checkUrl = () => {
       if (window.location.hash === "#admin") setCurrentView("admin");
@@ -68,18 +72,34 @@ export default function App() {
     window.location.hash = "";
   };
 
-  if (currentView === "admin" && !isAdminAuthenticated) return <AdminLogin onLogin={() => setIsAdminAuthenticated(true)} />;
-  if (currentView === "admin" && isAdminAuthenticated) return <AdminDashboard onExit={() => { setIsAdminAuthenticated(false); window.location.hash = ""; }} />;
+  // --- VIEW RENDERING LOGIC ---
 
-  if (currentView === "shop" && !isShopAuthenticated) return <ShopLogin onLogin={() => setIsShopAuthenticated(true)} />;
-  if (currentView === "shop" && isShopAuthenticated) return <ShopDashboard onExit={() => { setIsShopAuthenticated(false); window.location.hash = ""; }} />;
+  // 1. ADMIN VIEW
+  if (currentView === "admin") {
+    if (!isAdminAuthenticated) return <AdminLogin onLogin={() => setIsAdminAuthenticated(true)} />;
+    return <AdminDashboard onExit={() => { setIsAdminAuthenticated(false); window.location.hash = ""; }} />;
+  }
 
+  // 2. SHOP VIEW (Corrected Data Handoff)
+  if (currentView === "shop") {
+    if (!isShopAuthenticated) {
+      return <ShopLogin onLogin={(shopData) => setIsShopAuthenticated(shopData)} />;
+    }
+    return (
+      <ShopDashboard 
+        user={isShopAuthenticated} 
+        onExit={() => { setIsShopAuthenticated(null); window.location.hash = ""; }} 
+      />
+    );
+  }
+
+  // 3. USER ACCOUNT VIEW
   if (currentView === "account") {
     if (!loggedInUser) return <UserAuth onLoginSuccess={handleUserLogin} />;
     return <UserDashboard user={loggedInUser} onExit={() => window.location.hash = ""} onLogout={handleUserLogout} />;
   }
 
-  // 👇 THE NEW CART CHECKOUT LOGIC IS RIGHT HERE!
+  // 4. CART VIEW
   if (currentView === "cart") {
     return (
       <Cart 
@@ -87,13 +107,14 @@ export default function App() {
         user={loggedInUser} 
         onBack={() => window.location.hash = ""} 
         onCheckoutSuccess={() => {
-          setCart([]); // Empties the basket!
-          window.location.hash = "#account"; // Sends them to their profile to track it!
+          setCart([]);
+          window.location.hash = "#account";
         }}
       />
     );
   }
 
+  // 5. CUSTOMER HOME VIEW
   const cartTotalItems = cart.reduce((sum, item) => sum + item.qty, 0);
   const cartTotalPrice = cart.reduce((sum, item) => sum + (item.mrp * item.qty), 0);
 
@@ -114,6 +135,7 @@ export default function App() {
       
       <Footer />
 
+      {/* Floating Cart Bar */}
       {cart.length > 0 && (
         <div 
           onClick={() => window.location.hash = "#cart"}
