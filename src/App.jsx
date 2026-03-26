@@ -120,11 +120,16 @@ export default function App() {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', fontFamily: 'sans-serif', backgroundColor: '#f4f7f6', paddingBottom: cart.length > 0 ? '80px' : '0' }}>
-      <Header />
+      
+      {/* 👇 UPGRADED: Passing the user data into the Header */}
+      <Header user={loggedInUser} />
+      
       <Categories />
       
       <main style={{ flex: 1, padding: '1rem 0 3rem 0', textAlign: 'center' }}>
         <ProductFeed onAddToCart={handleAddToCart} />
+        
+        {/* Profile / Login Button */}
         <button 
           onClick={() => window.location.hash = "#account"} 
           style={{ marginTop: '30px', padding: '12px 24px', backgroundColor: '#2f3640', color: 'white', border: 'none', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer', boxShadow: '0 4px 6px rgba(0,0,0,0.1)' }}
