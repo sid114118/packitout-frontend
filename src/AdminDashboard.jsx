@@ -18,7 +18,6 @@ export default function AdminDashboard({ onExit }) {
   // Forms
   const [form, setForm] = useState({ name: "", brand: "", category: "", mrp: "", qnty: "", emoji: "", image: "", searchTags: "" });
   const [shopForm, setShopForm] = useState({ name: "", pincode: "", phone: "", password: "" });
-  // 👇 NEW: State for adding a user manually
   const [userForm, setUserForm] = useState({ name: "", phone: "", password: "", pincode: "" });
 
   const BASE_URL = "https://darkslategrey-snail-415133.hostingersite.com";
@@ -47,7 +46,6 @@ export default function AdminDashboard({ onExit }) {
     setLoading(false);
   };
 
-  // --- ADD ACTIONS ---
   const handleAddProduct = async (e) => {
     e.preventDefault();
     await fetch(`${BASE_URL}/master-products`, {
@@ -98,10 +96,9 @@ export default function AdminDashboard({ onExit }) {
     } catch (err) { console.log(err); }
   };
 
-  // --- EDIT ACTIONS ---
   const handleEditShop = async (shop) => {
     const newName = prompt("Edit Shop Name:", shop.name);
-    if (newName === null) return; // User clicked Cancel
+    if (newName === null) return;
     const newPincode = prompt("Edit Pincode:", shop.pincode);
     const newPhone = prompt("Edit Phone:", shop.phone);
 
@@ -115,7 +112,7 @@ export default function AdminDashboard({ onExit }) {
 
   const handleEditUser = async (user) => {
     const newName = prompt("Edit User Name:", user.name);
-    if (newName === null) return; // User clicked Cancel
+    if (newName === null) return;
     const newPhone = prompt("Edit Phone:", user.phone);
     const newPincode = prompt("Edit Pincode:", user.pincode);
 
@@ -139,7 +136,6 @@ export default function AdminDashboard({ onExit }) {
     }
   };
 
-  // --- VIEW ACTIONS ---
   const openShopDrawer = async (shop) => {
     setSelectedShop(shop);
     setLoadingAnalysis(true);
@@ -153,7 +149,6 @@ export default function AdminDashboard({ onExit }) {
   return (
     <div style={{ backgroundColor: '#f1f5f9', minHeight: '100vh', fontFamily: 'sans-serif', paddingBottom: '50px' }}>
       
-      {/* 🧭 TOP NAV BAR */}
       <nav style={{ backgroundColor: '#0f172a', color: 'white', padding: '15px 30px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', position: 'sticky', top: 0, zIndex: 10 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '30px' }}>
           <h2 style={{ margin: 0, color: '#10b981', fontSize: '1.4rem' }}>PackItOut ADMIN</h2>
@@ -168,8 +163,7 @@ export default function AdminDashboard({ onExit }) {
       </nav>
 
       <div style={{ padding: '30px' }}>
-
-        {/* --- TAB 1: MASTER CATALOG --- */}
+        
         {activeTab === "products" && (
            <div style={{ display: 'grid', gridTemplateColumns: '350px 1fr', gap: '30px' }}>
              <div style={cardStyle}>
@@ -187,7 +181,6 @@ export default function AdminDashboard({ onExit }) {
                  <button type="submit" style={submitBtnStyle}>Add to Database</button>
                </form>
              </div>
- 
              <div style={cardStyle}>
                <h3 style={{ marginTop: 0 }}>Master List ({products.length})</h3>
                <table style={tableStyle}>
@@ -210,23 +203,18 @@ export default function AdminDashboard({ onExit }) {
            </div>
         )}
 
-        {/* --- TAB 2: SHOP PARTNERS --- */}
         {activeTab === "shops" && (
           <div style={{ display: 'grid', gridTemplateColumns: '350px 1fr', gap: '30px' }}>
-            
-            {/* ADD SHOP FORM */}
             <div style={cardStyle}>
                <h3 style={{ marginTop: 0 }}>Register New Shop</h3>
                <form onSubmit={handleAddShop} style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                 <input type="text" placeholder="Shop Name (e.g., Sharma Kirana)" value={shopForm.name} onChange={e => setShopForm({...shopForm, name: e.target.value})} style={inputStyle} required />
-                 <input type="text" placeholder="Pincode (e.g., 400001)" value={shopForm.pincode} onChange={e => setShopForm({...shopForm, pincode: e.target.value})} style={inputStyle} required />
-                 <input type="text" placeholder="Phone Number (Login ID)" value={shopForm.phone} onChange={e => setShopForm({...shopForm, phone: e.target.value})} style={inputStyle} required />
+                 <input type="text" placeholder="Shop Name" value={shopForm.name} onChange={e => setShopForm({...shopForm, name: e.target.value})} style={inputStyle} required />
+                 <input type="text" placeholder="Pincode" value={shopForm.pincode} onChange={e => setShopForm({...shopForm, pincode: e.target.value})} style={inputStyle} required />
+                 <input type="text" placeholder="Phone Number" value={shopForm.phone} onChange={e => setShopForm({...shopForm, phone: e.target.value})} style={inputStyle} required />
                  <input type="text" placeholder="Password" value={shopForm.password} onChange={e => setShopForm({...shopForm, password: e.target.value})} style={inputStyle} required />
                  <button type="submit" style={submitBtnStyle}>Register Partner</button>
                </form>
              </div>
-
-            {/* SHOP LIST GRID */}
             <div style={cardStyle}>
               <h3 style={{ marginTop: 0 }}>Registered Shops ({shops.length})</h3>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '20px' }}>
@@ -237,7 +225,6 @@ export default function AdminDashboard({ onExit }) {
                       <span style={{ fontSize: '0.8rem', padding: '3px 8px', borderRadius: '12px', background: shop.isOpen ? '#d1fae5' : '#fee2e2', color: shop.isOpen ? '#059669' : '#b91c1c' }}>{shop.isOpen ? '🟢 Open' : '🔴 Closed'}</span>
                     </div>
                     <p style={{ margin: 0, fontSize: '0.85rem', color: '#64748b', marginBottom: '15px' }}>📍 {shop.pincode} | 📞 {shop.phone}</p>
-                    
                     <div style={{ display: 'flex', gap: '10px' }}>
                       <button onClick={() => openShopDrawer(shop)} style={{ flex: 1, padding: '10px', backgroundColor: '#0f172a', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold' }}>👁️ View Details</button>
                       <button onClick={() => handleEditShop(shop)} style={{ padding: '10px', backgroundColor: '#f1f5f9', border: '1px solid #cbd5e1', borderRadius: '8px', cursor: 'pointer' }}>✏️ Edit</button>
@@ -249,11 +236,8 @@ export default function AdminDashboard({ onExit }) {
           </div>
         )}
 
-        {/* --- TAB 3: USERS DB --- */}
         {activeTab === "users" && (
           <div style={{ display: 'grid', gridTemplateColumns: '350px 1fr', gap: '30px' }}>
-            
-            {/* 🆕 ADD USER FORM */}
             <div style={cardStyle}>
                <h3 style={{ marginTop: 0 }}>Register New User</h3>
                <form onSubmit={handleAddUser} style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
@@ -264,7 +248,6 @@ export default function AdminDashboard({ onExit }) {
                  <button type="submit" style={submitBtnStyle}>Register User</button>
                </form>
              </div>
-
             <div style={cardStyle}>
               <h3 style={{ marginTop: 0 }}>Customer Database ({users.length})</h3>
               <table style={tableStyle}>
@@ -292,7 +275,6 @@ export default function AdminDashboard({ onExit }) {
           </div>
         )}
 
-        {/* --- TAB 4: GLOBAL ORDERS --- */}
         {activeTab === "orders" && (
           <div style={cardStyle}>
             <h3 style={{ marginTop: 0 }}>Global Order Pulse ({orders.length})</h3>
@@ -319,12 +301,10 @@ export default function AdminDashboard({ onExit }) {
 
       </div>
 
-      {/* ⬛ DRAWER OVERLAY */}
       {selectedShop && (
         <div onClick={() => setSelectedShop(null)} style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 1000 }} />
       )}
 
-      {/* 📲 GAP ANALYSIS DRAWER */}
       <div style={{
         position: 'fixed', top: 0, right: selectedShop ? 0 : '-450px', width: '400px', height: '100vh', 
         backgroundColor: 'white', zIndex: 1001, boxShadow: '-5px 0 20px rgba(0,0,0,0.1)', 
@@ -359,4 +339,16 @@ export default function AdminDashboard({ onExit }) {
                 ) : (
                   shopAnalysis.missingItems.map(item => (
                     <div key={item._id} style={{ display: 'flex', alignItems: 'center', gap: '15px', padding: '10px', border: '1px solid #e2e8f0', borderRadius: '8px' }}>
-              
+                       {item.image ? <img src={item.image} style={{ width: '40px', height: '40px', objectFit: 'contain' }} alt={item.name} /> : <span style={{fontSize: '24px'}}>{item.emoji}</span>}
+                      <div>
+                        <div style={{ fontWeight: 'bold', fontSize: '0.9rem', color: '#334155' }}>{item.name}</div>
+                        <div style={{ fontSize: '0.75rem', color: '#94a3b8' }}>{item.brand} • {item.category}</div>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </>
+          ) : <p>No data available.</p>}
+        </div>
+      
