@@ -351,4 +351,16 @@ export default function AdminDashboard({ onExit }) {
             </>
           ) : <p>No data available.</p>}
         </div>
-      
+      </div>
+    </div>
+  );
+}
+
+// Styling Helpers
+const tabButtonStyle = (isActive) => ({ backgroundColor: isActive ? '#10b981' : 'transparent', color: isActive ? 'white' : '#94a3b8', border: 'none', padding: '8px 15px', borderRadius: '6px', fontWeight: 'bold', cursor: 'pointer', transition: '0.3s' });
+const cardStyle = { backgroundColor: 'white', padding: '25px', borderRadius: '16px', boxShadow: '0 4px 6px rgba(0,0,0,0.05)' };
+const inputStyle = { width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #e2e8f0', boxSizing: 'border-box' };
+const submitBtnStyle = { backgroundColor: '#10b981', color: 'white', border: 'none', padding: '12px', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer', marginTop: '10px' };
+const tableStyle = { width: '100%', borderCollapse: 'collapse', textAlign: 'left' };
+const tableHeaderStyle = { borderBottom: '2px solid #f1f5f9', color: '#64748b', paddingBottom: '10px' };
+const actionBtnStyle = (color) => ({ background: 'none', border: `1px solid ${color}`, color: color, padding: '4px 10px', borderRadius: '6px', cursor: 'pointer', fontSize: '0.8rem', fontWeight: 'bold' });
