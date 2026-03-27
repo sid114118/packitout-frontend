@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 
-// 👇 Now receives searchQuery as a prop!
 export default function ProductFeed({ user, onAddToCart, selectedCategory, onClearCategory, searchQuery }) {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -128,7 +127,6 @@ export default function ProductFeed({ user, onAddToCart, selectedCategory, onCle
       return nameMatch || brandMatch;
     });
   }
-
   return (
     <div style={{ padding: '0 15px', maxWidth: '1000px', margin: '0 auto', overflowX: 'hidden' }}>
       <style>{`.hide-scroll::-webkit-scrollbar { display: none; } .hide-scroll { -ms-overflow-style: none; scrollbar-width: none; }`}</style>
@@ -219,13 +217,8 @@ export default function ProductFeed({ user, onAddToCart, selectedCategory, onCle
               <div className="hide-scroll" style={carouselRowStyle}>{shopBestSellers.map(item => <ProductCard key={item._id} item={item} isCarousel={true} />)}</div>
             </div>
           )}
-
-          <div style={{ textAlign: 'left', borderTop: '2px solid #e2e8f0', paddingTop: '20px' }}>
-            <h3 style={{ color: '#0f172a', marginBottom: '15px' }}>Explore All Products</h3>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: '15px' }}>
-              {items.map(item => <ProductCard key={item._id} item={item} isCarousel={false} />)}
-            </div>
-          </div>
+          
+          {/* Note: The "Explore All Products" section has been successfully deleted! */}
         </>
       )}
     </div>
@@ -239,4 +232,4 @@ const sectionHeaderStyle = { color: '#0f172a', marginTop: 0, marginBottom: '12px
 const addBtnStyle = { width: '100%', padding: '8px', backgroundColor: '#10b981', color: 'white', border: 'none', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer', textTransform: 'uppercase', boxShadow: '0 2px 4px rgba(16, 185, 129, 0.2)' };
 const disabledBtnStyle = { width: '100%', padding: '8px', backgroundColor: '#f1f5f9', color: '#cbd5e1', border: '2px solid #cbd5e1', borderRadius: '8px', fontWeight: 'bold', cursor: 'not-allowed', textTransform: 'uppercase' };
 const outOfStockBtnStyle = { width: '100%', padding: '8px', backgroundColor: '#f1f5f9', color: '#94a3b8', border: '2px solid #e2e8f0', borderRadius: '8px', fontWeight: 'bold', cursor: 'not-allowed' };
-                                                                                              
+
