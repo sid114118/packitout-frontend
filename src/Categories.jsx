@@ -1,15 +1,14 @@
 import React from 'react';
 
 export default function Categories({ onCategorySelect }) {
-  // 🚀 REORGANIZED & RENAMED FOR PACKITOUT'S UNIQUE BRAND
   const menuData = [
     {
       sectionTitle: "Daily Fresh & Staples",
       items: [
-        { name: "Dairy, Bread & Eggs", icon: "🥛" }, // Moved to #1 (Highest frequency purchase!)
+        { name: "Dairy, Bread & Eggs", icon: "🥛" }, 
         { name: "Fruits & Veg", icon: "🍎" },
         { name: "Atta, Rice & Dal", icon: "🌾" },
-        { name: "Instant Food", icon: "🍜" },       // Moved up for quick meals
+        { name: "Instant Food", icon: "🍜" },       
         { name: "Chicken, Meat & Fish", icon: "🍗" },
         { name: "Oil, Ghee & Masala", icon: "🍶" },
         { name: "Dry Fruits & Cereals", icon: "🥣" },
@@ -20,23 +19,22 @@ export default function Categories({ onCategorySelect }) {
       sectionTitle: "Munchies & Refreshments",
       items: [
         { name: "Chips & Namkeen", icon: "🥨" },
-        { name: "Drinks & Juices", icon: "🥤" },     // Moved up next to chips
+        { name: "Drinks & Juices", icon: "🥤" },     
         { name: "Sweets & Chocolates", icon: "🍫" },
-        { name: "Ice Creams", icon: "🍦" },          // Moved up for impulse buys
+        { name: "Ice Creams", icon: "🍦" },          
         { name: "Tea & Coffee", icon: "☕" },
         { name: "Sauces & Spreads", icon: "🍯" },
         { name: "Paan Corner", icon: "🍃" }
-        { name: "Kitchen Appliances", icon: "🍳" }
       ]
     },
     {
       sectionTitle: "Home, Health & Utilities",
       items: [
         { name: "Bath & Body", icon: "🧼" },
-        { name: "Cleaners & Repellents", icon: "🧽" }, // Grouped cleaning together
+        { name: "Cleaners & Repellents", icon: "🧽" }, 
         { name: "Hair Care", icon: "🧴" },
         { name: "Health & Pharma", icon: "💊" },
-             // Moved to home utilities
+        { name: "Kitchen Appliances", icon: "🍳" }     
       ]
     }
   ];
@@ -82,7 +80,7 @@ export default function Categories({ onCategorySelect }) {
           </h3>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '15px 10px' }}>
             {section.items.map((item, itemIndex) => (
-              <div key={itemIndex} onClick={() => onCategorySelect(item.name)} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', cursor: 'pointer' }}>
+              <div key={itemIndex} onClick={() => onCategorySelect && onCategorySelect(item.name)} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', cursor: 'pointer' }}>
                 <div style={{ backgroundColor: '#ffffff', borderRadius: '18px', width: '70px', height: '70px', display: 'flex', justifyContent: 'center', alignItems: 'center', fontSize: '2.2rem', boxShadow: '0 4px 10px rgba(0,0,0,0.06)', border: '1px solid #f0f0f0', marginBottom: '8px' }}>
                   {item.icon}
                 </div>
