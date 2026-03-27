@@ -18,6 +18,7 @@ export default function ProductFeed({ user, onAddToCart }) {
       try {
         if (user && user.primaryShop) {
           const shopId = typeof user.primaryShop === 'object' ? user.primaryShop._id : user.primaryShop;
+          // Added cache-busting timestamp so deals update instantly
           const res = await fetch(`${BASE_URL}/shops/${shopId}/menu?t=${new Date().getTime()}`);
           const shopData = await res.json();
           
@@ -36,21 +37,21 @@ export default function ProductFeed({ user, onAddToCart }) {
           
           setItems(availableItems);
 
-          // 🧮 CAROUSEL LOGIC: Top Deals (Highest discount percentage)
+          // 🧮 CAROUSEL 1: Top Deals (Calculates highest discount percentage)
           const deals = [...availableItems]
             .filter(i => i.isDiscounted && i.inStock)
             .sort((a, b) => b.discountPercent - a.discountPercent)
-            .slice(0, 6);
+            .slice(0, 6); // Shows top 6 deals
           setShopDeals(deals);
 
-          // 🧮 CAROUSEL LOGIC: Bestsellers (In-stock essentials)
+          // 🧮 CAROUSEL 2: Bestsellers (Just pulling first 6 in-stock for now)
           const bestSellers = [...availableItems]
             .filter(i => i.inStock)
             .slice(0, 6);
           setShopBestSellers(bestSellers);
 
         } else {
-          // GUEST VIEW
+          // 🧍‍♂️ GUEST VIEW
           setShopInfo(null);
           const res = await fetch(`${BASE_URL}/master-products`);
           const masterData = await res.json();
@@ -60,6 +61,8 @@ export default function ProductFeed({ user, onAddToCart }) {
           }));
           
           setItems(formattedItems);
+          
+          // Show trending master items for guests
           setTrendingPlatform(formattedItems.slice(0, 6)); 
         }
       } catch (err) { console.log(err); }
@@ -71,6 +74,7 @@ export default function ProductFeed({ user, onAddToCart }) {
 
   if (loading) return <div style={{ padding: '40px', textAlign: 'center', color: '#64748b' }}>Loading fresh products...</div>;
 
+  // --- REUSABLE PRODUCT CARD COMPONENT ---
   const ProductCard = ({ item, isCarousel }) => {
     const isOutOfStock = !item.inStock;
     const shopClosed = shopInfo && !shopInfo.isOpen;
@@ -115,6 +119,7 @@ export default function ProductFeed({ user, onAddToCart }) {
         .hide-scroll { -ms-overflow-style: none; scrollbar-width: none; }
       `}</style>
 
+      {/* 🏪 TOP SHOP BADGE */}
       {shopInfo && (
         <div style={{ backgroundColor: '#fff', padding: '10px 20px', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '10px', boxShadow: '0 2px 4px rgba(0,0,0,0.05)', marginBottom: '25px', borderRadius: '8px' }}>
           <span style={{ fontSize: '0.9rem', color: '#64748b' }}>Shopping from:</span>
@@ -125,6 +130,7 @@ export default function ProductFeed({ user, onAddToCart }) {
         </div>
       )}
 
+      {/* 🚀 CAROUSEL 1: PACKITOUT TRENDING (Guests Only) */}
       {!shopInfo && trendingPlatform.length > 0 && (
         <div style={{ marginBottom: '30px', textAlign: 'left' }}>
           <h3 style={{ color: '#0f172a', marginBottom: '10px', display: 'flex', alignItems: 'center', gap: '8px' }}>🚀 Trending on PackItOut</h3>
@@ -134,6 +140,7 @@ export default function ProductFeed({ user, onAddToCart }) {
         </div>
       )}
 
+      {/* 🔥 CAROUSEL 2: SHOP MEGA STEALS */}
       {shopInfo && shopDeals.length > 0 && (
         <div style={{ marginBottom: '30px', textAlign: 'left' }}>
           <h3 style={{ color: '#ef4444', marginBottom: '10px', display: 'flex', alignItems: 'center', gap: '8px' }}>🔥 {shopInfo.name} Mega Steals</h3>
@@ -143,6 +150,7 @@ export default function ProductFeed({ user, onAddToCart }) {
         </div>
       )}
 
+      {/* 👑 CAROUSEL 3: SHOP BESTSELLERS */}
       {shopInfo && shopBestSellers.length > 0 && (
         <div style={{ marginBottom: '30px', textAlign: 'left', backgroundColor: '#f8fafc', padding: '15px', borderRadius: '12px', border: '1px dashed #cbd5e1' }}>
           <h3 style={{ color: '#0f172a', marginTop: 0, marginBottom: '10px', display: 'flex', alignItems: 'center', gap: '8px' }}>👑 Top Selling Today</h3>
@@ -152,6 +160,7 @@ export default function ProductFeed({ user, onAddToCart }) {
         </div>
       )}
 
+      {/* 📦 THE MAIN ALL-PRODUCTS GRID */}
       <div style={{ textAlign: 'left' }}>
         <h3 style={{ color: '#0f172a', marginBottom: '15px' }}>Explore All Products</h3>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: '15px' }}>
@@ -163,9 +172,12 @@ export default function ProductFeed({ user, onAddToCart }) {
   );
 }
 
+// --- CSS STYLES ---
 const productCardStyle = { backgroundColor: 'white', padding: '15px', borderRadius: '12px', boxShadow: '0 4px 10px rgba(0,0,0,0.05)', border: '1px solid #e2e8f0', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', position: 'relative', scrollSnapAlign: 'start' };
+
+// 🪄 THE HORIZONTAL SWIPE MAGIC
 const carouselRowStyle = { display: 'flex', overflowX: 'auto', gap: '15px', paddingBottom: '15px', scrollSnapType: 'x mandatory', WebkitOverflowScrolling: 'touch' };
+
 const addBtnStyle = { width: '100%', padding: '10px', backgroundColor: '#10b981', color: 'white', border: 'none', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer', textTransform: 'uppercase', boxShadow: '0 2px 4px rgba(16, 185, 129, 0.3)' };
 const disabledBtnStyle = { width: '100%', padding: '10px', backgroundColor: '#f1f5f9', color: '#cbd5e1', border: '2px solid #cbd5e1', borderRadius: '8px', fontWeight: 'bold', cursor: 'not-allowed', textTransform: 'uppercase' };
 const outOfStockBtnStyle = { width: '100%', padding: '10px', backgroundColor: '#f1f5f9', color: '#94a3b8', border: '2px solid #e2e8f0', borderRadius: '8px', fontWeight: 'bold', cursor: 'not-allowed' };
-                          
