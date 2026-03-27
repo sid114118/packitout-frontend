@@ -17,8 +17,10 @@ export default function App() {
   const [isAdminAuthenticated, setIsAdminAuthenticated] = useState(false);
   const [isShopAuthenticated, setIsShopAuthenticated] = useState(null);
   
-  // 👇 NEW: State to track if a category is clicked
   const [selectedCategory, setSelectedCategory] = useState(null); 
+  
+  // 🔍 NEW: Search state moved to the top level!
+  const [searchQuery, setSearchQuery] = useState("");
   
   const [loggedInUser, setLoggedInUser] = useState(() => {
     const saved = localStorage.getItem("packitout_user");
@@ -51,7 +53,8 @@ export default function App() {
       else if (window.location.hash === "#cart") setCurrentView("cart");
       else {
         setCurrentView("customer");
-        setSelectedCategory(null); // Reset category when going to home
+        setSelectedCategory(null);
+        setSearchQuery(""); // Clear search when returning home
       }
     };
     checkUrl();
@@ -94,22 +97,41 @@ export default function App() {
   const cartTotalItems = cart.reduce((sum, item) => sum + item.qty, 0);
   const cartTotalPrice = cart.reduce((sum, item) => sum + (item.mrp * item.qty), 0);
 
+  // --- MAIN HOME PAGE ROUTE ---
   return (
     <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', fontFamily: 'sans-serif', backgroundColor: '#f4f7f6', paddingBottom: cart.length > 0 ? '80px' : '0' }}>
       
       <Header user={loggedInUser} />
+
+      {/* 🔍 THE GLOBAL SEARCH BAR (Right under the header!) */}
+      <div style={{ position: 'sticky', top: 0, zIndex: 100, backgroundColor: '#f4f7f6', padding: '10px 15px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', backgroundColor: '#ffffff', borderRadius: '12px', padding: '10px 15px', boxShadow: '0 4px 10px rgba(0,0,0,0.05)', border: '1px solid #e2e8f0' }}>
+          <span style={{ fontSize: '1.2rem', marginRight: '10px', color: '#94a3b8' }}>🔍</span>
+          <input 
+            type="text" 
+            placeholder='Search "Maggi", "Milk", "Chips"...'
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            style={{ border: 'none', outline: 'none', width: '100%', fontSize: '1rem', color: '#0f172a', backgroundColor: 'transparent' }}
+          />
+          {searchQuery && (
+            <button onClick={() => setSearchQuery("")} style={{ background: 'none', border: 'none', fontSize: '1.2rem', color: '#94a3b8', cursor: 'pointer' }}>✖</button>
+          )}
+        </div>
+      </div>
       
-      {/* 👇 Hides categories if a specific one is selected */}
-      {!selectedCategory && <Categories onCategorySelect={setSelectedCategory} />}
+      {/* 👇 Hides categories if a category is selected OR if the user is typing a search! */}
+      {!selectedCategory && !searchQuery && <Categories onCategorySelect={setSelectedCategory} />}
       
       <main style={{ flex: 1, padding: '1rem 0 3rem 0', textAlign: 'center' }}>
         
-        {/* 👇 Pass the category data into the Feed! */}
+        {/* Pass searchQuery down to the feed so it can filter products */}
         <ProductFeed 
           user={loggedInUser} 
           onAddToCart={handleAddToCart} 
           selectedCategory={selectedCategory} 
           onClearCategory={() => setSelectedCategory(null)} 
+          searchQuery={searchQuery}
         />
         
         <button onClick={() => window.location.hash = "#account"} style={{ marginTop: '30px', padding: '12px 24px', backgroundColor: '#2f3640', color: 'white', border: 'none', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer', boxShadow: '0 4px 6px rgba(0,0,0,0.1)' }}>
