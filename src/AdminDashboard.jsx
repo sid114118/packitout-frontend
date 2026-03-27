@@ -22,6 +22,15 @@ export default function AdminDashboard({ onExit }) {
 
   const BASE_URL = "https://darkslategrey-snail-415133.hostingersite.com";
 
+  // 🚀 NEW: The exact categories from your frontend layout!
+  const CATEGORIES = [
+    "Dairy, Bread & Eggs", "Fruits & Veg", "Atta, Rice & Dal", "Chicken, Meat & Fish", 
+    "Oil, Ghee & Masala", "Dry Fruits & Cereals", "Bakery & Biscuits", "Kitchen Appliances",
+    "Chips & Namkeen", "Drinks & Juices", "Sweets & Chocolates", "Ice Creams",
+    "Tea & Coffee", "Instant Food", "Sauces & Spreads", "Paan Corner",
+    "Bath & Body", "Cleaners & Repellents", "Hair Care", "Health & Pharma"
+  ];
+
   useEffect(() => {
     fetchData();
   }, [activeTab]);
@@ -171,7 +180,20 @@ export default function AdminDashboard({ onExit }) {
                <form onSubmit={handleAddProduct} style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                  <input type="text" placeholder="Product Name" value={form.name} onChange={e => setForm({...form, name: e.target.value})} style={inputStyle} required />
                  <input type="text" placeholder="Brand Name" value={form.brand} onChange={e => setForm({...form, brand: e.target.value})} style={inputStyle} required />
-                 <input type="text" placeholder="Category" value={form.category} onChange={e => setForm({...form, category: e.target.value})} style={inputStyle} required />
+                 
+                 {/* 👇 NEW: The Dropdown Menu for Categories */}
+                 <select 
+                   value={form.category} 
+                   onChange={e => setForm({...form, category: e.target.value})} 
+                   style={{ ...inputStyle, cursor: 'pointer', appearance: 'auto' }} 
+                   required
+                 >
+                   <option value="" disabled>Select a Category...</option>
+                   {CATEGORIES.map(cat => (
+                     <option key={cat} value={cat}>{cat}</option>
+                   ))}
+                 </select>
+
                  <div style={{ display: 'flex', gap: '10px' }}>
                    <input type="number" placeholder="MRP" value={form.mrp} onChange={e => setForm({...form, mrp: e.target.value})} style={inputStyle} required />
                    <input type="text" placeholder="Qty" value={form.qnty} onChange={e => setForm({...form, qnty: e.target.value})} style={inputStyle} required />
@@ -359,7 +381,7 @@ export default function AdminDashboard({ onExit }) {
 // Styling Helpers
 const tabButtonStyle = (isActive) => ({ backgroundColor: isActive ? '#10b981' : 'transparent', color: isActive ? 'white' : '#94a3b8', border: 'none', padding: '8px 15px', borderRadius: '6px', fontWeight: 'bold', cursor: 'pointer', transition: '0.3s' });
 const cardStyle = { backgroundColor: 'white', padding: '25px', borderRadius: '16px', boxShadow: '0 4px 6px rgba(0,0,0,0.05)' };
-const inputStyle = { width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #e2e8f0', boxSizing: 'border-box' };
+const inputStyle = { width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #e2e8f0', boxSizing: 'border-box', fontFamily: 'inherit' };
 const submitBtnStyle = { backgroundColor: '#10b981', color: 'white', border: 'none', padding: '12px', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer', marginTop: '10px' };
 const tableStyle = { width: '100%', borderCollapse: 'collapse', textAlign: 'left' };
 const tableHeaderStyle = { borderBottom: '2px solid #f1f5f9', color: '#64748b', paddingBottom: '10px' };
