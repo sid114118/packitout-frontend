@@ -26,6 +26,7 @@ export default function Categories({ onCategorySelect }) {
         { name: "Tea & Coffee", icon: "☕" },
         { name: "Sauces & Spreads", icon: "🍯" },
         { name: "Paan Corner", icon: "🍃" }
+        { name: "Kitchen Appliances", icon: "🍳" }
       ]
     },
     {
@@ -35,7 +36,7 @@ export default function Categories({ onCategorySelect }) {
         { name: "Cleaners & Repellents", icon: "🧽" }, // Grouped cleaning together
         { name: "Hair Care", icon: "🧴" },
         { name: "Health & Pharma", icon: "💊" },
-        { name: "Kitchen Appliances", icon: "🍳" }     // Moved to home utilities
+             // Moved to home utilities
       ]
     }
   ];
