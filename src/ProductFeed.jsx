@@ -9,6 +9,12 @@ export default function ProductFeed({ user, onAddToCart }) {
   const [shopDeals, setShopDeals] = useState([]);
   const [shopBestSellers, setShopBestSellers] = useState([]);
   const [trendingPlatform, setTrendingPlatform] = useState([]);
+  
+  // 🚀 NEW: The 4 Power-Carousels
+  const [under99, setUnder99] = useState([]);
+  const [timeBased, setTimeBased] = useState({ title: "", items: [] });
+  const [newArrivals, setNewArrivals] = useState([]);
+  const [buyItAgain, setBuyItAgain] = useState([]);
 
   const BASE_URL = "https://darkslategrey-snail-415133.hostingersite.com";
 
@@ -18,7 +24,6 @@ export default function ProductFeed({ user, onAddToCart }) {
       try {
         if (user && user.primaryShop) {
           const shopId = typeof user.primaryShop === 'object' ? user.primaryShop._id : user.primaryShop;
-          // Added cache-busting timestamp so deals update instantly
           const res = await fetch(`${BASE_URL}/shops/${shopId}/menu?t=${new Date().getTime()}`);
           const shopData = await res.json();
           
@@ -37,32 +42,60 @@ export default function ProductFeed({ user, onAddToCart }) {
           
           setItems(availableItems);
 
-          // 🧮 CAROUSEL 1: Top Deals (Calculates highest discount percentage)
-          const deals = [...availableItems]
-            .filter(i => i.isDiscounted && i.inStock)
-            .sort((a, b) => b.discountPercent - a.discountPercent)
-            .slice(0, 6); // Shows top 6 deals
-          setShopDeals(deals);
+          // 1. TOP DEALS
+          setShopDeals([...availableItems].filter(i => i.isDiscounted && i.inStock).sort((a, b) => b.discountPercent - a.discountPercent).slice(0, 6));
 
-          // 🧮 CAROUSEL 2: Bestsellers (Just pulling first 6 in-stock for now)
-          const bestSellers = [...availableItems]
-            .filter(i => i.inStock)
-            .slice(0, 6);
-          setShopBestSellers(bestSellers);
+          // 2. BESTSELLERS
+          setShopBestSellers([...availableItems].filter(i => i.inStock).slice(0, 6));
+
+          // 3. UNDER ₹99 STORE
+          setUnder99([...availableItems].filter(i => i.sellingPrice > 0 && i.sellingPrice < 100 && i.inStock).slice(0, 8));
+
+          // 4. FRESHLY RESTOCKED (Reverses the array to show newest additions)
+          setNewArrivals([...availableItems].reverse().filter(i => i.inStock).slice(0, 8));
+
+          // 5. BUY IT AGAIN (Placeholder: Shuffles items. We will link this to real DB later!)
+          setBuyItAgain([...availableItems].filter(i => i.inStock).sort(() => 0.5 - Math.random()).slice(0, 6));
+
+          // 6. THE TIME-TRAVEL CAROUSEL 🕰️
+          const hour = new Date().getHours();
+          let timeTitle = "";
+          let keywords = [];
+
+          if (hour >= 5 && hour < 11) {
+            timeTitle = "🌤️ Good Morning! Breakfast & Dairy";
+            keywords = ["dairy", "bread", "milk", "eggs", "breakfast", "tea", "coffee"];
+          } else if (hour >= 11 && hour < 16) {
+            timeTitle = "⚡ Mid-Day Energy Boost";
+            keywords = ["snacks", "drinks", "beverages", "chips", "biscuit", "juice"];
+          } else if (hour >= 16 && hour < 22) {
+            timeTitle = "🌙 Evening Cravings";
+            keywords = ["ice cream", "maggi", "noodles", "chocolate", "chips", "dinner"];
+          } else {
+            timeTitle = "🦉 Late Night Essentials";
+            keywords = ["snacks", "beverages", "noodles", "condoms", "personal"];
+          }
+
+          // Search inventory for matching keywords
+          const matchedItems = availableItems.filter(i => {
+            const cat = (i.category || "").toLowerCase();
+            const name = (i.name || "").toLowerCase();
+            return i.inStock && keywords.some(kw => cat.includes(kw) || name.includes(kw));
+          });
+
+          // If no matches found for the time of day, fall back to random popular items
+          setTimeBased({
+            title: timeTitle,
+            items: matchedItems.length > 0 ? matchedItems.slice(0, 8) : availableItems.filter(i => i.inStock).slice(0, 8)
+          });
 
         } else {
-          // 🧍‍♂️ GUEST VIEW
+          // GUEST VIEW
           setShopInfo(null);
           const res = await fetch(`${BASE_URL}/master-products`);
           const masterData = await res.json();
-          
-          const formattedItems = masterData.map(p => ({
-            ...p, sellingPrice: p.mrp, isDiscounted: false, discountPercent: 0, inStock: true
-          }));
-          
+          const formattedItems = masterData.map(p => ({ ...p, sellingPrice: p.mrp, isDiscounted: false, discountPercent: 0, inStock: true }));
           setItems(formattedItems);
-          
-          // Show trending master items for guests
           setTrendingPlatform(formattedItems.slice(0, 6)); 
         }
       } catch (err) { console.log(err); }
@@ -74,29 +107,28 @@ export default function ProductFeed({ user, onAddToCart }) {
 
   if (loading) return <div style={{ padding: '40px', textAlign: 'center', color: '#64748b' }}>Loading fresh products...</div>;
 
-  // --- REUSABLE PRODUCT CARD COMPONENT ---
   const ProductCard = ({ item, isCarousel }) => {
     const isOutOfStock = !item.inStock;
     const shopClosed = shopInfo && !shopInfo.isOpen;
     
     return (
-      <div style={{ ...productCardStyle, minWidth: isCarousel ? '160px' : 'auto', opacity: isOutOfStock ? 0.6 : 1, filter: isOutOfStock ? 'grayscale(80%)' : 'none' }}>
-        <div style={{ height: '110px', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: '#f1f5f9', borderRadius: '8px', marginBottom: '10px', position: 'relative' }}>
+      <div style={{ ...productCardStyle, minWidth: isCarousel ? '150px' : 'auto', opacity: isOutOfStock ? 0.6 : 1, filter: isOutOfStock ? 'grayscale(80%)' : 'none' }}>
+        <div style={{ height: '100px', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: '#f1f5f9', borderRadius: '8px', marginBottom: '10px', position: 'relative' }}>
           {item.isDiscounted && !isOutOfStock && (
             <div style={{ position: 'absolute', top: '-8px', left: '-8px', backgroundColor: '#ef4444', color: 'white', fontSize: '0.75rem', fontWeight: 'bold', padding: '4px 8px', borderRadius: '6px', zIndex: 10 }}>
               {item.discountPercent}% OFF
             </div>
           )}
-          {item.image ? <img src={item.image} style={{ maxHeight: '90px', maxWidth: '100%', objectFit: 'contain' }} alt={item.name} /> : <span style={{fontSize: '40px'}}>{item.emoji}</span>}
+          {item.image ? <img src={item.image} style={{ maxHeight: '80px', maxWidth: '100%', objectFit: 'contain' }} alt={item.name} /> : <span style={{fontSize: '40px'}}>{item.emoji}</span>}
         </div>
         
-        <div style={{ fontSize: '0.75rem', color: '#94a3b8', textTransform: 'uppercase', fontWeight: 'bold', textAlign: 'left' }}>{item.brand}</div>
-        <div style={{ fontWeight: 'bold', color: '#0f172a', fontSize: '0.95rem', marginBottom: '5px', height: '40px', overflow: 'hidden', lineHeight: '1.2', textAlign: 'left' }}>{item.name}</div>
-        <div style={{ fontSize: '0.8rem', color: '#64748b', marginBottom: '10px', textAlign: 'left' }}>{item.qnty}</div>
+        <div style={{ fontSize: '0.7rem', color: '#94a3b8', textTransform: 'uppercase', fontWeight: 'bold', textAlign: 'left' }}>{item.brand}</div>
+        <div style={{ fontWeight: 'bold', color: '#0f172a', fontSize: '0.85rem', marginBottom: '5px', height: '35px', overflow: 'hidden', lineHeight: '1.2', textAlign: 'left' }}>{item.name}</div>
+        <div style={{ fontSize: '0.75rem', color: '#64748b', marginBottom: '10px', textAlign: 'left' }}>{item.qnty}</div>
         
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '15px' }}>
-          <span style={{ fontWeight: '900', fontSize: '1.25rem', color: '#0f172a' }}>₹{item.sellingPrice}</span>
-          {item.isDiscounted && <span style={{ textDecoration: 'line-through', color: '#94a3b8', fontSize: '0.9rem' }}>₹{item.mrp}</span>}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
+          <span style={{ fontWeight: '900', fontSize: '1.1rem', color: '#0f172a' }}>₹{item.sellingPrice}</span>
+          {item.isDiscounted && <span style={{ textDecoration: 'line-through', color: '#94a3b8', fontSize: '0.8rem' }}>₹{item.mrp}</span>}
         </div>
 
         {isOutOfStock ? (
@@ -113,11 +145,7 @@ export default function ProductFeed({ user, onAddToCart }) {
   return (
     <div style={{ padding: '0 15px', maxWidth: '1000px', margin: '0 auto', overflowX: 'hidden' }}>
       
-      {/* Safer CSS injection for the invisible scrollbar */}
-      <style>{`
-        .hide-scroll::-webkit-scrollbar { display: none; }
-        .hide-scroll { -ms-overflow-style: none; scrollbar-width: none; }
-      `}</style>
+      <style>{`.hide-scroll::-webkit-scrollbar { display: none; } .hide-scroll { -ms-overflow-style: none; scrollbar-width: none; }`}</style>
 
       {/* 🏪 TOP SHOP BADGE */}
       {shopInfo && (
@@ -130,40 +158,80 @@ export default function ProductFeed({ user, onAddToCart }) {
         </div>
       )}
 
-      {/* 🚀 CAROUSEL 1: PACKITOUT TRENDING (Guests Only) */}
+      {/* 🧍‍♂️ GUEST CAROUSEL */}
       {!shopInfo && trendingPlatform.length > 0 && (
         <div style={{ marginBottom: '30px', textAlign: 'left' }}>
-          <h3 style={{ color: '#0f172a', marginBottom: '10px', display: 'flex', alignItems: 'center', gap: '8px' }}>🚀 Trending on PackItOut</h3>
+          <h3 style={sectionHeaderStyle}>🚀 Trending on PackItOut</h3>
           <div className="hide-scroll" style={carouselRowStyle}>
             {trendingPlatform.map(item => <ProductCard key={item._id} item={item} isCarousel={true} />)}
           </div>
         </div>
       )}
 
-      {/* 🔥 CAROUSEL 2: SHOP MEGA STEALS */}
+      {/* 🕰️ 1. TIME-TRAVEL CAROUSEL */}
+      {shopInfo && timeBased.items.length > 0 && (
+        <div style={{ marginBottom: '30px', textAlign: 'left', backgroundColor: '#e0f2fe', padding: '15px', borderRadius: '12px', border: '1px solid #bae6fd' }}>
+          <h3 style={{ ...sectionHeaderStyle, color: '#0369a1' }}>{timeBased.title}</h3>
+          <div className="hide-scroll" style={{ ...carouselRowStyle, paddingBottom: '5px' }}>
+            {timeBased.items.map(item => <ProductCard key={item._id} item={item} isCarousel={true} />)}
+          </div>
+        </div>
+      )}
+
+      {/* 🔥 2. MEGA STEALS */}
       {shopInfo && shopDeals.length > 0 && (
         <div style={{ marginBottom: '30px', textAlign: 'left' }}>
-          <h3 style={{ color: '#ef4444', marginBottom: '10px', display: 'flex', alignItems: 'center', gap: '8px' }}>🔥 {shopInfo.name} Mega Steals</h3>
+          <h3 style={{ ...sectionHeaderStyle, color: '#ef4444' }}>🔥 {shopInfo.name} Mega Steals</h3>
           <div className="hide-scroll" style={carouselRowStyle}>
             {shopDeals.map(item => <ProductCard key={item._id} item={item} isCarousel={true} />)}
           </div>
         </div>
       )}
 
-      {/* 👑 CAROUSEL 3: SHOP BESTSELLERS */}
-      {shopInfo && shopBestSellers.length > 0 && (
-        <div style={{ marginBottom: '30px', textAlign: 'left', backgroundColor: '#f8fafc', padding: '15px', borderRadius: '12px', border: '1px dashed #cbd5e1' }}>
-          <h3 style={{ color: '#0f172a', marginTop: 0, marginBottom: '10px', display: 'flex', alignItems: 'center', gap: '8px' }}>👑 Top Selling Today</h3>
+      {/* 🛍️ 3. BUY IT AGAIN (Simulated) */}
+      {shopInfo && buyItAgain.length > 0 && (
+        <div style={{ marginBottom: '30px', textAlign: 'left' }}>
+          <h3 style={sectionHeaderStyle}>🛍️ Buy It Again</h3>
+          <div className="hide-scroll" style={carouselRowStyle}>
+            {buyItAgain.map(item => <ProductCard key={item._id} item={item} isCarousel={true} />)}
+          </div>
+        </div>
+      )}
+
+      {/* 💰 4. UNDER ₹99 STORE */}
+      {shopInfo && under99.length > 0 && (
+        <div style={{ marginBottom: '30px', textAlign: 'left', backgroundColor: '#fefce8', padding: '15px', borderRadius: '12px', border: '1px solid #fef08a' }}>
+          <h3 style={{ ...sectionHeaderStyle, color: '#a16207' }}>💰 The Under ₹99 Store</h3>
           <div className="hide-scroll" style={{ ...carouselRowStyle, paddingBottom: '5px' }}>
+            {under99.map(item => <ProductCard key={item._id} item={item} isCarousel={true} />)}
+          </div>
+        </div>
+      )}
+
+      {/* 🆕 5. FRESHLY RESTOCKED */}
+      {shopInfo && newArrivals.length > 0 && (
+        <div style={{ marginBottom: '30px', textAlign: 'left' }}>
+          <h3 style={sectionHeaderStyle}>🆕 Freshly Restocked</h3>
+          <div className="hide-scroll" style={carouselRowStyle}>
+            {newArrivals.map(item => <ProductCard key={item._id} item={item} isCarousel={true} />)}
+          </div>
+        </div>
+      )}
+
+      {/* 👑 6. TOP SELLERS */}
+      {shopInfo && shopBestSellers.length > 0 && (
+        <div style={{ marginBottom: '30px', textAlign: 'left' }}>
+          <h3 style={sectionHeaderStyle}>👑 Top Selling Today</h3>
+          <div className="hide-scroll" style={carouselRowStyle}>
             {shopBestSellers.map(item => <ProductCard key={item._id} item={item} isCarousel={true} />)}
           </div>
         </div>
       )}
 
       {/* 📦 THE MAIN ALL-PRODUCTS GRID */}
-      <div style={{ textAlign: 'left' }}>
+      <div style={{ textAlign: 'left', borderTop: '2px solid #e2e8f0', paddingTop: '20px' }}>
         <h3 style={{ color: '#0f172a', marginBottom: '15px' }}>Explore All Products</h3>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: '15px' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: '15px' }}>
           {items.map(item => <ProductCard key={item._id} item={item} isCarousel={false} />)}
         </div>
       </div>
@@ -173,11 +241,9 @@ export default function ProductFeed({ user, onAddToCart }) {
 }
 
 // --- CSS STYLES ---
-const productCardStyle = { backgroundColor: 'white', padding: '15px', borderRadius: '12px', boxShadow: '0 4px 10px rgba(0,0,0,0.05)', border: '1px solid #e2e8f0', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', position: 'relative', scrollSnapAlign: 'start' };
-
-// 🪄 THE HORIZONTAL SWIPE MAGIC
-const carouselRowStyle = { display: 'flex', overflowX: 'auto', gap: '15px', paddingBottom: '15px', scrollSnapType: 'x mandatory', WebkitOverflowScrolling: 'touch' };
-
-const addBtnStyle = { width: '100%', padding: '10px', backgroundColor: '#10b981', color: 'white', border: 'none', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer', textTransform: 'uppercase', boxShadow: '0 2px 4px rgba(16, 185, 129, 0.3)' };
-const disabledBtnStyle = { width: '100%', padding: '10px', backgroundColor: '#f1f5f9', color: '#cbd5e1', border: '2px solid #cbd5e1', borderRadius: '8px', fontWeight: 'bold', cursor: 'not-allowed', textTransform: 'uppercase' };
-const outOfStockBtnStyle = { width: '100%', padding: '10px', backgroundColor: '#f1f5f9', color: '#94a3b8', border: '2px solid #e2e8f0', borderRadius: '8px', fontWeight: 'bold', cursor: 'not-allowed' };
+const productCardStyle = { backgroundColor: 'white', padding: '12px', borderRadius: '12px', boxShadow: '0 4px 10px rgba(0,0,0,0.04)', border: '1px solid #e2e8f0', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', position: 'relative', scrollSnapAlign: 'start' };
+const carouselRowStyle = { display: 'flex', overflowX: 'auto', gap: '12px', paddingBottom: '15px', scrollSnapType: 'x mandatory', WebkitOverflowScrolling: 'touch' };
+const sectionHeaderStyle = { color: '#0f172a', marginTop: 0, marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '1.1rem' };
+const addBtnStyle = { width: '100%', padding: '8px', backgroundColor: '#10b981', color: 'white', border: 'none', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer', textTransform: 'uppercase', boxShadow: '0 2px 4px rgba(16, 185, 129, 0.2)' };
+const disabledBtnStyle = { width: '100%', padding: '8px', backgroundColor: '#f1f5f9', color: '#cbd5e1', border: '2px solid #cbd5e1', borderRadius: '8px', fontWeight: 'bold', cursor: 'not-allowed', textTransform: 'uppercase' };
+const outOfStockBtnStyle = { width: '100%', padding: '8px', backgroundColor: '#f1f5f9', color: '#94a3b8', border: '2px solid #e2e8f0', borderRadius: '8px', fontWeight: 'bold', cursor: 'not-allowed' };
