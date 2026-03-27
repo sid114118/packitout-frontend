@@ -1,40 +1,41 @@
 import React from 'react';
 
-export default function Categories() {
+export default function Categories({ onCategorySelect }) {
+  // 🚀 REORGANIZED & RENAMED FOR PACKITOUT'S UNIQUE BRAND
   const menuData = [
     {
-      sectionTitle: "Grocery & Kitchen",
+      sectionTitle: "Daily Fresh & Staples",
       items: [
+        { name: "Dairy, Bread & Eggs", icon: "🥛" }, // Moved to #1 (Highest frequency purchase!)
         { name: "Fruits & Veg", icon: "🍎" },
         { name: "Atta, Rice & Dal", icon: "🌾" },
-        { name: "Oil, Ghee & Masala", icon: "🍶" },
-        { name: "Dairy, Bread & Eggs", icon: "🥛" },
-        { name: "Bakery & Biscuits", icon: "🥐" },
-        { name: "Dry Fruits & Cereals", icon: "🥣" },
+        { name: "Instant Food", icon: "🍜" },       // Moved up for quick meals
         { name: "Chicken, Meat & Fish", icon: "🍗" },
-        { name: "Kitchen Appliances", icon: "🍳" }
+        { name: "Oil, Ghee & Masala", icon: "🍶" },
+        { name: "Dry Fruits & Cereals", icon: "🥣" },
+        { name: "Bakery & Biscuits", icon: "🥐" }
       ]
     },
     {
-      sectionTitle: "Snacks & Drinks",
+      sectionTitle: "Munchies & Refreshments",
       items: [
         { name: "Chips & Namkeen", icon: "🥨" },
+        { name: "Drinks & Juices", icon: "🥤" },     // Moved up next to chips
         { name: "Sweets & Chocolates", icon: "🍫" },
-        { name: "Drinks & Juices", icon: "🥤" },
+        { name: "Ice Creams", icon: "🍦" },          // Moved up for impulse buys
         { name: "Tea & Coffee", icon: "☕" },
-        { name: "Instant Food", icon: "🍜" },
         { name: "Sauces & Spreads", icon: "🍯" },
-        { name: "Ice Creams", icon: "🍦" },
         { name: "Paan Corner", icon: "🍃" }
       ]
     },
     {
-      sectionTitle: "Household & Personal Care",
+      sectionTitle: "Home, Health & Utilities",
       items: [
         { name: "Bath & Body", icon: "🧼" },
+        { name: "Cleaners & Repellents", icon: "🧽" }, // Grouped cleaning together
         { name: "Hair Care", icon: "🧴" },
-        { name: "Cleaners & Repellents", icon: "🧽" },
-        { name: "Health & Pharma", icon: "💊" }
+        { name: "Health & Pharma", icon: "💊" },
+        { name: "Kitchen Appliances", icon: "🍳" }     // Moved to home utilities
       ]
     }
   ];
@@ -42,9 +43,9 @@ export default function Categories() {
   return (
     <div style={{ padding: '15px', backgroundColor: '#ffffff' }}>
       
-      {/* --- NEW: THE UPLOAD PARCHI HERO BANNER --- */}
+      {/* --- THE UPLOAD PARCHI HERO BANNER --- */}
       <div style={{ 
-        background: 'linear-gradient(135deg, #ff6b6b, #ff4757)', // Vibrant premium gradient
+        background: 'linear-gradient(135deg, #ff6b6b, #ff4757)', 
         borderRadius: '16px', 
         padding: '18px', 
         display: 'flex', 
@@ -61,21 +62,7 @@ export default function Categories() {
           <p style={{ margin: '0 0 14px 0', fontSize: '0.8rem', opacity: '0.95', lineHeight: '1.4' }}>
             Save time! Send a photo of your handwritten list and we'll pack it instantly.
           </p>
-          <button style={{ 
-            backgroundColor: '#ffffff', 
-            color: '#ff4757', 
-            border: 'none', 
-            borderRadius: '8px', 
-            padding: '10px 16px', 
-            fontWeight: 'bold', 
-            fontSize: '0.9rem',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '8px',
-            cursor: 'pointer',
-            boxShadow: '0 2px 5px rgba(0,0,0,0.1)'
-          }}>
-            {/* Little Camera Icon */}
+          <button style={{ backgroundColor: '#ffffff', color: '#ff4757', border: 'none', borderRadius: '8px', padding: '10px 16px', fontWeight: 'bold', fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', boxShadow: '0 2px 5px rgba(0,0,0,0.1)' }}>
             <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" strokeWidth="2.5" fill="none">
               <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path>
               <circle cx="12" cy="13" r="4"></circle>
@@ -83,26 +70,18 @@ export default function Categories() {
             Upload Now
           </button>
         </div>
-        
-        {/* Big Receipt/List Emoji */}
-        <div style={{ fontSize: '4rem', lineHeight: '1', transform: 'rotate(8deg)' }}>
-          🧾
-        </div>
+        <div style={{ fontSize: '4rem', lineHeight: '1', transform: 'rotate(8deg)' }}>🧾</div>
       </div>
-      {/* --- END BANNER --- */}
-
 
       {/* --- THE CATEGORIES GRID --- */}
       {menuData.map((section, sectionIndex) => (
         <div key={sectionIndex} style={{ marginBottom: '30px' }}>
-          
           <h3 style={{ fontSize: '1.2rem', fontWeight: '800', color: '#1a1a1a', marginBottom: '15px', textAlign: 'left' }}>
             {section.sectionTitle}
           </h3>
-
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '15px 10px' }}>
             {section.items.map((item, itemIndex) => (
-              <div key={itemIndex} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', cursor: 'pointer' }}>
+              <div key={itemIndex} onClick={() => onCategorySelect(item.name)} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', cursor: 'pointer' }}>
                 <div style={{ backgroundColor: '#ffffff', borderRadius: '18px', width: '70px', height: '70px', display: 'flex', justifyContent: 'center', alignItems: 'center', fontSize: '2.2rem', boxShadow: '0 4px 10px rgba(0,0,0,0.06)', border: '1px solid #f0f0f0', marginBottom: '8px' }}>
                   {item.icon}
                 </div>
@@ -112,10 +91,8 @@ export default function Categories() {
               </div>
             ))}
           </div>
-
         </div>
       ))}
-      
     </div>
   );
 }
