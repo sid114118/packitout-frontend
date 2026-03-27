@@ -106,7 +106,7 @@ export default function App() {
       {/* 🔍 THE GLOBAL SEARCH BAR (Right under the header!) */}
       <div style={{ position: 'sticky', top: 0, zIndex: 100, backgroundColor: '#f4f7f6', padding: '10px 15px' }}>
         <div style={{ display: 'flex', alignItems: 'center', backgroundColor: '#ffffff', borderRadius: '12px', padding: '10px 15px', boxShadow: '0 4px 10px rgba(0,0,0,0.05)', border: '1px solid #e2e8f0' }}>
-          <span style={{ fontSize: '1.2rem', marginRight: '10px', color: '#94a3b8' }}>🔍</span>
+          <span style={{ fontSize: '1.2rem', marginRight: '10px', color: '#94a3b8' }}></span>
           <input 
             type="text" 
             placeholder='Search "Maggi", "Milk", "Chips"...'
