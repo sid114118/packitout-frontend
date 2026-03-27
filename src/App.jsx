@@ -9,16 +9,16 @@ import ShopDashboard from './ShopDashboard.jsx';
 import ShopLogin from './ShopLogin.jsx';
 import UserDashboard from './UserDashboard.jsx';
 import UserAuth from './UserAuth.jsx';
-
-// 👇 Notice we removed CustomerDashboard completely!
 import ProductFeed from './ProductFeed.jsx';
 import Cart from './Cart.jsx';
 
 export default function App() {
   const [currentView, setCurrentView] = useState("customer");
-  
   const [isAdminAuthenticated, setIsAdminAuthenticated] = useState(false);
   const [isShopAuthenticated, setIsShopAuthenticated] = useState(null);
+  
+  // 👇 NEW: State to track if a category is clicked
+  const [selectedCategory, setSelectedCategory] = useState(null); 
   
   const [loggedInUser, setLoggedInUser] = useState(() => {
     const saved = localStorage.getItem("packitout_user");
@@ -33,7 +33,6 @@ export default function App() {
       window.location.hash = "#account";
       return;
     }
-
     setCart((prevCart) => {
       const existingItem = prevCart.find(item => item._id === product._id);
       if (existingItem) {
@@ -50,7 +49,10 @@ export default function App() {
       else if (window.location.hash === "#shop") setCurrentView("shop");
       else if (window.location.hash === "#account") setCurrentView("account");
       else if (window.location.hash === "#cart") setCurrentView("cart");
-      else setCurrentView("customer");
+      else {
+        setCurrentView("customer");
+        setSelectedCategory(null); // Reset category when going to home
+      }
     };
     checkUrl();
     window.addEventListener("hashchange", checkUrl);
@@ -69,8 +71,6 @@ export default function App() {
     setCart([]);
     window.location.hash = "";
   };
-
-  // --- VIEW RENDERING LOGIC ---
 
   if (currentView === "admin") {
     if (!isAdminAuthenticated) return <AdminLogin onLogin={() => setIsAdminAuthenticated(true)} />;
@@ -91,7 +91,6 @@ export default function App() {
     return <Cart cart={cart} user={loggedInUser} onBack={() => window.location.hash = ""} onCheckoutSuccess={() => { setCart([]); window.location.hash = "#account"; }} />;
   }
 
-  // --- MAIN HOME PAGE ROUTE ---
   const cartTotalItems = cart.reduce((sum, item) => sum + item.qty, 0);
   const cartTotalPrice = cart.reduce((sum, item) => sum + (item.mrp * item.qty), 0);
 
@@ -99,17 +98,21 @@ export default function App() {
     <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', fontFamily: 'sans-serif', backgroundColor: '#f4f7f6', paddingBottom: cart.length > 0 ? '80px' : '0' }}>
       
       <Header user={loggedInUser} />
-      <Categories />
+      
+      {/* 👇 Hides categories if a specific one is selected */}
+      {!selectedCategory && <Categories onCategorySelect={setSelectedCategory} />}
       
       <main style={{ flex: 1, padding: '1rem 0 3rem 0', textAlign: 'center' }}>
         
-        {/* 🚀 EVERYONE gets the smart ProductFeed with carousels! */}
-        <ProductFeed user={loggedInUser} onAddToCart={handleAddToCart} />
+        {/* 👇 Pass the category data into the Feed! */}
+        <ProductFeed 
+          user={loggedInUser} 
+          onAddToCart={handleAddToCart} 
+          selectedCategory={selectedCategory} 
+          onClearCategory={() => setSelectedCategory(null)} 
+        />
         
-        <button 
-          onClick={() => window.location.hash = "#account"} 
-          style={{ marginTop: '30px', padding: '12px 24px', backgroundColor: '#2f3640', color: 'white', border: 'none', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer', boxShadow: '0 4px 6px rgba(0,0,0,0.1)' }}
-        >
+        <button onClick={() => window.location.hash = "#account"} style={{ marginTop: '30px', padding: '12px 24px', backgroundColor: '#2f3640', color: 'white', border: 'none', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer', boxShadow: '0 4px 6px rgba(0,0,0,0.1)' }}>
           {loggedInUser ? `Go to My Profile (${loggedInUser.name}) 👤` : "Login / Sign Up 🛒"}
         </button>
       </main>
@@ -117,16 +120,9 @@ export default function App() {
       <Footer />
 
       {cart.length > 0 && (
-        <div 
-          onClick={() => window.location.hash = "#cart"}
-          style={{ position: 'fixed', bottom: '15px', left: '15px', right: '15px', backgroundColor: '#10b981', color: 'white', padding: '15px 20px', borderRadius: '12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer', boxShadow: '0 10px 20px rgba(16, 185, 129, 0.4)', zIndex: 1000 }}
-        >
-          <div style={{ fontWeight: 'bold' }}>
-            {cartTotalItems} ITEM{cartTotalItems > 1 ? 'S' : ''} | ₹{cartTotalPrice}
-          </div>
-          <div style={{ fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '8px' }}>
-            View Cart 🛒 <span style={{ fontSize: '1.2rem' }}>➡️</span>
-          </div>
+        <div onClick={() => window.location.hash = "#cart"} style={{ position: 'fixed', bottom: '15px', left: '15px', right: '15px', backgroundColor: '#10b981', color: 'white', padding: '15px 20px', borderRadius: '12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer', boxShadow: '0 10px 20px rgba(16, 185, 129, 0.4)', zIndex: 1000 }}>
+          <div style={{ fontWeight: 'bold' }}>{cartTotalItems} ITEM{cartTotalItems > 1 ? 'S' : ''} | ₹{cartTotalPrice}</div>
+          <div style={{ fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '8px' }}>View Cart 🛒 <span style={{ fontSize: '1.2rem' }}>➡️</span></div>
         </div>
       )}
     </div>
