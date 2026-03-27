@@ -8,11 +8,11 @@ export default function Categories({ onCategorySelect }) {
         { name: "Dairy, Bread & Eggs", icon: "🥛" }, 
         { name: "Fruits & Veg", icon: "🍎" },
         { name: "Atta, Rice & Dal", icon: "🌾" },
-        { name: "Instant Food", icon: "🍜" },       
         { name: "Chicken, Meat & Fish", icon: "🍗" },
         { name: "Oil, Ghee & Masala", icon: "🍶" },
         { name: "Dry Fruits & Cereals", icon: "🥣" },
-        { name: "Bakery & Biscuits", icon: "🥐" }
+        { name: "Bakery & Biscuits", icon: "🥐" },
+        { name: "Kitchen Appliances", icon: "🍳" } // Moved here to keep 8 items!
       ]
     },
     {
@@ -23,6 +23,7 @@ export default function Categories({ onCategorySelect }) {
         { name: "Sweets & Chocolates", icon: "🍫" },
         { name: "Ice Creams", icon: "🍦" },          
         { name: "Tea & Coffee", icon: "☕" },
+        { name: "Instant Food", icon: "🍜" },       // Moved here to make exactly 8 items!
         { name: "Sauces & Spreads", icon: "🍯" },
         { name: "Paan Corner", icon: "🍃" }
       ]
@@ -33,8 +34,7 @@ export default function Categories({ onCategorySelect }) {
         { name: "Bath & Body", icon: "🧼" },
         { name: "Cleaners & Repellents", icon: "🧽" }, 
         { name: "Hair Care", icon: "🧴" },
-        { name: "Health & Pharma", icon: "💊" },
-        { name: "Kitchen Appliances", icon: "🍳" }     
+        { name: "Health & Pharma", icon: "💊" }     // Exactly 4 items now!
       ]
     }
   ];
