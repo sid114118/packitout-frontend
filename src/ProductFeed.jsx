@@ -1,12 +1,10 @@
 import React, { useState, useEffect } from 'react';
 
-export default function ProductFeed({ user, onAddToCart, selectedCategory, onClearCategory }) {
+// 👇 Now receives searchQuery as a prop!
+export default function ProductFeed({ user, onAddToCart, selectedCategory, onClearCategory, searchQuery }) {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [shopInfo, setShopInfo] = useState(null);
-  
-  // 🔍 NEW: Search State
-  const [searchQuery, setSearchQuery] = useState("");
 
   const [shopDeals, setShopDeals] = useState([]);
   const [shopBestSellers, setShopBestSellers] = useState([]);
@@ -70,10 +68,7 @@ export default function ProductFeed({ user, onAddToCart, selectedCategory, onCle
             return i.inStock && keywords.some(kw => cat.includes(kw) || name.includes(kw));
           });
 
-          setTimeBased({
-            title: timeTitle,
-            items: matchedItems.length > 0 ? matchedItems.slice(0, 8) : availableItems.filter(i => i.inStock).slice(0, 8)
-          });
+          setTimeBased({ title: timeTitle, items: matchedItems.length > 0 ? matchedItems.slice(0, 8) : availableItems.filter(i => i.inStock).slice(0, 8) });
 
         } else {
           setShopInfo(null);
@@ -117,8 +112,7 @@ export default function ProductFeed({ user, onAddToCart, selectedCategory, onCle
     );
   };
 
-  // 🔍 SEARCH LOGIC
-  const isSearching = searchQuery.trim().length > 0;
+  const isSearching = searchQuery && searchQuery.trim().length > 0;
   let displayItems = items;
 
   if (selectedCategory) {
@@ -135,12 +129,11 @@ export default function ProductFeed({ user, onAddToCart, selectedCategory, onCle
     });
   }
 
-    return (
+  return (
     <div style={{ padding: '0 15px', maxWidth: '1000px', margin: '0 auto', overflowX: 'hidden' }}>
       <style>{`.hide-scroll::-webkit-scrollbar { display: none; } .hide-scroll { -ms-overflow-style: none; scrollbar-width: none; }`}</style>
       
-      {/* 🏪 TOP SHOP BADGE */}
-      {shopInfo && (
+      {shopInfo && !selectedCategory && !isSearching && (
         <div style={{ backgroundColor: '#fff', padding: '10px 20px', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '10px', boxShadow: '0 2px 4px rgba(0,0,0,0.05)', marginBottom: '15px', borderRadius: '8px' }}>
           <span style={{ fontSize: '0.9rem', color: '#64748b' }}>Shopping from:</span>
           <strong style={{ color: '#10b981' }}>{shopInfo.name}</strong>
@@ -149,27 +142,6 @@ export default function ProductFeed({ user, onAddToCart, selectedCategory, onCle
           </span>
         </div>
       )}
-
-      {/* 🔍 THE STICKY SEARCH BAR */}
-      <div style={{ position: 'sticky', top: '65px', zIndex: 100, backgroundColor: '#f4f7f6', paddingBottom: '15px', paddingTop: '10px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', backgroundColor: '#ffffff', borderRadius: '12px', padding: '10px 15px', boxShadow: '0 4px 10px rgba(0,0,0,0.05)', border: '1px solid #e2e8f0' }}>
-          <span style={{ fontSize: '1.2rem', marginRight: '10px', color: '#94a3b8' }}>🔍</span>
-          <input 
-            type="text" 
-            placeholder='Search "Maggi", "Milk", "Chips"...'
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            style={{ border: 'none', outline: 'none', width: '100%', fontSize: '1rem', color: '#0f172a', backgroundColor: 'transparent' }}
-          />
-          {searchQuery && (
-            <button onClick={() => setSearchQuery("")} style={{ background: 'none', border: 'none', fontSize: '1.2rem', color: '#94a3b8', cursor: 'pointer' }}>✖</button>
-          )}
-        </div>
-      </div>
-
-      {/* ------------------------------------------------------------- */}
-      {/* 🚦 CONDITIONAL RENDER: CATEGORY / SEARCH RESULTS vs CAROUSELS */}
-      {/* ------------------------------------------------------------- */}
 
       {(selectedCategory || isSearching) ? (
         
@@ -198,7 +170,6 @@ export default function ProductFeed({ user, onAddToCart, selectedCategory, onCle
 
       ) : (
 
-        /* 🎠 THE HOME CAROUSELS (Only show if NOT searching and NOT in a category) */
         <>
           {!shopInfo && trendingPlatform.length > 0 && (
             <div style={{ marginBottom: '30px', textAlign: 'left' }}>
@@ -268,4 +239,4 @@ const sectionHeaderStyle = { color: '#0f172a', marginTop: 0, marginBottom: '12px
 const addBtnStyle = { width: '100%', padding: '8px', backgroundColor: '#10b981', color: 'white', border: 'none', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer', textTransform: 'uppercase', boxShadow: '0 2px 4px rgba(16, 185, 129, 0.2)' };
 const disabledBtnStyle = { width: '100%', padding: '8px', backgroundColor: '#f1f5f9', color: '#cbd5e1', border: '2px solid #cbd5e1', borderRadius: '8px', fontWeight: 'bold', cursor: 'not-allowed', textTransform: 'uppercase' };
 const outOfStockBtnStyle = { width: '100%', padding: '8px', backgroundColor: '#f1f5f9', color: '#94a3b8', border: '2px solid #e2e8f0', borderRadius: '8px', fontWeight: 'bold', cursor: 'not-allowed' };
-
+                                                                                              
