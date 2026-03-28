@@ -9,7 +9,7 @@ import ShopDashboard from './ShopDashboard.jsx';
 import ShopLogin from './ShopLogin.jsx';
 import UserDashboard from './UserDashboard.jsx';
 import UserAuth from './UserAuth.jsx';
-import ProductFeed from './ProductFeed/ProductFeed';
+import ProductFeed from './ProductFeed.jsx';
 import Cart from './Cart.jsx';
 
 export default function App() {
