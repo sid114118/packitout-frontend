@@ -207,13 +207,39 @@ export default function ShopDashboard({ user, onExit }) {
           </div>
         )}
 
-        {/* --- 📊 INVENTORY TAB (Restored!) --- */}
+        {/* --- 📊 INVENTORY TAB (Restored with Add Feature!) --- */}
         {activeTab === "inventory" && (
           <div>
             <h3 style={{ marginTop: 0, color: '#0f172a' }}>Shop Inventory</h3>
+
+            {/* 🚀 ADDED BACK: Add New Products UI */}
+            <div style={{ marginBottom: '20px', padding: '15px', backgroundColor: '#e0f2fe', borderRadius: '12px' }}>
+              <h4 style={{ margin: '0 0 10px 0', color: '#0369a1' }}>➕ Add New Products</h4>
+              {availableToAdd.length === 0 ? (
+                <div style={{ fontSize: '0.9rem', color: '#0ea5e9' }}>You have added all available products!</div>
+              ) : (
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                  {availableToAdd.map(m => (
+                    <button 
+                      key={m._id} 
+                      onClick={() => {
+                        const price = prompt(`Set selling price for ${m.name} (MRP: ₹${m.mrp})`, m.mrp);
+                        if (price) handleInventoryUpdate(m._id, price, true);
+                      }}
+                      style={{ padding: '8px 12px', backgroundColor: 'white', border: '1px solid #bae6fd', borderRadius: '6px', cursor: 'pointer', color: '#0369a1', fontWeight: 'bold' }}
+                    >
+                      {m.emoji} {m.name}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* EXISTING INVENTORY */}
+            <h4 style={{ margin: '0 0 10px 0', color: '#0f172a' }}>Current Items</h4>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
               {shopData.inventory?.map(item => item.product && (
-                <div key={item.product._id} style={{ ...cardStyle, display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '15px' }}>
+                <div key={item.product._id} style={{ ...cardStyle, display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '15px', marginBottom: 0 }}>
                   <div>
                     <div style={{ fontWeight: 'bold' }}>{item.product.emoji} {item.product.name}</div>
                     <div style={{ color: '#64748b', fontSize: '0.9rem' }}>Selling for: ₹{item.sellingPrice}</div>
@@ -320,4 +346,3 @@ export default function ShopDashboard({ user, onExit }) {
 const cardStyle = { backgroundColor: 'white', padding: '15px', borderRadius: '12px', boxShadow: '0 2px 4px rgba(0,0,0,0.05)', border: '1px solid #f1f5f9', marginBottom: '15px' };
 const tabStyle = (isActive) => ({ backgroundColor: isActive ? 'rgba(255,255,255,0.1)' : 'transparent', color: isActive ? '#38bdf8' : '#cbd5e1', border: 'none', padding: '8px 15px', borderRadius: '6px', fontWeight: 'bold', cursor: 'pointer', transition: '0.2s', display: 'flex', alignItems: 'center', gap: '8px' });
 const badgeStyle = { backgroundColor: '#ef4444', color: 'white', padding: '2px 6px', borderRadius: '10px', fontSize: '0.7rem', fontWeight: 'bold' };
-              
