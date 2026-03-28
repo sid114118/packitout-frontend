@@ -24,7 +24,8 @@ export default function ReceiptModal({ selectedOrder, setSelectedOrder }) {
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.95rem' }}>
             <tbody>
               {selectedOrder.items?.map((item, i) => {
-                const price = item.price || item.product?.mrp || 0;
+                const price = item.price || item.sellingPrice || item.mrp || item.product?.sellingPrice || item.product?.mrp || 0;
+      
                 return (
                   <tr key={i} style={{ borderBottom: '1px solid #f8fafc' }}>
                     <td style={{ padding: '12px 0', color: '#334155', fontWeight: '500' }}>{item.name}</td>
