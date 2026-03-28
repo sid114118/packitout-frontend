@@ -22,21 +22,20 @@ export default function GuestFeed({ user, onAddToCart, selectedCategory, onClear
         const res = await fetch(`${BASE_URL}/master-products`);
         const masterData = await res.json();
         
-        // Format for Guest View (Everything is in stock, using Master prices)
         const formattedItems = masterData.map(p => ({ 
           ...p, sellingPrice: p.mrp, isDiscounted: false, discountPercent: 0, inStock: true 
         }));
         setItems(formattedItems);
         
-        // 🪄 Magic: Fill the carousels to make the app look alive!
-        setTrendingPlatform(formattedItems.slice(0, 6)); 
-        setShopDeals([...formattedItems].sort(() => 0.5 - Math.random()).slice(0, 6)); 
-        setShopBestSellers([...formattedItems].slice(0, 6));
-        setUnder99([...formattedItems].filter(i => i.sellingPrice > 0 && i.sellingPrice < 100).slice(0, 8));
-        setNewArrivals([...formattedItems].reverse().slice(0, 8));
-        setBuyItAgain([...formattedItems].sort(() => 0.5 - Math.random()).slice(0, 6));
+        // 🛡️ CRASH-PROOF CAROUSELS: Using safe slices instead of random math!
+        setTrendingPlatform(formattedItems.slice(0, 8)); 
+        setShopDeals(formattedItems.slice(2, 10)); // Offset to look different
+        setShopBestSellers(formattedItems.slice(1, 9));
+        setUnder99(formattedItems.filter(i => i.sellingPrice > 0 && i.sellingPrice < 100).slice(0, 8));
+        setNewArrivals([...formattedItems].reverse().slice(0, 8)); // Newest first
+        setBuyItAgain(formattedItems.slice(3, 11));
 
-        // Smart Time-Based Logic
+        // Smart Time-Based Logic (100% safe)
         const hour = new Date().getHours();
         let timeTitle = "";
         let keywords = [];
@@ -95,7 +94,6 @@ export default function GuestFeed({ user, onAddToCart, selectedCategory, onClear
   const isSearching = searchQuery && searchQuery.trim().length > 0;
   let displayItems = items;
 
-  // Search and Category Filters
   if (selectedCategory) {
     displayItems = items.filter(item => {
       const dbCat = (item.category || "").toLowerCase();
@@ -132,7 +130,6 @@ export default function GuestFeed({ user, onAddToCart, selectedCategory, onClear
         </div>
       ) : (
         <>
-          {/* THE BEAUTIFUL GUEST CAROUSELS */}
           {trendingPlatform.length > 0 && (
             <div style={{ marginBottom: '30px', textAlign: 'left' }}>
               <h3 style={sectionHeaderStyle}>🚀 Trending on PackItOut</h3>
@@ -186,4 +183,3 @@ const productCardStyle = { backgroundColor: 'white', padding: '12px', borderRadi
 const carouselRowStyle = { display: 'flex', overflowX: 'auto', gap: '12px', paddingBottom: '15px', scrollSnapType: 'x mandatory', WebkitOverflowScrolling: 'touch' };
 const sectionHeaderStyle = { color: '#0f172a', marginTop: 0, marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '1.1rem' };
 const addBtnStyle = { width: '100%', padding: '8px', backgroundColor: '#10b981', color: 'white', border: 'none', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer', textTransform: 'uppercase', boxShadow: '0 2px 4px rgba(16, 185, 129, 0.2)' };
-                                                                                                              
