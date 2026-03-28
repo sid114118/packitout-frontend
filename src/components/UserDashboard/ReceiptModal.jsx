@@ -1,17 +1,12 @@
 import React from 'react';
 
 export default function ReceiptModal({ selectedOrder, setSelectedOrder }) {
-  
-  // 🚨 THE DETECTIVE LOG: This will print the order data to your browser!
-  console.log("🔍 THE SELECTED ORDER DATA IS:", selectedOrder);
-
-  // If there is no order selected, don't show the modal at all
   if (!selectedOrder) return null;
 
   return (
     <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.6)', zIndex: 1000, display: 'flex', justifyContent: 'center', alignItems: 'flex-end' }}>
       
-      <div style={{ backgroundColor: 'white', width: '100%', maxWidth: '600px', borderTopLeftRadius: '24px', borderTopRightRadius: '24px', padding: '25px', paddingBottom: '40px', boxShadow: '0 -10px 40px rgba(0,0,0,0.2)' }}>
+      <div style={{ backgroundColor: 'white', width: '100%', maxWidth: '600px', borderTopLeftRadius: '24px', borderTopRightRadius: '24px', padding: '25px', paddingBottom: '40px', maxHeight: '90vh', overflowY: 'auto', boxShadow: '0 -10px 40px rgba(0,0,0,0.2)' }}>
         
         {/* Modal Header */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', borderBottom: '2px dashed #e2e8f0', paddingBottom: '15px', marginBottom: '15px' }}>
@@ -23,7 +18,7 @@ export default function ReceiptModal({ selectedOrder, setSelectedOrder }) {
           <button onClick={() => setSelectedOrder(null)} style={{ background: '#f1f5f9', border: 'none', borderRadius: '50%', width: '35px', height: '35px', fontSize: '1.2rem', cursor: 'pointer', display: 'flex', justifyContent: 'center', alignItems: 'center', color: '#64748b' }}>✖</button>
         </div>
 
-        {/* 📸 NEW: YOUR ORIGINAL PARCHI IMAGE */}
+        {/* 📸 YOUR ORIGINAL PARCHI IMAGE */}
         {(selectedOrder.imageUrl || selectedOrder.parchiImage || selectedOrder.image) && (
           <div style={{ marginBottom: '15px', textAlign: 'center', backgroundColor: '#f8fafc', padding: '10px', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
             <span style={{ display: 'block', fontSize: '0.75rem', color: '#94a3b8', fontWeight: 'bold', marginBottom: '8px', letterSpacing: '0.5px' }}>YOUR UPLOADED LIST</span>
@@ -36,11 +31,10 @@ export default function ReceiptModal({ selectedOrder, setSelectedOrder }) {
         )}
 
         {/* Modal Items List */}
-        <div style={{ maxHeight: '30vh', overflowY: 'auto', marginBottom: '20px' }}>
+        <div style={{ marginBottom: '20px' }}>
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.95rem' }}>
             <tbody>
               {selectedOrder.items?.map((item, i) => {
-                // The super-charged price checker!
                 const price = item.price || item.sellingPrice || item.mrp || item.product?.sellingPrice || item.product?.mrp || 0;
                 return (
                   <tr key={i} style={{ borderBottom: '1px solid #f8fafc' }}>
@@ -65,6 +59,12 @@ export default function ReceiptModal({ selectedOrder, setSelectedOrder }) {
            <span style={{ padding: '8px 15px', borderRadius: '20px', fontSize: '0.9rem', fontWeight: 'bold', backgroundColor: selectedOrder.status === 'Delivered ✅' || selectedOrder.status === 'Done 🎉' ? '#d1fae5' : '#e0f2fe', color: selectedOrder.status === 'Delivered ✅' || selectedOrder.status === 'Done 🎉' ? '#059669' : '#0369a1' }}>
              Order Status: {selectedOrder.status}
            </span>
+        </div>
+
+        {/* 🚨 TEMPORARY HACKER SCREEN FOR MOBILE DEBUGGING 🚨 */}
+        <div style={{ marginTop: '30px', padding: '15px', backgroundColor: '#1e293b', color: '#10b981', borderRadius: '12px', fontSize: '0.75rem', overflowX: 'auto', fontFamily: 'monospace' }}>
+          <strong style={{ color: 'white', display: 'block', marginBottom: '10px' }}>🕵️‍♂️ RAW DATABASE INFO:</strong>
+          <pre style={{ margin: 0 }}>{JSON.stringify(selectedOrder, null, 2)}</pre>
         </div>
 
       </div>
