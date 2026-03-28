@@ -1,6 +1,10 @@
 import React from 'react';
 
 export default function ReceiptModal({ selectedOrder, setSelectedOrder }) {
+  
+  // 🚨 THE DETECTIVE LOG: This will print the order data to your browser!
+  console.log("🔍 THE SELECTED ORDER DATA IS:", selectedOrder);
+
   // If there is no order selected, don't show the modal at all
   if (!selectedOrder) return null;
 
@@ -20,11 +24,11 @@ export default function ReceiptModal({ selectedOrder, setSelectedOrder }) {
         </div>
 
         {/* 📸 NEW: YOUR ORIGINAL PARCHI IMAGE */}
-        {(selectedOrder.imageUrl || selectedOrder.parchiImage) && (
+        {(selectedOrder.imageUrl || selectedOrder.parchiImage || selectedOrder.image) && (
           <div style={{ marginBottom: '15px', textAlign: 'center', backgroundColor: '#f8fafc', padding: '10px', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
             <span style={{ display: 'block', fontSize: '0.75rem', color: '#94a3b8', fontWeight: 'bold', marginBottom: '8px', letterSpacing: '0.5px' }}>YOUR UPLOADED LIST</span>
             <img 
-              src={selectedOrder.imageUrl || selectedOrder.parchiImage} 
+              src={selectedOrder.imageUrl || selectedOrder.parchiImage || selectedOrder.image} 
               alt="Uploaded Parchi" 
               style={{ maxWidth: '100%', maxHeight: '120px', borderRadius: '8px', objectFit: 'contain', boxShadow: '0 2px 5px rgba(0,0,0,0.05)' }} 
             />
