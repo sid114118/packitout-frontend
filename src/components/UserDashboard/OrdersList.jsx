@@ -1,12 +1,40 @@
 import React from 'react';
 
-export default function OrdersList({ activeOrders, pastOrders, loading, setSelectedOrder }) {
+export default function OrdersList({ activeOrders, pastOrders, pendingParchis, loading, setSelectedOrder }) {
   return (
     <div>
+      
+      {/* 📸 NEW: WAITING ROOM FOR RAW PARCHIS */}
+      {pendingParchis && pendingParchis.length > 0 && (
+        <div style={{ marginBottom: '25px' }}>
+          <h3 style={{ color: '#334155', fontSize: '1.1rem', marginBottom: '10px' }}>Pending Uploads 📸</h3>
+          {pendingParchis.map((parchi, i) => (
+            <div 
+              key={i} 
+              onClick={() => setSelectedOrder({ ...parchi, status: "Waiting for Shopkeeper ⏳", totalAmount: "Calculating..." })} 
+              style={{ background: 'white', padding: '15px', borderRadius: '16px', boxShadow: '0 4px 15px rgba(0,0,0,0.03)', border: '2px dashed #cbd5e1', cursor: 'pointer', marginBottom: '15px', display: 'flex', gap: '15px', alignItems: 'center' }}
+            >
+              {/* Thumbnail of their uploaded photo */}
+              <div style={{ width: '60px', height: '60px', borderRadius: '10px', overflow: 'hidden', backgroundColor: '#f1f5f9', flexShrink: 0 }}>
+                <img src={parchi.imageUrl || parchi.parchiImage} alt="Uploaded" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+              </div>
+              
+              <div style={{ flex: 1 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                  <h4 style={{ margin: '0 0 5px 0', color: '#0f172a', fontSize: '1.1rem' }}>Uploaded List</h4>
+                  <span style={{ fontSize: '0.75rem', color: '#b45309', backgroundColor: '#fef3c7', padding: '4px 8px', borderRadius: '6px', fontWeight: 'bold' }}>Reviewing...</span>
+                </div>
+                <p style={{ fontSize: '0.85rem', color: '#64748b', margin: 0 }}>The shopkeeper is generating your bill.</p>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
       {/* 🚀 LIVE ORDER TRACKER */}
       {activeOrders.length > 0 && (
         <div style={{ marginBottom: '25px' }}>
-          <h3 style={{ color: '#334155', fontSize: '1.1rem', marginBottom: '10px' }}>Live Parchi & Orders ⏳</h3>
+          <h3 style={{ color: '#334155', fontSize: '1.1rem', marginBottom: '10px' }}>Live Orders ⏳</h3>
           {activeOrders.map((order, i) => (
             <div 
               key={i} 
