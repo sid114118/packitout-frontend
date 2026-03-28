@@ -108,11 +108,10 @@ export default function Categories({ onCategorySelect }) {
         .spinner { animation: spin 1.5s linear infinite; display: inline-block; }
       `}</style>
 
-      {/* --- THE REAL HIDDEN FILE INPUT --- */}
+      {/* 🚀 THE FIX: Removed capture="environment" so you can choose Gallery or Camera */}
       <input 
         type="file" 
         accept="image/*" 
-        capture="environment" 
         ref={fileInputRef} 
         onChange={handleFileChange} 
         style={{ display: 'none' }} 
