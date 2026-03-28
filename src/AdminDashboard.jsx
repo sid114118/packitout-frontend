@@ -5,6 +5,7 @@ import ProductsTab from './components/AdminDashboard/ProductsTab';
 import ShopsTab from './components/AdminDashboard/ShopsTab';
 import UsersTab from './components/AdminDashboard/UsersTab';
 import GlobalOrdersTab from './components/AdminDashboard/GlobalOrdersTab';
+import AdminParchiManager from './components/AdminDashboard/AdminParchiManager'; // 🧾 NEW WORKER!
 
 export default function AdminDashboard({ onExit }) {
   const [activeTab, setActiveTab] = useState("products"); 
@@ -14,6 +15,7 @@ export default function AdminDashboard({ onExit }) {
   const [shops, setShops] = useState([]);
   const [users, setUsers] = useState([]);
   const [orders, setOrders] = useState([]);
+  const [globalParchis, setGlobalParchis] = useState([]); // 📸 NEW STATE
   const [loading, setLoading] = useState(true);
 
   // Drawer & Analysis States
@@ -55,12 +57,46 @@ export default function AdminDashboard({ onExit }) {
       } else if (activeTab === "orders") {
         const res = await fetch(`${BASE_URL}/orders`);
         setOrders(await res.json());
+      } else if (activeTab === "parchis") {
+        // 📸 FETCH GLOBAL PARCHIS
+        const res = await fetch(`${BASE_URL}/admin/all-parchis`);
+        setGlobalParchis(await res.json());
       }
     } catch (err) { console.log(err); }
     setLoading(false);
   };
 
-  // --- LOGIC FUNCTIONS (The Boss handles the data) ---
+  // --- 🚀 ADMIN OVERRIDE LOGIC ---
+  const handleAdminProcessOrder = async (parchi, billItems) => {
+    const totalAmount = billItems.reduce((sum, i) => sum + (i.price * i.qty), 0);
+    
+    try {
+      const res = await fetch(`${BASE_URL}/orders`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          userId: parchi.userId,
+          shopId: parchi.shopId,
+          items: billItems,
+          totalAmount: totalAmount,
+          status: "Pending",
+          imageUrl: parchi.imageUrl // This photo link ensures the Parchi is marked 'processed' on backend
+        })
+      });
+
+      if (res.ok) {
+        alert("✅ Order processed successfully as Admin!");
+        fetchData(); // Refresh the list
+      } else {
+        alert("❌ Failed to process order.");
+      }
+    } catch (err) {
+      console.log(err);
+      alert("❌ Error connecting to server.");
+    }
+  };
+
+  // --- EXISTING LOGIC FUNCTIONS ---
   const handleAddProduct = async (e) => {
     e.preventDefault();
     await fetch(`${BASE_URL}/master-products`, {
@@ -160,13 +196,14 @@ export default function AdminDashboard({ onExit }) {
       
       {/* 🚀 ADMIN NAV BAR */}
       <nav style={{ backgroundColor: '#0f172a', color: 'white', padding: '15px 30px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', position: 'sticky', top: 0, zIndex: 10 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '30px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
           <h2 style={{ margin: 0, color: '#10b981', fontSize: '1.4rem' }}>PackItOut ADMIN</h2>
-          <div style={{ display: 'flex', gap: '10px' }}>
-            <button onClick={() => setActiveTab("products")} style={tabButtonStyle(activeTab === "products")}>📦 Master Catalog</button>
-            <button onClick={() => setActiveTab("shops")} style={tabButtonStyle(activeTab === "shops")}>🏪 Shop Partners</button>
-            <button onClick={() => setActiveTab("users")} style={tabButtonStyle(activeTab === "users")}>👤 Users DB</button>
-            <button onClick={() => setActiveTab("orders")} style={tabButtonStyle(activeTab === "orders")}>📜 Global Orders</button>
+          <div style={{ display: 'flex', gap: '8px', overflowX: 'auto' }}>
+            <button onClick={() => setActiveTab("products")} style={tabButtonStyle(activeTab === "products")}>📦 Catalog</button>
+            <button onClick={() => setActiveTab("shops")} style={tabButtonStyle(activeTab === "shops")}>🏪 Shops</button>
+            <button onClick={() => setActiveTab("users")} style={tabButtonStyle(activeTab === "users")}>👤 Users</button>
+            <button onClick={() => setActiveTab("orders")} style={tabButtonStyle(activeTab === "orders")}>📜 Orders</button>
+            <button onClick={() => setActiveTab("parchis")} style={tabButtonStyle(activeTab === "parchis")}>🧾 Global Parchis</button>
           </div>
         </div>
         <button onClick={onExit} style={{ backgroundColor: '#ef4444', border: 'none', padding: '8px 15px', borderRadius: '6px', color: 'white', fontWeight: 'bold', cursor: 'pointer' }}>Logout</button>
@@ -174,34 +211,47 @@ export default function AdminDashboard({ onExit }) {
 
       <div style={{ padding: '30px' }}>
         
-        {/* 🚀 WORKERS AT WORK */}
-        {activeTab === "products" && (
-           <ProductsTab 
-             products={products} form={form} setForm={setForm} 
-             handleAddProduct={handleAddProduct} CATEGORIES={CATEGORIES} 
-           />
-        )}
+        {loading ? (
+          <div style={{ textAlign: 'center', marginTop: '50px', color: '#64748b' }}>Loading Data...</div>
+        ) : (
+          <>
+            {activeTab === "products" && (
+               <ProductsTab 
+                 products={products} form={form} setForm={setForm} 
+                 handleAddProduct={handleAddProduct} CATEGORIES={CATEGORIES} 
+               />
+            )}
 
-        {activeTab === "shops" && (
-          <ShopsTab 
-            shops={shops} shopForm={shopForm} setShopForm={setShopForm} 
-            handleAddShop={handleAddShop} handleEditShop={handleEditShop} 
-            openShopDrawer={openShopDrawer} selectedShop={selectedShop} 
-            setSelectedShop={setSelectedShop} shopAnalysis={shopAnalysis} 
-            loadingAnalysis={loadingAnalysis} 
-          />
-        )}
+            {activeTab === "shops" && (
+              <ShopsTab 
+                shops={shops} shopForm={shopForm} setShopForm={setShopForm} 
+                handleAddShop={handleAddShop} handleEditShop={handleEditShop} 
+                openShopDrawer={openShopDrawer} selectedShop={selectedShop} 
+                setSelectedShop={setSelectedShop} shopAnalysis={shopAnalysis} 
+                loadingAnalysis={loadingAnalysis} 
+              />
+            )}
 
-        {activeTab === "users" && (
-          <UsersTab 
-            users={users} userForm={userForm} setUserForm={setUserForm} 
-            handleAddUser={handleAddUser} handleEditUser={handleEditUser} 
-            handleEditUserCoins={handleEditUserCoins} 
-          />
-        )}
+            {activeTab === "users" && (
+              <UsersTab 
+                users={users} userForm={userForm} setUserForm={setUserForm} 
+                handleAddUser={handleAddUser} handleEditUser={handleEditUser} 
+                handleEditUserCoins={handleEditUserCoins} 
+              />
+            )}
 
-        {activeTab === "orders" && (
-          <GlobalOrdersTab orders={orders} />
+            {activeTab === "orders" && (
+              <GlobalOrdersTab orders={orders} />
+            )}
+
+            {activeTab === "parchis" && (
+              <AdminParchiManager 
+                parchis={globalParchis} 
+                shops={shops} 
+                onProcessOrder={handleAdminProcessOrder} 
+              />
+            )}
+          </>
         )}
 
       </div>
@@ -209,10 +259,10 @@ export default function AdminDashboard({ onExit }) {
   );
 }
 
-// Global Styling Helpers for Nav Bar
 const tabButtonStyle = (isActive) => ({
   backgroundColor: isActive ? '#334155' : 'transparent',
   color: isActive ? '#10b981' : '#94a3b8',
   border: 'none', padding: '8px 15px', borderRadius: '6px',
-  fontWeight: 'bold', cursor: 'pointer', transition: '0.2s'
+  fontWeight: 'bold', cursor: 'pointer', transition: '0.2s', whiteSpace: 'nowrap'
 });
+             
