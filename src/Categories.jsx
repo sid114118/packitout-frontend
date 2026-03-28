@@ -1,13 +1,57 @@
 import React, { useState, useRef } from 'react';
 
+// ⚡ THE FIX: Instant Image Compressor
+// Shrinks massive 10MB phone photos down to ~150KB before uploading!
+const compressImage = (file) => {
+  return new Promise((resolve) => {
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onload = (event) => {
+      const img = new Image();
+      img.src = event.target.result;
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        // Max size of 800px is perfect for reading a list clearly
+        let width = img.width;
+        let height = img.height;
+        const MAX_SIZE = 800;
+
+        if (width > height) {
+          if (width > MAX_SIZE) {
+            height *= MAX_SIZE / width;
+            width = MAX_SIZE;
+          }
+        } else {
+          if (height > MAX_SIZE) {
+            width *= MAX_SIZE / height;
+            height = MAX_SIZE;
+          }
+        }
+
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, width, height);
+        
+        // Compress to 70% quality JPEG
+        canvas.toBlob((blob) => {
+          const compressedFile = new File([blob], file.name, {
+            type: 'image/jpeg',
+            lastModified: Date.now()
+          });
+          resolve(compressedFile);
+        }, 'image/jpeg', 0.7);
+      };
+    };
+  });
+};
+
 export default function Categories({ onCategorySelect }) {
   const [isUploading, setIsUploading] = useState(false);
   const [uploadSuccess, setUploadSuccess] = useState(false);
   const [uploadError, setUploadError] = useState("");
   
   const fileInputRef = useRef(null);
-  
-  // 🔗 Points directly to your new Hostinger backend!
   const BASE_URL = "https://darkslategrey-snail-415133.hostingersite.com";
 
   const handleUploadClick = () => {
@@ -15,28 +59,29 @@ export default function Categories({ onCategorySelect }) {
   };
 
   const handleFileChange = async (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
+    const originalFile = e.target.files[0];
+    if (!originalFile) return;
 
     setIsUploading(true);
     setUploadSuccess(false);
     setUploadError("");
 
-    // 1. Pack the image into a FormData envelope
-    const formData = new FormData();
-    formData.append("parchiImage", file); 
-    
-    // 2. Attach the user's info so the shop knows who sent it
-    const savedUser = JSON.parse(localStorage.getItem("packitout_user") || "{}");
-    formData.append("customerName", savedUser.name || "Guest Customer");
-    formData.append("userId", savedUser._id || "guest_id");
-    
-    // Attempt to grab the shop ID they are shopping from
-    const shopId = savedUser.primaryShop?._id || savedUser.primaryShop || "Master_Shop";
-    formData.append("shopId", shopId);
-
     try {
-      // 3. Send to your live backend
+      // 1. ⚡ Compress the image instantly on the phone
+      const compressedFile = await compressImage(originalFile);
+
+      // 2. Pack the compressed image into the envelope
+      const formData = new FormData();
+      formData.append("parchiImage", compressedFile); 
+      
+      const savedUser = JSON.parse(localStorage.getItem("packitout_user") || "{}");
+      formData.append("customerName", savedUser.name || "Guest Customer");
+      formData.append("userId", savedUser._id || "guest_id");
+      
+      const shopId = savedUser.primaryShop?._id || savedUser.primaryShop || "Master_Shop";
+      formData.append("shopId", shopId);
+
+      // 3. Send the tiny file to the backend
       const res = await fetch(`${BASE_URL}/upload-parchi`, {
         method: "POST",
         body: formData, 
@@ -47,7 +92,7 @@ export default function Categories({ onCategorySelect }) {
       if (res.ok && data.success) {
         setIsUploading(false);
         setUploadSuccess(true);
-        setTimeout(() => setUploadSuccess(false), 3500); // Hide success after 3.5s
+        setTimeout(() => setUploadSuccess(false), 3500); 
       } else {
         throw new Error(data.error || "Upload failed");
       }
@@ -58,7 +103,6 @@ export default function Categories({ onCategorySelect }) {
       setTimeout(() => setUploadError(""), 4000);
     }
 
-    // Clear the input so they can upload again if needed
     e.target.value = null; 
   };
 
@@ -108,7 +152,6 @@ export default function Categories({ onCategorySelect }) {
         .spinner { animation: spin 1.5s linear infinite; display: inline-block; }
       `}</style>
 
-      {/* 🚀 THE FIX: Removed capture="environment" so you can choose Gallery or Camera */}
       <input 
         type="file" 
         accept="image/*" 
@@ -146,7 +189,6 @@ export default function Categories({ onCategorySelect }) {
         </div>
       ))}
 
-      {/* --- UPLOAD STATUS MODALS --- */}
       {(isUploading || uploadSuccess || uploadError) && (
         <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.6)', zIndex: 9999, display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
           <div style={{ backgroundColor: 'white', padding: '30px', borderRadius: '16px', textAlign: 'center', width: '80%', maxWidth: '320px', boxShadow: '0 10px 25px rgba(0,0,0,0.2)' }}>
