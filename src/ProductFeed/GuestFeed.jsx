@@ -4,6 +4,7 @@ export default function GuestFeed({ user, onAddToCart, selectedCategory, onClear
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
 
+  // Carousel States
   const [trendingPlatform, setTrendingPlatform] = useState([]);
   const [shopDeals, setShopDeals] = useState([]);
   const [shopBestSellers, setShopBestSellers] = useState([]);
@@ -21,13 +22,13 @@ export default function GuestFeed({ user, onAddToCart, selectedCategory, onClear
         const res = await fetch(`${BASE_URL}/master-products`);
         const masterData = await res.json();
         
-        // Format for Guest View (Everything is in stock, no real discounts yet)
+        // Format for Guest View (Everything is in stock, using Master prices)
         const formattedItems = masterData.map(p => ({ 
           ...p, sellingPrice: p.mrp, isDiscounted: false, discountPercent: 0, inStock: true 
         }));
         setItems(formattedItems);
         
-        // Fill the carousels to make the app look alive!
+        // 🪄 Magic: Fill the carousels to make the app look alive!
         setTrendingPlatform(formattedItems.slice(0, 6)); 
         setShopDeals([...formattedItems].sort(() => 0.5 - Math.random()).slice(0, 6)); 
         setShopBestSellers([...formattedItems].slice(0, 6));
@@ -35,7 +36,7 @@ export default function GuestFeed({ user, onAddToCart, selectedCategory, onClear
         setNewArrivals([...formattedItems].reverse().slice(0, 8));
         setBuyItAgain([...formattedItems].sort(() => 0.5 - Math.random()).slice(0, 6));
 
-        // Guest Time Based Logic
+        // Smart Time-Based Logic
         const hour = new Date().getHours();
         let timeTitle = "";
         let keywords = [];
@@ -60,8 +61,12 @@ export default function GuestFeed({ user, onAddToCart, selectedCategory, onClear
           return keywords.some(kw => cat.includes(kw) || name.includes(kw));
         });
 
-        setTimeBased({ title: timeTitle, items: matchedItems.length > 0 ? matchedItems.slice(0, 8) : formattedItems.slice(0, 8) });
-      } catch (err) { console.log(err); }
+        setTimeBased({ 
+          title: timeTitle, 
+          items: matchedItems.length > 0 ? matchedItems.slice(0, 8) : formattedItems.slice(0, 8) 
+        });
+
+      } catch (err) { console.log("Guest fetch error:", err); }
       setLoading(false);
     };
 
@@ -90,6 +95,7 @@ export default function GuestFeed({ user, onAddToCart, selectedCategory, onClear
   const isSearching = searchQuery && searchQuery.trim().length > 0;
   let displayItems = items;
 
+  // Search and Category Filters
   if (selectedCategory) {
     displayItems = items.filter(item => {
       const dbCat = (item.category || "").toLowerCase();
@@ -111,7 +117,9 @@ export default function GuestFeed({ user, onAddToCart, selectedCategory, onClear
       {(selectedCategory || isSearching) ? (
         <div style={{ textAlign: 'left', marginTop: '10px' }}>
           <div style={{ display: 'flex', alignItems: 'center', marginBottom: '20px', gap: '15px' }}>
-            {selectedCategory && <button onClick={onClearCategory} style={{ backgroundColor: '#f1f5f9', border: '1px solid #cbd5e1', padding: '8px 16px', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold', color: '#334155' }}>⬅ Back</button>}
+            {selectedCategory && (
+              <button onClick={onClearCategory} style={{ backgroundColor: '#f1f5f9', border: '1px solid #cbd5e1', padding: '8px 16px', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold', color: '#334155' }}>⬅ Back</button>
+            )}
             <h2 style={{ margin: 0, color: '#0f172a', fontSize: '1.4rem' }}>{isSearching ? `Search Results for "${searchQuery}"` : selectedCategory}</h2>
           </div>
           {displayItems.length === 0 ? (
@@ -124,7 +132,7 @@ export default function GuestFeed({ user, onAddToCart, selectedCategory, onClear
         </div>
       ) : (
         <>
-          {/* YOUR EXACT UI & CAROUSELS */}
+          {/* THE BEAUTIFUL GUEST CAROUSELS */}
           {trendingPlatform.length > 0 && (
             <div style={{ marginBottom: '30px', textAlign: 'left' }}>
               <h3 style={sectionHeaderStyle}>🚀 Trending on PackItOut</h3>
@@ -178,3 +186,4 @@ const productCardStyle = { backgroundColor: 'white', padding: '12px', borderRadi
 const carouselRowStyle = { display: 'flex', overflowX: 'auto', gap: '12px', paddingBottom: '15px', scrollSnapType: 'x mandatory', WebkitOverflowScrolling: 'touch' };
 const sectionHeaderStyle = { color: '#0f172a', marginTop: 0, marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '1.1rem' };
 const addBtnStyle = { width: '100%', padding: '8px', backgroundColor: '#10b981', color: 'white', border: 'none', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer', textTransform: 'uppercase', boxShadow: '0 2px 4px rgba(16, 185, 129, 0.2)' };
+                                                                                                              
