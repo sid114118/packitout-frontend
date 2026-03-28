@@ -4,13 +4,11 @@ export default function ProductFeed({ user, onAddToCart, selectedCategory, onCle
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [shopInfo, setShopInfo] = useState(null);
+  const [debugInfo, setDebugInfo] = useState(""); // 🕵️‍♂️ Debug helper
 
   const [shopDeals, setShopDeals] = useState([]);
-  const [shopBestSellers, setShopBestSellers] = useState([]);
-  const [under99, setUnder99] = useState([]);
   const [timeBased, setTimeBased] = useState({ title: "", items: [] });
-  const [newArrivals, setNewArrivals] = useState([]);
-  const [buyItAgain, setBuyItAgain] = useState([]);
+  const [under99, setUnder99] = useState([]);
 
   const BASE_URL = "https://darkslategrey-snail-415133.hostingersite.com";
 
@@ -18,10 +16,19 @@ export default function ProductFeed({ user, onAddToCart, selectedCategory, onCle
     const fetchProducts = async () => {
       setLoading(true);
       try {
+        // 1. Check if we have a user and a shop
         if (user && user.primaryShop) {
           const shopId = typeof user.primaryShop === 'object' ? user.primaryShop._id : user.primaryShop;
+          
+          setDebugInfo(`Fetching for Shop ID: ${shopId}`);
+
           const res = await fetch(`${BASE_URL}/shops/${shopId}/menu?t=${new Date().getTime()}`);
           const shopData = await res.json();
+
+          if (!shopData || !shopData.inventory) {
+            setDebugInfo(`Error: Shop found but inventory is missing or empty.`);
+          }
+
           setShopInfo({ name: shopData.name, isOpen: shopData.isOpen });
           
           const availableItems = shopData.inventory?.filter(item => item.product).map(item => {
@@ -36,38 +43,45 @@ export default function ProductFeed({ user, onAddToCart, selectedCategory, onCle
           }) || [];
           
           setItems(availableItems);
-          setShopDeals(availableItems.filter(i => i.isDiscounted && i.inStock).slice(0, 8));
-          setShopBestSellers(availableItems.filter(i => i.inStock).slice(0, 8));
-          setUnder99(availableItems.filter(i => i.sellingPrice < 100 && i.inStock).slice(0, 8));
-          setNewArrivals([...availableItems].reverse().filter(i => i.inStock).slice(0, 8));
-          setBuyItAgain([...availableItems].sort(() => 0.5 - Math.random()).slice(0, 6));
+          
+          if (availableItems.length === 0) {
+            setDebugInfo(`Success! Connected to ${shopData.name}, but inventory filtered to 0 items. Check if products are linked in Admin.`);
+          } else {
+            setDebugInfo(`Loaded ${availableItems.length} items successfully!`);
+          }
 
-          // Time-based logic
+          setShopDeals(availableItems.filter(i => i.isDiscounted && i.inStock).slice(0, 8));
+          setUnder99(availableItems.filter(i => i.sellingPrice < 100 && i.inStock).slice(0, 8));
+          
           const hour = new Date().getHours();
-          const timeTitle = hour >= 22 || hour < 5 ? "🦉 Late Night Essentials" : "🛒 Daily Essentials";
-          setTimeBased({ title: timeTitle, items: availableItems.slice(0, 8) });
+          setTimeBased({ 
+            title: hour < 12 ? "🌤️ Breakfast Essentials" : "🌙 Evening Cravings", 
+            items: availableItems.slice(0, 6) 
+          });
 
         } else {
+          setDebugInfo("No Shop selected. Loading Master Catalog...");
           const res = await fetch(`${BASE_URL}/master-products`);
           const masterData = await res.json();
           setItems(masterData.map(p => ({ ...p, sellingPrice: p.mrp, inStock: true })));
           setShopInfo(null);
         }
-      } catch (err) { console.log(err); }
+      } catch (err) { 
+        setDebugInfo(`Fetch Failed: ${err.message}`);
+      }
       setLoading(false);
     };
     fetchProducts();
   }, [user]);
 
   const ProductCard = ({ item, isCarousel }) => (
-    <div style={{ ...productCardStyle, minWidth: isCarousel ? '155px' : 'auto', opacity: !item.inStock ? 0.6 : 1 }}>
-      <div style={{ height: '100px', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: '#f8fafc', borderRadius: '12px', marginBottom: '8px', position: 'relative' }}>
-        {item.isDiscounted && <div style={{ position: 'absolute', top: '-5px', left: '-5px', backgroundColor: '#ef4444', color: 'white', fontSize: '0.7rem', fontWeight: '900', padding: '3px 6px', borderRadius: '5px' }}>{item.discountPercent}% OFF</div>}
-        <span style={{ fontSize: '2.5rem' }}>{item.emoji || "📦"}</span>
+    <div style={{ ...productCardStyle, minWidth: isCarousel ? '150px' : 'auto' }}>
+      <div style={{ height: '90px', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: '#f1f5f9', borderRadius: '10px', marginBottom: '10px' }}>
+        <span style={{fontSize: '35px'}}>{item.emoji || "📦"}</span>
       </div>
-      <div style={{ fontWeight: 'bold', fontSize: '0.85rem', color: '#1e293b', textAlign: 'left', height: '34px', overflow: 'hidden' }}>{item.name}</div>
+      <div style={{ fontWeight: 'bold', fontSize: '0.8rem', textAlign: 'left', height: '32px', overflow: 'hidden' }}>{item.name}</div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '10px' }}>
-        <span style={{ fontWeight: 'bold', color: '#0f172a' }}>₹{item.sellingPrice}</span>
+        <span style={{ fontWeight: 'bold' }}>₹{item.sellingPrice}</span>
         <button onClick={() => onAddToCart(item)} style={addBtnStyle}>+ Add</button>
       </div>
     </div>
@@ -75,36 +89,39 @@ export default function ProductFeed({ user, onAddToCart, selectedCategory, onCle
 
   if (loading) return <div style={{ padding: '40px', textAlign: 'center' }}>Loading Feed...</div>;
 
-  const isSearching = searchQuery && searchQuery.trim().length > 0;
-
   return (
     <div style={{ padding: '0 15px' }}>
-      <style>{`.hide-scroll::-webkit-scrollbar { display: none; } .hide-scroll { -ms-overflow-style: none; scrollbar-width: none; }`}</style>
       
-      {/* Search or Category Results */}
-      {(selectedCategory || isSearching) ? (
-        <div style={{ textAlign: 'left' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '15px', margin: '15px 0' }}>
-            {selectedCategory && <button onClick={onClearCategory} style={backBtnStyle}>⬅ Back</button>}
-            <h2 style={{ margin: 0, fontSize: '1.2rem' }}>{isSearching ? `Results for "${searchQuery}"` : selectedCategory}</h2>
-          </div>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
-            {items.filter(i => (selectedCategory && i.category?.toLowerCase().includes(selectedCategory.toLowerCase())) || (isSearching && i.name?.toLowerCase().includes(searchQuery.toLowerCase()))).map(item => <ProductCard key={item._id} item={item} />)}
-          </div>
-        </div>
-      ) : (
+      {/* 🕵️‍♂️ DEBUGGER: Delete this div once the feed is working! */}
+      <div style={{ fontSize: '10px', color: '#ef4444', backgroundColor: '#fee2e2', padding: '5px', borderRadius: '5px', marginBottom: '10px', textAlign: 'left' }}>
+        <strong>Debug:</strong> {debugInfo}
+      </div>
+
+      {/* --- Main Carousels --- */}
+      {!selectedCategory && !searchQuery && (
         <>
-          {/* Your Nice Carousels */}
           {shopDeals.length > 0 && <Section title="🔥 Mega Steals" items={shopDeals} render={ProductCard} />}
           {timeBased.items.length > 0 && <Section title={timeBased.title} items={timeBased.items} render={ProductCard} />}
-          {under99.length > 0 && <Section title="💰 Under ₹99" items={under99} render={ProductCard} />}
-
-          {/* 🚨 THE SAFETY NET: FULL SHOP MENU */}
-          <h3 style={{ textAlign: 'left', margin: '25px 0 15px 0', fontSize: '1.1rem' }}>Shop Catalog 🏪</h3>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
-            {items.map(item => <ProductCard key={item._id} item={item} />)}
-          </div>
         </>
+      )}
+
+      {/* --- Full Catalog Section --- */}
+      <h3 style={{ textAlign: 'left', margin: '20px 0 10px 0', fontSize: '1.1rem' }}>
+        {selectedCategory || (searchQuery ? `Results for "${searchQuery}"` : "Shop Catalog 🏪")}
+      </h3>
+
+      {items.length === 0 ? (
+        <div style={{ padding: '30px', background: 'white', borderRadius: '12px', border: '1px dashed #cbd5e1', color: '#64748b' }}>
+          No products found in this shop yet.
+        </div>
+      ) : (
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px', paddingBottom: '30px' }}>
+          {items.filter(i => {
+            if (selectedCategory) return i.category?.toLowerCase().includes(selectedCategory.toLowerCase());
+            if (searchQuery) return i.name?.toLowerCase().includes(searchQuery.toLowerCase());
+            return true;
+          }).map(item => <ProductCard key={item._id} item={item} />)}
+        </div>
       )}
     </div>
   );
@@ -112,13 +129,12 @@ export default function ProductFeed({ user, onAddToCart, selectedCategory, onCle
 
 const Section = ({ title, items, render }) => (
   <div style={{ marginBottom: '25px', textAlign: 'left' }}>
-    <h3 style={{ fontSize: '1.1rem', marginBottom: '12px', fontWeight: '800' }}>{title}</h3>
-    <div className="hide-scroll" style={{ display: 'flex', overflowX: 'auto', gap: '12px', paddingBottom: '10px' }}>
+    <h3 style={{ fontSize: '1rem', marginBottom: '10px', fontWeight: 'bold' }}>{title}</h3>
+    <div style={{ display: 'flex', overflowX: 'auto', gap: '12px', paddingBottom: '10px' }}>
       {items.map(i => render({ item: i, isCarousel: true }))}
     </div>
   </div>
 );
 
-const productCardStyle = { backgroundColor: 'white', padding: '12px', borderRadius: '16px', border: '1px solid #e2e8f0' };
-const addBtnStyle = { backgroundColor: '#0f172a', color: 'white', border: 'none', borderRadius: '8px', padding: '6px 12px', fontWeight: 'bold', fontSize: '0.8rem', cursor: 'pointer' };
-const backBtnStyle = { padding: '8px 15px', backgroundColor: '#f1f5f9', border: '1px solid #cbd5e1', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer' };
+const productCardStyle = { backgroundColor: 'white', padding: '12px', borderRadius: '12px', border: '1px solid #e2e8f0', display: 'flex', flexDirection: 'column' };
+const addBtnStyle = { backgroundColor: '#0f172a', color: 'white', border: 'none', borderRadius: '6px', padding: '5px 10px', fontWeight: 'bold', fontSize: '0.75rem' };
