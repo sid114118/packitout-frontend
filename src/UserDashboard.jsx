@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 
-// 🔗 IMPORTING YOUR NEW WORKERS!
+// 🔗 IMPORTING YOUR WORKERS
 import ProfileHeader from './components/UserDashboard/ProfileHeader';
 import OrdersList from './components/UserDashboard/OrdersList';
 import AddressBook from './components/UserDashboard/AddressBook';
@@ -9,8 +9,9 @@ import ReceiptModal from './components/UserDashboard/ReceiptModal';
 export default function UserDashboard({ user, onExit, onLogout }) {
   // --- STATE MANAGEMENT ---
   const [orders, setOrders] = useState([]);
+  const [pendingParchis, setPendingParchis] = useState([]); // 📸 NEW: Holds the raw uploads
   const [loading, setLoading] = useState(true);
-  const [selectedOrder, setSelectedOrder] = useState(null); // Controls the receipt modal
+  const [selectedOrder, setSelectedOrder] = useState(null); 
   
   const [coinBalance, setCoinBalance] = useState(user?.coins || 0);
   const [myReferralCode, setMyReferralCode] = useState(user?.referralCode || ""); 
@@ -30,7 +31,7 @@ export default function UserDashboard({ user, onExit, onLogout }) {
 
   // --- DATA FETCHING ---
   useEffect(() => {
-    // 1. Fetch Orders
+    // 1. Fetch Processed Orders
     fetch(`${BASE_URL}/orders`)
       .then(res => res.json())
       .then(data => {
@@ -39,7 +40,18 @@ export default function UserDashboard({ user, onExit, onLogout }) {
       })
       .catch(() => setLoading(false));
 
-    // 2. Fetch Profile & Coins
+    // 2. 📸 Fetch Pending Raw Parchis for this User
+    // (Using a double-fetch trick just in case your backend uses a general route)
+    fetch(`${BASE_URL}/parchis`)
+      .then(res => res.json())
+      .then(data => {
+        // Filter out only the parchis uploaded by THIS customer
+        const myParchis = data.filter(p => p.userId === user._id || p.userId?._id === user._id);
+        setPendingParchis(myParchis);
+      })
+      .catch(err => console.log("No pending parchis found", err));
+
+    // 3. Fetch Profile & Coins
     fetch(`${BASE_URL}/users/${user._id}`)
       .then(res => res.json())
       .then(data => {
@@ -55,7 +67,7 @@ export default function UserDashboard({ user, onExit, onLogout }) {
         }
       });
 
-    // 3. Fetch Nearby Shops
+    // 4. Fetch Nearby Shops
     if (user?.pincode) {
       fetch(`${BASE_URL}/shops/all/${user.pincode}`)
         .then(res => res.json())
@@ -95,11 +107,9 @@ export default function UserDashboard({ user, onExit, onLogout }) {
     }
   };
 
-  // --- RENDER (Clean & Modular!) ---
   return (
     <div style={{ backgroundColor: '#f0f4f8', minHeight: '100vh', fontFamily: 'sans-serif', paddingBottom: '40px' }}>
       
-      {/* Top Section Worker */}
       <ProfileHeader 
         user={user} onExit={onExit} coinBalance={coinBalance} myReferralCode={myReferralCode}
         isEditingProfile={isEditingProfile} setIsEditingProfile={setIsEditingProfile}
@@ -107,29 +117,28 @@ export default function UserDashboard({ user, onExit, onLogout }) {
         nearbyShops={nearbyShops} primaryShop={primaryShop}
       />
 
-      {/* Main Container for the rest of the components */}
       <div style={{ padding: '0 20px 20px 20px', maxWidth: '600px', margin: '0 auto' }}>
         
-        {/* Lists Worker */}
+        {/* 📸 Passed the new pendingParchis state to the OrdersList! */}
         <OrdersList 
-          activeOrders={activeOrders} pastOrders={pastOrders} 
-          loading={loading} setSelectedOrder={setSelectedOrder} 
+          activeOrders={activeOrders} 
+          pastOrders={pastOrders} 
+          pendingParchis={pendingParchis}
+          loading={loading} 
+          setSelectedOrder={setSelectedOrder} 
         />
 
-        {/* Address Worker */}
         <AddressBook 
           addresses={addresses} showAddressForm={showAddressForm} setShowAddressForm={setShowAddressForm}
           newAddress={newAddress} setNewAddress={setNewAddress} handleSaveAddress={handleSaveAddress}
         />
 
-        {/* Logout Button */}
         <button onClick={onLogout} style={{ width: '100%', padding: '15px', marginTop: '10px', background: '#fee2e2', color: '#b91c1c', border: 'none', borderRadius: '12px', fontWeight: 'bold', fontSize: '1rem', cursor: 'pointer' }}>
           Log Out
         </button>
 
       </div>
 
-      {/* Pop-up Worker (Only shows when selectedOrder is set) */}
       <ReceiptModal 
         selectedOrder={selectedOrder} setSelectedOrder={setSelectedOrder} 
       />
