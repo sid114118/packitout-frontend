@@ -106,11 +106,41 @@ export default function ShopDashboard({ user, onExit }) {
     });
   };
 
-  const handleSendBill = () => {
-    alert(`✅ Digital Bill Sent to ${selectedParchi.customerName || 'Customer'}! They will receive a notification to pay ₹${parchiBill.reduce((sum, i) => sum + (i.price * i.qty), 0)}.`);
-    setParchiRequests(prev => prev.filter(p => p._id !== selectedParchi._id));
-    setSelectedParchi(null);
-    setParchiBill([]);
+  // 🚀 THE MAGIC FIX: Sending the real order with the photo attached!
+  const handleSendBill = async () => {
+    const totalAmount = parchiBill.reduce((sum, i) => sum + (i.price * i.qty), 0);
+    
+    try {
+      const res = await fetch(`${BASE_URL}/orders`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          userId: selectedParchi.userId,    // The customer
+          shopId: shopData._id,             // Your shop
+          items: parchiBill,                // The items you added
+          totalAmount: totalAmount,         // The calculated total
+          status: "Pending",                // Initial order status
+          imageUrl: selectedParchi.imageUrl // 📸 This makes sure the picture goes to the customer!
+        })
+      });
+
+      if (res.ok) {
+        // Remove from the pending Parchi list
+        setParchiRequests(prev => prev.filter(p => p._id !== selectedParchi._id));
+        setSelectedParchi(null);
+        setParchiBill([]);
+        
+        // Refresh orders immediately
+        fetchOrders();
+        
+        alert(`✅ Digital Bill Sent to ${selectedParchi.customerName || 'Customer'}!`);
+      } else {
+        alert("❌ Failed to create the order. Please try again.");
+      }
+    } catch (err) {
+      console.log(err);
+      alert("❌ Something went wrong sending the bill.");
+    }
   };
 
   return (
