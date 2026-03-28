@@ -42,7 +42,8 @@ export default function UserDashboard({ user, onExit, onLogout }) {
 
     // 2. 📸 Fetch Pending Raw Parchis for this User
     // (Using a double-fetch trick just in case your backend uses a general route)
-    fetch(`${BASE_URL}/parchis`)
+    fetch(`${BASE_URL}/parchis/user/${user._id}`)
+      
       .then(res => res.json())
       .then(data => {
         // Filter out only the parchis uploaded by THIS customer
