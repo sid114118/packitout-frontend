@@ -1,246 +1,218 @@
 import React, { useState, useEffect } from 'react';
 
 export default function ShopDashboard({ user, onExit }) {
-  const [activeTab, setActiveTab] = useState("orders");
-  const [orders, setOrders] = useState([]);
-  const [masterCatalog, setMasterCatalog] = useState([]);
-  const [shopData, setShopData] = useState(user); 
+  const [activeTab, setActiveTab] = useState("parchis"); 
+  const [inventory, setInventory] = useState([]);
+  
+  // 🚀 Start with an empty list instead of the fake data
+  const [parchiRequests, setParchiRequests] = useState([]); 
+  
+  const [selectedParchi, setSelectedParchi] = useState(null);
+  const [parchiBill, setParchiBill] = useState([]); 
 
   const BASE_URL = "https://darkslategrey-snail-415133.hostingersite.com";
 
   useEffect(() => {
-    fetchOrders();
-    fetchMasterCatalog();
-  }, []);
+    if (!user) return;
 
-  const fetchOrders = async () => {
-    try {
-      const res = await fetch(`${BASE_URL}/orders`);
-      const allOrders = await res.json();
-      setOrders(allOrders.filter(o => o.shopId?._id === shopData._id));
-    } catch (err) { console.log(err); }
-  };
+    const fetchShopData = async () => {
+      try {
+        // 1. Fetch the Shop's Inventory
+        const menuRes = await fetch(`${BASE_URL}/shops/${user._id}/menu`);
+        const menuData = await menuRes.json();
+        setInventory(menuData.inventory || []);
 
-  const fetchMasterCatalog = async () => {
-    try {
-      const res = await fetch(`${BASE_URL}/master-products`);
-      setMasterCatalog(await res.json());
-    } catch (err) { console.log(err); }
-  };
-
-  const toggleShopStatus = async () => {
-    const newStatus = !shopData.isOpen;
-    try {
-      const res = await fetch(`${BASE_URL}/shops/${shopData._id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ isOpen: newStatus })
-      });
-      const updatedShop = await res.json();
-      setShopData(updatedShop);
-    } catch (err) { console.log(err); }
-  };
-
-  const updateOrderStatus = async (orderId, newStatus) => {
-    try {
-      const res = await fetch(`${BASE_URL}/orders/${orderId}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status: newStatus })
-      });
-      if (res.ok) fetchOrders();
-    } catch (err) { console.log(err); }
-  };
-
-  // 🛡️ THE FIX: Safe update logic that won't blank out your screen
-  const handleInventoryUpdate = async (productId, sellingPrice, inStock = true) => {
-    try {
-      const res = await fetch(`${BASE_URL}/shops/${shopData._id}/inventory`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ productId, sellingPrice: Number(sellingPrice), inStock })
-      });
-      
-      if (res.ok) {
-        const updatedShop = await res.json();
-        setShopData(updatedShop);
-        alert("✅ Store Updated!"); 
-      } else {
-        const errorData = await res.json();
-        alert("❌ Error: " + (errorData.error || "Failed to update"));
+        // 2. Fetch the REAL pending Parchi photos!
+        const parchiRes = await fetch(`${BASE_URL}/parchis/${user._id}`);
+        const parchiData = await parchiRes.json();
+        
+        if (Array.isArray(parchiData)) {
+          setParchiRequests(parchiData);
+        }
+      } catch (err) { 
+        console.log("Error fetching shop data:", err); 
       }
-    } catch (err) { console.log(err); }
+    };
+
+    // Fetch immediately on load
+    fetchShopData();
+    
+    // 🔄 MAGIC: Auto-check for new photos every 10 seconds!
+    const interval = setInterval(fetchShopData, 10000);
+    return () => clearInterval(interval);
+  }, [user]);
+
+  // --- PARCHI BILLING LOGIC ---
+  const handleAddToBill = (item) => {
+    setParchiBill(prev => {
+      const exists = prev.find(i => i._id === item.product._id);
+      if (exists) {
+        return prev.map(i => i._id === item.product._id ? { ...i, qty: i.qty + 1 } : i);
+      }
+      return [...prev, { ...item.product, price: item.sellingPrice || item.product.mrp, qty: 1 }];
+    });
   };
 
-  const shopProductIds = shopData.inventory?.filter(i => i.product).map(i => i.product._id) || [];
-  const availableToAdd = masterCatalog.filter(m => !shopProductIds.includes(m._id));
+  const handleSendBill = () => {
+    alert(`✅ Digital Bill Sent to ${selectedParchi.customerName || 'Customer'}! They will receive a notification to pay ₹${parchiBill.reduce((sum, i) => sum + (i.price * i.qty), 0)}.`);
+    
+    // Remove it from the pending list after sending the bill
+    setParchiRequests(prev => prev.filter(p => p._id !== selectedParchi._id));
+    setSelectedParchi(null);
+    setParchiBill([]);
+  };
 
   return (
-    <div style={{ backgroundColor: '#f8fafc', minHeight: '100vh', paddingBottom: '70px', fontFamily: 'sans-serif' }}>
+    <div style={{ backgroundColor: '#f8fafc', minHeight: '100vh', fontFamily: 'sans-serif' }}>
       
-      <div style={{ backgroundColor: '#0f172a', color: 'white', padding: '15px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', position: 'sticky', top: 0, zIndex: 100, boxShadow: '0 2px 10px rgba(0,0,0,0.1)' }}>
+      {/* 🏪 SHOP NAV BAR */}
+      <nav style={{ backgroundColor: '#1e293b', color: 'white', padding: '15px 30px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', position: 'sticky', top: 0, zIndex: 10 }}>
         <div>
-          <h2 style={{ margin: 0, fontSize: '1.2rem', color: '#10b981' }}>🏪 {shopData.name}</h2>
-          <span style={{ fontSize: '0.8rem', color: '#94a3b8' }}>Partner Dashboard</span>
+          <h2 style={{ margin: 0, color: '#38bdf8', fontSize: '1.4rem' }}>{user?.name} Terminal</h2>
+          <span style={{ fontSize: '0.8rem', color: '#94a3b8' }}>Shop Partner Dashboard</span>
         </div>
-        
-        <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
-          <button 
-            onClick={toggleShopStatus}
-            style={{ 
-              padding: '6px 12px', borderRadius: '20px', fontWeight: 'bold', border: 'none', cursor: 'pointer',
-              backgroundColor: shopData.isOpen ? '#d1fae5' : '#fee2e2', 
-              color: shopData.isOpen ? '#059669' : '#b91c1c' 
-            }}
-          >
-            {shopData.isOpen ? '🟢 OPEN' : '🔴 CLOSED'}
+        <div style={{ display: 'flex', gap: '15px' }}>
+          <button onClick={() => setActiveTab("orders")} style={tabStyle(activeTab === "orders")}>📦 Live Orders</button>
+          
+          <button onClick={() => setActiveTab("parchis")} style={tabStyle(activeTab === "parchis")}>
+            🧾 Parchi Requests 
+            {parchiRequests.length > 0 && <span style={badgeStyle}>{parchiRequests.length}</span>}
           </button>
-          <button onClick={onExit} style={{ background: '#ef4444', color: 'white', border: 'none', padding: '6px 12px', borderRadius: '6px', fontWeight: 'bold' }}>Logout</button>
+          
+          <button onClick={() => setActiveTab("inventory")} style={tabStyle(activeTab === "inventory")}>📊 Inventory</button>
         </div>
-      </div>
+        <button onClick={onExit} style={{ backgroundColor: '#ef4444', border: 'none', padding: '8px 15px', borderRadius: '6px', color: 'white', fontWeight: 'bold', cursor: 'pointer' }}>Logout</button>
+      </nav>
 
-      <div style={{ padding: '15px', maxWidth: '600px', margin: '0 auto' }}>
-
-        {activeTab === "orders" && (
+      <div style={{ padding: '30px', maxWidth: '1200px', margin: '0 auto' }}>
+        
+        {/* --- 🧾 PARCHI REQUESTS TAB --- */}
+        {activeTab === "parchis" && (
           <div>
-            <h3 style={{ marginTop: 0, color: '#0f172a' }}>Live Orders ({orders.length})</h3>
-            {orders.length === 0 ? (
-              <div style={{ textAlign: 'center', padding: '40px', color: '#64748b' }}>No active orders right now.</div>
-            ) : orders.map(order => (
-              <div key={order._id} style={cardStyle}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid #e2e8f0', paddingBottom: '10px', marginBottom: '10px' }}>
-                  <strong style={{ color: '#334155' }}>Order #{order._id.substring(order._id.length - 6).toUpperCase()}</strong>
-                  <span style={{ color: order.status === "Delivered ✅" ? '#10b981' : '#f59e0b', fontWeight: 'bold', fontSize: '0.9rem' }}>{order.status}</span>
-                </div>
-                
-                <div style={{ color: '#64748b', fontSize: '0.95rem', marginBottom: '15px', lineHeight: '1.5' }}>
-                  {order.items.map((i, idx) => (
-                    <div key={idx}>• {i.qty}x {i.name}</div>
-                  ))}
-                </div>
-                
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '10px', paddingTop: '10px', borderTop: '1px dashed #e2e8f0' }}>
-                  <strong style={{ fontSize: '1.2rem', color: '#0f172a' }}>₹{order.totalAmount}</strong>
-                  
-                  {order.status === "Pending" && (
-                    <button onClick={() => updateOrderStatus(order._id, "Packed & Ready")} style={{ padding: '8px 15px', backgroundColor: '#3b82f6', color: 'white', border: 'none', borderRadius: '6px', fontWeight: 'bold' }}>
-                      Mark Packed 📦
-                    </button>
-                  )}
-                  {order.status === "Packed & Ready" && (
-                    <button onClick={() => updateOrderStatus(order._id, "Delivered ✅")} style={{ padding: '8px 15px', backgroundColor: '#10b981', color: 'white', border: 'none', borderRadius: '6px', fontWeight: 'bold' }}>
-                      Mark Delivered ✅
-                    </button>
-                  )}
-                </div>
+            <h2 style={{ color: '#0f172a', marginTop: 0 }}>Pending Parchi Lists</h2>
+            <p style={{ color: '#64748b', marginTop: '-10px', marginBottom: '20px' }}>Customers have uploaded these handwritten lists. Convert them to digital bills!</p>
+
+            {parchiRequests.length === 0 ? (
+              <div style={{ padding: '50px', textAlign: 'center', backgroundColor: 'white', borderRadius: '12px', color: '#94a3b8', border: '2px dashed #cbd5e1' }}>
+                <span style={{ fontSize: '3rem' }}>📭</span><br/>No pending parchis right now.
               </div>
-            ))}
-          </div>
-        )}
-
-        {activeTab === "store" && (
-          <div>
-            <h3 style={{ marginTop: 0, color: '#0f172a' }}>My Store Pricing</h3>
-            {shopData.inventory?.length === 0 ? (
-              <div style={{ textAlign: 'center', padding: '40px', color: '#64748b' }}>Your store is empty! Go to 'Add Items'.</div>
-            ) : shopData.inventory?.map(item => (
-              item.product && (
-                <div key={item._id} style={{...cardStyle, display: 'flex', alignItems: 'center', gap: '15px', opacity: item.inStock ? 1 : 0.6 }}>
-                  {item.product.image ? <img src={item.product.image} style={{ width: '50px', height: '50px', objectFit: 'contain' }} alt={item.product.name} /> : <span style={{fontSize: '30px'}}>{item.product.emoji}</span>}
-                  
-                  <div style={{ flex: 1 }}>
-                    <div style={{ fontWeight: 'bold', color: '#0f172a' }}>{item.product.name}</div>
-                    <div style={{ fontSize: '0.75rem', color: '#94a3b8' }}>MRP: ₹{item.product.mrp}</div>
-                  </div>
-                  
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', alignItems: 'flex-end' }}>
-                    
-                    {/* 👇 THE FIX: Added a visible Save button to prevent accidental blank saves */}
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
-                      <span style={{ fontWeight: 'bold', color: '#64748b' }}>₹</span>
-                      <input 
-                        type="number" 
-                        id={`price-${item.product._id}`}
-                        defaultValue={item.sellingPrice} 
-                        style={{ width: '60px', padding: '6px', borderRadius: '6px', border: '1px solid #cbd5e1', textAlign: 'center', fontWeight: 'bold' }}
-                      />
-                      <button 
-                        onClick={() => {
-                          const newPrice = document.getElementById(`price-${item.product._id}`).value;
-                          handleInventoryUpdate(item.product._id, newPrice, item.inStock);
-                        }}
-                        style={{ backgroundColor: '#0f172a', color: 'white', border: 'none', padding: '7px 10px', borderRadius: '6px', cursor: 'pointer', fontSize: '0.75rem', fontWeight: 'bold' }}
-                      >
-                        Save
-                      </button>
+            ) : (
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '20px' }}>
+                {parchiRequests.map(req => (
+                  <div key={req._id} style={{ backgroundColor: 'white', padding: '20px', borderRadius: '12px', boxShadow: '0 4px 6px rgba(0,0,0,0.05)', border: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div>
+                      <div style={{ fontWeight: 'bold', color: '#0f172a', fontSize: '1.1rem' }}>{req.customerName || "Customer"}</div>
+                      <div style={{ fontSize: '0.8rem', color: '#64748b' }}>
+                        Uploaded at {new Date(req.createdAt).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                      </div>
                     </div>
-
                     <button 
-                      onClick={() => handleInventoryUpdate(item.product._id, item.sellingPrice, !item.inStock)}
-                      style={{ fontSize: '0.75rem', background: item.inStock ? '#fee2e2' : '#d1fae5', border: 'none', color: item.inStock ? '#b91c1c' : '#059669', fontWeight: 'bold', cursor: 'pointer', padding: '4px 8px', borderRadius: '4px' }}
+                      onClick={() => setSelectedParchi(req)}
+                      style={{ backgroundColor: '#3b82f6', color: 'white', border: 'none', padding: '10px 15px', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer', boxShadow: '0 2px 4px rgba(59, 130, 246, 0.3)' }}
                     >
-                      {item.inStock ? "Mark Out of Stock" : "Mark In Stock"}
+                      Process Parchi ➡️
                     </button>
                   </div>
-                </div>
-              )
-            ))}
-          </div>
-        )}
-
-        {activeTab === "add" && (
-          <div>
-            <h3 style={{ marginTop: 0, color: '#0f172a' }}>Add from Master List</h3>
-            <p style={{ fontSize: '0.85rem', color: '#64748b', marginBottom: '15px' }}>Set your custom price to add these to your store.</p>
-            
-            {availableToAdd.length === 0 ? (
-              <div style={{ textAlign: 'center', padding: '40px', color: '#64748b' }}>You have added every product! 🌟</div>
-            ) : availableToAdd.map(product => (
-              <div key={product._id} style={{...cardStyle, display: 'flex', alignItems: 'center', gap: '15px' }}>
-                 {product.image ? <img src={product.image} style={{ width: '50px', height: '50px', objectFit: 'contain' }} alt={product.name} /> : <span style={{fontSize: '30px'}}>{product.emoji}</span>}
-                
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontWeight: 'bold', color: '#0f172a' }}>{product.name}</div>
-                  <div style={{ fontSize: '0.8rem', color: '#10b981', fontWeight: 'bold' }}>MRP: ₹{product.mrp}</div>
-                </div>
-                
-                <button 
-                  onClick={() => {
-                    const price = prompt(`Enter your selling price for ${product.name}\n(MRP is ₹${product.mrp}):`, product.mrp);
-                    if (price && !isNaN(price)) {
-                      handleInventoryUpdate(product._id, price, true);
-                    }
-                  }}
-                  style={{ padding: '8px 15px', backgroundColor: '#0f172a', color: 'white', border: 'none', borderRadius: '6px', fontWeight: 'bold', cursor: 'pointer' }}
-                >
-                  Add ➕
-                </button>
+                ))}
               </div>
-            ))}
+            )}
           </div>
         )}
 
+        {/* --- OTHER TABS (Placeholders for now) --- */}
+        {activeTab === "orders" && <div style={{ padding: '40px', textAlign: 'center', backgroundColor: 'white', borderRadius: '12px' }}>Live Orders will appear here.</div>}
+        {activeTab === "inventory" && <div style={{ padding: '40px', textAlign: 'center', backgroundColor: 'white', borderRadius: '12px' }}>Inventory Management goes here.</div>}
+
       </div>
 
-      <div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, backgroundColor: 'white', borderTop: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-around', padding: '12px 0', zIndex: 100, boxShadow: '0 -2px 10px rgba(0,0,0,0.05)' }}>
-        <button onClick={() => setActiveTab("orders")} style={bottomTabStyle(activeTab === "orders")}>
-          <span style={{ fontSize: '1.2rem' }}>📦</span><span>Orders</span>
-        </button>
-        <button onClick={() => setActiveTab("store")} style={bottomTabStyle(activeTab === "store")}>
-          <span style={{ fontSize: '1.2rem' }}>🛒</span><span>My Store</span>
-        </button>
-        <button onClick={() => setActiveTab("add")} style={bottomTabStyle(activeTab === "add")}>
-          <span style={{ fontSize: '1.2rem' }}>➕</span><span>Add Items</span>
-        </button>
-      </div>
+      {/* --------------------------------------------------- */}
+      {/* 🚀 THE SPLIT-SCREEN PARCHI PROCESSING MODAL         */}
+      {/* --------------------------------------------------- */}
+      {selectedParchi && (
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.8)', zIndex: 1000, display: 'flex', justifyContent: 'center', alignItems: 'center', padding: '20px' }}>
+          
+          <div style={{ backgroundColor: '#f8fafc', width: '100%', maxWidth: '1000px', height: '90vh', borderRadius: '16px', overflow: 'hidden', display: 'flex', flexDirection: 'column', boxShadow: '0 25px 50px rgba(0,0,0,0.25)' }}>
+            
+            {/* Modal Header */}
+            <div style={{ padding: '15px 20px', backgroundColor: '#1e293b', color: 'white', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <h3 style={{ margin: 0 }}>Processing Parchi for {selectedParchi.customerName || "Customer"}</h3>
+              <button onClick={() => { setSelectedParchi(null); setParchiBill([]); }} style={{ background: 'none', border: 'none', color: 'white', fontSize: '1.5rem', cursor: 'pointer' }}>✖</button>
+            </div>
+
+            {/* Split Screen Content */}
+            <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
+              
+              {/* LEFT SIDE: The Customer's Uploaded Image */}
+              <div style={{ flex: 1, borderRight: '2px solid #e2e8f0', backgroundColor: '#e2e8f0', padding: '20px', display: 'flex', flexDirection: 'column', alignItems: 'center', overflowY: 'auto' }}>
+                <h4 style={{ margin: '0 0 15px 0', color: '#475569' }}>Customer's Uploaded List</h4>
+                <img src={selectedParchi.imageUrl} alt="Parchi" style={{ maxWidth: '100%', borderRadius: '12px', boxShadow: '0 4px 10px rgba(0,0,0,0.1)' }} />
+              </div>
+
+              {/* RIGHT SIDE: The Digital POS Register */}
+              <div style={{ flex: 1, display: 'flex', flexDirection: 'column', backgroundColor: 'white' }}>
+                
+                {/* 1. Quick Add Inventory Strip */}
+                <div style={{ padding: '15px', borderBottom: '1px solid #e2e8f0', backgroundColor: '#f1f5f9', overflowY: 'auto', maxHeight: '40%' }}>
+                  <h4 style={{ margin: '0 0 10px 0', color: '#0f172a', fontSize: '0.9rem' }}>Tap items to add to bill:</h4>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                    {inventory.filter(i => i.product).map(item => (
+                      <button 
+                        key={item.product._id} 
+                        onClick={() => handleAddToBill(item)}
+                        style={{ padding: '8px 12px', backgroundColor: 'white', border: '1px solid #cbd5e1', borderRadius: '6px', cursor: 'pointer', fontSize: '0.8rem', fontWeight: 'bold', color: '#334155', display: 'flex', alignItems: 'center', gap: '5px' }}
+                      >
+                        {item.product.emoji} {item.product.name} (₹{item.sellingPrice || item.product.mrp})
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* 2. The Built Bill */}
+                <div style={{ flex: 1, padding: '20px', overflowY: 'auto' }}>
+                  <h4 style={{ margin: '0 0 15px 0', color: '#0f172a' }}>Generated Digital Bill</h4>
+                  {parchiBill.length === 0 ? (
+                    <div style={{ color: '#94a3b8', fontSize: '0.9rem', fontStyle: 'italic' }}>Read the image on the left and tap items above to build the bill.</div>
+                  ) : (
+                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.9rem' }}>
+                      <tbody>
+                        {parchiBill.map((item, index) => (
+                          <tr key={index} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                            <td style={{ padding: '10px 0' }}>{item.name}</td>
+                            <td style={{ padding: '10px 0', textAlign: 'center' }}>x{item.qty}</td>
+                            <td style={{ padding: '10px 0', textAlign: 'right', fontWeight: 'bold' }}>₹{item.price * item.qty}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  )}
+                </div>
+
+                {/* 3. Send to Customer Button */}
+                <div style={{ padding: '20px', backgroundColor: '#f8fafc', borderTop: '2px solid #e2e8f0' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '15px', fontSize: '1.2rem', fontWeight: 'bold', color: '#0f172a' }}>
+                    <span>Total Bill:</span>
+                    <span>₹{parchiBill.reduce((sum, i) => sum + (i.price * i.qty), 0)}</span>
+                  </div>
+                  <button 
+                    onClick={handleSendBill}
+                    disabled={parchiBill.length === 0}
+                    style={{ width: '100%', padding: '15px', backgroundColor: parchiBill.length > 0 ? '#10b981' : '#cbd5e1', color: 'white', border: 'none', borderRadius: '8px', fontSize: '1.1rem', fontWeight: 'bold', cursor: parchiBill.length > 0 ? 'pointer' : 'not-allowed' }}
+                  >
+                    {parchiBill.length > 0 ? "Send Bill to Customer 🚀" : "Add items to send bill"}
+                  </button>
+                </div>
+
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
     </div>
   );
 }
 
-const cardStyle = { backgroundColor: 'white', padding: '15px', borderRadius: '12px', boxShadow: '0 2px 8px rgba(0,0,0,0.04)', marginBottom: '15px', border: '1px solid #f1f5f9' };
-const bottomTabStyle = (isActive) => ({ 
-  background: 'none', border: 'none', fontSize: '0.75rem', fontWeight: 'bold', 
-  color: isActive ? '#10b981' : '#94a3b8', display: 'flex', flexDirection: 'column', 
-  alignItems: 'center', gap: '4px', cursor: 'pointer', flex: 1
-});
+// Styling Helpers
+const tabStyle = (isActive) => ({ backgroundColor: isActive ? 'rgba(255,255,255,0.1)' : 'transparent', color: isActive ? '#38bdf8' : '#cbd5e1', border: 'none', padding: '8px 15px', borderRadius: '6px', fontWeight: 'bold', cursor: 'pointer', transition: '0.2s', display: 'flex', alignItems: 'center', gap: '8px' });
+const badgeStyle = { backgroundColor: '#ef4444', color: 'white', padding: '2px 6px', borderRadius: '10px', fontSize: '0.7rem', fontWeight: 'bold' };
+          
