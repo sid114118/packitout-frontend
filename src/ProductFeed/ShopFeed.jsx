@@ -1,11 +1,14 @@
 import React, { useState, useEffect } from 'react';
+import ProductModal from './ProductModal.jsx'; // 👈 Imported the Modal
 
-export default function ShopFeed({ user, onAddToCart, selectedCategory, onClearCategory, searchQuery }) {
+// 👈 Added cart to props (defaulting to empty array for safety)
+export default function ShopFeed({ user, onAddToCart, cart = [], selectedCategory, onClearCategory, searchQuery }) {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [shopInfo, setShopInfo] = useState(null);
   
   const [nearbyShops, setNearbyShops] = useState([]);
+  const [selectedProductDetails, setSelectedProductDetails] = useState(null); // 👈 State for the modal
 
   const [shopDeals, setShopDeals] = useState([]);
   const [shopBestSellers, setShopBestSellers] = useState([]);
@@ -82,24 +85,18 @@ export default function ShopFeed({ user, onAddToCart, selectedCategory, onClearC
     fetchShopProducts();
   }, [user]);
 
-  // 👇 ADDED THIS: The magic function to switch shops!
   const handleSwitchShop = async (newShop) => {
     const confirmSwitch = window.confirm(`Switch to ${newShop.name}? This will clear your current cart.`);
     if (!confirmSwitch) return;
 
     try {
-      // 1. Update the user's primary shop in the database
       const res = await fetch(`${BASE_URL}/users/${user._id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ primaryShop: newShop._id })
       });
       const updatedUser = await res.json();
-
-      // 2. Update local storage so the app remembers the new shop
       localStorage.setItem("packitout_user", JSON.stringify(updatedUser));
-
-      // 3. Reload the page to load the new menu and clear the cart!
       window.location.reload();
     } catch (err) {
       console.log(err);
@@ -114,10 +111,16 @@ export default function ShopFeed({ user, onAddToCart, selectedCategory, onClearC
     const shopClosed = shopInfo && !shopInfo.isOpen;
     return (
       <div style={{ ...productCardStyle, minWidth: isCarousel ? '150px' : 'auto', opacity: isOutOfStock ? 0.6 : 1, filter: isOutOfStock ? 'grayscale(80%)' : 'none' }}>
-        <div style={{ height: '100px', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: '#f1f5f9', borderRadius: '8px', marginBottom: '10px', position: 'relative' }}>
+        
+        {/* 👇 WRAPPED THE IMAGE IN AN ONCLICK TO OPEN MODAL 👇 */}
+        <div 
+          onClick={() => setSelectedProductDetails(item)}
+          style={{ height: '100px', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: '#f1f5f9', borderRadius: '8px', marginBottom: '10px', position: 'relative', cursor: 'pointer' }}
+        >
           {item.isDiscounted && !isOutOfStock && <div style={{ position: 'absolute', top: '-8px', left: '-8px', backgroundColor: '#ef4444', color: 'white', fontSize: '0.75rem', fontWeight: 'bold', padding: '4px 8px', borderRadius: '6px', zIndex: 10 }}>{item.discountPercent}% OFF</div>}
           {item.image ? <img src={item.image} style={{ maxHeight: '80px', maxWidth: '100%', objectFit: 'contain' }} alt={item.name} /> : <span style={{fontSize: '40px'}}>{item.emoji}</span>}
         </div>
+
         <div style={{ fontSize: '0.7rem', color: '#94a3b8', textTransform: 'uppercase', fontWeight: 'bold', textAlign: 'left' }}>{item.brand}</div>
         <div style={{ fontWeight: 'bold', color: '#0f172a', fontSize: '0.85rem', marginBottom: '5px', height: '35px', overflow: 'hidden', lineHeight: '1.2', textAlign: 'left' }}>{item.name}</div>
         <div style={{ fontSize: '0.75rem', color: '#64748b', marginBottom: '10px', textAlign: 'left' }}>{item.qnty}</div>
@@ -208,8 +211,7 @@ export default function ShopFeed({ user, onAddToCart, selectedCategory, onClearC
             </div>
           )}
 
-          {/* 👇 MOVED TO THE BOTTOM & BUTTON WIRED UP 👇 */}
-          {!selectedCategory && !isSearching && nearbyShops.length > 0 && (
+          {nearbyShops.length > 0 && (
             <div style={{ marginBottom: '30px', textAlign: 'left', paddingTop: '15px', borderTop: '2px dashed #e2e8f0' }}>
               <h3 style={sectionHeaderStyle}>🏪 Explore Other Stores Near You</h3>
               <div className="hide-scroll" style={carouselRowStyle}>
@@ -222,22 +224,27 @@ export default function ShopFeed({ user, onAddToCart, selectedCategory, onClearC
                     <div style={{ fontSize: '0.75rem', color: shop.isOpen ? '#10b981' : '#ef4444', fontWeight: 'bold', marginTop: '5px', marginBottom: '10px' }}>
                       {shop.isOpen ? '🟢 OPEN NOW' : '🔴 CLOSED'}
                     </div>
-                    {/* BUTTON NOW CALLS handleSwitchShop! */}
-                    <button 
-                      onClick={() => handleSwitchShop(shop)} 
-                      style={{ ...addBtnStyle, backgroundColor: '#334155', boxShadow: 'none' }}
-                    >
-                      Visit Store
-                    </button>
+                    <button onClick={() => handleSwitchShop(shop)} style={{ ...addBtnStyle, backgroundColor: '#334155', boxShadow: 'none' }}>Visit Store</button>
                   </div>
                 ))}
               </div>
             </div>
           )}
-          {/* 👆 END OF TOP STORES SECTION 👆 */}
-
         </>
       )}
+
+      {/* 👇 RENDER THE MODAL COMPONENT AT THE VERY BOTTOM 👇 */}
+      <ProductModal 
+        product={selectedProductDetails} 
+        isOpen={selectedProductDetails !== null} 
+        onClose={() => setSelectedProductDetails(null)} 
+        onAddToCart={(item) => {
+          onAddToCart({ ...item, mrp: item.sellingPrice });
+          setSelectedProductDetails(null); // Optional: Close modal after adding
+        }}
+        cart={cart}
+      />
+
     </div>
   );
 }
@@ -249,4 +256,4 @@ const sectionHeaderStyle = { color: '#0f172a', marginTop: 0, marginBottom: '12px
 const addBtnStyle = { width: '100%', padding: '8px', backgroundColor: '#10b981', color: 'white', border: 'none', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer', textTransform: 'uppercase', boxShadow: '0 2px 4px rgba(16, 185, 129, 0.2)' };
 const disabledBtnStyle = { width: '100%', padding: '8px', backgroundColor: '#f1f5f9', color: '#cbd5e1', border: '2px solid #cbd5e1', borderRadius: '8px', fontWeight: 'bold', cursor: 'not-allowed', textTransform: 'uppercase' };
 const outOfStockBtnStyle = { width: '100%', padding: '8px', backgroundColor: '#f1f5f9', color: '#94a3b8', border: '2px solid #e2e8f0', borderRadius: '8px', fontWeight: 'bold', cursor: 'not-allowed' };
-  
+            
