@@ -8,15 +8,25 @@ export default function InventoryTab({ shopData, masterCatalog, handleInventoryU
   // States for Inline Price Editing
   const [editingId, setEditingId] = useState(null);
   const [tempPrice, setTempPrice] = useState("");
-  const [addingId, setAddingId] = useState(null); // For adding new items
+  const [addingId, setAddingId] = useState(null); 
+
+  // 🛡️ SAFETY NETS: Prevent the "Blank Screen" Crash 🛡️
+  // If data is still loading, we force them to be empty arrays so .map() and .filter() don't break!
+  const safeInventory = shopData?.inventory || [];
+  const safeCatalog = masterCatalog || [];
 
   // --- DATA CALCULATIONS ---
-  const shopProductIds = shopData.inventory?.filter(i => i.product).map(i => i.product._id) || []; 
-  const availableToAdd = masterCatalog.filter(m => !shopProductIds.includes(m._id));
+  const shopProductIds = safeInventory.filter(i => i?.product).map(i => i.product._id); 
+  const availableToAdd = safeCatalog.filter(m => !shopProductIds.includes(m._id));
 
-  // Apply Search Filters
-  const filteredAvailable = availableToAdd.filter(item => item.name.toLowerCase().includes(searchMaster.toLowerCase()));
-  const filteredInventory = shopData.inventory?.filter(item => item.product && item.product.name.toLowerCase().includes(searchInventory.toLowerCase())) || [];
+  // Apply Search Filters safely
+  const filteredAvailable = availableToAdd.filter(item => 
+    item?.name?.toLowerCase().includes(searchMaster.toLowerCase())
+  );
+  
+  const filteredInventory = safeInventory.filter(item => 
+    item?.product?.name?.toLowerCase().includes(searchInventory.toLowerCase())
+  );
 
   return (
     <div style={{ paddingBottom: '30px' }}>
@@ -45,7 +55,7 @@ export default function InventoryTab({ shopData, masterCatalog, handleInventoryU
         {availableToAdd.length === 0 ? (
           <div style={{ fontSize: '0.9rem', color: '#0284c7', marginTop: '10px', fontWeight: 'bold' }}>🎉 You have added every available product!</div>
         ) : (
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: '10px', marginTop: '10px', maxHeight: '250px', overflowY: 'auto' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: '10px', marginTop: '10px', maxHeight: '250px', overflowY: 'auto', paddingRight: '5px' }}>
             {filteredAvailable.map(m => (
               <div key={m._id} style={{ backgroundColor: 'white', padding: '10px', borderRadius: '8px', border: '1px solid #bae6fd', textAlign: 'center', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
                 
@@ -62,7 +72,15 @@ export default function InventoryTab({ shopData, masterCatalog, handleInventoryU
                     <input type="number" placeholder={`₹${m.mrp}`} value={tempPrice} onChange={e => setTempPrice(e.target.value)} style={{ padding: '6px', borderRadius: '4px', border: '1px solid #0284c7', fontSize: '0.9rem', textAlign: 'center' }} autoFocus />
                     <div style={{ display: 'flex', gap: '5px' }}>
                       <button onClick={() => setAddingId(null)} style={{ flex: 1, padding: '6px', backgroundColor: '#f1f5f9', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>❌</button>
-                      <button onClick={() => { handleInventoryUpdate(m._id, tempPrice || m.mrp, true); setAddingId(null); setTempPrice(""); }} style={{ flex: 1, padding: '6px', backgroundColor: '#0284c7', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold' }}>Save</button>
+                      <button 
+                        onClick={() => { 
+                          handleInventoryUpdate(m._id, tempPrice || m.mrp, true); 
+                          setAddingId(null); 
+                          setTempPrice(""); 
+                        }} 
+                        style={{ flex: 1, padding: '6px', backgroundColor: '#0284c7', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold' }}>
+                        Save
+                      </button>
                     </div>
                   </div>
                 ) : (
@@ -90,56 +108,60 @@ export default function InventoryTab({ shopData, masterCatalog, handleInventoryU
         style={{ ...searchInputStyle, marginBottom: '15px' }} 
       />
 
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
-        {filteredInventory.map(item => {
-          if (!item.product) return null;
-          const isOutOfStock = !item.inStock;
+      {filteredInventory.length === 0 ? (
+        <div style={{ textAlign: 'center', padding: '30px', backgroundColor: 'white', borderRadius: '12px', color: '#64748b' }}>No items match your search.</div>
+      ) : (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
+          {filteredInventory.map(item => {
+            if (!item?.product) return null;
+            const isOutOfStock = !item.inStock;
 
-          return (
-            <div key={item.product._id} style={{ ...cardStyle, border: isOutOfStock ? '2px solid #fecaca' : '1px solid #e2e8f0', opacity: isOutOfStock ? 0.8 : 1 }}>
-              
-              <div style={{ display: 'flex', gap: '15px', alignItems: 'center', width: '100%' }}>
-                {/* Image/Emoji */}
-                <div style={{ width: '50px', height: '50px', backgroundColor: '#f8fafc', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '24px', flexShrink: 0 }}>
-                  {item.product.image ? <img src={item.product.image} style={{ maxWidth: '40px', maxHeight: '40px', objectFit: 'contain' }} alt="" /> : item.product.emoji}
+            return (
+              <div key={item.product._id} style={{ ...cardStyle, border: isOutOfStock ? '2px solid #fecaca' : '1px solid #e2e8f0', opacity: isOutOfStock ? 0.8 : 1 }}>
+                
+                <div style={{ display: 'flex', gap: '15px', alignItems: 'center', width: '100%' }}>
+                  {/* Image/Emoji */}
+                  <div style={{ width: '50px', height: '50px', backgroundColor: '#f8fafc', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '24px', flexShrink: 0 }}>
+                    {item.product.image ? <img src={item.product.image} style={{ maxWidth: '40px', maxHeight: '40px', objectFit: 'contain' }} alt="" /> : item.product.emoji}
+                  </div>
+
+                  {/* Details */}
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontWeight: 'bold', color: '#0f172a', fontSize: '0.95rem', lineHeight: '1.2' }}>{item.product.name}</div>
+                    <div style={{ fontSize: '0.75rem', color: '#64748b', marginBottom: '6px' }}>{item.product.qnty} • MRP ₹{item.product.mrp}</div>
+                    
+                    {/* Inline Price Editor */}
+                    {editingId === item.product._id ? (
+                      <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                        <span style={{ fontWeight: 'bold', color: '#334155' }}>₹</span>
+                        <input type="number" value={tempPrice} onChange={e => setTempPrice(e.target.value)} style={{ width: '70px', padding: '6px', borderRadius: '4px', border: '2px solid #10b981', outline: 'none', fontWeight: 'bold' }} autoFocus />
+                        <button onClick={() => { handleInventoryUpdate(item.product._id, tempPrice, item.inStock); setEditingId(null); }} style={{ padding: '6px 12px', backgroundColor: '#10b981', color: 'white', border: 'none', borderRadius: '4px', fontWeight: 'bold', cursor: 'pointer' }}>Save</button>
+                        <button onClick={() => setEditingId(null)} style={{ padding: '6px 10px', backgroundColor: '#f1f5f9', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>❌</button>
+                      </div>
+                    ) : (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        <span style={{ fontWeight: '900', color: '#10b981', fontSize: '1.1rem' }}>₹{item.sellingPrice}</span>
+                        <button onClick={() => { setEditingId(item.product._id); setTempPrice(item.sellingPrice); }} style={{ background: 'none', border: 'none', color: '#3b82f6', fontSize: '0.8rem', cursor: 'pointer', fontWeight: 'bold', padding: 0, textDecoration: 'underline' }}>
+                          Edit Price
+                        </button>
+                      </div>
+                    )}
+                  </div>
                 </div>
 
-                {/* Details */}
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontWeight: 'bold', color: '#0f172a', fontSize: '0.95rem', lineHeight: '1.2' }}>{item.product.name}</div>
-                  <div style={{ fontSize: '0.75rem', color: '#64748b', marginBottom: '6px' }}>{item.product.qnty} • MRP ₹{item.product.mrp}</div>
-                  
-                  {/* Inline Price Editor */}
-                  {editingId === item.product._id ? (
-                    <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                      <span style={{ fontWeight: 'bold', color: '#334155' }}>₹</span>
-                      <input type="number" value={tempPrice} onChange={e => setTempPrice(e.target.value)} style={{ width: '70px', padding: '6px', borderRadius: '4px', border: '2px solid #10b981', outline: 'none', fontWeight: 'bold' }} autoFocus />
-                      <button onClick={() => { handleInventoryUpdate(item.product._id, tempPrice, item.inStock); setEditingId(null); }} style={{ padding: '6px 12px', backgroundColor: '#10b981', color: 'white', border: 'none', borderRadius: '4px', fontWeight: 'bold', cursor: 'pointer' }}>Save</button>
-                      <button onClick={() => setEditingId(null)} style={{ padding: '6px 10px', backgroundColor: '#f1f5f9', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>❌</button>
-                    </div>
-                  ) : (
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                      <span style={{ fontWeight: '900', color: '#10b981', fontSize: '1.1rem' }}>₹{item.sellingPrice}</span>
-                      <button onClick={() => { setEditingId(item.product._id); setTempPrice(item.sellingPrice); }} style={{ background: 'none', border: 'none', color: '#3b82f6', fontSize: '0.8rem', cursor: 'pointer', fontWeight: 'bold', padding: 0, textDecoration: 'underline' }}>
-                        Edit Price
-                      </button>
-                    </div>
-                  )}
-                </div>
+                {/* 🔴🟢 MASSIVE OUT OF STOCK TOGGLE */}
+                <button 
+                  onClick={() => handleInventoryUpdate(item.product._id, item.sellingPrice, !item.inStock)}
+                  style={{ width: '100%', marginTop: '15px', padding: '12px', borderRadius: '8px', border: 'none', fontWeight: 'bold', fontSize: '0.9rem', cursor: 'pointer', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '8px', backgroundColor: item.inStock ? '#ecfdf5' : '#fef2f2', color: item.inStock ? '#059669' : '#dc2626', border: item.inStock ? '1px solid #10b981' : '1px solid #ef4444', transition: '0.2s' }}
+                >
+                  {item.inStock ? "🟢 IN STOCK (Tap to Disable)" : "🔴 OUT OF STOCK (Tap to Enable)"}
+                </button>
+
               </div>
-
-              {/* 🔴🟢 MASSIVE OUT OF STOCK TOGGLE */}
-              <button 
-                onClick={() => handleInventoryUpdate(item.product._id, item.sellingPrice, !item.inStock)}
-                style={{ width: '100%', marginTop: '15px', padding: '12px', borderRadius: '8px', border: 'none', fontWeight: 'bold', fontSize: '0.9rem', cursor: 'pointer', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '8px', backgroundColor: item.inStock ? '#ecfdf5' : '#fef2f2', color: item.inStock ? '#059669' : '#dc2626', border: item.inStock ? '1px solid #10b981' : '1px solid #ef4444', transition: '0.2s' }}
-              >
-                {item.inStock ? "🟢 IN STOCK (Tap to Disable)" : "🔴 OUT OF STOCK (Tap to Enable)"}
-              </button>
-
-            </div>
-          );
-        })}
-      </div>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }
@@ -147,4 +169,4 @@ export default function InventoryTab({ shopData, masterCatalog, handleInventoryU
 // PREMIUM STYLING
 const searchInputStyle = { width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '0.95rem', boxSizing: 'border-box', outline: 'none', backgroundColor: 'white' };
 const cardStyle = { backgroundColor: 'white', padding: '15px', borderRadius: '12px', boxShadow: '0 4px 6px rgba(0,0,0,0.04)', display: 'flex', flexDirection: 'column', transition: '0.2s' };
-                  
+            
