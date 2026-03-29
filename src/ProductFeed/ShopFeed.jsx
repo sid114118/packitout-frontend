@@ -4,6 +4,8 @@ export default function ShopFeed({ user, onAddToCart, selectedCategory, onClearC
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [shopInfo, setShopInfo] = useState(null);
+  
+  const [nearbyShops, setNearbyShops] = useState([]);
 
   const [shopDeals, setShopDeals] = useState([]);
   const [shopBestSellers, setShopBestSellers] = useState([]);
@@ -23,6 +25,12 @@ export default function ShopFeed({ user, onAddToCart, selectedCategory, onClearC
         const shopData = await res.json();
         setShopInfo({ name: shopData.name, isOpen: shopData.isOpen });
         
+        if (user && user.pincode) {
+          const shopsRes = await fetch(`${BASE_URL}/shops/all/${user.pincode}`);
+          const shopsData = await shopsRes.json();
+          setNearbyShops(shopsData.filter(s => s._id !== shopId)); 
+        }
+
         const availableItems = shopData.inventory?.filter(item => item.product).map(item => {
           const sellingPrice = item.sellingPrice !== undefined && item.sellingPrice !== null ? item.sellingPrice : item.product.mrp;
           return {
@@ -121,14 +129,25 @@ export default function ShopFeed({ user, onAddToCart, selectedCategory, onClearC
   return (
     <div style={{ padding: '0 15px', maxWidth: '1000px', margin: '0 auto', overflowX: 'hidden' }}>
       <style>{`.hide-scroll::-webkit-scrollbar { display: none; } .hide-scroll { -ms-overflow-style: none; scrollbar-width: none; }`}</style>
-      
-      {shopInfo && !selectedCategory && !isSearching && (
-        <div style={{ backgroundColor: '#fff', padding: '10px 20px', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '10px', boxShadow: '0 2px 4px rgba(0,0,0,0.05)', marginBottom: '15px', borderRadius: '8px' }}>
-          <span style={{ fontSize: '0.9rem', color: '#64748b' }}>Shopping from:</span>
-          <strong style={{ color: '#10b981' }}>{shopInfo.name}</strong>
-          <span style={{ fontSize: '0.75rem', padding: '3px 8px', borderRadius: '12px', background: shopInfo.isOpen ? '#d1fae5' : '#fee2e2', color: shopInfo.isOpen ? '#059669' : '#b91c1c' }}>
-            {shopInfo.isOpen ? '🟢 OPEN' : '🔴 CLOSED'}
-          </span>
+
+      {/* NEW TOP STORES CAROUSEL */}
+      {!selectedCategory && !isSearching && nearbyShops.length > 0 && (
+        <div style={{ marginBottom: '30px', textAlign: 'left' }}>
+          <h3 style={sectionHeaderStyle}>🏪 Top Stores Near You</h3>
+          <div className="hide-scroll" style={carouselRowStyle}>
+            {nearbyShops.map(shop => (
+              <div key={shop._id} style={{ ...productCardStyle, minWidth: '160px', alignItems: 'center', textAlign: 'center', border: '1px solid #cbd5e1', backgroundColor: '#f8fafc' }}>
+                <div style={{ fontSize: '30px', marginBottom: '5px' }}>🏪</div>
+                <div style={{ fontWeight: 'bold', color: '#0f172a', fontSize: '0.9rem', width: '100%', overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis' }}>
+                  {shop.name}
+                </div>
+                <div style={{ fontSize: '0.75rem', color: shop.isOpen ? '#10b981' : '#ef4444', fontWeight: 'bold', marginTop: '5px', marginBottom: '10px' }}>
+                  {shop.isOpen ? '🟢 OPEN NOW' : '🔴 CLOSED'}
+                </div>
+                <button style={{ ...addBtnStyle, backgroundColor: '#334155', boxShadow: 'none' }}>Visit Store</button>
+              </div>
+            ))}
+          </div>
         </div>
       )}
 
@@ -156,7 +175,7 @@ export default function ShopFeed({ user, onAddToCart, selectedCategory, onClearC
           )}
           {shopDeals.length > 0 && (
             <div style={{ marginBottom: '30px', textAlign: 'left' }}>
-              <h3 style={{ ...sectionHeaderStyle, color: '#ef4444' }}>🔥 {shopInfo.name} Mega Steals</h3>
+              <h3 style={{ ...sectionHeaderStyle, color: '#ef4444' }}>🔥 {shopInfo?.name} Mega Steals</h3>
               <div className="hide-scroll" style={carouselRowStyle}>{shopDeals.map(item => <ProductCard key={item._id} item={item} isCarousel={true} />)}</div>
             </div>
           )}
@@ -197,4 +216,4 @@ const sectionHeaderStyle = { color: '#0f172a', marginTop: 0, marginBottom: '12px
 const addBtnStyle = { width: '100%', padding: '8px', backgroundColor: '#10b981', color: 'white', border: 'none', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer', textTransform: 'uppercase', boxShadow: '0 2px 4px rgba(16, 185, 129, 0.2)' };
 const disabledBtnStyle = { width: '100%', padding: '8px', backgroundColor: '#f1f5f9', color: '#cbd5e1', border: '2px solid #cbd5e1', borderRadius: '8px', fontWeight: 'bold', cursor: 'not-allowed', textTransform: 'uppercase' };
 const outOfStockBtnStyle = { width: '100%', padding: '8px', backgroundColor: '#f1f5f9', color: '#94a3b8', border: '2px solid #e2e8f0', borderRadius: '8px', fontWeight: 'bold', cursor: 'not-allowed' };
-            
+        
