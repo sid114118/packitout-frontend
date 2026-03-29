@@ -1,5 +1,5 @@
 import React from 'react';
-import NotificationBell from '../NotificationBell'; // 🔔 Make sure this path points to your new Bell component!
+import NotificationBell from '../../NotificationBell'; // 🔔 Make sure this path points to your new Bell component!
 
 export default function ProfileHeader({
   user,
