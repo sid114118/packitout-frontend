@@ -4,10 +4,11 @@ import React, { useState, useEffect } from 'react';
 import OrdersTab from './components/ShopDashboard/OrdersTab';
 import ParchiTab from './components/ShopDashboard/ParchiTab';
 import InventoryTab from './components/ShopDashboard/InventoryTab';
+import NotificationBell from './NotificationBell'; // 🔔 IMPORTED THE BELL! (Adjust path if needed)
 
 export default function ShopDashboard({ user, onExit }) {
   // --- STATE ---
-  const [activeTab, setActiveTab] = useState("parchis"); 
+  const [activeTab, setActiveTab] = useState("orders"); // Changed default to orders for better UX
   const [orders, setOrders] = useState([]); 
   const [masterCatalog, setMasterCatalog] = useState([]); 
   const [shopData, setShopData] = useState(user); 
@@ -106,7 +107,6 @@ export default function ShopDashboard({ user, onExit }) {
     });
   };
 
-  // 🚀 THE MAGIC FIX: Sending the real order with the photo attached!
   const handleSendBill = async () => {
     const totalAmount = parchiBill.reduce((sum, i) => sum + (i.price * i.qty), 0);
     
@@ -115,24 +115,20 @@ export default function ShopDashboard({ user, onExit }) {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          userId: selectedParchi.userId,    // The customer
-          shopId: shopData._id,             // Your shop
-          items: parchiBill,                // The items you added
-          totalAmount: totalAmount,         // The calculated total
-          status: "Pending",                // Initial order status
-          imageUrl: selectedParchi.imageUrl // 📸 This makes sure the picture goes to the customer!
+          userId: selectedParchi.userId,    
+          shopId: shopData._id,             
+          items: parchiBill,                
+          totalAmount: totalAmount,         
+          status: "Pending",                
+          imageUrl: selectedParchi.imageUrl 
         })
       });
 
       if (res.ok) {
-        // Remove from the pending Parchi list
         setParchiRequests(prev => prev.filter(p => p._id !== selectedParchi._id));
         setSelectedParchi(null);
         setParchiBill([]);
-        
-        // Refresh orders immediately
         fetchOrders();
-        
         alert(`✅ Digital Bill Sent to ${selectedParchi.customerName || 'Customer'}!`);
       } else {
         alert("❌ Failed to create the order. Please try again.");
@@ -146,17 +142,24 @@ export default function ShopDashboard({ user, onExit }) {
   return (
     <div style={{ backgroundColor: '#f8fafc', minHeight: '100vh', paddingBottom: '70px', fontFamily: 'sans-serif' }}>
       
-      {/* 🏪 TOP HEADER */}
+      {/* 🏪 TOP HEADER WITH NOTIFICATION BELL */}
       <div style={{ backgroundColor: '#0f172a', color: 'white', padding: '15px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', position: 'sticky', top: 0, zIndex: 100, boxShadow: '0 2px 10px rgba(0,0,0,0.1)' }}> 
         <div> 
           <h2 style={{ margin: 0, fontSize: '1.2rem', color: '#10b981' }}>🏪 {shopData.name}</h2> 
           <span style={{ fontSize: '0.8rem', color: '#94a3b8' }}>Partner Dashboard</span> 
         </div> 
+        
+        {/* 👇 THE NEW BUTTON GROUP 👇 */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}> 
+          
+          <NotificationBell ownerType="shop" ownerId={shopData._id} />
+
           <button onClick={toggleShopStatus} style={{ padding: '6px 12px', borderRadius: '20px', fontWeight: 'bold', border: 'none', cursor: 'pointer', backgroundColor: shopData.isOpen ? '#d1fae5' : '#fee2e2', color: shopData.isOpen ? '#059669' : '#b91c1c' }} > 
             {shopData.isOpen ? '🟢 OPEN' : '🔴 CLOSED'} 
           </button> 
-          <button onClick={onExit} style={{ background: '#ef4444', color: 'white', border: 'none', padding: '6px 12px', borderRadius: '6px', fontWeight: 'bold' }}>Logout</button> 
+          <button onClick={onExit} style={{ background: '#ef4444', color: 'white', border: 'none', padding: '6px 12px', borderRadius: '6px', fontWeight: 'bold', cursor: 'pointer' }}>
+            Logout
+          </button> 
         </div> 
       </div> 
 
@@ -169,37 +172,14 @@ export default function ShopDashboard({ user, onExit }) {
 
       <div style={{ padding: '15px', maxWidth: '800px', margin: '0 auto' }}> 
         
-        {/* 🚀 LOOK HOW CLEAN THIS IS NOW! */}
-        {activeTab === "orders" && (
-          <OrdersTab orders={orders} updateOrderStatus={updateOrderStatus} />
-        )}
-
-        {activeTab === "parchis" && (
-          <ParchiTab 
-            parchiRequests={parchiRequests}
-            selectedParchi={selectedParchi}
-            setSelectedParchi={setSelectedParchi}
-            parchiBill={parchiBill}
-            setParchiBill={setParchiBill}
-            handleAddToBill={handleAddToBill}
-            handleSendBill={handleSendBill}
-            shopData={shopData}
-          />
-        )}
-
-        {activeTab === "inventory" && (
-          <InventoryTab 
-            shopData={shopData} 
-            masterCatalog={masterCatalog} 
-            handleInventoryUpdate={handleInventoryUpdate} 
-          />
-        )}
+        {activeTab === "orders" && <OrdersTab orders={orders} updateOrderStatus={updateOrderStatus} />}
+        {activeTab === "parchis" && <ParchiTab parchiRequests={parchiRequests} selectedParchi={selectedParchi} setSelectedParchi={setSelectedParchi} parchiBill={parchiBill} setParchiBill={setParchiBill} handleAddToBill={handleAddToBill} handleSendBill={handleSendBill} shopData={shopData} />}
+        {activeTab === "inventory" && <InventoryTab shopData={shopData} masterCatalog={masterCatalog} handleInventoryUpdate={handleInventoryUpdate} />}
 
       </div>
     </div>
   );
 }
 
-// Styling Helpers for the Nav Bar
 const tabStyle = (isActive) => ({ backgroundColor: isActive ? 'rgba(255,255,255,0.1)' : 'transparent', color: isActive ? '#38bdf8' : '#cbd5e1', border: 'none', padding: '8px 15px', borderRadius: '6px', fontWeight: 'bold', cursor: 'pointer', transition: '0.2s', display: 'flex', alignItems: 'center', gap: '8px' });
 const badgeStyle = { backgroundColor: '#ef4444', color: 'white', padding: '2px 6px', borderRadius: '10px', fontSize: '0.7rem', fontWeight: 'bold' };
