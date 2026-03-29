@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import OneSignal from 'react-onesignal'; // 🚀 ADDED ONESIGNAL IMPORT
 
 // 🔗 IMPORTING YOUR WORKERS
 import ProfileHeader from './components/UserDashboard/ProfileHeader';
@@ -29,9 +30,30 @@ export default function UserDashboard({ user, onExit, onLogout }) {
 
   const BASE_URL = "https://darkslategrey-snail-415133.hostingersite.com";
 
-  // --- DATA FETCHING ---
+  // --- DATA FETCHING & INITIALIZATION ---
   useEffect(() => {
-    // 1. Fetch Processed Orders
+
+    // 👇 1. WAKE UP ONESIGNAL AND REGISTER DEVICE 👇
+    const initOneSignal = async () => {
+      try {
+        await OneSignal.init({
+          appId: "1da2e78d-0874-4965-a895-42c9237ee92b", // Your App ID
+          safari_web_id: "web.onesignal.auto.13d8bf97-93cf-4a09-b799-2a50baaf1ebd",
+          notifyButton: { enable: true }, // Shows the bell to subscribe
+          allowLocalhostAsSecureOrigin: true,
+        });
+        
+        // This is the magic line! Ties this phone to the MongoDB User ID
+        if (user && user._id) {
+          OneSignal.login(user._id); 
+        }
+      } catch (err) {
+        console.log("OneSignal Init Error:", err);
+      }
+    };
+    initOneSignal();
+
+    // 2. Fetch Processed Orders
     fetch(`${BASE_URL}/orders`)
       .then(res => res.json())
       .then(data => {
@@ -40,10 +62,8 @@ export default function UserDashboard({ user, onExit, onLogout }) {
       })
       .catch(() => setLoading(false));
 
-    // 2. 📸 Fetch Pending Raw Parchis for this User
-    // (Using a double-fetch trick just in case your backend uses a general route)
+    // 3. 📸 Fetch Pending Raw Parchis for this User
     fetch(`${BASE_URL}/parchis/user/${user._id}`)
-      
       .then(res => res.json())
       .then(data => {
         // Filter out only the parchis uploaded by THIS customer
@@ -52,7 +72,7 @@ export default function UserDashboard({ user, onExit, onLogout }) {
       })
       .catch(err => console.log("No pending parchis found", err));
 
-    // 3. Fetch Profile & Coins
+    // 4. Fetch Profile & Coins
     fetch(`${BASE_URL}/users/${user._id}`)
       .then(res => res.json())
       .then(data => {
@@ -68,7 +88,7 @@ export default function UserDashboard({ user, onExit, onLogout }) {
         }
       });
 
-    // 4. Fetch Nearby Shops
+    // 5. Fetch Nearby Shops
     if (user?.pincode) {
       fetch(`${BASE_URL}/shops/all/${user.pincode}`)
         .then(res => res.json())
