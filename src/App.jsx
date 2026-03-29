@@ -88,8 +88,9 @@ export default function App() {
     return <UserDashboard user={loggedInUser} onExit={() => window.location.hash = ""} onLogout={handleUserLogout} />;
   }
 
+  // 👇 THIS IS THE ONLY CHANGE: Added setCart={setCart}
   if (currentView === "cart") {
-    return <Cart cart={cart} user={loggedInUser} onBack={() => window.location.hash = ""} onCheckoutSuccess={() => { setCart([]); window.location.hash = "#account"; }} />;
+    return <Cart cart={cart} setCart={setCart} user={loggedInUser} onBack={() => window.location.hash = ""} onCheckoutSuccess={() => { setCart([]); window.location.hash = "#account"; }} />;
   }
 
   const cartTotalItems = cart.reduce((sum, item) => sum + item.qty, 0);
@@ -117,7 +118,7 @@ export default function App() {
         </div>
       </div>
       
-      {/* 👇 PREMIUM STORE BANNER (Added Here) 👇 */}
+      {/* 👇 PREMIUM STORE BANNER 👇 */}
       {loggedInUser && loggedInUser.primaryShop && typeof loggedInUser.primaryShop === 'object' && !searchQuery && !selectedCategory && (
         <div style={{ margin: '5px 15px 15px 15px', backgroundColor: '#ffffff', padding: '12px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', boxShadow: '0 4px 10px rgba(0,0,0,0.03)', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
           <div style={{ display: 'flex', flexDirection: 'column', textAlign: 'left' }}>
