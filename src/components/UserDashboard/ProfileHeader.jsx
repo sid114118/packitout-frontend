@@ -1,4 +1,5 @@
 import React from 'react';
+import NotificationBell from '../NotificationBell'; // 🔔 Make sure this path points to your new Bell component!
 
 export default function ProfileHeader({
   user,
@@ -17,13 +18,23 @@ export default function ProfileHeader({
     <>
       {/* 🟢 PREMIUM HEADER */}
       <div style={{ background: 'linear-gradient(135deg, #10b981, #059669)', padding: '30px 20px 50px 20px', color: 'white', borderBottomLeftRadius: '25px', borderBottomRightRadius: '25px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', boxShadow: '0 4px 15px rgba(16, 185, 129, 0.3)' }}>
+        
         <div>
           <h2 style={{ margin: '0 0 5px 0', fontSize: '1.8rem' }}>{editForm.name || "Customer"}</h2>
           <p style={{ margin: 0, opacity: 0.9, fontSize: '0.9rem' }}>📞 {user?.phone} | 📍 {editForm.pincode}</p>
         </div>
-        <button onClick={onExit} style={{ background: 'rgba(255,255,255,0.2)', color: 'white', border: 'none', padding: '10px 15px', borderRadius: '12px', fontWeight: 'bold', cursor: 'pointer', backdropFilter: 'blur(5px)' }}>
-          Back to Shop
-        </button>
+
+        {/* 👇 ADDED NOTIFICATION BELL HERE 👇 */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
+          
+          <NotificationBell ownerType="user" ownerId={user._id} />
+          
+          <button onClick={onExit} style={{ background: 'rgba(255,255,255,0.2)', color: 'white', border: 'none', padding: '10px 15px', borderRadius: '12px', fontWeight: 'bold', cursor: 'pointer', backdropFilter: 'blur(5px)' }}>
+            Back to Shop
+          </button>
+        </div>
+        {/* 👆 END ADDITION 👆 */}
+
       </div>
 
       {/* The content wrapper that pulls everything up over the header background */}
@@ -106,4 +117,3 @@ export default function ProfileHeader({
 
 // Styling helper
 const inputStyle = { width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid #cbd5e1', boxSizing: 'border-box', outline: 'none' };
-              
