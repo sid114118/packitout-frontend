@@ -216,4 +216,4 @@ const sectionHeaderStyle = { color: '#0f172a', marginTop: 0, marginBottom: '12px
 const addBtnStyle = { width: '100%', padding: '8px', backgroundColor: '#10b981', color: 'white', border: 'none', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer', textTransform: 'uppercase', boxShadow: '0 2px 4px rgba(16, 185, 129, 0.2)' };
 const disabledBtnStyle = { width: '100%', padding: '8px', backgroundColor: '#f1f5f9', color: '#cbd5e1', border: '2px solid #cbd5e1', borderRadius: '8px', fontWeight: 'bold', cursor: 'not-allowed', textTransform: 'uppercase' };
 const outOfStockBtnStyle = { width: '100%', padding: '8px', backgroundColor: '#f1f5f9', color: '#94a3b8', border: '2px solid #e2e8f0', borderRadius: '8px', fontWeight: 'bold', cursor: 'not-allowed' };
-        
+          
