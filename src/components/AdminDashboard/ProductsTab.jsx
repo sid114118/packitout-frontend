@@ -1,11 +1,22 @@
 import React from 'react';
 
-export default function ProductsTab({ products, form, setForm, handleAddProduct, CATEGORIES }) {
+// Notice we brought in the new props!
+export default function ProductsTab({ products, form, setForm, handleProductSubmit, CATEGORIES, editingProductId, startEditingProduct, cancelEdit }) {
   return (
     <div>
-      <h3 style={{ color: '#0f172a', marginBottom: '20px' }}>Add New Product to Master Catalog</h3>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+        <h3 style={{ color: '#0f172a', margin: 0 }}>
+          {editingProductId ? "✏️ Edit Product in Catalog" : "Add New Product to Master Catalog"}
+        </h3>
+        {editingProductId && (
+          <button onClick={cancelEdit} style={{ backgroundColor: '#ef4444', color: 'white', border: 'none', padding: '8px 16px', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold' }}>
+            Cancel Edit
+          </button>
+        )}
+      </div>
       
-      <form onSubmit={handleAddProduct} style={{ backgroundColor: 'white', padding: '25px', borderRadius: '12px', boxShadow: '0 4px 6px rgba(0,0,0,0.05)', marginBottom: '30px' }}>
+      {/* Form now calls handleProductSubmit */}
+      <form onSubmit={handleProductSubmit} style={{ backgroundColor: 'white', padding: '25px', borderRadius: '12px', boxShadow: '0 4px 6px rgba(0,0,0,0.05)', marginBottom: '30px', border: editingProductId ? '2px solid #3b82f6' : 'none' }}>
         
         {/* SECTION 1: Basic Info */}
         <h4 style={{ color: '#10b981', marginTop: 0, borderBottom: '1px solid #e2e8f0', paddingBottom: '10px' }}>1. Basic Information</h4>
@@ -40,8 +51,8 @@ export default function ProductsTab({ products, form, setForm, handleAddProduct,
           <input type="text" placeholder="Fat (e.g., 11g)" value={form.fat} onChange={e => setForm({...form, fat: e.target.value})} style={inputStyle} />
         </div>
 
-        <button type="submit" style={{ width: '100%', padding: '12px', backgroundColor: '#10b981', color: 'white', border: 'none', borderRadius: '8px', fontWeight: 'bold', fontSize: '1.1rem', cursor: 'pointer' }}>
-          ➕ Save Product to Database
+        <button type="submit" style={{ width: '100%', padding: '12px', backgroundColor: editingProductId ? '#3b82f6' : '#10b981', color: 'white', border: 'none', borderRadius: '8px', fontWeight: 'bold', fontSize: '1.1rem', cursor: 'pointer' }}>
+          {editingProductId ? "💾 Save Changes" : "➕ Save Product to Database"}
         </button>
       </form>
 
@@ -49,18 +60,26 @@ export default function ProductsTab({ products, form, setForm, handleAddProduct,
       <h3 style={{ color: '#0f172a', marginBottom: '15px' }}>Current Master Catalog ({products.length})</h3>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))', gap: '15px' }}>
         {products.map(p => (
-          <div key={p._id} style={{ backgroundColor: 'white', padding: '15px', borderRadius: '10px', boxShadow: '0 2px 4px rgba(0,0,0,0.05)', border: '1px solid #e2e8f0' }}>
-            <div style={{ display: 'flex', gap: '10px', alignItems: 'center', marginBottom: '10px' }}>
-              <div style={{ fontSize: '2rem' }}>{p.image ? <img src={p.image} style={{ width: '40px', height: '40px', objectFit: 'contain' }} alt="" /> : p.emoji}</div>
-              <div>
-                <strong style={{ display: 'block', color: '#0f172a' }}>{p.name}</strong>
-                <span style={{ fontSize: '0.8rem', color: '#64748b' }}>{p.brand} • {p.qnty}</span>
+          <div key={p._id} style={{ backgroundColor: 'white', padding: '15px', borderRadius: '10px', boxShadow: '0 2px 4px rgba(0,0,0,0.05)', border: '1px solid #e2e8f0', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+            <div>
+              <div style={{ display: 'flex', gap: '10px', alignItems: 'center', marginBottom: '10px' }}>
+                <div style={{ fontSize: '2rem' }}>{p.image ? <img src={p.image} style={{ width: '40px', height: '40px', objectFit: 'contain' }} alt="" /> : p.emoji}</div>
+                <div>
+                  <strong style={{ display: 'block', color: '#0f172a' }}>{p.name}</strong>
+                  <span style={{ fontSize: '0.8rem', color: '#64748b' }}>{p.brand} • {p.qnty}</span>
+                </div>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
+                <span style={{ fontWeight: 'bold', color: '#10b981' }}>₹{p.mrp}</span>
+                <span style={{ fontSize: '0.75rem', backgroundColor: '#f1f5f9', padding: '4px 8px', borderRadius: '4px', color: '#475569' }}>{p.category}</span>
               </div>
             </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <span style={{ fontWeight: 'bold', color: '#10b981' }}>₹{p.mrp}</span>
-              <span style={{ fontSize: '0.75rem', backgroundColor: '#f1f5f9', padding: '4px 8px', borderRadius: '4px', color: '#475569' }}>{p.category}</span>
-            </div>
+            {/* 👇 THE NEW EDIT BUTTON 👇 */}
+            <button 
+              onClick={() => startEditingProduct(p)} 
+              style={{ width: '100%', padding: '8px', backgroundColor: '#f1f5f9', color: '#334155', border: '1px solid #cbd5e1', borderRadius: '6px', fontWeight: 'bold', cursor: 'pointer' }}>
+              ✏️ Edit Product
+            </button>
           </div>
         ))}
       </div>
