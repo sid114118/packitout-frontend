@@ -1,6 +1,7 @@
 import React from 'react';
-import ShopFeed from './ShopFeed';
-import GuestFeed from './GuestFeed';
+// 👇 Notice these exact lowercase filenames with .jsx!
+import ShopFeed from './shop.jsx';   
+import GuestFeed from './guest.jsx'; 
 
 export default function ProductFeed(props) {
   // If the user is logged in AND has a primary shop selected
@@ -10,6 +11,6 @@ export default function ProductFeed(props) {
     return <ShopFeed {...props} />;
   }
 
-  // Otherwise, route them to the beautifully populated Guest Feed
+  // Otherwise, route them to the Guest Feed
   return <GuestFeed {...props} />;
 }
