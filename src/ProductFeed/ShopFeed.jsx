@@ -8,6 +8,9 @@ export default function ShopFeed({ user, onAddToCart, cart = [], selectedCategor
   
   const [nearbyShops, setNearbyShops] = useState([]);
   const [selectedProductDetails, setSelectedProductDetails] = useState(null); 
+  
+  // 👇 NEW: State to handle when a user clicks the "➔" arrow
+  const [viewAll, setViewAll] = useState(null); 
 
   const [shopDeals, setShopDeals] = useState([]);
   const [shopBestSellers, setShopBestSellers] = useState([]);
@@ -45,11 +48,12 @@ export default function ShopFeed({ user, onAddToCart, cart = [], selectedCategor
         }) || [];
         
         setItems(availableItems);
-        setShopDeals([...availableItems].filter(i => i.isDiscounted && i.inStock).sort((a, b) => b.discountPercent - a.discountPercent).slice(0, 8));
-        setShopBestSellers([...availableItems].filter(i => i.inStock).slice(0, 8));
-        setUnder99([...availableItems].filter(i => i.sellingPrice > 0 && i.sellingPrice < 100 && i.inStock).slice(0, 8));
-        setNewArrivals([...availableItems].reverse().filter(i => i.inStock).slice(0, 8));
-        setBuyItAgain([...availableItems].filter(i => i.inStock).sort(() => 0.5 - Math.random()).slice(0, 8));
+        // Gave these slightly more items (12) so the "View All" page has more to show!
+        setShopDeals([...availableItems].filter(i => i.isDiscounted && i.inStock).sort((a, b) => b.discountPercent - a.discountPercent).slice(0, 12));
+        setShopBestSellers([...availableItems].filter(i => i.inStock).slice(0, 12));
+        setUnder99([...availableItems].filter(i => i.sellingPrice > 0 && i.sellingPrice < 100 && i.inStock).slice(0, 12));
+        setNewArrivals([...availableItems].reverse().filter(i => i.inStock).slice(0, 12));
+        setBuyItAgain([...availableItems].filter(i => i.inStock).sort(() => 0.5 - Math.random()).slice(0, 12));
 
         const hour = new Date().getHours();
         let timeTitle = "";
@@ -76,7 +80,7 @@ export default function ShopFeed({ user, onAddToCart, cart = [], selectedCategor
           return i.inStock && keywords.some(kw => cat.includes(kw) || name.includes(kw));
         });
 
-        setTimeBased({ title: timeTitle, subtitle: timeSubtitle, items: matchedItems.length > 0 ? matchedItems.slice(0, 8) : availableItems.filter(i => i.inStock).slice(0, 8) });
+        setTimeBased({ title: timeTitle, subtitle: timeSubtitle, items: matchedItems.length > 0 ? matchedItems.slice(0, 12) : availableItems.filter(i => i.inStock).slice(0, 12) });
 
       } catch (err) { console.log(err); }
       setLoading(false);
@@ -103,7 +107,6 @@ export default function ShopFeed({ user, onAddToCart, cart = [], selectedCategor
 
   if (loading) return <div style={{ padding: '40px', textAlign: 'center', color: '#6b7280' }}>Loading fresh products...</div>;
 
-  // 🚀 THE NEW ULTRA-MODERN PRODUCT CARD 🚀
   const ModernProductCard = ({ item, isCarousel }) => {
     const isOutOfStock = !item.inStock;
     const shopClosed = shopInfo && !shopInfo.isOpen;
@@ -124,12 +127,10 @@ export default function ShopFeed({ user, onAddToCart, cart = [], selectedCategor
         scrollSnapAlign: 'start'
       }}>
         
-        {/* IMAGE AREA (Clicking opens modal) */}
         <div 
           onClick={() => setSelectedProductDetails(item)}
           style={{ position: 'relative', height: '110px', width: '100%', display: 'flex', justifyContent: 'center', alignItems: 'center', backgroundColor: '#f9fafb', borderRadius: '6px', marginBottom: '16px', cursor: 'pointer' }}
         >
-          {/* Discount Badge */}
           {item.isDiscounted && !isOutOfStock && (
             <span style={{ position: 'absolute', top: 0, left: '-8px', backgroundColor: '#0f9d58', color: '#fff', fontSize: '0.7rem', fontWeight: 'bold', padding: '2px 6px', borderRadius: '0 8px 8px 0', zIndex: 1 }}>
               ↓{item.discountPercent}%
@@ -142,12 +143,10 @@ export default function ShopFeed({ user, onAddToCart, cart = [], selectedCategor
             <span style={{fontSize: '40px'}}>{item.emoji}</span>
           )}
 
-          {/* Fake Rating Badge */}
           <div style={{ position: 'absolute', bottom: 0, left: 0, backgroundColor: '#fff', border: '1px solid #e5e7eb', fontSize: '0.65rem', padding: '2px 4px', borderRadius: '4px', display: 'flex', alignItems: 'center', gap: '2px', fontWeight: 'bold' }}>
             4.2 <span style={{ color: '#0f9d58' }}>★</span>
           </div>
 
-          {/* Floating Add Button */}
           {!isOutOfStock && !shopClosed && (
             <button 
               onClick={(e) => { e.stopPropagation(); onAddToCart({ ...item, mrp: item.sellingPrice }); }} 
@@ -158,7 +157,6 @@ export default function ShopFeed({ user, onAddToCart, cart = [], selectedCategor
           )}
         </div>
 
-        {/* TEXT AREA */}
         <div>
           <p style={{ fontSize: '0.75rem', color: '#6b7280', margin: '0 0 4px 0', minHeight: '14px' }}>
             {item.qnty || "1 pc"}
@@ -168,7 +166,6 @@ export default function ShopFeed({ user, onAddToCart, cart = [], selectedCategor
             {item.brand ? `${item.brand} ` : ''}{item.name}
           </h4>
 
-          {/* Price Area */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
             <span style={{ backgroundColor: '#fef08a', padding: '2px 6px', borderRadius: '4px', fontWeight: 'bold', fontSize: '0.85rem', color: '#000' }}>
               ₹{item.sellingPrice}
@@ -180,7 +177,6 @@ export default function ShopFeed({ user, onAddToCart, cart = [], selectedCategor
             )}
           </div>
 
-          {/* Status Messages */}
           {isOutOfStock && <div style={{ fontSize: '0.7rem', color: '#ef4444', fontWeight: 'bold', marginTop: '8px' }}>OUT OF STOCK</div>}
           {shopClosed && !isOutOfStock && <div style={{ fontSize: '0.7rem', color: '#ef4444', fontWeight: 'bold', marginTop: '8px' }}>CLOSED</div>}
         </div>
@@ -188,7 +184,6 @@ export default function ShopFeed({ user, onAddToCart, cart = [], selectedCategor
     );
   };
 
-  // 🚀 REUSABLE ROW COMPONENT 🚀
   const ProductRow = ({ title, subtitle, items }) => {
     if (!items || items.length === 0) return null;
     return (
@@ -198,7 +193,13 @@ export default function ShopFeed({ user, onAddToCart, cart = [], selectedCategor
             <h2 style={{ fontSize: '1.1rem', margin: 0, color: '#111827', fontWeight: 'bold' }}>{title}</h2>
             {subtitle && <p style={{ fontSize: '0.75rem', margin: '2px 0 0 0', color: '#6b7280' }}>{subtitle}</p>}
           </div>
-          <button style={{ backgroundColor: '#111827', color: '#fff', border: 'none', borderRadius: '50%', width: '28px', height: '28px', display: 'flex', justifyContent: 'center', alignItems: 'center', fontSize: '1rem' }}>➔</button>
+          {/* 👇 ADDED CLICK EVENT TO THE ARROW 👇 */}
+          <button 
+            onClick={() => setViewAll({ title, items })}
+            style={{ backgroundColor: '#111827', color: '#fff', border: 'none', borderRadius: '50%', width: '28px', height: '28px', display: 'flex', justifyContent: 'center', alignItems: 'center', fontSize: '1rem', cursor: 'pointer' }}
+          >
+            ➔
+          </button>
         </div>
         <div className="hide-scroll" style={{ display: 'flex', overflowX: 'auto', gap: '12px', padding: '0 15px 10px 15px', scrollSnapType: 'x mandatory' }}>
           {items.map(item => <ModernProductCard key={item._id} item={item} isCarousel={true} />)}
@@ -210,17 +211,20 @@ export default function ShopFeed({ user, onAddToCart, cart = [], selectedCategor
   const isSearching = searchQuery && searchQuery.trim().length > 0;
   let displayItems = items;
 
-  if (selectedCategory) {
-    displayItems = items.filter(item => {
-      const dbCat = (item.category || "").toLowerCase();
-      const searchCat = selectedCategory.toLowerCase();
-      return dbCat.includes(searchCat) || searchCat.includes(dbCat);
-    });
-  } else if (isSearching) {
+  // 👇 SMART LOGIC: Decides what grid to show (Search vs Category vs View All)
+  if (isSearching) {
     displayItems = items.filter(item => {
       const nameMatch = (item.name || "").toLowerCase().includes(searchQuery.toLowerCase());
       const brandMatch = (item.brand || "").toLowerCase().includes(searchQuery.toLowerCase());
       return nameMatch || brandMatch;
+    });
+  } else if (viewAll) {
+    displayItems = viewAll.items;
+  } else if (selectedCategory) {
+    displayItems = items.filter(item => {
+      const dbCat = (item.category || "").toLowerCase();
+      const searchCat = selectedCategory.toLowerCase();
+      return dbCat.includes(searchCat) || searchCat.includes(dbCat);
     });
   }
 
@@ -228,12 +232,27 @@ export default function ShopFeed({ user, onAddToCart, cart = [], selectedCategor
     <div style={{ padding: '0', maxWidth: '1000px', margin: '0 auto', overflowX: 'hidden', backgroundColor: '#f3f4f6' }}>
       <style>{`.hide-scroll::-webkit-scrollbar { display: none; } .hide-scroll { -ms-overflow-style: none; scrollbar-width: none; }`}</style>
 
-      {(selectedCategory || isSearching) ? (
+      {/* 👇 SHOW THE GRID IF THEY ARE SEARCHING, SELECTED A CATEGORY, OR CLICKED 'VIEW ALL' 👇 */}
+      {(selectedCategory || isSearching || viewAll) ? (
         <div style={{ padding: '15px', backgroundColor: '#fff', minHeight: '100vh' }}>
           <div style={{ display: 'flex', alignItems: 'center', marginBottom: '20px', gap: '15px' }}>
-            {selectedCategory && <button onClick={onClearCategory} style={{ backgroundColor: '#f1f5f9', border: '1px solid #cbd5e1', padding: '8px 16px', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold', color: '#334155' }}>⬅ Back</button>}
-            <h2 style={{ margin: 0, color: '#0f172a', fontSize: '1.2rem' }}>{isSearching ? `Results for "${searchQuery}"` : selectedCategory}</h2>
+            
+            {/* Back Button handles clearing everything properly */}
+            <button 
+              onClick={() => {
+                if (selectedCategory) onClearCategory();
+                setViewAll(null);
+              }} 
+              style={{ backgroundColor: '#f1f5f9', border: '1px solid #cbd5e1', padding: '8px 16px', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold', color: '#334155' }}
+            >
+              ⬅ Back
+            </button>
+
+            <h2 style={{ margin: 0, color: '#0f172a', fontSize: '1.2rem' }}>
+              {isSearching ? `Results for "${searchQuery}"` : (viewAll ? viewAll.title : selectedCategory)}
+            </h2>
           </div>
+
           {displayItems.length === 0 ? (
             <div style={{ padding: '40px', textAlign: 'center', color: '#64748b', backgroundColor: '#f8fafc', borderRadius: '12px', border: '1px dashed #cbd5e1' }}>No products found.</div>
           ) : (
@@ -244,6 +263,7 @@ export default function ShopFeed({ user, onAddToCart, cart = [], selectedCategor
         </div>
       ) : (
         <>
+          {/* MAIN FEED CAROUSELS */}
           <ProductRow title={timeBased.title} subtitle={timeBased.subtitle} items={timeBased.items} />
           <ProductRow title="Price Crash" subtitle="Extra Savings" items={shopDeals} />
           <ProductRow title="Top Picks for You" subtitle="Based on what is popular around you" items={shopBestSellers} />
@@ -281,4 +301,4 @@ export default function ShopFeed({ user, onAddToCart, cart = [], selectedCategor
       />
     </div>
   );
-}
+          }
