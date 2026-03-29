@@ -100,7 +100,7 @@ export default function App() {
       
       <Header user={loggedInUser} />
 
-      {/* 🔍 THE GLOBAL SEARCH BAR (Icon Removed!) */}
+      {/* 🔍 THE GLOBAL SEARCH BAR */}
       <div style={{ position: 'sticky', top: 0, zIndex: 100, backgroundColor: '#f4f7f6', padding: '10px 15px' }}>
         <div style={{ display: 'flex', alignItems: 'center', backgroundColor: '#ffffff', borderRadius: '12px', padding: '10px 15px', boxShadow: '0 4px 10px rgba(0,0,0,0.05)', border: '1px solid #e2e8f0' }}>
           
@@ -117,6 +117,20 @@ export default function App() {
         </div>
       </div>
       
+      {/* 👇 PREMIUM STORE BANNER (Added Here) 👇 */}
+      {loggedInUser && loggedInUser.primaryShop && typeof loggedInUser.primaryShop === 'object' && !searchQuery && !selectedCategory && (
+        <div style={{ margin: '5px 15px 15px 15px', backgroundColor: '#ffffff', padding: '12px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', boxShadow: '0 4px 10px rgba(0,0,0,0.03)', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', textAlign: 'left' }}>
+            <span style={{ fontSize: '0.7rem', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px', fontWeight: 'bold' }}>Shopping From</span>
+            <strong style={{ color: '#0f172a', fontSize: '1.05rem', marginTop: '2px' }}>{loggedInUser.primaryShop.name}</strong>
+          </div>
+          <div style={{ fontSize: '0.75rem', fontWeight: 'bold', padding: '6px 12px', borderRadius: '8px', backgroundColor: loggedInUser.primaryShop.isOpen ? '#d1fae5' : '#fee2e2', color: loggedInUser.primaryShop.isOpen ? '#059669' : '#b91c1c', border: `1px solid ${loggedInUser.primaryShop.isOpen ? '#a7f3d0' : '#fecaca'}` }}>
+            {loggedInUser.primaryShop.isOpen ? '🟢 OPEN' : '🔴 CLOSED'}
+          </div>
+        </div>
+      )}
+      {/* 👆 END OF STORE BANNER 👆 */}
+
       {!selectedCategory && !searchQuery && <Categories onCategorySelect={setSelectedCategory} />}
       
       <main style={{ flex: 1, padding: '1rem 0 3rem 0', textAlign: 'center' }}>
