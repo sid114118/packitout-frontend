@@ -23,12 +23,13 @@ export default function AdminDashboard({ onExit }) {
   const [shopAnalysis, setShopAnalysis] = useState(null);
   const [loadingAnalysis, setLoadingAnalysis] = useState(false);
   
-  // 👇 UPDATED: Added new product fields to the form state!
+  // Forms
   const initialProductForm = { 
     name: "", brand: "", category: "", mrp: "", qnty: "", emoji: "", image: "", searchTags: "",
     description: "", manufacturer: "", energy: "", protein: "", carbs: "", sugar: "", fat: "" 
   };
   const [form, setForm] = useState(initialProductForm);
+  const [editingProductId, setEditingProductId] = useState(null); // 👈 NEW: Tracks if we are editing
   
   const [shopForm, setShopForm] = useState({ name: "", pincode: "", phone: "", password: "" });
   const [userForm, setUserForm] = useState({ name: "", phone: "", password: "", pincode: "" });
@@ -72,7 +73,6 @@ export default function AdminDashboard({ onExit }) {
 
   const handleAdminProcessOrder = async (parchi, billItems) => {
     const totalAmount = billItems.reduce((sum, i) => sum + (i.price * i.qty), 0);
-    
     try {
       const res = await fetch(`${BASE_URL}/orders`, {
         method: "POST",
@@ -99,16 +99,53 @@ export default function AdminDashboard({ onExit }) {
     }
   };
 
-  const handleAddProduct = async (e) => {
+  // 👇 NEW: Master Function to Handle Add or Update 👇
+  const handleProductSubmit = async (e) => {
     e.preventDefault();
-    await fetch(`${BASE_URL}/master-products`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(form)
+    try {
+      if (editingProductId) {
+        // Update Existing Product
+        await fetch(`${BASE_URL}/master-products/${editingProductId}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(form)
+        });
+        alert("✅ Product Updated Successfully!");
+      } else {
+        // Add New Product
+        await fetch(`${BASE_URL}/master-products`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(form)
+        });
+        alert("✅ Added to Master Catalog!");
+      }
+      setForm(initialProductForm);
+      setEditingProductId(null);
+      fetchData();
+    } catch (err) {
+      console.log(err);
+      alert("❌ Something went wrong.");
+    }
+  };
+
+  // 👇 NEW: Sets up the form to edit an existing product
+  const startEditingProduct = (product) => {
+    setForm({
+      name: product.name || "", brand: product.brand || "", category: product.category || "",
+      mrp: product.mrp || "", qnty: product.qnty || "", emoji: product.emoji || "",
+      image: product.image || "", searchTags: product.searchTags ? product.searchTags.join(', ') : "",
+      description: product.description || "", manufacturer: product.manufacturer || "",
+      energy: product.energy || "", protein: product.protein || "", carbs: product.carbs || "",
+      sugar: product.sugar || "", fat: product.fat || ""
     });
-    setForm(initialProductForm); // Reset with all new fields
-    fetchData();
-    alert("✅ Added to Master Catalog!");
+    setEditingProductId(product._id);
+    window.scrollTo({ top: 0, behavior: 'smooth' }); 
+  };
+
+  const cancelEdit = () => {
+    setForm(initialProductForm);
+    setEditingProductId(null);
   };
 
   const handleAddShop = async (e) => {
@@ -220,7 +257,10 @@ export default function AdminDashboard({ onExit }) {
             {activeTab === "products" && (
                <ProductsTab 
                  products={products} form={form} setForm={setForm} 
-                 handleAddProduct={handleAddProduct} CATEGORIES={CATEGORIES} 
+                 handleProductSubmit={handleProductSubmit} CATEGORIES={CATEGORIES} 
+                 editingProductId={editingProductId} 
+                 startEditingProduct={startEditingProduct} 
+                 cancelEdit={cancelEdit}
                />
             )}
 
@@ -267,4 +307,3 @@ const tabButtonStyle = (isActive) => ({
   border: 'none', padding: '8px 15px', borderRadius: '6px',
   fontWeight: 'bold', cursor: 'pointer', transition: '0.2s', whiteSpace: 'nowrap'
 });
-      
