@@ -5,7 +5,7 @@ import ProductsTab from './components/AdminDashboard/ProductsTab';
 import ShopsTab from './components/AdminDashboard/ShopsTab';
 import UsersTab from './components/AdminDashboard/UsersTab';
 import GlobalOrdersTab from './components/AdminDashboard/GlobalOrdersTab';
-import AdminParchiManager from './components/AdminDashboard/AdminParchiManager'; // 🧾 NEW WORKER!
+import AdminParchiManager from './components/AdminDashboard/AdminParchiManager'; 
 
 export default function AdminDashboard({ onExit }) {
   const [activeTab, setActiveTab] = useState("products"); 
@@ -15,7 +15,7 @@ export default function AdminDashboard({ onExit }) {
   const [shops, setShops] = useState([]);
   const [users, setUsers] = useState([]);
   const [orders, setOrders] = useState([]);
-  const [globalParchis, setGlobalParchis] = useState([]); // 📸 NEW STATE
+  const [globalParchis, setGlobalParchis] = useState([]); 
   const [loading, setLoading] = useState(true);
 
   // Drawer & Analysis States
@@ -23,8 +23,13 @@ export default function AdminDashboard({ onExit }) {
   const [shopAnalysis, setShopAnalysis] = useState(null);
   const [loadingAnalysis, setLoadingAnalysis] = useState(false);
   
-  // Forms
-  const [form, setForm] = useState({ name: "", brand: "", category: "", mrp: "", qnty: "", emoji: "", image: "", searchTags: "" });
+  // 👇 UPDATED: Added new product fields to the form state!
+  const initialProductForm = { 
+    name: "", brand: "", category: "", mrp: "", qnty: "", emoji: "", image: "", searchTags: "",
+    description: "", manufacturer: "", energy: "", protein: "", carbs: "", sugar: "", fat: "" 
+  };
+  const [form, setForm] = useState(initialProductForm);
+  
   const [shopForm, setShopForm] = useState({ name: "", pincode: "", phone: "", password: "" });
   const [userForm, setUserForm] = useState({ name: "", phone: "", password: "", pincode: "" });
 
@@ -58,7 +63,6 @@ export default function AdminDashboard({ onExit }) {
         const res = await fetch(`${BASE_URL}/orders`);
         setOrders(await res.json());
       } else if (activeTab === "parchis") {
-        // 📸 FETCH GLOBAL PARCHIS
         const res = await fetch(`${BASE_URL}/admin/all-parchis`);
         setGlobalParchis(await res.json());
       }
@@ -66,7 +70,6 @@ export default function AdminDashboard({ onExit }) {
     setLoading(false);
   };
 
-  // --- 🚀 ADMIN OVERRIDE LOGIC ---
   const handleAdminProcessOrder = async (parchi, billItems) => {
     const totalAmount = billItems.reduce((sum, i) => sum + (i.price * i.qty), 0);
     
@@ -80,13 +83,13 @@ export default function AdminDashboard({ onExit }) {
           items: billItems,
           totalAmount: totalAmount,
           status: "Pending",
-          imageUrl: parchi.imageUrl // This photo link ensures the Parchi is marked 'processed' on backend
+          imageUrl: parchi.imageUrl 
         })
       });
 
       if (res.ok) {
         alert("✅ Order processed successfully as Admin!");
-        fetchData(); // Refresh the list
+        fetchData(); 
       } else {
         alert("❌ Failed to process order.");
       }
@@ -96,7 +99,6 @@ export default function AdminDashboard({ onExit }) {
     }
   };
 
-  // --- EXISTING LOGIC FUNCTIONS ---
   const handleAddProduct = async (e) => {
     e.preventDefault();
     await fetch(`${BASE_URL}/master-products`, {
@@ -104,7 +106,7 @@ export default function AdminDashboard({ onExit }) {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(form)
     });
-    setForm({ name: "", brand: "", category: "", mrp: "", qnty: "", emoji: "", image: "", searchTags: "" });
+    setForm(initialProductForm); // Reset with all new fields
     fetchData();
     alert("✅ Added to Master Catalog!");
   };
@@ -265,4 +267,4 @@ const tabButtonStyle = (isActive) => ({
   border: 'none', padding: '8px 15px', borderRadius: '6px',
   fontWeight: 'bold', cursor: 'pointer', transition: '0.2s', whiteSpace: 'nowrap'
 });
-             
+      
