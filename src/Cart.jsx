@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 
-export default function Cart({ cart, user, onBack, onCheckoutSuccess }) {
+// 👇 Notice we added setCart here so the buttons can modify the cart!
+export default function Cart({ cart, setCart, user, onBack, onCheckoutSuccess }) {
   const [status, setStatus] = useState("");
   const [availableShops, setAvailableShops] = useState([]); 
   const [targetShop, setTargetShop] = useState(null); 
@@ -9,17 +10,30 @@ export default function Cart({ cart, user, onBack, onCheckoutSuccess }) {
   // 🪙 Coin Discount State
   const [useCoins, setUseCoins] = useState(false);
 
-  // 🧮 NEW BILL CALCULATIONS (10 Coins = ₹1)
-  const subTotal = cart.reduce((sum, item) => sum + (item.mrp * item.qty), 0);
+  // 🧮 BILL CALCULATIONS
+  // Use sellingPrice if available, otherwise fallback to mrp
+  const itemTotal = cart.reduce((sum, item) => sum + ((item.sellingPrice || item.mrp) * item.qty), 0);
+  const totalMrp = cart.reduce((sum, item) => sum + (item.mrp * item.qty), 0);
   
-  // Calculate max possible discount in Rupees (Coins * 0.10)
+  // Coin Logic (10 Coins = ₹1)
   const maxCoinDiscount = (user?.coins || 0) * 0.10; 
-  // Make sure we don't discount more than the actual bill
-  const discount = useCoins ? Math.min(maxCoinDiscount, subTotal) : 0; 
-  // Calculate exactly how many coins we are spending for this discount
+  const discount = useCoins ? Math.min(maxCoinDiscount, itemTotal) : 0; 
   const coinsUsed = discount * 10; 
   
-  const finalBill = subTotal - discount;
+  const finalBill = itemTotal - discount;
+
+  // --- 🛒 ADD/REMOVE ITEM LOGIC ---
+  const updateQty = (productId, delta) => {
+    setCart(prevCart => {
+      return prevCart.map(item => {
+        if (item._id === productId) {
+          const newQty = item.qty + delta;
+          return newQty > 0 ? { ...item, qty: newQty } : null; // Remove if qty is 0
+        }
+        return item;
+      }).filter(item => item !== null); // Clear out the nulls
+    });
+  };
 
   // 🕵️ Fetch all shops matching the user's pincode
   useEffect(() => {
@@ -29,7 +43,6 @@ export default function Cart({ cart, user, onBack, onCheckoutSuccess }) {
         .then(res => res.json())
         .then(data => {
           setAvailableShops(data);
-          
           if (data.length > 0) {
             const primaryId = user.primaryShop?._id || user.primaryShop;
             const myPrimary = data.find(s => s._id === primaryId);
@@ -44,26 +57,31 @@ export default function Cart({ cart, user, onBack, onCheckoutSuccess }) {
   const handleCheckout = async () => {
     if (!targetShop) {
       setStatus("❌ Please select a shop first!");
+      setTimeout(() => setStatus(""), 3000);
       return;
     }
 
-    setStatus(`⏳ Sending Parchi to ${targetShop.name}...`);
+    setStatus(`⏳ Sending Order to ${targetShop.name}...`);
     
     try {
-      // 1. Submit the Order with the Final (Discounted) Amount
       const response = await fetch("https://darkslategrey-snail-415133.hostingersite.com/orders", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           userId: user._id, 
           shopId: targetShop._id,
-          items: cart,
+          items: cart.map(item => ({
+            productId: item._id,
+            name: item.name,
+            qty: item.qty,
+            price: item.sellingPrice || item.mrp
+          })),
           totalAmount: finalBill
         })
       });
 
       if (response.ok) {
-        // 2. Deduct EXACT Coins from User Profile
+        // Deduct Coins
         if (useCoins && coinsUsed > 0) {
           const newCoinBalance = user.coins - coinsUsed;
           await fetch(`https://darkslategrey-snail-415133.hostingersite.com/users/${user._id}`, {
@@ -80,142 +98,176 @@ export default function Cart({ cart, user, onBack, onCheckoutSuccess }) {
         setTimeout(() => onCheckoutSuccess(), 1500);
       } else {
         setStatus("❌ Failed to place order.");
+        setTimeout(() => setStatus(""), 3000);
       }
-    } catch (err) { setStatus("❌ Connection error"); }
+    } catch (err) { 
+      setStatus("❌ Connection error"); 
+      setTimeout(() => setStatus(""), 3000);
+    }
   };
 
+  // --- EMPTY CART UI ---
+  if (cart.length === 0) {
+    return (
+      <div style={{ padding: '20px', textAlign: 'center', backgroundColor: '#f4f7f6', minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+        <div style={{ fontSize: '4rem', marginBottom: '10px' }}>🛒</div>
+        <h2 style={{ color: '#0f172a', marginBottom: '10px' }}>Your cart is empty</h2>
+        <p style={{ color: '#64748b', marginBottom: '20px' }}>Looks like you haven't added anything yet.</p>
+        <button onClick={onBack} style={{ padding: '12px 24px', backgroundColor: '#10b981', color: 'white', border: 'none', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer' }}>
+          Browse Products
+        </button>
+      </div>
+    );
+  }
+
   return (
-    <div style={{ backgroundColor: '#f4f7f6', minHeight: '100vh', fontFamily: 'sans-serif', paddingBottom: '120px' }}>
+    <div style={{ backgroundColor: '#f4f7f6', minHeight: '100vh', fontFamily: 'sans-serif', paddingBottom: '140px' }}>
       
       {/* Header */}
-      <div style={{ backgroundColor: 'white', padding: '20px', display: 'flex', alignItems: 'center', gap: '15px', boxShadow: '0 2px 10px rgba(0,0,0,0.05)' }}>
-        <button onClick={onBack} style={{ background: 'none', border: 'none', fontSize: '1.2rem', cursor: 'pointer' }}>⬅️</button>
-        <h2 style={{ margin: 0, fontSize: '1.3rem', color: '#2f3640' }}>Checkout</h2>
+      <div style={{ position: 'sticky', top: 0, backgroundColor: 'white', padding: '15px 20px', display: 'flex', alignItems: 'center', gap: '15px', boxShadow: '0 2px 10px rgba(0,0,0,0.05)', zIndex: 100 }}>
+        <button onClick={onBack} style={{ background: 'none', border: 'none', fontSize: '1.2rem', cursor: 'pointer', color: '#0f172a' }}>⬅</button>
+        <h2 style={{ margin: 0, fontSize: '1.2rem', color: '#0f172a' }}>Checkout</h2>
       </div>
 
-      <div style={{ padding: '20px' }}>
+      <div style={{ padding: '15px', maxWidth: '800px', margin: '0 auto' }}>
         
         {/* 🏪 SHOP SELECTION SECTION */}
-        <h3 style={{ fontSize: '1rem', color: '#7f8fa6', marginBottom: '10px' }}>Pick-up Point ({user?.pincode})</h3>
-        
-        {loadingShops ? (
-          <div style={{ padding: '15px', background: '#eee', borderRadius: '10px' }}>🔍 Finding nearby shops...</div>
-        ) : availableShops.length > 0 ? (
-          availableShops.map((shop) => {
-            const isPrimary = (user?.primaryShop?._id || user?.primaryShop) === shop._id;
-            return (
-              <div 
-                key={shop._id}
-                onClick={() => setTargetShop(shop)}
-                style={{ 
-                  backgroundColor: 'white', 
-                  padding: '15px', 
-                  borderRadius: '12px', 
-                  marginBottom: '10px', 
-                  display: 'flex', 
-                  alignItems: 'center', 
-                  justifyContent: 'space-between',
-                  border: targetShop?._id === shop._id ? '2px solid #10b981' : '2px solid transparent',
-                  cursor: 'pointer',
-                  boxShadow: '0 2px 5px rgba(0,0,0,0.02)'
-                }}
-              >
-                <div>
-                  <strong style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#2f3640' }}>
-                    {shop.name}
-                    {isPrimary && <span style={{ backgroundColor: '#fef3c7', color: '#d97706', fontSize: '0.7rem', padding: '2px 6px', borderRadius: '4px', fontWeight: 'bold' }}>⭐ Primary</span>}
-                  </strong>
-                  <span style={{ fontSize: '0.8rem', color: '#7f8fa6' }}>Ready in 10-15 mins</span>
+        <div style={{ backgroundColor: 'white', padding: '15px', borderRadius: '12px', marginBottom: '20px', boxShadow: '0 2px 5px rgba(0,0,0,0.02)' }}>
+          <h3 style={{ fontSize: '0.9rem', color: '#64748b', marginTop: 0, marginBottom: '15px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>📍 Pick-up Point ({user?.pincode})</h3>
+          
+          {loadingShops ? (
+            <div style={{ padding: '15px', background: '#f1f5f9', borderRadius: '8px', color: '#64748b', textAlign: 'center' }}>🔍 Finding nearby shops...</div>
+          ) : availableShops.length > 0 ? (
+            availableShops.map((shop) => {
+              const isPrimary = (user?.primaryShop?._id || user?.primaryShop) === shop._id;
+              const isSelected = targetShop?._id === shop._id;
+              return (
+                <div 
+                  key={shop._id}
+                  onClick={() => setTargetShop(shop)}
+                  style={{ 
+                    backgroundColor: isSelected ? '#ecfdf5' : '#f8fafc', 
+                    padding: '12px 15px', 
+                    borderRadius: '8px', 
+                    marginBottom: '10px', 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    justifyContent: 'space-between',
+                    border: isSelected ? '1px solid #10b981' : '1px solid #e2e8f0',
+                    cursor: 'pointer'
+                  }}
+                >
+                  <div>
+                    <strong style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#0f172a', fontSize: '0.95rem' }}>
+                      {shop.name}
+                      {isPrimary && <span style={{ backgroundColor: '#fef3c7', color: '#d97706', fontSize: '0.65rem', padding: '2px 6px', borderRadius: '4px', fontWeight: 'bold' }}>⭐ Primary</span>}
+                    </strong>
+                    <span style={{ fontSize: '0.75rem', color: '#64748b' }}>Ready in 10-15 mins</span>
+                  </div>
+                  {isSelected && <span style={{ color: '#10b981', fontSize: '1.2rem' }}>✅</span>}
                 </div>
-                {targetShop?._id === shop._id && <span style={{ color: '#10b981', fontWeight: 'bold' }}>✅ Selected</span>}
-              </div>
-            );
-          })
-        ) : (
-          <div style={{ padding: '15px', background: '#fee2e2', color: '#991b1b', borderRadius: '10px' }}>
-            ❌ No shops found in your pincode. Please update your profile.
-          </div>
-        )}
+              );
+            })
+          ) : (
+            <div style={{ padding: '15px', background: '#fee2e2', color: '#991b1b', borderRadius: '8px', fontSize: '0.85rem' }}>
+              ❌ No shops found in your pincode. Please update your profile.
+            </div>
+          )}
+        </div>
 
-        {/* 🛒 ITEM SUMMARY */}
-        <h3 style={{ fontSize: '1rem', color: '#7f8fa6', marginTop: '25px', marginBottom: '10px' }}>Order Summary</h3>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-          {cart.map((item, i) => (
-            <div key={i} style={{ background: 'white', padding: '12px', borderRadius: '10px', display: 'flex', justifyContent: 'space-between' }}>
-              <span>{item.emoji} {item.name} (x{item.qty})</span>
-              <span style={{ fontWeight: 'bold' }}>₹{item.mrp * item.qty}</span>
+        {/* 🛒 ITEM SUMMARY WITH QUANTITY CONTROLS */}
+        <div style={{ backgroundColor: 'white', borderRadius: '12px', padding: '15px', marginBottom: '20px', boxShadow: '0 2px 5px rgba(0,0,0,0.02)' }}>
+          <div style={{ fontWeight: 'bold', marginBottom: '15px', color: '#0f172a' }}>Review Items</div>
+          
+          {cart.map((item, index) => (
+            <div key={item._id} style={{ display: 'flex', gap: '15px', alignItems: 'center', paddingBottom: '15px', marginBottom: '15px', borderBottom: index === cart.length - 1 ? 'none' : '1px solid #f1f5f9' }}>
+              
+              {/* Image */}
+              <div style={{ width: '50px', height: '50px', backgroundColor: '#f8fafc', borderRadius: '8px', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+                {item.image ? <img src={item.image} style={{ maxWidth: '40px', maxHeight: '40px' }} alt={item.name} /> : <span style={{ fontSize: '24px' }}>{item.emoji}</span>}
+              </div>
+
+              {/* Details */}
+              <div style={{ flex: 1 }}>
+                <div style={{ fontWeight: 'bold', color: '#0f172a', fontSize: '0.85rem', lineHeight: '1.2', marginBottom: '4px' }}>{item.name}</div>
+                <div style={{ fontSize: '0.75rem', color: '#64748b', marginBottom: '4px' }}>{item.qnty}</div>
+                <div style={{ fontWeight: 'bold', color: '#0f172a', fontSize: '0.9rem' }}>₹{item.sellingPrice || item.mrp}</div>
+              </div>
+
+              {/* Qty Controls */}
+              <div style={{ display: 'flex', alignItems: 'center', backgroundColor: '#10b981', borderRadius: '6px', color: 'white', fontWeight: 'bold', padding: '2px' }}>
+                <button onClick={() => updateQty(item._id, -1)} style={{ background: 'none', border: 'none', color: 'white', padding: '4px 12px', cursor: 'pointer', fontSize: '1.1rem' }}>−</button>
+                <span style={{ fontSize: '0.9rem', width: '16px', textAlign: 'center' }}>{item.qty}</span>
+                <button onClick={() => updateQty(item._id, 1)} style={{ background: 'none', border: 'none', color: 'white', padding: '4px 12px', cursor: 'pointer', fontSize: '1.1rem' }}>+</button>
+              </div>
+
             </div>
           ))}
         </div>
 
         {/* 🪙 COIN DISCOUNT TOGGLE */}
         {user?.coins > 0 && (
-          <div style={{ background: 'linear-gradient(135deg, #fef3c7, #fde68a)', padding: '15px', borderRadius: '12px', marginTop: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', border: '1px solid #f59e0b', boxShadow: '0 4px 6px rgba(245, 158, 11, 0.1)' }}>
+          <div style={{ background: 'linear-gradient(135deg, #fefce8, #fef08a)', padding: '15px', borderRadius: '12px', marginBottom: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', border: '1px solid #fde047', boxShadow: '0 2px 5px rgba(234, 179, 8, 0.1)' }}>
             <div>
-              <strong style={{ color: '#b45309', display: 'flex', alignItems: 'center', gap: '5px', fontSize: '1.1rem' }}>🪙 PackIt Coins</strong>
-              {/* 👇 Updated text so users understand the value */}
-              <div style={{ fontSize: '0.85rem', color: '#d97706', marginTop: '2px' }}>
+              <strong style={{ color: '#a16207', display: 'flex', alignItems: 'center', gap: '5px', fontSize: '1rem' }}>🪙 PackIt Coins</strong>
+              <div style={{ fontSize: '0.75rem', color: '#ca8a04', marginTop: '2px', fontWeight: 'bold' }}>
                 Balance: {user.coins} (Worth ₹{maxCoinDiscount.toFixed(2)})
               </div>
             </div>
             <label style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer' }}>
-              <span style={{ fontWeight: 'bold', color: '#b45309', fontSize: '0.9rem' }}>Use Coins</span>
+              <span style={{ fontWeight: 'bold', color: '#a16207', fontSize: '0.85rem' }}>Apply</span>
               <input 
                 type="checkbox" 
                 checked={useCoins} 
                 onChange={(e) => setUseCoins(e.target.checked)}
-                style={{ width: '22px', height: '22px', accentColor: '#d97706', cursor: 'pointer' }}
+                style={{ width: '20px', height: '20px', accentColor: '#eab308', cursor: 'pointer' }}
               />
             </label>
           </div>
         )}
 
         {/* 💵 FINAL BILL BREAKDOWN */}
-        <div style={{ marginTop: '20px', padding: '15px', borderTop: '2px dashed #ddd', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', color: '#7f8fa6', fontSize: '0.95rem' }}>
-            <span>Item Total:</span>
-            <span>₹{subTotal}</span>
+        <div style={{ backgroundColor: 'white', borderRadius: '12px', padding: '15px', boxShadow: '0 2px 5px rgba(0,0,0,0.02)' }}>
+          <div style={{ fontWeight: 'bold', marginBottom: '15px', color: '#0f172a' }}>Bill Details</div>
+          
+          <div style={{ display: 'flex', justifyContent: 'space-between', color: '#64748b', fontSize: '0.85rem', marginBottom: '8px' }}>
+            <span>Item Total</span>
+            <span>₹{itemTotal}</span>
           </div>
+          
           {useCoins && discount > 0 && (
-            <div style={{ display: 'flex', justifyContent: 'space-between', color: '#10b981', fontWeight: 'bold', fontSize: '0.95rem' }}>
-              <span>Coin Discount (-{coinsUsed} Coins):</span>
+            <div style={{ display: 'flex', justifyContent: 'space-between', color: '#10b981', fontWeight: 'bold', fontSize: '0.85rem', marginBottom: '8px' }}>
+              <span>Coin Discount (-{coinsUsed} Coins)</span>
               <span>- ₹{discount.toFixed(2)}</span>
             </div>
           )}
-          <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '10px', paddingTop: '10px', borderTop: '1px solid #eee' }}>
-            <span style={{ color: '#2f3640', fontWeight: 'bold', fontSize: '1.2rem' }}>To Pay:</span>
-            <span style={{ fontSize: '1.4rem', fontWeight: '900', color: '#2f3640' }}>₹{finalBill.toFixed(2)}</span>
+          
+          <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '12px', paddingTop: '12px', borderTop: '1px solid #f1f5f9', fontWeight: '900', color: '#0f172a', fontSize: '1.1rem' }}>
+            <span>To Pay</span>
+            <span>₹{finalBill.toFixed(2)}</span>
           </div>
         </div>
       </div>
 
-      {/* 🟢 FOOTER ACTION */}
+      {/* 🟢 STATUS MESSAGE TOAST */}
       {status && (
-        <div style={{ position: 'fixed', bottom: '100px', left: '20px', right: '20px', backgroundColor: '#2f3640', color: 'white', padding: '15px', borderRadius: '10px', textAlign: 'center', zIndex: 1000 }}>
+        <div style={{ position: 'fixed', bottom: '90px', left: '50%', transform: 'translateX(-50%)', backgroundColor: '#334155', color: 'white', padding: '12px 20px', borderRadius: '30px', fontWeight: 'bold', fontSize: '0.9rem', zIndex: 1000, boxShadow: '0 4px 12px rgba(0,0,0,0.15)', whiteSpace: 'nowrap' }}>
           {status}
         </div>
       )}
 
-      <div style={{ position: 'fixed', bottom: 0, width: '100%', backgroundColor: 'white', padding: '20px', boxShadow: '0 -5px 15px rgba(0,0,0,0.05)', boxSizing: 'border-box' }}>
+      {/* STICKY CHECKOUT BUTTON */}
+      <div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, backgroundColor: 'white', padding: '15px 20px', borderTop: '1px solid #e2e8f0', boxShadow: '0 -4px 10px rgba(0,0,0,0.05)', zIndex: 90 }}>
         <button 
           onClick={handleCheckout} 
-          disabled={!targetShop} 
-          style={{ 
-            width: '100%', 
-            backgroundColor: targetShop ? '#10b981' : '#cbd5e1', 
-            color: 'white', 
-            border: 'none', 
-            padding: '16px', 
-            borderRadius: '12px', 
-            fontWeight: 'bold', 
-            fontSize: '1.1rem',
-            cursor: targetShop ? 'pointer' : 'not-allowed',
-            boxShadow: targetShop ? '0 4px 10px rgba(16, 185, 129, 0.3)' : 'none'
-          }}
+          disabled={!targetShop || status.includes("⏳")}
+          style={{ width: '100%', maxWidth: '800px', margin: '0 auto', display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px 20px', backgroundColor: targetShop ? '#10b981' : '#cbd5e1', color: 'white', border: 'none', borderRadius: '12px', fontWeight: 'bold', fontSize: '1.1rem', cursor: targetShop ? 'pointer' : 'not-allowed', boxShadow: targetShop ? '0 4px 10px rgba(16, 185, 129, 0.3)' : 'none', opacity: status.includes("⏳") ? 0.7 : 1 }}
         >
-          {targetShop ? `Confirm Order (₹${finalBill.toFixed(2)})` : "Select a Shop to Continue"}
+          <span>{status.includes("⏳") ? "Processing..." : "Place Order"}</span>
+          <span>₹{finalBill.toFixed(2)}</span>
         </button>
       </div>
+
     </div>
   );
-              }
+}
