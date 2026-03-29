@@ -20,7 +20,7 @@ export default function AdminDashboard({ onExit }) {
   const [form, setForm] = useState(initialProductForm);
   const [editingProductId, setEditingProductId] = useState(null); 
   
-  // 👇 UPDATED SHOP FORM STATE 👇
+  // Shop Form State
   const initialShopForm = { 
     name: "", phone: "", password: "", pincode: "",
     ownerName: "", fullAddress: "", operatingHours: "", shopImage: "",
@@ -48,12 +48,67 @@ export default function AdminDashboard({ onExit }) {
     setLoading(false);
   };
 
-  // --- PRODUCT LOGIC ---
-  const handleProductSubmit = async (e) => { /* ... existing product logic ... */ };
-  const startEditingProduct = (product) => { /* ... existing product logic ... */ };
-  const cancelEditProduct = () => { setForm(initialProductForm); setEditingProductId(null); };
+  // 👇 --- UPGRADED PRODUCT LOGIC --- 👇
+  const handleProductSubmit = async (e) => {
+    e.preventDefault(); // 🛑 Stops the page from refreshing!
 
-  // 👇 UPGRADED SHOP LOGIC 👇
+    try {
+      if (editingProductId) {
+        // Edit Existing Product
+        const res = await fetch(`${BASE_URL}/master-products/${editingProductId}`, {
+          method: "PATCH", 
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(form)
+        });
+        if (res.ok) alert("✅ Product Updated Successfully!");
+      } else {
+        // Add New Product
+        const res = await fetch(`${BASE_URL}/master-products`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(form)
+        });
+        if (res.ok) alert("✅ New Product Added to Master Catalog!");
+      }
+
+      setForm(initialProductForm);
+      setEditingProductId(null);
+      fetchData(); // Refresh the list instantly
+    } catch (err) {
+      console.error(err);
+      alert("❌ Failed to save product. Check your connection.");
+    }
+  };
+
+  const startEditingProduct = (product) => {
+    setForm({
+      name: product.name || "",
+      brand: product.brand || "",
+      category: product.category || "",
+      mrp: product.mrp || "",
+      qnty: product.qnty || "",
+      emoji: product.emoji || "",
+      image: product.image || "",
+      searchTags: product.searchTags || "",
+      description: product.description || "",
+      manufacturer: product.manufacturer || "",
+      energy: product.energy || "",
+      protein: product.protein || "",
+      carbs: product.carbs || "",
+      sugar: product.sugar || "",
+      fat: product.fat || ""
+    });
+    setEditingProductId(product._id);
+    window.scrollTo({ top: 0, behavior: 'smooth' }); // Smoothly scrolls back to the form
+  };
+
+  const cancelEditProduct = () => { 
+    setForm(initialProductForm); 
+    setEditingProductId(null); 
+  };
+  // 👆 -------------------------------- 👆
+
+  // --- SHOP LOGIC ---
   const handleShopSubmit = async (e) => {
     e.preventDefault();
     try {
@@ -109,4 +164,13 @@ export default function AdminDashboard({ onExit }) {
     </div>
   );
 }
-const tabButtonStyle = (isActive) => ({ backgroundColor: isActive ? '#334155' : 'transparent', color: isActive ? '#10b981' : '#94a3b8', border: 'none', padding: '8px 15px', borderRadius: '6px', fontWeight: 'bold', cursor: 'pointer' });
+
+const tabButtonStyle = (isActive) => ({ 
+  backgroundColor: isActive ? '#334155' : 'transparent', 
+  color: isActive ? '#10b981' : '#94a3b8', 
+  border: 'none', 
+  padding: '8px 15px', 
+  borderRadius: '6px', 
+  fontWeight: 'bold', 
+  cursor: 'pointer' 
+});
