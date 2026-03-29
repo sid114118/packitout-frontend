@@ -1,80 +1,88 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 
-// ownerType should be either "user" or "shop"
-// ownerId is the _id of the user or shop
 export default function NotificationBell({ ownerType, ownerId }) {
   const [notifications, setNotifications] = useState([]);
-  const [isOpen, setIsOpen] = useState(false);
+  const [showDropdown, setShowDropdown] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const prevCountRef = useRef(0);
+  
+  // 🔊 Audio Setup (Using a public short ding sound)
+  const ding = new Audio("https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3");
+
   const BASE_URL = "https://darkslategrey-snail-415133.hostingersite.com";
 
   useEffect(() => {
-    if (ownerId) fetchNotifications();
-    // Optional: Auto-refresh notifications every 30 seconds
-    const interval = setInterval(() => { if (ownerId) fetchNotifications(); }, 30000);
+    if (!ownerId) return;
+
+    // Request browser notification permission
+    if (Notification.permission === "default") {
+      Notification.requestPermission();
+    }
+
+    const fetchNotifications = async () => {
+      try {
+        const res = await fetch(`${BASE_URL}/notifications/${ownerType}/${ownerId}`);
+        const data = await res.json();
+        setNotifications(data);
+        
+        const unread = data.filter(n => !n.isRead).length;
+        
+        // 🔔 Trigger "Ding" and Browser Notification if new items arrive
+        if (unread > prevCountRef.current) {
+          ding.play().catch(e => console.log("Audio play blocked"));
+          
+          if (Notification.permission === "granted") {
+            new Notification(data[0].title, { body: data[0].message });
+          }
+        }
+        
+        setUnreadCount(unread);
+        prevCountRef.current = unread;
+      } catch (err) { console.log(err); }
+    };
+
+    fetchNotifications();
+    const interval = setInterval(fetchNotifications, 5000); // Check every 5 seconds
     return () => clearInterval(interval);
-  }, [ownerId]);
+  }, [ownerId, ownerType]);
 
-  const fetchNotifications = async () => {
-    try {
-      const endpoint = ownerType === "user" ? `/notifications/user/${ownerId}` : `/notifications/shop/${ownerId}`;
-      const res = await fetch(`${BASE_URL}${endpoint}`);
-      if (res.ok) setNotifications(await res.json());
-    } catch (err) { console.log("Failed to fetch notifications"); }
+  const markAsRead = async () => {
+    setShowDropdown(!showDropdown);
+    if (unreadCount > 0) {
+      try {
+        await fetch(`${BASE_URL}/notifications/read-all`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ [ownerType === 'user' ? 'userId' : 'shopId']: ownerId })
+        });
+        setUnreadCount(0);
+        prevCountRef.current = 0;
+      } catch (err) { console.log(err); }
+    }
   };
-
-  const markAllAsRead = async () => {
-    try {
-      await fetch(`${BASE_URL}/notifications/read-all`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(ownerType === "user" ? { userId: ownerId } : { shopId: ownerId })
-      });
-      // Update local state to remove red dots
-      setNotifications(notifications.map(n => ({ ...n, isRead: true })));
-    } catch (err) { console.log("Failed to mark as read"); }
-  };
-
-  const unreadCount = notifications.filter(n => !n.isRead).length;
 
   return (
-    <div style={{ position: 'relative' }}>
-      
-      {/* 🔔 The Bell Icon */}
-      <button 
-        onClick={() => setIsOpen(!isOpen)} 
-        style={{ background: 'white', border: '1px solid #cbd5e1', borderRadius: '50%', width: '45px', height: '45px', display: 'flex', justifyContent: 'center', alignItems: 'center', cursor: 'pointer', fontSize: '1.2rem', position: 'relative', boxShadow: '0 2px 5px rgba(0,0,0,0.05)' }}
-      >
+    <div style={{ position: 'relative', display: 'inline-block' }}>
+      <button onClick={markAsRead} style={{ background: 'none', border: 'none', fontSize: '1.5rem', cursor: 'pointer', position: 'relative', padding: '5px' }}>
         🔔
         {unreadCount > 0 && (
-          <span style={{ position: 'absolute', top: '-2px', right: '-2px', backgroundColor: '#ef4444', color: 'white', borderRadius: '50%', width: '20px', height: '20px', fontSize: '0.75rem', fontWeight: 'bold', display: 'flex', justifyContent: 'center', alignItems: 'center', border: '2px solid white' }}>
+          <span style={{ position: 'absolute', top: '0', right: '0', background: '#ef4444', color: 'white', borderRadius: '50%', padding: '2px 6px', fontSize: '0.7rem', fontWeight: 'bold', border: '2px solid white' }}>
             {unreadCount}
           </span>
         )}
       </button>
 
-      {/* 📋 The Dropdown Panel */}
-      {isOpen && (
-        <div style={{ position: 'absolute', top: '55px', right: '0', width: '300px', backgroundColor: 'white', borderRadius: '12px', boxShadow: '0 10px 25px rgba(0,0,0,0.1)', border: '1px solid #e2e8f0', zIndex: 100, overflow: 'hidden' }}>
-          
-          <div style={{ padding: '15px', backgroundColor: '#f8fafc', borderBottom: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <h4 style={{ margin: 0, color: '#0f172a' }}>Notifications</h4>
-            {unreadCount > 0 && (
-              <button onClick={markAllAsRead} style={{ background: 'none', border: 'none', color: '#3b82f6', fontSize: '0.8rem', cursor: 'pointer', fontWeight: 'bold' }}>Mark all read</button>
-            )}
-          </div>
-
-          <div style={{ maxHeight: '350px', overflowY: 'auto' }}>
+      {showDropdown && (
+        <div style={{ position: 'absolute', right: 0, top: '45px', width: '280px', background: 'white', borderRadius: '12px', boxShadow: '0 10px 25px rgba(0,0,0,0.2)', zIndex: 1000, overflow: 'hidden', border: '1px solid #e2e8f0' }}>
+          <div style={{ padding: '12px', background: '#f8fafc', borderBottom: '1px solid #e2e8f0', fontWeight: 'bold', color: '#1e293b' }}>Notifications</div>
+          <div style={{ maxHeight: '300px', overflowY: 'auto' }}>
             {notifications.length === 0 ? (
-              <div style={{ padding: '30px', textAlign: 'center', color: '#94a3b8', fontSize: '0.9rem' }}>No new notifications</div>
+              <div style={{ padding: '20px', textAlign: 'center', color: '#94a3b8', fontSize: '0.9rem' }}>No notifications yet</div>
             ) : (
               notifications.map(n => (
-                <div key={n._id} style={{ padding: '15px', borderBottom: '1px solid #f1f5f9', backgroundColor: n.isRead ? 'white' : '#f0f9ff', transition: '0.2s' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
-                    <strong style={{ color: '#0f172a', fontSize: '0.9rem' }}>{n.title}</strong>
-                    {!n.isRead && <span style={{ width: '8px', height: '8px', backgroundColor: '#3b82f6', borderRadius: '50%' }}></span>}
-                  </div>
-                  <div style={{ fontSize: '0.85rem', color: '#64748b' }}>{n.message}</div>
-                  <div style={{ fontSize: '0.7rem', color: '#94a3b8', marginTop: '6px' }}>{new Date(n.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
+                <div key={n._id} style={{ padding: '12px', borderBottom: '1px solid #f1f5f9', backgroundColor: n.isRead ? 'transparent' : '#f0fdf4' }}>
+                  <div style={{ fontWeight: 'bold', fontSize: '0.9rem', color: '#0f172a' }}>{n.title}</div>
+                  <div style={{ fontSize: '0.8rem', color: '#64748b' }}>{n.message}</div>
                 </div>
               ))
             )}
@@ -83,4 +91,4 @@ export default function NotificationBell({ ownerType, ownerId }) {
       )}
     </div>
   );
-                  }
+}
