@@ -27,13 +27,13 @@ export default function GuestFeed({ user, onAddToCart, selectedCategory, onClear
         }));
         setItems(formattedItems);
         
-        // 🛡️ CRASH-PROOF CAROUSELS: Using safe slices instead of random math!
+        // 🛡️ SMALL DATABASE PROOF: We use slice(0, 8) so it never skips your items!
         setTrendingPlatform(formattedItems.slice(0, 8)); 
-        setShopDeals(formattedItems.slice(2, 10)); // Offset to look different
-        setShopBestSellers(formattedItems.slice(1, 9));
+        setShopDeals([...formattedItems].reverse().slice(0, 8)); // Reversed so it looks different
+        setShopBestSellers(formattedItems.slice(0, 8));
         setUnder99(formattedItems.filter(i => i.sellingPrice > 0 && i.sellingPrice < 100).slice(0, 8));
-        setNewArrivals([...formattedItems].reverse().slice(0, 8)); // Newest first
-        setBuyItAgain(formattedItems.slice(3, 11));
+        setNewArrivals([...formattedItems].reverse().slice(0, 8)); 
+        setBuyItAgain(formattedItems.slice(0, 8));
 
         // Smart Time-Based Logic (100% safe)
         const hour = new Date().getHours();
@@ -60,6 +60,7 @@ export default function GuestFeed({ user, onAddToCart, selectedCategory, onClear
           return keywords.some(kw => cat.includes(kw) || name.includes(kw));
         });
 
+        // If no keywords match, just show the standard items so it doesn't disappear
         setTimeBased({ 
           title: timeTitle, 
           items: matchedItems.length > 0 ? matchedItems.slice(0, 8) : formattedItems.slice(0, 8) 
