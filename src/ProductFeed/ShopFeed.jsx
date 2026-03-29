@@ -82,6 +82,31 @@ export default function ShopFeed({ user, onAddToCart, selectedCategory, onClearC
     fetchShopProducts();
   }, [user]);
 
+  // 👇 ADDED THIS: The magic function to switch shops!
+  const handleSwitchShop = async (newShop) => {
+    const confirmSwitch = window.confirm(`Switch to ${newShop.name}? This will clear your current cart.`);
+    if (!confirmSwitch) return;
+
+    try {
+      // 1. Update the user's primary shop in the database
+      const res = await fetch(`${BASE_URL}/users/${user._id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ primaryShop: newShop._id })
+      });
+      const updatedUser = await res.json();
+
+      // 2. Update local storage so the app remembers the new shop
+      localStorage.setItem("packitout_user", JSON.stringify(updatedUser));
+
+      // 3. Reload the page to load the new menu and clear the cart!
+      window.location.reload();
+    } catch (err) {
+      console.log(err);
+      alert("Failed to switch shop. Please try again.");
+    }
+  };
+
   if (loading) return <div style={{ padding: '40px', textAlign: 'center', color: '#64748b' }}>Loading fresh products...</div>;
 
   const ProductCard = ({ item, isCarousel }) => {
@@ -129,27 +154,6 @@ export default function ShopFeed({ user, onAddToCart, selectedCategory, onClearC
   return (
     <div style={{ padding: '0 15px', maxWidth: '1000px', margin: '0 auto', overflowX: 'hidden' }}>
       <style>{`.hide-scroll::-webkit-scrollbar { display: none; } .hide-scroll { -ms-overflow-style: none; scrollbar-width: none; }`}</style>
-
-      {/* NEW TOP STORES CAROUSEL */}
-      {!selectedCategory && !isSearching && nearbyShops.length > 0 && (
-        <div style={{ marginBottom: '30px', textAlign: 'left' }}>
-          <h3 style={sectionHeaderStyle}>🏪 Top Stores Near You</h3>
-          <div className="hide-scroll" style={carouselRowStyle}>
-            {nearbyShops.map(shop => (
-              <div key={shop._id} style={{ ...productCardStyle, minWidth: '160px', alignItems: 'center', textAlign: 'center', border: '1px solid #cbd5e1', backgroundColor: '#f8fafc' }}>
-                <div style={{ fontSize: '30px', marginBottom: '5px' }}>🏪</div>
-                <div style={{ fontWeight: 'bold', color: '#0f172a', fontSize: '0.9rem', width: '100%', overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis' }}>
-                  {shop.name}
-                </div>
-                <div style={{ fontSize: '0.75rem', color: shop.isOpen ? '#10b981' : '#ef4444', fontWeight: 'bold', marginTop: '5px', marginBottom: '10px' }}>
-                  {shop.isOpen ? '🟢 OPEN NOW' : '🔴 CLOSED'}
-                </div>
-                <button style={{ ...addBtnStyle, backgroundColor: '#334155', boxShadow: 'none' }}>Visit Store</button>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
 
       {(selectedCategory || isSearching) ? (
         <div style={{ textAlign: 'left', marginTop: '10px' }}>
@@ -203,6 +207,35 @@ export default function ShopFeed({ user, onAddToCart, selectedCategory, onClearC
               <div className="hide-scroll" style={carouselRowStyle}>{shopBestSellers.map(item => <ProductCard key={item._id} item={item} isCarousel={true} />)}</div>
             </div>
           )}
+
+          {/* 👇 MOVED TO THE BOTTOM & BUTTON WIRED UP 👇 */}
+          {!selectedCategory && !isSearching && nearbyShops.length > 0 && (
+            <div style={{ marginBottom: '30px', textAlign: 'left', paddingTop: '15px', borderTop: '2px dashed #e2e8f0' }}>
+              <h3 style={sectionHeaderStyle}>🏪 Explore Other Stores Near You</h3>
+              <div className="hide-scroll" style={carouselRowStyle}>
+                {nearbyShops.map(shop => (
+                  <div key={shop._id} style={{ ...productCardStyle, minWidth: '160px', alignItems: 'center', textAlign: 'center', border: '1px solid #cbd5e1', backgroundColor: '#f8fafc' }}>
+                    <div style={{ fontSize: '30px', marginBottom: '5px' }}>🏪</div>
+                    <div style={{ fontWeight: 'bold', color: '#0f172a', fontSize: '0.9rem', width: '100%', overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis' }}>
+                      {shop.name}
+                    </div>
+                    <div style={{ fontSize: '0.75rem', color: shop.isOpen ? '#10b981' : '#ef4444', fontWeight: 'bold', marginTop: '5px', marginBottom: '10px' }}>
+                      {shop.isOpen ? '🟢 OPEN NOW' : '🔴 CLOSED'}
+                    </div>
+                    {/* BUTTON NOW CALLS handleSwitchShop! */}
+                    <button 
+                      onClick={() => handleSwitchShop(shop)} 
+                      style={{ ...addBtnStyle, backgroundColor: '#334155', boxShadow: 'none' }}
+                    >
+                      Visit Store
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+          {/* 👆 END OF TOP STORES SECTION 👆 */}
+
         </>
       )}
     </div>
@@ -216,4 +249,4 @@ const sectionHeaderStyle = { color: '#0f172a', marginTop: 0, marginBottom: '12px
 const addBtnStyle = { width: '100%', padding: '8px', backgroundColor: '#10b981', color: 'white', border: 'none', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer', textTransform: 'uppercase', boxShadow: '0 2px 4px rgba(16, 185, 129, 0.2)' };
 const disabledBtnStyle = { width: '100%', padding: '8px', backgroundColor: '#f1f5f9', color: '#cbd5e1', border: '2px solid #cbd5e1', borderRadius: '8px', fontWeight: 'bold', cursor: 'not-allowed', textTransform: 'uppercase' };
 const outOfStockBtnStyle = { width: '100%', padding: '8px', backgroundColor: '#f1f5f9', color: '#94a3b8', border: '2px solid #e2e8f0', borderRadius: '8px', fontWeight: 'bold', cursor: 'not-allowed' };
-          
+  
