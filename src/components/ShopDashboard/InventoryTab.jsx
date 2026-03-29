@@ -11,7 +11,6 @@ export default function InventoryTab({ shopData, masterCatalog, handleInventoryU
   const [addingId, setAddingId] = useState(null); 
 
   // 🛡️ SAFETY NETS: Prevent the "Blank Screen" Crash 🛡️
-  // If data is still loading, we force them to be empty arrays so .map() and .filter() don't break!
   const safeInventory = shopData?.inventory || [];
   const safeCatalog = masterCatalog || [];
 
@@ -152,7 +151,23 @@ export default function InventoryTab({ shopData, masterCatalog, handleInventoryU
                 {/* 🔴🟢 MASSIVE OUT OF STOCK TOGGLE */}
                 <button 
                   onClick={() => handleInventoryUpdate(item.product._id, item.sellingPrice, !item.inStock)}
-                  style={{ width: '100%', marginTop: '15px', padding: '12px', borderRadius: '8px', border: 'none', fontWeight: 'bold', fontSize: '0.9rem', cursor: 'pointer', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '8px', backgroundColor: item.inStock ? '#ecfdf5' : '#fef2f2', color: item.inStock ? '#059669' : '#dc2626', border: item.inStock ? '1px solid #10b981' : '1px solid #ef4444', transition: '0.2s' }}
+                  style={{ 
+                    width: '100%', 
+                    marginTop: '15px', 
+                    padding: '12px', 
+                    borderRadius: '8px', 
+                    fontWeight: 'bold', 
+                    fontSize: '0.9rem', 
+                    cursor: 'pointer', 
+                    display: 'flex', 
+                    justifyContent: 'center', 
+                    alignItems: 'center', 
+                    gap: '8px', 
+                    backgroundColor: item.inStock ? '#ecfdf5' : '#fef2f2', 
+                    color: item.inStock ? '#059669' : '#dc2626', 
+                    border: item.inStock ? '1px solid #10b981' : '1px solid #ef4444', 
+                    transition: '0.2s' 
+                  }}
                 >
                   {item.inStock ? "🟢 IN STOCK (Tap to Disable)" : "🔴 OUT OF STOCK (Tap to Enable)"}
                 </button>
@@ -169,4 +184,4 @@ export default function InventoryTab({ shopData, masterCatalog, handleInventoryU
 // PREMIUM STYLING
 const searchInputStyle = { width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '0.95rem', boxSizing: 'border-box', outline: 'none', backgroundColor: 'white' };
 const cardStyle = { backgroundColor: 'white', padding: '15px', borderRadius: '12px', boxShadow: '0 4px 6px rgba(0,0,0,0.04)', display: 'flex', flexDirection: 'column', transition: '0.2s' };
-            
+                
