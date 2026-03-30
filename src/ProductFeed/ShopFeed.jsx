@@ -35,7 +35,6 @@ export default function ShopFeed({ user, onAddToCart, cart = [], selectedCategor
           setNearbyShops(shopsData.filter(s => s._id !== shopId)); 
         }
 
-        // 👇 UPDATED LOGIC: Groups products with the same itemGroupId into a single card
         const groupedMap = new Map();
         const availableItems = [];
 
@@ -49,18 +48,15 @@ export default function ShopFeed({ user, onAddToCart, cart = [], selectedCategor
             inStock: item.inStock
           };
 
-          // If the product has a group ID, bundle it up!
           if (formattedItem.itemGroupId && formattedItem.itemGroupId.trim() !== "") {
             if (!groupedMap.has(formattedItem.itemGroupId)) {
-              formattedItem.variants = [formattedItem]; // Create an array to hold all sizes
+              formattedItem.variants = [formattedItem];
               groupedMap.set(formattedItem.itemGroupId, formattedItem);
               availableItems.push(formattedItem);
             } else {
-              // Add this size to the existing main card
               groupedMap.get(formattedItem.itemGroupId).variants.push(formattedItem);
             }
           } else {
-            // Normal product with no group ID
             availableItems.push(formattedItem);
           }
         });
@@ -165,7 +161,6 @@ export default function ShopFeed({ user, onAddToCart, cart = [], selectedCategor
             4.2 <span style={{ color: '#0f9d58' }}>★</span>
           </div>
 
-          {/* 👇 UPDATED: Changed the '+' to a clean 'ADD' pill button */}
           {!isOutOfStock && !shopClosed && (
             <button 
               onClick={(e) => { e.stopPropagation(); onAddToCart({ ...item, mrp: item.sellingPrice }); }} 
@@ -179,7 +174,6 @@ export default function ShopFeed({ user, onAddToCart, cart = [], selectedCategor
         <div>
           <p style={{ fontSize: '0.75rem', color: '#6b7280', margin: '0 0 4px 0', minHeight: '14px' }}>
             {item.qnty || "1 pc"} 
-            {/* Show a tiny indicator if there are multiple sizes hiding inside */}
             {item.variants && item.variants.length > 1 && <span style={{color: '#d97706', fontWeight: 'bold'}}> ({item.variants.length} sizes)</span>}
           </p>
           
@@ -251,6 +245,20 @@ export default function ShopFeed({ user, onAddToCart, cart = [], selectedCategor
     <div style={{ padding: '0', maxWidth: '1000px', margin: '0 auto', overflowX: 'hidden', backgroundColor: '#f3f4f6' }}>
       <style>{`.hide-scroll::-webkit-scrollbar { display: none; } .hide-scroll { -ms-overflow-style: none; scrollbar-width: none; }`}</style>
 
+      {/* 🐛 TEMPORARY MOBILE DEBUGGER 🐛 */}
+      <div style={{ backgroundColor: '#000', color: '#0f0', padding: '10px', fontSize: '11px', overflowX: 'scroll', fontFamily: 'monospace' }}>
+        <strong>DEBUG - CHECK GROUP IDs:</strong>
+        <pre>
+          {JSON.stringify(items.map(i => ({ 
+            name: i.name, 
+            qnty: i.qnty,
+            itemGroupId: i.itemGroupId || "NONE", 
+            variantsFound: i.variants ? i.variants.length : 0 
+          })), null, 2)}
+        </pre>
+      </div>
+      {/* ---------------------------------- */}
+
       {(selectedCategory || isSearching || viewAll) ? (
         <div style={{ padding: '15px', backgroundColor: '#fff', minHeight: '100vh' }}>
           <div style={{ display: 'flex', alignItems: 'center', marginBottom: '20px', gap: '15px' }}>
@@ -317,4 +325,4 @@ export default function ShopFeed({ user, onAddToCart, cart = [], selectedCategor
       />
     </div>
   );
-                }
+              }
