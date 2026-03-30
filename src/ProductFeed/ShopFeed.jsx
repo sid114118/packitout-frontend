@@ -7,8 +7,13 @@ export default function ShopFeed({ user, onAddToCart, cart = [], selectedCategor
   const [shopInfo, setShopInfo] = useState(null);
   
   const [nearbyShops, setNearbyShops] = useState([]);
+  
+  // State for the FULL detailed modal (Opens when clicking the image)
   const [selectedProductDetails, setSelectedProductDetails] = useState(null); 
   
+  // 👇 NEW: State for the QUICK VARIANT SHEET (Opens when clicking "ADD" on a multi-size item)
+  const [selectedVariantProduct, setSelectedVariantProduct] = useState(null);
+
   const [viewAll, setViewAll] = useState(null); 
 
   const [shopDeals, setShopDeals] = useState([]);
@@ -49,12 +54,13 @@ export default function ShopFeed({ user, onAddToCart, cart = [], selectedCategor
           };
 
           if (formattedItem.itemGroupId && formattedItem.itemGroupId.trim() !== "") {
-            if (!groupedMap.has(formattedItem.itemGroupId)) {
+            const groupId = String(formattedItem.itemGroupId).trim().toUpperCase();
+            if (!groupedMap.has(groupId)) {
               formattedItem.variants = [formattedItem]; 
-              groupedMap.set(formattedItem.itemGroupId, formattedItem);
+              groupedMap.set(groupId, formattedItem);
               availableItems.push(formattedItem);
             } else {
-              groupedMap.get(formattedItem.itemGroupId).variants.push(formattedItem);
+              groupedMap.get(groupId).variants.push(formattedItem);
             }
           } else {
             availableItems.push(formattedItem);
@@ -70,9 +76,7 @@ export default function ShopFeed({ user, onAddToCart, cart = [], selectedCategor
         setBuyItAgain([...availableItems].filter(i => i.inStock).sort(() => 0.5 - Math.random()).slice(0, 12));
 
         const hour = new Date().getHours();
-        let timeTitle = "";
-        let timeSubtitle = "";
-        let keywords = [];
+        let timeTitle = ""; let timeSubtitle = ""; let keywords = [];
 
         if (hour >= 5 && hour < 11) {
           timeTitle = "🌤️ Breakfast & Dairy"; timeSubtitle = "Start your morning right";
@@ -141,6 +145,7 @@ export default function ShopFeed({ user, onAddToCart, cart = [], selectedCategor
         scrollSnapAlign: 'start'
       }}>
         
+        {/* CLICKING THE IMAGE OPENS FULL DETAILS MODAL */}
         <div 
           onClick={() => setSelectedProductDetails(item)}
           style={{ position: 'relative', height: '110px', width: '100%', display: 'flex', justifyContent: 'center', alignItems: 'center', backgroundColor: '#f9fafb', borderRadius: '6px', marginBottom: '16px', cursor: 'pointer' }}
@@ -161,16 +166,15 @@ export default function ShopFeed({ user, onAddToCart, cart = [], selectedCategor
             4.2 <span style={{ color: '#0f9d58' }}>★</span>
           </div>
 
-          {/* 👇 UPGRADED SMART 'ADD' BUTTON 👇 */}
           {!isOutOfStock && !shopClosed && (
             <button 
               onClick={(e) => { 
                 e.stopPropagation(); 
                 if (item.variants && item.variants.length > 1) {
-                  // If it has multiple sizes, open the Modal!
-                  setSelectedProductDetails(item);
+                  // 👇 IF MULTIPLE SIZES: Open Quick Variant Sheet
+                  setSelectedVariantProduct(item);
                 } else {
-                  // If it's just one item, add it directly to cart!
+                  // 👇 IF ONE SIZE: Add straight to cart!
                   onAddToCart({ ...item, mrp: item.sellingPrice }); 
                 }
               }} 
@@ -258,7 +262,6 @@ export default function ShopFeed({ user, onAddToCart, cart = [], selectedCategor
       {(selectedCategory || isSearching || viewAll) ? (
         <div style={{ padding: '15px', backgroundColor: '#fff', minHeight: '100vh' }}>
           <div style={{ display: 'flex', alignItems: 'center', marginBottom: '20px', gap: '15px' }}>
-            
             <button 
               onClick={() => {
                 if (selectedCategory) onClearCategory();
@@ -268,7 +271,6 @@ export default function ShopFeed({ user, onAddToCart, cart = [], selectedCategor
             >
               ⬅ Back
             </button>
-
             <h2 style={{ margin: 0, color: '#0f172a', fontSize: '1.2rem' }}>
               {isSearching ? `Results for "${searchQuery}"` : (viewAll ? viewAll.title : selectedCategory)}
             </h2>
@@ -309,16 +311,54 @@ export default function ShopFeed({ user, onAddToCart, cart = [], selectedCategor
         </>
       )}
 
-      <ProductModal 
-        product={selectedProductDetails} 
-        isOpen={selectedProductDetails !== null} 
-        onClose={() => setSelectedProductDetails(null)} 
-        onAddToCart={(item) => {
-          onAddToCart({ ...item, mrp: item.sellingPrice });
-          setSelectedProductDetails(null); 
-        }}
-        cart={cart}
-      />
-    </div>
-  );
-                      }
+      {/* 📋 THE QUICK VARIANT SELECTION SHEET (Matches your screenshot!) */}
+      {selectedVariantProduct && (
+        <>
+          <div 
+            onClick={() => setSelectedVariantProduct(null)} 
+            style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.6)', zIndex: 1000, backdropFilter: 'blur(2px)' }} 
+          />
+          <div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 1001, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+            
+            {/* The Floating 'X' Button */}
+            <button 
+              onClick={() => setSelectedVariantProduct(null)} 
+              style={{ marginBottom: '15px', backgroundColor: '#333', color: '#fff', border: 'none', borderRadius: '50%', width: '40px', height: '40px', fontSize: '1.2rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 10px rgba(0,0,0,0.2)' }}
+            >
+              ✕
+            </button>
+            
+            {/* The White Bottom Sheet */}
+            <div style={{ backgroundColor: '#f3f4f6', width: '100%', borderTopLeftRadius: '24px', borderTopRightRadius: '24px', padding: '20px', paddingBottom: '30px', maxHeight: '75vh', overflowY: 'auto', animation: 'slideUp 0.3s ease-out' }}>
+              <style>{`@keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }`}</style>
+              
+              <h3 style={{ margin: '0 0 15px 0', fontSize: '1.1rem', color: '#111827', fontWeight: 'bold' }}>
+                {selectedVariantProduct.name}
+              </h3>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                {selectedVariantProduct.variants.map((variant, idx) => {
+                  const vPrice = variant.sellingPrice || variant.mrp;
+                  const vDiscounted = vPrice < variant.mrp;
+                  const vDiscountPercent = vDiscounted ? Math.round(((variant.mrp - vPrice) / variant.mrp) * 100) : 0;
+
+                  return (
+                    <div key={idx} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', backgroundColor: '#fff', padding: '12px', borderRadius: '12px', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
+                        <div style={{ position: 'relative', width: '50px', height: '50px', backgroundColor: '#f9fafb', borderRadius: '8px', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+                          {vDiscounted && (
+                            <span style={{ position: 'absolute', top: '-5px', left: '-5px', backgroundColor: '#2563eb', color: '#fff', fontSize: '0.6rem', fontWeight: 'bold', padding: '2px 4px', borderRadius: '4px', zIndex: 1 }}>
+                              {vDiscountPercent}% OFF
+                            </span>
+                          )}
+                          {variant.image ? (
+                            <img src={variant.image} alt="" style={{ maxWidth: '40px', maxHeight: '40px', objectFit: 'contain' }} />
+                          ) : (
+                            <span style={{ fontSize: '24px' }}>{variant.emoji}</span>
+                          )}
+                        </div>
+                        <div>
+                          <div style={{ fontSize: '0.85rem', color: '#4b5563', fontWeight: '500' }}>{variant.qnty}</div>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '4px' }}>
+                            <span style={{ fontWeight: 'bold', fontSize: '0.95rem', color: '#111827' }}>₹{vPrice}</span>
+                            {vDiscounted && <span style={{ fontSize: '0.75rem', color: '#9ca3af', textDecoration: 'line-th
