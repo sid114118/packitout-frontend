@@ -161,8 +161,13 @@ export default function ProductModal({ product, isOpen, onClose, onAddToCart, on
                       <div
                         key={i}
                         onClick={() => setSelectedVariant(v)}
-                        style={{ minWidth: '90px', padding: '10px 12px', border: isSel ? '2px solid #0f9d58' : '1.5px solid #e5e7eb', borderRadius: '12px', backgroundColor: isSel ? '#f0fdf4' : '#fff', textAlign: 'center', position: 'relative', cursor: 'pointer', flexShrink: 0, transition: 'all 0.15s' }}
+                        style={{ minWidth: '90px', padding: '10px 12px', border: isSel ? '2px solid #1a7a3c' : '1.5px solid #e5e7eb', borderRadius: '12px', backgroundColor: isSel ? '#f0fdf4' : '#fff', textAlign: 'center', position: 'relative', cursor: 'pointer', flexShrink: 0, transition: 'all 0.15s' }}
                       >
+                        {cart.filter(c => c._id === v._id).length > 0 && (
+                          <div style={{ position: 'absolute', top: '-8px', right: '-8px', backgroundColor: '#1a7a3c', color: '#fff', borderRadius: '50%', width: '20px', height: '20px', display: 'flex', justifyContent: 'center', alignItems: 'center', fontSize: '0.7rem', fontWeight: '800', border: '2px solid #fff', zIndex: 2 }}>
+                            {cart.filter(c => c._id === v._id).length}
+                          </div>
+                        )}
                         {vDisc > 0 && (
                           <span style={{ position: 'absolute', top: '-9px', left: '50%', transform: 'translateX(-50%)', backgroundColor: '#2563eb', color: '#fff', fontSize: '0.58rem', padding: '2px 5px', borderRadius: '4px', whiteSpace: 'nowrap', fontWeight: '700' }}>
                             {vDisc}% OFF
@@ -243,67 +248,59 @@ export default function ProductModal({ product, isOpen, onClose, onAddToCart, on
           </div>
         </div>
 
-        {/* ── Floating View Cart ── */}
+        {/* ── View Cart Bar (full-width, flush, like Blinkit) ── */}
         {cartTotalItems > 0 && (
-          <div style={{ position: 'absolute', bottom: '88px', left: '16px', right: '16px', zIndex: 101, animation: 'fadeIn 0.2s ease' }}>
-            <div
-              onClick={() => { onClose(); if (onViewCart) onViewCart(); }}
-              style={{ backgroundColor: '#0c8c4e', color: '#fff', padding: '12px 18px', borderRadius: '12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer', boxShadow: '0 8px 24px rgba(12,140,78,0.38)' }}
-            >
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                <div style={{ backgroundColor: 'rgba(255,255,255,0.18)', padding: '6px 8px', borderRadius: '8px', fontSize: '1rem' }}>🛒</div>
-                <div>
-                  <div style={{ fontWeight: '700', fontSize: '0.9rem' }}>{cartTotalItems} item{cartTotalItems > 1 ? 's' : ''}</div>
-                  <div style={{ fontWeight: '800', fontSize: '0.95rem' }}>₹{cartTotalPrice}</div>
+          <div
+            onClick={() => { onClose(); if (onViewCart) onViewCart(); }}
+            style={{ position: 'absolute', bottom: '72px', left: 0, right: 0, zIndex: 101, backgroundColor: '#237a3c', color: '#fff', padding: '14px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer', animation: 'fadeIn 0.2s ease' }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <div style={{ backgroundColor: 'rgba(255,255,255,0.15)', padding: '7px 9px', borderRadius: '8px', fontSize: '1.05rem', lineHeight: 1 }}>🛒</div>
+              <div>
+                <div style={{ fontWeight: '600', fontSize: '0.85rem', opacity: 0.95 }}>
+                  {cartTotalItems} item{cartTotalItems > 1 ? 's' : ''}
                 </div>
+                <div style={{ fontWeight: '800', fontSize: '0.95rem' }}>₹ {cartTotalPrice}</div>
               </div>
-              <div style={{ fontWeight: '800', fontSize: '0.95rem', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                View Cart <span>›</span>
-              </div>
+            </div>
+            <div style={{ fontWeight: '800', fontSize: '0.95rem', display: 'flex', alignItems: 'center', gap: '6px', letterSpacing: '0.2px' }}>
+              View Cart <span style={{ fontSize: '1.1rem' }}>›</span>
             </div>
           </div>
         )}
 
         {/* ── Fixed Bottom Action Bar ── */}
-        <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, backgroundColor: '#fff', borderTop: '1px solid #f1f5f9', padding: '12px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', zIndex: 102, paddingBottom: 'max(12px, env(safe-area-inset-bottom))' }}>
-          
-          {/* Price */}
-          <div>
+        <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, backgroundColor: '#fff', borderTop: '1px solid #f0f0f0', padding: '10px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', zIndex: 102, minHeight: '72px', paddingBottom: 'max(10px, env(safe-area-inset-bottom))' }}>
+
+          {/* Price left */}
+          <div style={{ textAlign: 'left' }}>
+            <div style={{ fontSize: '0.8rem', color: '#6b7280', fontWeight: '500', marginBottom: '1px' }}>
+              {selectedVariant.qnty}
+            </div>
             <div style={{ display: 'flex', alignItems: 'baseline', gap: '6px' }}>
               <span style={{ fontSize: '1.4rem', fontWeight: '900', color: '#111827', lineHeight: 1 }}>₹{displayPrice}</span>
-              {isDiscounted && <span style={{ fontSize: '0.85rem', color: '#9ca3af', textDecoration: 'line-through' }}>₹{selectedVariant.mrp}</span>}
+              {isDiscounted && <span style={{ fontSize: '0.82rem', color: '#9ca3af', textDecoration: 'line-through' }}>₹{selectedVariant.mrp}</span>}
             </div>
-            {isDiscounted && <div style={{ fontSize: '0.72rem', color: '#0f9d58', fontWeight: '600', marginTop: '2px' }}>You save ₹{selectedVariant.mrp - displayPrice}</div>}
+            <div style={{ fontSize: '0.7rem', color: '#9ca3af', marginTop: '2px' }}>Inclusive of all taxes</div>
           </div>
 
-          {/* Quantity stepper OR Add button */}
+          {/* Right: Green stepper OR green Add button */}
           {cartCount > 0 ? (
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0' }}>
-              {/* Stepper */}
-              <div style={{ display: 'flex', alignItems: 'center', border: '1.5px solid #e5e7eb', borderRadius: '10px', overflow: 'hidden', marginRight: '10px' }}>
-                <button
-                  onClick={() => onRemoveFromCart && onRemoveFromCart(selectedVariant)}
-                  style={{ width: '38px', height: '42px', border: 'none', backgroundColor: '#fff', color: '#374151', fontSize: '1.3rem', fontWeight: '700', cursor: 'pointer', display: 'flex', justifyContent: 'center', alignItems: 'center' }}
-                >−</button>
-                <span style={{ minWidth: '28px', textAlign: 'center', fontWeight: '800', fontSize: '1rem', color: '#111827' }}>{cartCount}</span>
-                <button
-                  onClick={() => onAddToCart({ ...selectedVariant, mrp: displayPrice })}
-                  style={{ width: '38px', height: '42px', border: 'none', backgroundColor: '#fff', color: '#374151', fontSize: '1.2rem', fontWeight: '700', cursor: 'pointer', display: 'flex', justifyContent: 'center', alignItems: 'center' }}
-                >+</button>
-              </div>
-
-              {/* Add more */}
+            <div style={{ display: 'flex', alignItems: 'center', backgroundColor: '#1a7a3c', borderRadius: '10px', overflow: 'hidden', boxShadow: '0 2px 10px rgba(26,122,60,0.35)' }}>
+              <button
+                onClick={() => onRemoveFromCart && onRemoveFromCart(selectedVariant)}
+                style={{ width: '46px', height: '46px', border: 'none', backgroundColor: 'transparent', color: '#fff', fontSize: '1.4rem', fontWeight: '300', cursor: 'pointer', display: 'flex', justifyContent: 'center', alignItems: 'center', lineHeight: 1 }}
+              >−</button>
+              <span style={{ minWidth: '30px', textAlign: 'center', fontWeight: '800', fontSize: '1.05rem', color: '#fff' }}>{cartCount}</span>
               <button
                 onClick={() => onAddToCart({ ...selectedVariant, mrp: displayPrice })}
-                style={{ height: '42px', padding: '0 22px', backgroundColor: '#0f9d58', color: '#fff', border: 'none', borderRadius: '10px', fontWeight: '800', fontSize: '0.95rem', cursor: 'pointer', boxShadow: '0 4px 14px rgba(15,157,88,0.3)' }}
-              >
-                Add
-              </button>
+                style={{ width: '46px', height: '46px', border: 'none', backgroundColor: 'transparent', color: '#fff', fontSize: '1.25rem', fontWeight: '300', cursor: 'pointer', display: 'flex', justifyContent: 'center', alignItems: 'center', lineHeight: 1 }}
+              >+</button>
             </div>
           ) : (
             <button
               onClick={() => onAddToCart({ ...selectedVariant, mrp: displayPrice })}
-              style={{ height: '46px', padding: '0 32px', backgroundColor: '#0f9d58', color: '#fff', border: 'none', borderRadius: '10px', fontWeight: '800', fontSize: '1rem', cursor: 'pointer', boxShadow: '0 4px 14px rgba(15,157,88,0.3)' }}
+              style={{ height: '46px', padding: '0 36px', backgroundColor: '#1a7a3c', color: '#fff', border: 'none', borderRadius: '10px', fontWeight: '800', fontSize: '1rem', cursor: 'pointer', boxShadow: '0 2px 10px rgba(26,122,60,0.35)', letterSpacing: '0.3px' }}
             >
               Add
             </button>
@@ -313,5 +310,5 @@ export default function ProductModal({ product, isOpen, onClose, onAddToCart, on
       </div>
     </>
   );
-          }
-                    
+                        }
+        
