@@ -2,19 +2,22 @@ import React, { useState, useEffect } from 'react';
 
 // 👇 Notice we added `allItems = []` here!
 export default function ProductModal({ product, isOpen, onClose, onAddToCart, allItems = [] }) {
+  // 🟢 We now track 'currentProduct' so the modal can navigate within itself!
+  const [currentProduct, setCurrentProduct] = useState(null);
   const [selectedVariant, setSelectedVariant] = useState(null);
   const [showFullDesc, setShowFullDesc] = useState(false); 
   const [quantity, setQuantity] = useState(1); 
 
   useEffect(() => {
     if (product) {
+      setCurrentProduct(product);
       setSelectedVariant(product);
       setShowFullDesc(false); 
       setQuantity(1); 
     }
   }, [product]);
 
-  if (!isOpen || !product || !selectedVariant) return null;
+  if (!isOpen || !currentProduct || !selectedVariant) return null;
 
   const displayPrice = selectedVariant.sellingPrice || selectedVariant.mrp;
   const isDiscounted = displayPrice < selectedVariant.mrp;
@@ -64,6 +67,18 @@ export default function ProductModal({ product, isOpen, onClose, onAddToCart, al
     ? allItems.filter(item => selectedVariant.relatedProducts.includes(item._id) && item.inStock)
     : [];
 
+  // 🟢 NEW: Handles clicking a related product! Updates the modal and scrolls to top.
+  const handleRelatedProductClick = (item) => {
+    setCurrentProduct(item);
+    setSelectedVariant(item);
+    setShowFullDesc(false);
+    setQuantity(1);
+    
+    // Smoothly scroll back to the top of the modal!
+    const scrollContainer = document.getElementById('modal-scroll-container');
+    if (scrollContainer) scrollContainer.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
   return (
     <>
       <div onClick={onClose} style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.65)', zIndex: 9999, backdropFilter: 'blur(3px)', transition: 'all 0.3s' }} />
@@ -85,7 +100,8 @@ export default function ProductModal({ product, isOpen, onClose, onAddToCart, al
 
         <button onClick={onClose} style={{ position: 'absolute', top: '12px', right: '12px', backgroundColor: '#fff', border: 'none', borderRadius: '50%', width: '32px', height: '32px', fontSize: '1.1rem', display: 'flex', justifyContent: 'center', alignItems: 'center', cursor: 'pointer', zIndex: 10, boxShadow: '0 2px 6px rgba(0,0,0,0.08)', color: '#475569' }}>✕</button>
 
-        <div style={{ flex: 1, overflowY: 'auto', paddingBottom: '20px' }}>
+        {/* 🟢 NEW: Added id="modal-scroll-container" so we can scroll it programmatically! */}
+        <div id="modal-scroll-container" style={{ flex: 1, overflowY: 'auto', paddingBottom: '20px', scrollBehavior: 'smooth' }}>
           
           <div style={{ width: '100%', height: '220px', backgroundColor: '#f8fafc', position: 'relative', display: 'flex', justifyContent: 'center', alignItems: 'center', borderBottom: '1px solid #e2e8f0' }}>
             <div style={{ position: 'absolute', top: '12px', left: '12px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
@@ -106,11 +122,12 @@ export default function ProductModal({ product, isOpen, onClose, onAddToCart, al
             <h1 style={{ margin: '0 0 6px 0', fontSize: '1.15rem', color: '#0f172a', lineHeight: '1.3', fontWeight: 'bold' }}>{selectedVariant.name}</h1>
             <div style={{ fontSize: '0.85rem', color: '#64748b', fontWeight: '500', marginBottom: '16px' }}>{selectedVariant.qnty}</div>
 
-            {product.variants && product.variants.length > 1 && (
+            {/* 🟢 Updated `product.variants` to `currentProduct.variants` */}
+            {currentProduct.variants && currentProduct.variants.length > 1 && (
               <div style={{ marginBottom: '20px', padding: '12px', backgroundColor: '#f8fafc', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
                 <p style={{ fontSize: '0.75rem', color: '#475569', fontWeight: 'bold', margin: '0 0 10px 0', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Available Sizes</p>
                 <div className="hide-scroll" style={{ display: 'flex', gap: '8px', overflowX: 'auto', paddingBottom: '4px' }}>
-                  {product.variants.map((variant, index) => {
+                  {currentProduct.variants.map((variant, index) => {
                     const isSelected = selectedVariant._id === variant._id;
                     return (
                       <button 
@@ -161,7 +178,7 @@ export default function ProductModal({ product, isOpen, onClose, onAddToCart, al
               </Accordion>
             )}
 
-            {/* 🤝 NEW: FREQUENTLY BOUGHT TOGETHER */}
+            {/* 🤝 FREQUENTLY BOUGHT TOGETHER */}
             {relatedItems.length > 0 && (
               <div style={{ marginTop: '15px', paddingTop: '15px', borderTop: '1px solid #e2e8f0' }}>
                 <h3 style={{ fontSize: '0.95rem', color: '#0f172a', margin: '0 0 12px 0', fontWeight: 'bold' }}>Frequently Bought Together</h3>
@@ -169,7 +186,11 @@ export default function ProductModal({ product, isOpen, onClose, onAddToCart, al
                   {relatedItems.map(item => {
                     const rPrice = item.sellingPrice || item.mrp;
                     return (
-                      <div key={item._id} style={{ minWidth: '110px', maxWidth: '110px', border: '1px solid #e2e8f0', borderRadius: '10px', padding: '8px', backgroundColor: '#fff', display: 'flex', flexDirection: 'column' }}>
+                      <div 
+                        key={item._id} 
+                        onClick={() => handleRelatedProductClick(item)} // 🟢 NEW CLICK HANDLER ATTACHED!
+                        style={{ minWidth: '110px', maxWidth: '110px', border: '1px solid #e2e8f0', borderRadius: '10px', padding: '8px', backgroundColor: '#fff', display: 'flex', flexDirection: 'column', cursor: 'pointer' }}
+                      >
                         <div style={{ height: '70px', backgroundColor: '#f8fafc', borderRadius: '6px', display: 'flex', justifyContent: 'center', alignItems: 'center', marginBottom: '8px' }}>
                           {item.image ? <img src={item.image} alt="" style={{ maxHeight: '80%', maxWidth: '80%', objectFit: 'contain' }} /> : <span style={{fontSize: '30px'}}>{item.emoji}</span>}
                         </div>
@@ -179,9 +200,8 @@ export default function ProductModal({ product, isOpen, onClose, onAddToCart, al
                           <span style={{ fontWeight: 'bold', fontSize: '0.85rem' }}>₹{rPrice}</span>
                           <button 
                             onClick={(e) => {
-                              e.stopPropagation();
+                              e.stopPropagation(); // 🟢 THIS PREVENTS THE CARD CLICK FROM TRIGGERING WHEN 'ADD' IS CLICKED
                               onAddToCart({ ...item, mrp: rPrice });
-                              // Optional: You could show a quick toast here like "Added!"
                             }}
                             style={{ backgroundColor: '#ecfdf5', color: '#0f9d58', border: '1px solid #0f9d58', borderRadius: '4px', padding: '2px 8px', fontSize: '0.7rem', fontWeight: 'bold', cursor: 'pointer' }}
                           >
@@ -235,4 +255,4 @@ export default function ProductModal({ product, isOpen, onClose, onAddToCart, al
       </div>
     </>
   );
-                                                                                                                                                                                                                                                                                                                                                           }
+}
