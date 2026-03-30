@@ -1,18 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import CrossSellSlider from './CrossSell.jsx'; 
 
-export default function ProductModal({ product, isOpen, onClose, onAddToCart, allItems = [], cart = [] }) {
+// 👇 NEW: Added `onViewCart` to the props so the button actually takes them to the cart!
+export default function ProductModal({ product, isOpen, onClose, onAddToCart, onViewCart, allItems = [], cart = [] }) {
   const [currentProduct, setCurrentProduct] = useState(null);
   const [selectedVariant, setSelectedVariant] = useState(null);
   const [showFullDesc, setShowFullDesc] = useState(false); 
-  const [quantity, setQuantity] = useState(1); 
 
   useEffect(() => {
     if (product) {
       setCurrentProduct(product);
       setSelectedVariant(product);
       setShowFullDesc(false); 
-      setQuantity(1); 
     }
   }, [product]);
 
@@ -22,6 +21,9 @@ export default function ProductModal({ product, isOpen, onClose, onAddToCart, al
   const isDiscounted = displayPrice < selectedVariant.mrp;
   const discountPercent = isDiscounted ? Math.round(((selectedVariant.mrp - displayPrice) / selectedVariant.mrp) * 100) : 0;
   
+  // 🟢 SMART CART TRACKER
+  const cartCount = cart.filter(item => item._id === selectedVariant._id).length;
+
   const DietaryIcon = ({ type }) => {
     if (type === "Non-Veg") {
       return (
@@ -69,7 +71,6 @@ export default function ProductModal({ product, isOpen, onClose, onAddToCart, al
     setCurrentProduct(item);
     setSelectedVariant(item);
     setShowFullDesc(false);
-    setQuantity(1);
     
     const scrollContainer = document.getElementById('modal-scroll-container');
     if (scrollContainer) scrollContainer.scrollTo({ top: 0, behavior: 'smooth' });
@@ -90,14 +91,17 @@ export default function ProductModal({ product, isOpen, onClose, onAddToCart, al
           `}
         </style>
 
+        {/* MODAL DRAG HANDLE */}
         <div style={{ width: '100%', display: 'flex', justifyContent: 'center', paddingTop: '10px', paddingBottom: '6px', backgroundColor: '#f8fafc', borderTopLeftRadius: '20px', borderTopRightRadius: '20px' }}>
           <div style={{ width: '36px', height: '4px', backgroundColor: '#cbd5e1', borderRadius: '10px' }}></div>
         </div>
 
+        {/* CLOSE BUTTON */}
         <button onClick={onClose} style={{ position: 'absolute', top: '12px', right: '12px', backgroundColor: '#fff', border: 'none', borderRadius: '50%', width: '32px', height: '32px', fontSize: '1.1rem', display: 'flex', justifyContent: 'center', alignItems: 'center', cursor: 'pointer', zIndex: 10, boxShadow: '0 2px 6px rgba(0,0,0,0.08)', color: '#475569' }}>✕</button>
 
         <div id="modal-scroll-container" style={{ flex: 1, overflowY: 'auto', paddingBottom: '20px', scrollBehavior: 'smooth' }}>
           
+          {/* IMAGE HEADER */}
           <div style={{ width: '100%', height: '220px', backgroundColor: '#f8fafc', position: 'relative', display: 'flex', justifyContent: 'center', alignItems: 'center', borderBottom: '1px solid #e2e8f0' }}>
             <div style={{ position: 'absolute', top: '12px', left: '12px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
               <DietaryIcon type={selectedVariant.dietaryPreference || "Veg"} />
@@ -108,15 +112,61 @@ export default function ProductModal({ product, isOpen, onClose, onAddToCart, al
 
           <div style={{ padding: '15px', textAlign: 'left' }}>
             
+            {/* BRAND */}
             {selectedVariant.brand && (
               <div onClick={() => { alert(`Later, this will filter the store to show only ${selectedVariant.brand} products!`); onClose(); }} style={{ color: '#0f9d58', fontWeight: 'bold', fontSize: '0.8rem', marginBottom: '4px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '4px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
                 {selectedVariant.brand} <span style={{fontSize: '1rem', lineHeight: '1'}}>›</span>
               </div>
             )}
 
+            {/* TITLE & QUANTITY */}
             <h1 style={{ margin: '0 0 6px 0', fontSize: '1.15rem', color: '#0f172a', lineHeight: '1.3', fontWeight: 'bold' }}>{selectedVariant.name}</h1>
-            <div style={{ fontSize: '0.85rem', color: '#64748b', fontWeight: '500', marginBottom: '16px' }}>{selectedVariant.qnty}</div>
+            <div style={{ fontSize: '0.85rem', color: '#64748b', fontWeight: '500' }}>{selectedVariant.qnty}</div>
 
+            {/* 🌟 THE INLINE ACTION ROW (Price -> Add) 🌟 */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '18px', marginBottom: '20px' }}>
+              
+              {/* 1. PRICE FIRST */}
+              <div>
+                <div style={{ fontSize: '1.35rem', fontWeight: '900', color: '#0f172a', lineHeight: '1' }}>₹{displayPrice}</div>
+                {isDiscounted && <div style={{ fontSize: '0.8rem', color: '#94a3b8', textDecoration: 'line-through', marginTop: '4px' }}>MRP ₹{selectedVariant.mrp}</div>}
+              </div>
+
+              {/* 2. THE MORPHING ADD BUTTON */}
+              <button 
+                onClick={() => onAddToCart({ ...selectedVariant, mrp: displayPrice })}
+                style={{ 
+                  backgroundColor: cartCount > 0 ? '#ecfdf5' : '#0f9d58', 
+                  color: cartCount > 0 ? '#0f9d58' : '#fff', 
+                  border: '1px solid #0f9d58', 
+                  padding: '0 16px', 
+                  height: '38px', 
+                  borderRadius: '8px', 
+                  fontWeight: 'bold', 
+                  fontSize: '0.95rem', 
+                  cursor: 'pointer', 
+                  boxShadow: cartCount > 0 ? 'none' : '0 4px 10px rgba(15, 157, 88, 0.25)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  transition: 'all 0.2s ease'
+                }}
+              >
+                {cartCount > 0 ? (
+                  <>
+                    <span style={{backgroundColor: '#0f9d58', color: '#fff', borderRadius: '4px', padding: '2px 6px', fontSize: '0.75rem'}}>
+                      {cartCount}
+                    </span>
+                    Add More +
+                  </>
+                ) : (
+                  "ADD"
+                )}
+              </button>
+
+            </div>
+
+            {/* VARIANT SELECTOR */}
             {currentProduct.variants && currentProduct.variants.length > 1 && (
               <div style={{ marginBottom: '20px', padding: '12px', backgroundColor: '#f8fafc', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
                 <p style={{ fontSize: '0.75rem', color: '#475569', fontWeight: 'bold', margin: '0 0 10px 0', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Available Sizes</p>
@@ -138,6 +188,7 @@ export default function ProductModal({ product, isOpen, onClose, onAddToCart, al
               </div>
             )}
 
+            {/* DESCRIPTION */}
             {selectedVariant.description && (
               <div style={{ marginBottom: '10px', padding: '15px 0', borderTop: '1px solid #e2e8f0', borderBottom: '1px solid #e2e8f0' }}>
                 <h3 style={{ fontSize: '0.95rem', color: '#0f172a', margin: '0 0 8px 0', fontWeight: 'bold' }}>Product Details</h3>
@@ -172,6 +223,7 @@ export default function ProductModal({ product, isOpen, onClose, onAddToCart, al
               </Accordion>
             )}
 
+            {/* CROSS-SELL SLIDER */}
             <CrossSellSlider 
               title="Frequently Bought Together" 
               items={relatedItems} 
@@ -179,6 +231,7 @@ export default function ProductModal({ product, isOpen, onClose, onAddToCart, al
               onAddToCart={onAddToCart} 
             />
 
+            {/* DISCLAIMER */}
             <div style={{ marginTop: '20px', padding: '12px', backgroundColor: '#f8fafc', borderRadius: '8px', border: '1px dashed #cbd5e1' }}>
               <p style={{ margin: 0, fontSize: '0.7rem', color: '#64748b', lineHeight: '1.4' }}>
                 <strong>Important Note:</strong> Every effort is made to maintain accuracy of all information. However, actual product packaging and materials may contain more and/or different information. It is recommended not to solely rely on the information presented.
@@ -188,58 +241,29 @@ export default function ProductModal({ product, isOpen, onClose, onAddToCart, al
           </div>
         </div>
 
-        {/* 🟢 THE FLOATING VIEW CART STRIP */}
+        {/* 🟢 THE FLOATING VIEW CART STRIP (Now navigates to cart!) */}
         {cart && cart.length > 0 && (
           <div 
-            onClick={onClose} 
-            style={{ backgroundColor: '#064e3b', color: '#fff', padding: '12px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer', animation: 'slideUpModal 0.2s ease-out' }}
+            onClick={() => {
+              onClose(); // Close the modal first
+              if (onViewCart) onViewCart(); // Then open the cart!
+            }} 
+            style={{ backgroundColor: '#064e3b', color: '#fff', padding: '16px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer', animation: 'slideUpModal 0.2s ease-out', boxShadow: '0 -4px 15px rgba(0,0,0,0.1)' }}
           >
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
               <span style={{ fontSize: '1.2rem' }}>🛒</span>
-              <div style={{ fontWeight: 'bold', fontSize: '0.9rem' }}>
+              <div style={{ fontWeight: 'bold', fontSize: '0.95rem' }}>
                 {cart.length} Item{cart.length > 1 ? 's' : ''} in cart
               </div>
             </div>
-            <div style={{ fontWeight: 'bold', fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: '4px' }}>
+            <div style={{ fontWeight: 'bold', fontSize: '0.95rem', display: 'flex', alignItems: 'center', gap: '4px' }}>
               View Cart <span style={{ fontSize: '1.2rem' }}>›</span>
             </div>
           </div>
         )}
 
-        {/* 🛒 STICKY BOTTOM ACTION BAR (PRICE -> QUANTITY -> ADD) */}
-        <div style={{ backgroundColor: '#fff', padding: '12px 15px', borderTop: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center', boxShadow: '0 -4px 10px rgba(0,0,0,0.03)' }}>
-          
-          <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-            {/* 1. PRICE FIRST */}
-            <div style={{ textAlign: 'left' }}>
-              <div style={{ fontSize: '1.3rem', fontWeight: '800', color: '#0f172a', lineHeight: '1' }}>₹{displayPrice * quantity}</div>
-              {isDiscounted && <div style={{ fontSize: '0.75rem', color: '#94a3b8', textDecoration: 'line-through', marginTop: '4px' }}>MRP ₹{selectedVariant.mrp * quantity}</div>}
-            </div>
-
-            {/* 2. QUANTITY SECOND */}
-            <div style={{ display: 'flex', alignItems: 'center', border: '1px solid #cbd5e1', borderRadius: '10px', overflow: 'hidden', backgroundColor: '#f8fafc', height: '36px' }}>
-              <button onClick={() => setQuantity(q => Math.max(1, q - 1))} style={{ padding: '0 12px', height: '100%', border: 'none', background: 'transparent', fontSize: '1.2rem', color: quantity > 1 ? '#0f172a' : '#cbd5e1', cursor: quantity > 1 ? 'pointer' : 'not-allowed' }}>−</button>
-              <div style={{ width: '24px', textAlign: 'center', fontWeight: 'bold', fontSize: '1rem', color: '#0f172a' }}>{quantity}</div>
-              <button onClick={() => setQuantity(q => q + 1)} style={{ padding: '0 12px', height: '100%', border: 'none', background: 'transparent', fontSize: '1.2rem', color: '#0f9d58', cursor: 'pointer' }}>+</button>
-            </div>
-          </div>
-
-          {/* 3. ADD BUTTON ON THE FAR RIGHT */}
-          <button 
-            onClick={() => {
-              for(let i = 0; i < quantity; i++) {
-                onAddToCart({ ...selectedVariant, mrp: displayPrice });
-              }
-              onClose(); 
-            }}
-            style={{ backgroundColor: '#0f9d58', color: '#fff', border: 'none', padding: '12px 24px', borderRadius: '10px', fontWeight: 'bold', fontSize: '1.05rem', cursor: 'pointer', boxShadow: '0 4px 12px rgba(15, 157, 88, 0.25)' }}
-          >
-            Add
-          </button>
-        </div>
-
       </div>
     </>
   );
                           }
-                  
+
