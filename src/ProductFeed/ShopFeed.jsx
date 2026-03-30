@@ -9,7 +9,6 @@ export default function ShopFeed({ user, onAddToCart, cart = [], selectedCategor
   const [nearbyShops, setNearbyShops] = useState([]);
   const [selectedProductDetails, setSelectedProductDetails] = useState(null); 
   
-  // 👇 NEW: State to handle when a user clicks the "➔" arrow
   const [viewAll, setViewAll] = useState(null); 
 
   const [shopDeals, setShopDeals] = useState([]);
@@ -36,19 +35,38 @@ export default function ShopFeed({ user, onAddToCart, cart = [], selectedCategor
           setNearbyShops(shopsData.filter(s => s._id !== shopId)); 
         }
 
-        const availableItems = shopData.inventory?.filter(item => item.product).map(item => {
+        // 👇 UPDATED LOGIC: Groups products with the same itemGroupId into a single card
+        const groupedMap = new Map();
+        const availableItems = [];
+
+        shopData.inventory?.filter(item => item.product).forEach(item => {
           const sellingPrice = item.sellingPrice !== undefined && item.sellingPrice !== null ? item.sellingPrice : item.product.mrp;
-          return {
+          const formattedItem = {
             ...item.product,
             sellingPrice: sellingPrice,
             isDiscounted: sellingPrice < item.product.mrp,
             discountPercent: sellingPrice < item.product.mrp ? Math.round(((item.product.mrp - sellingPrice) / item.product.mrp) * 100) : 0,
             inStock: item.inStock
           };
-        }) || [];
+
+          // If the product has a group ID, bundle it up!
+          if (formattedItem.itemGroupId && formattedItem.itemGroupId.trim() !== "") {
+            if (!groupedMap.has(formattedItem.itemGroupId)) {
+              formattedItem.variants = [formattedItem]; // Create an array to hold all sizes
+              groupedMap.set(formattedItem.itemGroupId, formattedItem);
+              availableItems.push(formattedItem);
+            } else {
+              // Add this size to the existing main card
+              groupedMap.get(formattedItem.itemGroupId).variants.push(formattedItem);
+            }
+          } else {
+            // Normal product with no group ID
+            availableItems.push(formattedItem);
+          }
+        });
         
         setItems(availableItems);
-        // Gave these slightly more items (12) so the "View All" page has more to show!
+        
         setShopDeals([...availableItems].filter(i => i.isDiscounted && i.inStock).sort((a, b) => b.discountPercent - a.discountPercent).slice(0, 12));
         setShopBestSellers([...availableItems].filter(i => i.inStock).slice(0, 12));
         setUnder99([...availableItems].filter(i => i.sellingPrice > 0 && i.sellingPrice < 100 && i.inStock).slice(0, 12));
@@ -147,19 +165,22 @@ export default function ShopFeed({ user, onAddToCart, cart = [], selectedCategor
             4.2 <span style={{ color: '#0f9d58' }}>★</span>
           </div>
 
+          {/* 👇 UPDATED: Changed the '+' to a clean 'ADD' pill button */}
           {!isOutOfStock && !shopClosed && (
             <button 
               onClick={(e) => { e.stopPropagation(); onAddToCart({ ...item, mrp: item.sellingPrice }); }} 
-              style={{ position: 'absolute', bottom: '-12px', right: 0, backgroundColor: '#fff', color: '#d97706', border: '1px solid #e5e7eb', borderRadius: '50%', width: '30px', height: '30px', fontSize: '1.2rem', display: 'flex', justifyContent: 'center', alignItems: 'center', cursor: 'pointer', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' }}
+              style={{ position: 'absolute', bottom: '-12px', right: '5px', backgroundColor: '#fff', color: '#0f9d58', border: '1px solid #0f9d58', borderRadius: '6px', padding: '4px 14px', fontSize: '0.8rem', fontWeight: 'bold', display: 'flex', justifyContent: 'center', alignItems: 'center', cursor: 'pointer', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' }}
             >
-              +
+              ADD
             </button>
           )}
         </div>
 
         <div>
           <p style={{ fontSize: '0.75rem', color: '#6b7280', margin: '0 0 4px 0', minHeight: '14px' }}>
-            {item.qnty || "1 pc"}
+            {item.qnty || "1 pc"} 
+            {/* Show a tiny indicator if there are multiple sizes hiding inside */}
+            {item.variants && item.variants.length > 1 && <span style={{color: '#d97706', fontWeight: 'bold'}}> ({item.variants.length} sizes)</span>}
           </p>
           
           <h4 style={{ fontSize: '0.85rem', margin: '0 0 8px 0', color: '#111827', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden', textOverflow: 'ellipsis', height: '2.4em', lineHeight: '1.2em' }}>
@@ -193,7 +214,6 @@ export default function ShopFeed({ user, onAddToCart, cart = [], selectedCategor
             <h2 style={{ fontSize: '1.1rem', margin: 0, color: '#111827', fontWeight: 'bold' }}>{title}</h2>
             {subtitle && <p style={{ fontSize: '0.75rem', margin: '2px 0 0 0', color: '#6b7280' }}>{subtitle}</p>}
           </div>
-          {/* 👇 ADDED CLICK EVENT TO THE ARROW 👇 */}
           <button 
             onClick={() => setViewAll({ title, items })}
             style={{ backgroundColor: '#111827', color: '#fff', border: 'none', borderRadius: '50%', width: '28px', height: '28px', display: 'flex', justifyContent: 'center', alignItems: 'center', fontSize: '1rem', cursor: 'pointer' }}
@@ -211,7 +231,6 @@ export default function ShopFeed({ user, onAddToCart, cart = [], selectedCategor
   const isSearching = searchQuery && searchQuery.trim().length > 0;
   let displayItems = items;
 
-  // 👇 SMART LOGIC: Decides what grid to show (Search vs Category vs View All)
   if (isSearching) {
     displayItems = items.filter(item => {
       const nameMatch = (item.name || "").toLowerCase().includes(searchQuery.toLowerCase());
@@ -232,12 +251,10 @@ export default function ShopFeed({ user, onAddToCart, cart = [], selectedCategor
     <div style={{ padding: '0', maxWidth: '1000px', margin: '0 auto', overflowX: 'hidden', backgroundColor: '#f3f4f6' }}>
       <style>{`.hide-scroll::-webkit-scrollbar { display: none; } .hide-scroll { -ms-overflow-style: none; scrollbar-width: none; }`}</style>
 
-      {/* 👇 SHOW THE GRID IF THEY ARE SEARCHING, SELECTED A CATEGORY, OR CLICKED 'VIEW ALL' 👇 */}
       {(selectedCategory || isSearching || viewAll) ? (
         <div style={{ padding: '15px', backgroundColor: '#fff', minHeight: '100vh' }}>
           <div style={{ display: 'flex', alignItems: 'center', marginBottom: '20px', gap: '15px' }}>
             
-            {/* Back Button handles clearing everything properly */}
             <button 
               onClick={() => {
                 if (selectedCategory) onClearCategory();
@@ -263,7 +280,6 @@ export default function ShopFeed({ user, onAddToCart, cart = [], selectedCategor
         </div>
       ) : (
         <>
-          {/* MAIN FEED CAROUSELS */}
           <ProductRow title={timeBased.title} subtitle={timeBased.subtitle} items={timeBased.items} />
           <ProductRow title="Price Crash" subtitle="Extra Savings" items={shopDeals} />
           <ProductRow title="Top Picks for You" subtitle="Based on what is popular around you" items={shopBestSellers} />
@@ -301,4 +317,4 @@ export default function ShopFeed({ user, onAddToCart, cart = [], selectedCategor
       />
     </div>
   );
-          }
+                }
