@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import CrossSellSlider from './CrossSell.jsx'; 
 
-// 👇 NEW: Added `onViewCart` to the props so the button actually takes them to the cart!
 export default function ProductModal({ product, isOpen, onClose, onAddToCart, onViewCart, allItems = [], cart = [] }) {
   const [currentProduct, setCurrentProduct] = useState(null);
   const [selectedVariant, setSelectedVariant] = useState(null);
@@ -21,8 +20,10 @@ export default function ProductModal({ product, isOpen, onClose, onAddToCart, on
   const isDiscounted = displayPrice < selectedVariant.mrp;
   const discountPercent = isDiscounted ? Math.round(((selectedVariant.mrp - displayPrice) / selectedVariant.mrp) * 100) : 0;
   
-  // 🟢 SMART CART TRACKER
+  // 🟢 SMART CART TRACKERS
   const cartCount = cart.filter(item => item._id === selectedVariant._id).length;
+  const cartTotalItems = cart.length;
+  const cartTotalPrice = cart.reduce((total, item) => total + (item.sellingPrice || item.mrp), 0);
 
   const DietaryIcon = ({ type }) => {
     if (type === "Non-Veg") {
@@ -99,7 +100,8 @@ export default function ProductModal({ product, isOpen, onClose, onAddToCart, on
         {/* CLOSE BUTTON */}
         <button onClick={onClose} style={{ position: 'absolute', top: '12px', right: '12px', backgroundColor: '#fff', border: 'none', borderRadius: '50%', width: '32px', height: '32px', fontSize: '1.1rem', display: 'flex', justifyContent: 'center', alignItems: 'center', cursor: 'pointer', zIndex: 10, boxShadow: '0 2px 6px rgba(0,0,0,0.08)', color: '#475569' }}>✕</button>
 
-        <div id="modal-scroll-container" style={{ flex: 1, overflowY: 'auto', paddingBottom: '20px', scrollBehavior: 'smooth' }}>
+        {/* Added dynamic padding so the floating cart doesn't cover content */}
+        <div id="modal-scroll-container" style={{ flex: 1, overflowY: 'auto', paddingBottom: cartTotalItems > 0 ? '90px' : '20px', scrollBehavior: 'smooth' }}>
           
           {/* IMAGE HEADER */}
           <div style={{ width: '100%', height: '220px', backgroundColor: '#f8fafc', position: 'relative', display: 'flex', justifyContent: 'center', alignItems: 'center', borderBottom: '1px solid #e2e8f0' }}>
@@ -119,20 +121,22 @@ export default function ProductModal({ product, isOpen, onClose, onAddToCart, on
               </div>
             )}
 
-            {/* TITLE & QUANTITY */}
-            <h1 style={{ margin: '0 0 6px 0', fontSize: '1.15rem', color: '#0f172a', lineHeight: '1.3', fontWeight: 'bold' }}>{selectedVariant.name}</h1>
-            <div style={{ fontSize: '0.85rem', color: '#64748b', fontWeight: '500' }}>{selectedVariant.qnty}</div>
+            {/* TITLE */}
+            <h1 style={{ margin: '0 0 10px 0', fontSize: '1.15rem', color: '#0f172a', lineHeight: '1.3', fontWeight: 'bold' }}>{selectedVariant.name}</h1>
 
-            {/* 🌟 THE INLINE ACTION ROW (Price -> Add) 🌟 */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '18px', marginBottom: '20px' }}>
+            {/* 🌟 NEW: ULTRA-COMPACT HEADER INFO ROW 🌟 */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: '24px' }}>
               
-              {/* 1. PRICE FIRST */}
+              {/* 1. WEIGHT & PRICE STACKED ON THE LEFT */}
               <div>
-                <div style={{ fontSize: '1.35rem', fontWeight: '900', color: '#0f172a', lineHeight: '1' }}>₹{displayPrice}</div>
-                {isDiscounted && <div style={{ fontSize: '0.8rem', color: '#94a3b8', textDecoration: 'line-through', marginTop: '4px' }}>MRP ₹{selectedVariant.mrp}</div>}
+                <div style={{ fontSize: '0.85rem', color: '#64748b', fontWeight: '500', marginBottom: '4px' }}>{selectedVariant.qnty}</div>
+                <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px' }}>
+                  <div style={{ fontSize: '1.35rem', fontWeight: '900', color: '#0f172a', lineHeight: '1' }}>₹{displayPrice}</div>
+                  {isDiscounted && <div style={{ fontSize: '0.8rem', color: '#94a3b8', textDecoration: 'line-through' }}>₹{selectedVariant.mrp}</div>}
+                </div>
               </div>
 
-              {/* 2. THE MORPHING ADD BUTTON */}
+              {/* 2. THE MORPHING ADD BUTTON ON THE RIGHT */}
               <button 
                 onClick={() => onAddToCart({ ...selectedVariant, mrp: displayPrice })}
                 style={{ 
@@ -241,23 +245,25 @@ export default function ProductModal({ product, isOpen, onClose, onAddToCart, on
           </div>
         </div>
 
-        {/* 🟢 THE FLOATING VIEW CART STRIP (Now navigates to cart!) */}
-        {cart && cart.length > 0 && (
-          <div 
-            onClick={() => {
-              onClose(); // Close the modal first
-              if (onViewCart) onViewCart(); // Then open the cart!
-            }} 
-            style={{ backgroundColor: '#064e3b', color: '#fff', padding: '16px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer', animation: 'slideUpModal 0.2s ease-out', boxShadow: '0 -4px 15px rgba(0,0,0,0.1)' }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-              <span style={{ fontSize: '1.2rem' }}>🛒</span>
-              <div style={{ fontWeight: 'bold', fontSize: '0.95rem' }}>
-                {cart.length} Item{cart.length > 1 ? 's' : ''} in cart
+        {/* 🟢 NEW: THE FLOATING VIEW CART OVERLAY (Mimics the Home Page!) 🟢 */}
+        {cartTotalItems > 0 && (
+          <div style={{ position: 'absolute', bottom: '15px', left: '15px', right: '15px', zIndex: 10001, animation: 'slideUpModal 0.2s ease-out' }}>
+            <div 
+              onClick={() => {
+                onClose(); 
+                if (onViewCart) onViewCart(); 
+              }} 
+              style={{ backgroundColor: '#0f9d58', color: '#fff', padding: '12px 20px', borderRadius: '12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer', boxShadow: '0 4px 15px rgba(15, 157, 88, 0.4)' }}
+            >
+              <div style={{ display: 'flex', flexDirection: 'column' }}>
+                <div style={{ fontWeight: 'bold', fontSize: '0.95rem' }}>
+                  {cartTotalItems} Item{cartTotalItems > 1 ? 's' : ''} | ₹{cartTotalPrice}
+                </div>
+                <div style={{ fontSize: '0.7rem', opacity: 0.9 }}>Extra charges may apply</div>
               </div>
-            </div>
-            <div style={{ fontWeight: 'bold', fontSize: '0.95rem', display: 'flex', alignItems: 'center', gap: '4px' }}>
-              View Cart <span style={{ fontSize: '1.2rem' }}>›</span>
+              <div style={{ fontWeight: 'bold', fontSize: '1rem', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                View Cart <span style={{ fontSize: '1.2rem' }}>›</span>
+              </div>
             </div>
           </div>
         )}
@@ -265,5 +271,4 @@ export default function ProductModal({ product, isOpen, onClose, onAddToCart, on
       </div>
     </>
   );
-                          }
-
+}
