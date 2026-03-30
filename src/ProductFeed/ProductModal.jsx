@@ -2,10 +2,12 @@ import React, { useState, useEffect } from 'react';
 
 export default function ProductModal({ product, isOpen, onClose, onAddToCart }) {
   const [selectedVariant, setSelectedVariant] = useState(null);
+  const [showFullDesc, setShowFullDesc] = useState(false); // Controls "Read More" fade
 
   useEffect(() => {
     if (product) {
       setSelectedVariant(product);
+      setShowFullDesc(false); // Reset description toggle when opening a new product
     }
   }, [product]);
 
@@ -30,6 +32,31 @@ export default function ProductModal({ product, isOpen, onClose, onAddToCart }) 
     );
   };
 
+  // 👇 NEW: Sleek Reusable Dropdown Component
+  const Accordion = ({ title, icon, children }) => {
+    const [isExpanded, setIsExpanded] = useState(false);
+    return (
+      <div style={{ borderBottom: '1px solid #e2e8f0', padding: '12px 0' }}>
+        <div 
+          onClick={() => setIsExpanded(!isExpanded)} 
+          style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer' }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.9rem', color: '#0f172a', fontWeight: 'bold' }}>
+            <span style={{ fontSize: '1.1rem' }}>{icon}</span> {title}
+          </div>
+          <span style={{ fontSize: '1.2rem', color: '#64748b', transform: isExpanded ? 'rotate(180deg)' : 'rotate(0)', transition: 'transform 0.2s ease' }}>
+            ⌄
+          </span>
+        </div>
+        {isExpanded && (
+          <div style={{ paddingTop: '10px', animation: 'fadeIn 0.2s ease-in' }}>
+            {children}
+          </div>
+        )}
+      </div>
+    );
+  };
+
   return (
     <>
       {/* 🌑 DARK BLURRED BACKDROP */}
@@ -48,7 +75,13 @@ export default function ProductModal({ product, isOpen, onClose, onAddToCart }) 
           boxShadow: '0 -4px 25px rgba(0,0,0,0.15)', animation: 'slideUpModal 0.25s ease-out'
         }}
       >
-        <style>{`@keyframes slideUpModal { from { transform: translateY(100%); } to { transform: translateY(0); } }`}</style>
+        <style>
+          {`
+            @keyframes slideUpModal { from { transform: translateY(100%); } to { transform: translateY(0); } }
+            @keyframes fadeIn { from { opacity: 0; transform: translateY(-5px); } to { opacity: 1; transform: translateY(0); } }
+            .line-clamp { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+          `}
+        </style>
 
         {/* ➖ NATIVE DRAG HANDLE */}
         <div style={{ width: '100%', display: 'flex', justifyContent: 'center', paddingTop: '10px', paddingBottom: '6px', backgroundColor: '#f8fafc', borderTopLeftRadius: '20px', borderTopRightRadius: '20px' }}>
@@ -66,7 +99,7 @@ export default function ProductModal({ product, isOpen, onClose, onAddToCart }) 
         {/* 📜 SCROLLABLE CONTENT AREA */}
         <div style={{ flex: 1, overflowY: 'auto', paddingBottom: '20px' }}>
           
-          {/* 📸 IMAGE SHOWCASE AREA (Shrank from 300px to 220px) */}
+          {/* 📸 IMAGE SHOWCASE AREA (Unchanged) */}
           <div style={{ width: '100%', height: '220px', backgroundColor: '#f8fafc', position: 'relative', display: 'flex', justifyContent: 'center', alignItems: 'center', borderBottom: '1px solid #e2e8f0' }}>
             <div style={{ position: 'absolute', top: '12px', left: '12px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
               <DietaryIcon type={selectedVariant.dietaryPreference || "Veg"} />
@@ -84,8 +117,8 @@ export default function ProductModal({ product, isOpen, onClose, onAddToCart }) 
             )}
           </div>
 
-          {/* 📝 PRODUCT DETAILS AREA */}
-          <div style={{ padding: '15px' }}>
+          {/* 📝 PRODUCT DETAILS AREA (Upgraded & Left-Aligned) */}
+          <div style={{ padding: '15px', textAlign: 'left' }}>
             
             {/* Clickable Brand Name */}
             {selectedVariant.brand && (
@@ -100,7 +133,6 @@ export default function ProductModal({ product, isOpen, onClose, onAddToCart }) 
               </div>
             )}
 
-            {/* Title shrank to 1.15rem */}
             <h1 style={{ margin: '0 0 6px 0', fontSize: '1.15rem', color: '#0f172a', lineHeight: '1.3', fontWeight: 'bold' }}>
               {selectedVariant.name}
             </h1>
@@ -140,43 +172,63 @@ export default function ProductModal({ product, isOpen, onClose, onAddToCart }) 
               </div>
             )}
 
-            {/* Product Description */}
+            {/* 📝 DESCRIPTION (WITH READ MORE LOGIC) */}
             {selectedVariant.description && (
-              <div style={{ marginBottom: '20px' }}>
-                <h3 style={{ fontSize: '0.95rem', color: '#0f172a', margin: '0 0 6px 0', fontWeight: 'bold' }}>Product Details</h3>
-                <p style={{ fontSize: '0.85rem', color: '#475569', lineHeight: '1.5', margin: 0 }}>
-                  {selectedVariant.description}
-                </p>
-              </div>
-            )}
-
-            {/* Nutritional Info Grid */}
-            {(selectedVariant.energy || selectedVariant.protein || selectedVariant.carbs || selectedVariant.fat) && (
-              <div style={{ marginBottom: '20px' }}>
-                <h3 style={{ fontSize: '0.95rem', color: '#0f172a', margin: '0 0 8px 0', fontWeight: 'bold' }}>Nutritional Value <span style={{fontSize: '0.75rem', color: '#94a3b8', fontWeight: 'normal'}}>(Per 100g)</span></h3>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
-                  {selectedVariant.energy && <div style={{ backgroundColor: '#f1f5f9', padding: '10px', borderRadius: '8px', display: 'flex', justifyContent: 'space-between' }}><span style={{color: '#64748b', fontSize: '0.8rem'}}>Energy</span> <span style={{color: '#0f172a', fontWeight: 'bold', fontSize: '0.8rem'}}>{selectedVariant.energy}</span></div>}
-                  {selectedVariant.protein && <div style={{ backgroundColor: '#f1f5f9', padding: '10px', borderRadius: '8px', display: 'flex', justifyContent: 'space-between' }}><span style={{color: '#64748b', fontSize: '0.8rem'}}>Protein</span> <span style={{color: '#0f172a', fontWeight: 'bold', fontSize: '0.8rem'}}>{selectedVariant.protein}</span></div>}
-                  {selectedVariant.carbs && <div style={{ backgroundColor: '#f1f5f9', padding: '10px', borderRadius: '8px', display: 'flex', justifyContent: 'space-between' }}><span style={{color: '#64748b', fontSize: '0.8rem'}}>Carbs</span> <span style={{color: '#0f172a', fontWeight: 'bold', fontSize: '0.8rem'}}>{selectedVariant.carbs}</span></div>}
-                  {selectedVariant.fat && <div style={{ backgroundColor: '#f1f5f9', padding: '10px', borderRadius: '8px', display: 'flex', justifyContent: 'space-between' }}><span style={{color: '#64748b', fontSize: '0.8rem'}}>Total Fat</span> <span style={{color: '#0f172a', fontWeight: 'bold', fontSize: '0.8rem'}}>{selectedVariant.fat}</span></div>}
+              <div style={{ marginBottom: '10px', padding: '15px 0', borderTop: '1px solid #e2e8f0', borderBottom: '1px solid #e2e8f0' }}>
+                <h3 style={{ fontSize: '0.95rem', color: '#0f172a', margin: '0 0 8px 0', fontWeight: 'bold' }}>Product Details</h3>
+                <div style={{ position: 'relative' }}>
+                  <p className={showFullDesc ? "" : "line-clamp"} style={{ fontSize: '0.85rem', color: '#475569', lineHeight: '1.6', margin: 0 }}>
+                    {selectedVariant.description}
+                  </p>
+                  {!showFullDesc && selectedVariant.description.length > 120 && (
+                    <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: '24px', background: 'linear-gradient(transparent, #fff)' }} />
+                  )}
                 </div>
+                {selectedVariant.description.length > 120 && (
+                  <button 
+                    onClick={() => setShowFullDesc(!showFullDesc)}
+                    style={{ background: 'none', border: 'none', color: '#0f9d58', fontWeight: 'bold', fontSize: '0.85rem', padding: '8px 0 0 0', cursor: 'pointer' }}
+                  >
+                    {showFullDesc ? "Read Less ⌃" : "Read More ⌄"}
+                  </button>
+                )}
               </div>
             )}
 
-            {/* Manufacturer Info */}
-            {selectedVariant.manufacturer && (
-              <div style={{ marginBottom: '15px', padding: '12px', border: '1px dashed #cbd5e1', borderRadius: '8px' }}>
-                <h3 style={{ fontSize: '0.8rem', color: '#64748b', margin: '0 0 4px 0', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Manufacturer Details</h3>
-                <p style={{ fontSize: '0.75rem', color: '#475569', lineHeight: '1.4', margin: 0 }}>
-                  {selectedVariant.manufacturer}
-                </p>
-              </div>
+            {/* ⚡ ACCORDION: NUTRITIONAL INFO */}
+            {(selectedVariant.energy || selectedVariant.protein || selectedVariant.carbs || selectedVariant.fat) && (
+              <Accordion title="Nutritional Value" icon="⚡">
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+                  {selectedVariant.energy && <div style={{ backgroundColor: '#f1f5f9', padding: '10px 14px', borderRadius: '8px', display: 'flex', flexDirection: 'column' }}><span style={{color: '#64748b', fontSize: '0.75rem', marginBottom: '2px'}}>Energy</span> <span style={{color: '#0f172a', fontWeight: 'bold', fontSize: '0.85rem'}}>{selectedVariant.energy}</span></div>}
+                  {selectedVariant.protein && <div style={{ backgroundColor: '#f1f5f9', padding: '10px 14px', borderRadius: '8px', display: 'flex', flexDirection: 'column' }}><span style={{color: '#64748b', fontSize: '0.75rem', marginBottom: '2px'}}>Protein</span> <span style={{color: '#0f172a', fontWeight: 'bold', fontSize: '0.85rem'}}>{selectedVariant.protein}</span></div>}
+                  {selectedVariant.carbs && <div style={{ backgroundColor: '#f1f5f9', padding: '10px 14px', borderRadius: '8px', display: 'flex', flexDirection: 'column' }}><span style={{color: '#64748b', fontSize: '0.75rem', marginBottom: '2px'}}>Carbs</span> <span style={{color: '#0f172a', fontWeight: 'bold', fontSize: '0.85rem'}}>{selectedVariant.carbs}</span></div>}
+                  {selectedVariant.fat && <div style={{ backgroundColor: '#f1f5f9', padding: '10px 14px', borderRadius: '8px', display: 'flex', flexDirection: 'column' }}><span style={{color: '#64748b', fontSize: '0.75rem', marginBottom: '2px'}}>Total Fat</span> <span style={{color: '#0f172a', fontWeight: 'bold', fontSize: '0.85rem'}}>{selectedVariant.fat}</span></div>}
+                </div>
+              </Accordion>
             )}
+
+            {/* 🏢 ACCORDION: MANUFACTURER INFO */}
+            {selectedVariant.manufacturer && (
+              <Accordion title="Manufacturer Details" icon="🏢">
+                <div style={{ backgroundColor: '#f8fafc', padding: '12px 16px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+                  <p style={{ fontSize: '0.8rem', color: '#475569', lineHeight: '1.5', margin: 0 }}>
+                    {selectedVariant.manufacturer}
+                  </p>
+                </div>
+              </Accordion>
+            )}
+
+            {/* STANDARD DISCLAIMER */}
+            <div style={{ marginTop: '20px', padding: '12px', backgroundColor: '#f8fafc', borderRadius: '8px', border: '1px dashed #cbd5e1' }}>
+              <p style={{ margin: 0, fontSize: '0.7rem', color: '#64748b', lineHeight: '1.4' }}>
+                <strong>Important Note:</strong> Every effort is made to maintain accuracy of all information. However, actual product packaging and materials may contain more and/or different information. It is recommended not to solely rely on the information presented.
+              </p>
+            </div>
 
           </div>
         </div>
 
-        {/* 🛒 STICKY BOTTOM ACTION BAR */}
+        {/* 🛒 STICKY BOTTOM ACTION BAR (Unchanged) */}
         <div style={{ 
           backgroundColor: '#fff', padding: '12px 15px', borderTop: '1px solid #e2e8f0', 
           display: 'flex', justifyContent: 'space-between', alignItems: 'center', 
