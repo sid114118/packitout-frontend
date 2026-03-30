@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import ProductModal from './ProductModal.jsx';
+import { VariantBottomSheet, ModernProductCard, ProductRow } from './FeedComponents.jsx'; // 👈 Centralized UI Imports!
 
 export default function GuestFeed({ user, onAddToCart, selectedCategory, onClearCategory, searchQuery }) {
   const [items, setItems] = useState([]);
@@ -28,7 +29,7 @@ export default function GuestFeed({ user, onAddToCart, selectedCategory, onClear
         const res = await fetch(`${BASE_URL}/master-products`);
         const masterData = await res.json();
         
-        // 🛡️ BULLETPROOF GROUPING LOGIC (Same as ShopFeed)
+        // 🛡️ BULLETPROOF GROUPING LOGIC
         const groupedMap = new Map();
         const finalItems = [];
 
@@ -104,107 +105,13 @@ export default function GuestFeed({ user, onAddToCart, selectedCategory, onClear
     fetchGuestProducts();
   }, []);
 
-  if (loading) return <div style={{ padding: '40px', textAlign: 'center', color: '#64748b' }}>Loading fresh products...</div>;
-
-  // 💎 PREMIUM MODERN PRODUCT CARD
-  const ModernProductCard = ({ item, isCarousel }) => {
-    return (
-      <div style={{ 
-        minWidth: isCarousel ? '140px' : 'auto', 
-        maxWidth: isCarousel ? '150px' : 'auto', 
-        flexShrink: 0, 
-        border: '1px solid #f3f4f6', 
-        borderRadius: '8px', 
-        padding: '8px', 
-        backgroundColor: '#fff', 
-        position: 'relative',
-        boxShadow: '0 2px 4px rgba(0,0,0,0.02)',
-        scrollSnapAlign: 'start'
-      }}>
-        
-        <div 
-          onClick={() => setSelectedProductDetails(item)}
-          style={{ position: 'relative', height: '110px', width: '100%', display: 'flex', justifyContent: 'center', alignItems: 'center', backgroundColor: '#f9fafb', borderRadius: '6px', marginBottom: '16px', cursor: 'pointer' }}
-        >
-          {item.isDiscounted && (
-            <span style={{ position: 'absolute', top: 0, left: '-8px', backgroundColor: '#0f9d58', color: '#fff', fontSize: '0.7rem', fontWeight: 'bold', padding: '2px 6px', borderRadius: '0 8px 8px 0', zIndex: 1 }}>
-              ↓{item.discountPercent}%
-            </span>
-          )}
-
-          {item.image ? (
-            <img src={item.image} alt={item.name} style={{ maxHeight: '90%', maxWidth: '90%', objectFit: 'contain' }} />
-          ) : (
-            <span style={{fontSize: '40px'}}>{item.emoji}</span>
-          )}
-
-          <div style={{ position: 'absolute', bottom: 0, left: 0, backgroundColor: '#fff', border: '1px solid #e5e7eb', fontSize: '0.65rem', padding: '2px 4px', borderRadius: '4px', display: 'flex', alignItems: 'center', gap: '2px', fontWeight: 'bold' }}>
-            4.2 <span style={{ color: '#0f9d58' }}>★</span>
-          </div>
-
-          <button 
-            onClick={(e) => { 
-              e.stopPropagation(); 
-              if (item.variants && item.variants.length > 1) {
-                setSelectedVariantProduct(item);
-              } else {
-                onAddToCart({ ...item, mrp: item.sellingPrice }); 
-              }
-            }} 
-            style={{ position: 'absolute', bottom: '-12px', right: '5px', backgroundColor: '#fff', color: '#0f9d58', border: '1px solid #0f9d58', borderRadius: '6px', padding: '4px 14px', fontSize: '0.8rem', fontWeight: 'bold', display: 'flex', justifyContent: 'center', alignItems: 'center', cursor: 'pointer', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' }}
-          >
-            ADD
-          </button>
-        </div>
-
-        <div>
-          <p style={{ fontSize: '0.75rem', color: '#6b7280', margin: '0 0 4px 0', minHeight: '14px' }}>
-            {item.qnty || "1 pc"} 
-            {item.variants && item.variants.length > 1 && <span style={{color: '#d97706', fontWeight: 'bold'}}> ({item.variants.length} sizes)</span>}
-          </p>
-          
-          <h4 style={{ fontSize: '0.85rem', margin: '0 0 8px 0', color: '#111827', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden', textOverflow: 'ellipsis', height: '2.4em', lineHeight: '1.2em' }}>
-            {item.brand ? `${item.brand} ` : ''}{item.name}
-          </h4>
-
-          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-            <span style={{ backgroundColor: '#fef08a', padding: '2px 6px', borderRadius: '4px', fontWeight: 'bold', fontSize: '0.85rem', color: '#000' }}>
-              ₹{item.sellingPrice}
-            </span>
-            {item.isDiscounted && (
-              <span style={{ fontSize: '0.75rem', color: '#9ca3af', textDecoration: 'line-through' }}>
-                ₹{item.mrp}
-              </span>
-            )}
-          </div>
-        </div>
-      </div>
-    );
+  // 👇 The Centralized Click Handler!
+  const handleQuickAdd = (item) => {
+    if (item.variants && item.variants.length > 1) setSelectedVariantProduct(item);
+    else onAddToCart({ ...item, mrp: item.sellingPrice });
   };
 
-  // 💎 PREMIUM PRODUCT ROW
-  const ProductRow = ({ title, subtitle, items }) => {
-    if (!items || items.length === 0) return null;
-    return (
-      <div style={{ marginBottom: '24px', backgroundColor: '#fff', padding: '15px 0' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px', padding: '0 15px' }}>
-          <div>
-            <h2 style={{ fontSize: '1.1rem', margin: 0, color: '#111827', fontWeight: 'bold' }}>{title}</h2>
-            {subtitle && <p style={{ fontSize: '0.75rem', margin: '2px 0 0 0', color: '#6b7280' }}>{subtitle}</p>}
-          </div>
-          <button 
-            onClick={() => setViewAll({ title, items })}
-            style={{ backgroundColor: '#111827', color: '#fff', border: 'none', borderRadius: '50%', width: '28px', height: '28px', display: 'flex', justifyContent: 'center', alignItems: 'center', fontSize: '1rem', cursor: 'pointer' }}
-          >
-            ➔
-          </button>
-        </div>
-        <div className="hide-scroll" style={{ display: 'flex', overflowX: 'auto', gap: '12px', padding: '0 15px 10px 15px', scrollSnapType: 'x mandatory' }}>
-          {items.map(item => <ModernProductCard key={item._id} item={item} isCarousel={true} />)}
-        </div>
-      </div>
-    );
-  };
+  if (loading) return <div style={{ padding: '40px', textAlign: 'center', color: '#6b7280' }}>Loading fresh products...</div>;
 
   const isSearching = searchQuery && searchQuery.trim().length > 0;
   let displayItems = items;
@@ -250,94 +157,27 @@ export default function GuestFeed({ user, onAddToCart, selectedCategory, onClear
             <div style={{ padding: '40px', textAlign: 'center', color: '#64748b', backgroundColor: '#f8fafc', borderRadius: '12px', border: '1px dashed #cbd5e1' }}>No products found.</div>
           ) : (
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: '12px' }}>
-              {displayItems.map(item => <ModernProductCard key={item._id} item={item} isCarousel={false} />)}
+              {/* Using imported ModernProductCard */}
+              {displayItems.map(item => <ModernProductCard key={item._id} item={item} isCarousel={false} shopClosed={false} onOpenDetails={setSelectedProductDetails} onQuickAdd={handleQuickAdd} />)}
             </div>
           )}
         </div>
       ) : (
         <>
-          <ProductRow title="🚀 Trending on PackItOut" subtitle="What everyone is ordering" items={trendingPlatform} />
-          <ProductRow title={timeBased.title} subtitle={timeBased.subtitle} items={timeBased.items} />
-          <ProductRow title="🔥 Today's Mega Steals" subtitle="Unbeatable prices" items={shopDeals} />
-          <ProductRow title="🛍️ Recommended For You" subtitle="Top picks for guests" items={buyItAgain} />
-          <ProductRow title="💰 The Under ₹99 Store" subtitle="Budget friendly grabs" items={under99} />
-          <ProductRow title="🆕 Freshly Restocked" subtitle="Back on the shelves" items={newArrivals} />
-          <ProductRow title="👑 Top Selling Today" subtitle="Customer favorites" items={shopBestSellers} />
+          {/* Using imported ProductRow */}
+          <ProductRow title="🚀 Trending on PackItOut" subtitle="What everyone is ordering" items={trendingPlatform} onViewAll={setViewAll} shopClosed={false} onOpenDetails={setSelectedProductDetails} onQuickAdd={handleQuickAdd} />
+          <ProductRow title={timeBased.title} subtitle={timeBased.subtitle} items={timeBased.items} onViewAll={setViewAll} shopClosed={false} onOpenDetails={setSelectedProductDetails} onQuickAdd={handleQuickAdd} />
+          <ProductRow title="🔥 Today's Mega Steals" subtitle="Unbeatable prices" items={shopDeals} onViewAll={setViewAll} shopClosed={false} onOpenDetails={setSelectedProductDetails} onQuickAdd={handleQuickAdd} />
+          <ProductRow title="🛍️ Recommended For You" subtitle="Top picks for guests" items={buyItAgain} onViewAll={setViewAll} shopClosed={false} onOpenDetails={setSelectedProductDetails} onQuickAdd={handleQuickAdd} />
+          <ProductRow title="💰 The Under ₹99 Store" subtitle="Budget friendly grabs" items={under99} onViewAll={setViewAll} shopClosed={false} onOpenDetails={setSelectedProductDetails} onQuickAdd={handleQuickAdd} />
+          <ProductRow title="🆕 Freshly Restocked" subtitle="Back on the shelves" items={newArrivals} onViewAll={setViewAll} shopClosed={false} onOpenDetails={setSelectedProductDetails} onQuickAdd={handleQuickAdd} />
+          <ProductRow title="👑 Top Selling Today" subtitle="Customer favorites" items={shopBestSellers} onViewAll={setViewAll} shopClosed={false} onOpenDetails={setSelectedProductDetails} onQuickAdd={handleQuickAdd} />
         </>
       )}
 
-      {/* 📋 THE QUICK VARIANT SELECTION SHEET */}
-      {selectedVariantProduct && (
-        <>
-          <div 
-            onClick={() => setSelectedVariantProduct(null)} 
-            style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.6)', zIndex: 1000, backdropFilter: 'blur(2px)' }} 
-          />
-          <div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 1001, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-            
-            <button 
-              onClick={() => setSelectedVariantProduct(null)} 
-              style={{ marginBottom: '15px', backgroundColor: '#333', color: '#fff', border: 'none', borderRadius: '50%', width: '40px', height: '40px', fontSize: '1.2rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 10px rgba(0,0,0,0.2)' }}
-            >
-              ✕
-            </button>
-            
-            <div style={{ backgroundColor: '#f3f4f6', width: '100%', borderTopLeftRadius: '24px', borderTopRightRadius: '24px', padding: '20px', paddingBottom: '30px', maxHeight: '75vh', overflowY: 'auto', animation: 'slideUp 0.3s ease-out' }}>
-              <style>{`@keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }`}</style>
-              
-              <h3 style={{ margin: '0 0 15px 0', fontSize: '1.1rem', color: '#111827', fontWeight: 'bold' }}>
-                {selectedVariantProduct.name}
-              </h3>
-
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                {selectedVariantProduct.variants.map((variant, idx) => {
-                  const vPrice = variant.sellingPrice || variant.mrp;
-                  const vDiscounted = vPrice < variant.mrp;
-                  const vDiscountPercent = vDiscounted ? Math.round(((variant.mrp - vPrice) / variant.mrp) * 100) : 0;
-
-                  return (
-                    <div key={idx} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', backgroundColor: '#fff', padding: '12px', borderRadius: '12px', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
-                        <div style={{ position: 'relative', width: '50px', height: '50px', backgroundColor: '#f9fafb', borderRadius: '8px', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
-                          {vDiscounted && (
-                            <span style={{ position: 'absolute', top: '-5px', left: '-5px', backgroundColor: '#2563eb', color: '#fff', fontSize: '0.6rem', fontWeight: 'bold', padding: '2px 4px', borderRadius: '4px', zIndex: 1 }}>
-                              {vDiscountPercent}% OFF
-                            </span>
-                          )}
-                          {variant.image ? (
-                            <img src={variant.image} alt="" style={{ maxWidth: '40px', maxHeight: '40px', objectFit: 'contain' }} />
-                          ) : (
-                            <span style={{ fontSize: '24px' }}>{variant.emoji}</span>
-                          )}
-                        </div>
-                        <div>
-                          <div style={{ fontSize: '0.85rem', color: '#4b5563', fontWeight: '500' }}>{variant.qnty}</div>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '4px' }}>
-                            <span style={{ fontWeight: 'bold', fontSize: '0.95rem', color: '#111827' }}>₹{vPrice}</span>
-                            {vDiscounted && <span style={{ fontSize: '0.75rem', color: '#9ca3af', textDecoration: 'line-through' }}>₹{variant.mrp}</span>}
-                          </div>
-                        </div>
-                      </div>
-                      
-                      <button 
-                        onClick={() => {
-                          onAddToCart({ ...variant, mrp: vPrice });
-                          setSelectedVariantProduct(null); 
-                        }} 
-                        style={{ backgroundColor: '#fff', color: '#0f9d58', border: '1px solid #0f9d58', borderRadius: '6px', padding: '6px 16px', fontSize: '0.85rem', fontWeight: 'bold', cursor: 'pointer' }}
-                      >
-                        ADD
-                      </button>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          </div>
-        </>
-      )}
-
-      {/* 📝 THE FULL DETAILS MODAL */}
+      {/* REUSABLE UI MAGIC ✨ */}
+      <VariantBottomSheet product={selectedVariantProduct} onClose={() => setSelectedVariantProduct(null)} onAddToCart={onAddToCart} />
+      
       <ProductModal 
         product={selectedProductDetails} 
         isOpen={selectedProductDetails !== null} 
@@ -346,9 +186,9 @@ export default function GuestFeed({ user, onAddToCart, selectedCategory, onClear
           onAddToCart({ ...item, mrp: item.sellingPrice });
           setSelectedProductDetails(null); 
         }}
-        cart={[]}
-        allItems={items}
+        cart={[]} 
+        allItems={items} 
       />
     </div>
   );
-            }
+}
