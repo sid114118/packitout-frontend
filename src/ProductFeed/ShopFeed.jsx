@@ -50,7 +50,7 @@ export default function ShopFeed({ user, onAddToCart, cart = [], selectedCategor
 
           if (formattedItem.itemGroupId && formattedItem.itemGroupId.trim() !== "") {
             if (!groupedMap.has(formattedItem.itemGroupId)) {
-              formattedItem.variants = [formattedItem];
+              formattedItem.variants = [formattedItem]; 
               groupedMap.set(formattedItem.itemGroupId, formattedItem);
               availableItems.push(formattedItem);
             } else {
@@ -161,9 +161,19 @@ export default function ShopFeed({ user, onAddToCart, cart = [], selectedCategor
             4.2 <span style={{ color: '#0f9d58' }}>★</span>
           </div>
 
+          {/* 👇 UPGRADED SMART 'ADD' BUTTON 👇 */}
           {!isOutOfStock && !shopClosed && (
             <button 
-              onClick={(e) => { e.stopPropagation(); onAddToCart({ ...item, mrp: item.sellingPrice }); }} 
+              onClick={(e) => { 
+                e.stopPropagation(); 
+                if (item.variants && item.variants.length > 1) {
+                  // If it has multiple sizes, open the Modal!
+                  setSelectedProductDetails(item);
+                } else {
+                  // If it's just one item, add it directly to cart!
+                  onAddToCart({ ...item, mrp: item.sellingPrice }); 
+                }
+              }} 
               style={{ position: 'absolute', bottom: '-12px', right: '5px', backgroundColor: '#fff', color: '#0f9d58', border: '1px solid #0f9d58', borderRadius: '6px', padding: '4px 14px', fontSize: '0.8rem', fontWeight: 'bold', display: 'flex', justifyContent: 'center', alignItems: 'center', cursor: 'pointer', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' }}
             >
               ADD
@@ -245,20 +255,6 @@ export default function ShopFeed({ user, onAddToCart, cart = [], selectedCategor
     <div style={{ padding: '0', maxWidth: '1000px', margin: '0 auto', overflowX: 'hidden', backgroundColor: '#f3f4f6' }}>
       <style>{`.hide-scroll::-webkit-scrollbar { display: none; } .hide-scroll { -ms-overflow-style: none; scrollbar-width: none; }`}</style>
 
-      {/* 🐛 TEMPORARY MOBILE DEBUGGER 🐛 */}
-      <div style={{ backgroundColor: '#000', color: '#0f0', padding: '10px', fontSize: '11px', overflowX: 'scroll', fontFamily: 'monospace' }}>
-        <strong>DEBUG - CHECK GROUP IDs:</strong>
-        <pre>
-          {JSON.stringify(items.map(i => ({ 
-            name: i.name, 
-            qnty: i.qnty,
-            itemGroupId: i.itemGroupId || "NONE", 
-            variantsFound: i.variants ? i.variants.length : 0 
-          })), null, 2)}
-        </pre>
-      </div>
-      {/* ---------------------------------- */}
-
       {(selectedCategory || isSearching || viewAll) ? (
         <div style={{ padding: '15px', backgroundColor: '#fff', minHeight: '100vh' }}>
           <div style={{ display: 'flex', alignItems: 'center', marginBottom: '20px', gap: '15px' }}>
@@ -325,4 +321,4 @@ export default function ShopFeed({ user, onAddToCart, cart = [], selectedCategor
       />
     </div>
   );
-              }
+                      }
