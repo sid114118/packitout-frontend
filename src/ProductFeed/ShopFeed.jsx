@@ -361,4 +361,40 @@ export default function ShopFeed({ user, onAddToCart, cart = [], selectedCategor
                           <div style={{ fontSize: '0.85rem', color: '#4b5563', fontWeight: '500' }}>{variant.qnty}</div>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '4px' }}>
                             <span style={{ fontWeight: 'bold', fontSize: '0.95rem', color: '#111827' }}>₹{vPrice}</span>
-                            {vDiscounted && <span style={{ fontSize: '0.75rem', color: '#9ca3af', textDecoration: 'line-th
+                            {vDiscounted && <span style={{ fontSize: '0.75rem', color: '#9ca3af', textDecoration: 'line-through' }}>₹{variant.mrp}</span>}
+                          </div>
+                        </div>
+                      </div>
+                      
+                      <button 
+                        onClick={() => {
+                          onAddToCart({ ...variant, mrp: vPrice });
+                          setSelectedVariantProduct(null); 
+                        }} 
+                        style={{ backgroundColor: '#fff', color: '#0f9d58', border: '1px solid #0f9d58', borderRadius: '6px', padding: '6px 16px', fontSize: '0.85rem', fontWeight: 'bold', cursor: 'pointer' }}
+                      >
+                        ADD
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* 📝 THE FULL DETAILS MODAL */}
+      <ProductModal 
+        product={selectedProductDetails} 
+        isOpen={selectedProductDetails !== null} 
+        onClose={() => setSelectedProductDetails(null)} 
+        onAddToCart={(item) => {
+          onAddToCart({ ...item, mrp: item.sellingPrice });
+          setSelectedProductDetails(null); 
+        }}
+        cart={cart}
+      />
+    </div>
+  );
+}
