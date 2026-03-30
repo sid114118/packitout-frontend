@@ -42,17 +42,43 @@ export function VariantBottomSheet({ product, onClose, onAddToCart }) {
   );
 }
 
-// 💎 2. THE MODERN PRODUCT CARD
+// 💎 2. THE MODERN PRODUCT CARD (Now completely clickable!)
 export function ModernProductCard({ item, isCarousel, shopClosed, onOpenDetails, onQuickAdd }) {
   const isOutOfStock = !item.inStock;
   return (
-    <div style={{ minWidth: isCarousel ? '140px' : 'auto', maxWidth: isCarousel ? '150px' : 'auto', flexShrink: 0, border: '1px solid #f3f4f6', borderRadius: '8px', padding: '8px', backgroundColor: '#fff', position: 'relative', opacity: isOutOfStock ? 0.6 : 1, filter: isOutOfStock ? 'grayscale(80%)' : 'none', boxShadow: '0 2px 4px rgba(0,0,0,0.02)', scrollSnapAlign: 'start' }}>
-      <div onClick={() => onOpenDetails(item)} style={{ position: 'relative', height: '110px', width: '100%', display: 'flex', justifyContent: 'center', alignItems: 'center', backgroundColor: '#f9fafb', borderRadius: '6px', marginBottom: '16px', cursor: 'pointer' }}>
+    <div 
+      onClick={() => onOpenDetails(item)} // 👈 Moved click handler to the entire card
+      style={{ 
+        minWidth: isCarousel ? '140px' : 'auto', 
+        maxWidth: isCarousel ? '150px' : 'auto', 
+        flexShrink: 0, 
+        border: '1px solid #f3f4f6', 
+        borderRadius: '8px', 
+        padding: '8px', 
+        backgroundColor: '#fff', 
+        position: 'relative', 
+        opacity: isOutOfStock ? 0.6 : 1, 
+        filter: isOutOfStock ? 'grayscale(80%)' : 'none', 
+        boxShadow: '0 2px 4px rgba(0,0,0,0.02)', 
+        scrollSnapAlign: 'start',
+        cursor: 'pointer' // 👈 Makes the whole card show a pointer finger on hover
+      }}
+    >
+      <div style={{ position: 'relative', height: '110px', width: '100%', display: 'flex', justifyContent: 'center', alignItems: 'center', backgroundColor: '#f9fafb', borderRadius: '6px', marginBottom: '16px' }}>
         {item.isDiscounted && !isOutOfStock && <span style={{ position: 'absolute', top: 0, left: '-8px', backgroundColor: '#0f9d58', color: '#fff', fontSize: '0.7rem', fontWeight: 'bold', padding: '2px 6px', borderRadius: '0 8px 8px 0', zIndex: 1 }}>↓{item.discountPercent}%</span>}
         {item.image ? <img src={item.image} alt={item.name} style={{ maxHeight: '90%', maxWidth: '90%', objectFit: 'contain' }} /> : <span style={{fontSize: '40px'}}>{item.emoji}</span>}
         <div style={{ position: 'absolute', bottom: 0, left: 0, backgroundColor: '#fff', border: '1px solid #e5e7eb', fontSize: '0.65rem', padding: '2px 4px', borderRadius: '4px', display: 'flex', alignItems: 'center', gap: '2px', fontWeight: 'bold' }}>4.2 <span style={{ color: '#0f9d58' }}>★</span></div>
+        
         {!isOutOfStock && !shopClosed && (
-          <button onClick={(e) => { e.stopPropagation(); onQuickAdd(item); }} style={{ position: 'absolute', bottom: '-12px', right: '5px', backgroundColor: '#fff', color: '#0f9d58', border: '1px solid #0f9d58', borderRadius: '6px', padding: '4px 14px', fontSize: '0.8rem', fontWeight: 'bold', display: 'flex', justifyContent: 'center', alignItems: 'center', cursor: 'pointer', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' }}>ADD</button>
+          <button 
+            onClick={(e) => { 
+              e.stopPropagation(); // 👈 This stops the "ADD" button from opening the modal!
+              onQuickAdd(item); 
+            }} 
+            style={{ position: 'absolute', bottom: '-12px', right: '5px', backgroundColor: '#fff', color: '#0f9d58', border: '1px solid #0f9d58', borderRadius: '6px', padding: '4px 14px', fontSize: '0.8rem', fontWeight: 'bold', display: 'flex', justifyContent: 'center', alignItems: 'center', cursor: 'pointer', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' }}
+          >
+            ADD
+          </button>
         )}
       </div>
       <div>
