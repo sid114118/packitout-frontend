@@ -15,8 +15,12 @@ export default function AdminDashboard({ onExit }) {
   const [globalParchis, setGlobalParchis] = useState([]); 
   const [loading, setLoading] = useState(true);
 
-  // Forms
-  const initialProductForm = { name: "", brand: "", category: "", mrp: "", qnty: "", emoji: "", image: "", searchTags: "", description: "", manufacturer: "", energy: "", protein: "", carbs: "", sugar: "", fat: "" };
+  // 👇 UPDATED: Added Pro Fields to initial form state
+  const initialProductForm = { 
+    name: "", brand: "", category: "", mrp: "", qnty: "", emoji: "", image: "", searchTags: "", 
+    description: "", manufacturer: "", energy: "", protein: "", carbs: "", sugar: "", fat: "",
+    itemGroupId: "", relatedProducts: [], substitutes: [] 
+  };
   const [form, setForm] = useState(initialProductForm);
   const [editingProductId, setEditingProductId] = useState(null); 
   
@@ -48,7 +52,7 @@ export default function AdminDashboard({ onExit }) {
     setLoading(false);
   };
 
-  // 👇 --- UPGRADED PRODUCT LOGIC --- 👇
+  // --- UPGRADED PRODUCT LOGIC --- 
   const handleProductSubmit = async (e) => {
     e.preventDefault(); // 🛑 Stops the page from refreshing!
 
@@ -96,7 +100,11 @@ export default function AdminDashboard({ onExit }) {
       protein: product.protein || "",
       carbs: product.carbs || "",
       sugar: product.sugar || "",
-      fat: product.fat || ""
+      fat: product.fat || "",
+      // 👇 UPDATED: Load existing pro data when editing
+      itemGroupId: product.itemGroupId || "",
+      relatedProducts: product.relatedProducts || [],
+      substitutes: product.substitutes || []
     });
     setEditingProductId(product._id);
     window.scrollTo({ top: 0, behavior: 'smooth' }); // Smoothly scrolls back to the form
@@ -106,7 +114,6 @@ export default function AdminDashboard({ onExit }) {
     setForm(initialProductForm); 
     setEditingProductId(null); 
   };
-  // 👆 -------------------------------- 👆
 
   // --- SHOP LOGIC ---
   const handleShopSubmit = async (e) => {
