@@ -2,12 +2,16 @@ import React, { useState, useEffect } from 'react';
 
 export default function ProductModal({ product, isOpen, onClose, onAddToCart }) {
   const [selectedVariant, setSelectedVariant] = useState(null);
-  const [showFullDesc, setShowFullDesc] = useState(false); // Controls "Read More" fade
+  const [showFullDesc, setShowFullDesc] = useState(false); 
+  
+  // 👇 NEW: Local Quantity State
+  const [quantity, setQuantity] = useState(1); 
 
   useEffect(() => {
     if (product) {
       setSelectedVariant(product);
-      setShowFullDesc(false); // Reset description toggle when opening a new product
+      setShowFullDesc(false); 
+      setQuantity(1); // 👈 Reset quantity to 1 when opening a new product
     }
   }, [product]);
 
@@ -32,7 +36,6 @@ export default function ProductModal({ product, isOpen, onClose, onAddToCart }) 
     );
   };
 
-  // 👇 NEW: Sleek Reusable Dropdown Component
   const Accordion = ({ title, icon, children }) => {
     const [isExpanded, setIsExpanded] = useState(false);
     return (
@@ -59,13 +62,11 @@ export default function ProductModal({ product, isOpen, onClose, onAddToCart }) 
 
   return (
     <>
-      {/* 🌑 DARK BLURRED BACKDROP */}
       <div 
         onClick={onClose} 
         style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.65)', zIndex: 9999, backdropFilter: 'blur(3px)', transition: 'all 0.3s' }} 
       />
 
-      {/* 📱 THE BOTTOM SHEET */}
       <div 
         onClick={(e) => e.stopPropagation()} 
         style={{ 
@@ -83,12 +84,10 @@ export default function ProductModal({ product, isOpen, onClose, onAddToCart }) 
           `}
         </style>
 
-        {/* ➖ NATIVE DRAG HANDLE */}
         <div style={{ width: '100%', display: 'flex', justifyContent: 'center', paddingTop: '10px', paddingBottom: '6px', backgroundColor: '#f8fafc', borderTopLeftRadius: '20px', borderTopRightRadius: '20px' }}>
           <div style={{ width: '36px', height: '4px', backgroundColor: '#cbd5e1', borderRadius: '10px' }}></div>
         </div>
 
-        {/* ✕ CLOSE BUTTON */}
         <button 
           onClick={onClose} 
           style={{ position: 'absolute', top: '12px', right: '12px', backgroundColor: '#fff', border: 'none', borderRadius: '50%', width: '32px', height: '32px', fontSize: '1.1rem', display: 'flex', justifyContent: 'center', alignItems: 'center', cursor: 'pointer', zIndex: 10, boxShadow: '0 2px 6px rgba(0,0,0,0.08)', color: '#475569' }}
@@ -96,10 +95,8 @@ export default function ProductModal({ product, isOpen, onClose, onAddToCart }) 
           ✕
         </button>
 
-        {/* 📜 SCROLLABLE CONTENT AREA */}
         <div style={{ flex: 1, overflowY: 'auto', paddingBottom: '20px' }}>
           
-          {/* 📸 IMAGE SHOWCASE AREA (Unchanged) */}
           <div style={{ width: '100%', height: '220px', backgroundColor: '#f8fafc', position: 'relative', display: 'flex', justifyContent: 'center', alignItems: 'center', borderBottom: '1px solid #e2e8f0' }}>
             <div style={{ position: 'absolute', top: '12px', left: '12px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
               <DietaryIcon type={selectedVariant.dietaryPreference || "Veg"} />
@@ -117,10 +114,8 @@ export default function ProductModal({ product, isOpen, onClose, onAddToCart }) 
             )}
           </div>
 
-          {/* 📝 PRODUCT DETAILS AREA (Upgraded & Left-Aligned) */}
           <div style={{ padding: '15px', textAlign: 'left' }}>
             
-            {/* Clickable Brand Name */}
             {selectedVariant.brand && (
               <div 
                 style={{ color: '#0f9d58', fontWeight: 'bold', fontSize: '0.8rem', marginBottom: '4px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '4px', textTransform: 'uppercase', letterSpacing: '0.5px' }}
@@ -141,7 +136,6 @@ export default function ProductModal({ product, isOpen, onClose, onAddToCart }) 
               {selectedVariant.qnty}
             </div>
 
-            {/* 🌟 VARIANT SELECTOR */}
             {product.variants && product.variants.length > 1 && (
               <div style={{ marginBottom: '20px', padding: '12px', backgroundColor: '#f8fafc', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
                 <p style={{ fontSize: '0.75rem', color: '#475569', fontWeight: 'bold', margin: '0 0 10px 0', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Available Sizes</p>
@@ -172,7 +166,6 @@ export default function ProductModal({ product, isOpen, onClose, onAddToCart }) 
               </div>
             )}
 
-            {/* 📝 DESCRIPTION (WITH READ MORE LOGIC) */}
             {selectedVariant.description && (
               <div style={{ marginBottom: '10px', padding: '15px 0', borderTop: '1px solid #e2e8f0', borderBottom: '1px solid #e2e8f0' }}>
                 <h3 style={{ fontSize: '0.95rem', color: '#0f172a', margin: '0 0 8px 0', fontWeight: 'bold' }}>Product Details</h3>
@@ -195,19 +188,17 @@ export default function ProductModal({ product, isOpen, onClose, onAddToCart }) 
               </div>
             )}
 
-            {/* ⚡ ACCORDION: NUTRITIONAL INFO */}
             {(selectedVariant.energy || selectedVariant.protein || selectedVariant.carbs || selectedVariant.fat) && (
               <Accordion title="Nutritional Value" icon="⚡">
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
-                  {selectedVariant.energy && <div style={{ backgroundColor: '#f1f5f9', padding: '10px 14px', borderRadius: '8px', display: 'flex', flexDirection: 'column' }}><span style={{color: '#64748b', fontSize: '0.75rem', marginBottom: '2px'}}>Energy</span> <span style={{color: '#0f172a', fontWeight: 'bold', fontSize: '0.85rem'}}>{selectedVariant.energy}</span></div>}
-                  {selectedVariant.protein && <div style={{ backgroundColor: '#f1f5f9', padding: '10px 14px', borderRadius: '8px', display: 'flex', flexDirection: 'column' }}><span style={{color: '#64748b', fontSize: '0.75rem', marginBottom: '2px'}}>Protein</span> <span style={{color: '#0f172a', fontWeight: 'bold', fontSize: '0.85rem'}}>{selectedVariant.protein}</span></div>}
-                  {selectedVariant.carbs && <div style={{ backgroundColor: '#f1f5f9', padding: '10px 14px', borderRadius: '8px', display: 'flex', flexDirection: 'column' }}><span style={{color: '#64748b', fontSize: '0.75rem', marginBottom: '2px'}}>Carbs</span> <span style={{color: '#0f172a', fontWeight: 'bold', fontSize: '0.85rem'}}>{selectedVariant.carbs}</span></div>}
-                  {selectedVariant.fat && <div style={{ backgroundColor: '#f1f5f9', padding: '10px 14px', borderRadius: '8px', display: 'flex', flexDirection: 'column' }}><span style={{color: '#64748b', fontSize: '0.75rem', marginBottom: '2px'}}>Total Fat</span> <span style={{color: '#0f172a', fontWeight: 'bold', fontSize: '0.85rem'}}>{selectedVariant.fat}</span></div>}
+                  {selectedVariant.energy && <div style={{ backgroundColor: '#f1f5f9', padding: '10px', borderRadius: '8px', display: 'flex', justifyContent: 'space-between' }}><span style={{color: '#64748b', fontSize: '0.8rem'}}>Energy</span> <span style={{color: '#0f172a', fontWeight: 'bold', fontSize: '0.8rem'}}>{selectedVariant.energy}</span></div>}
+                  {selectedVariant.protein && <div style={{ backgroundColor: '#f1f5f9', padding: '10px', borderRadius: '8px', display: 'flex', justifyContent: 'space-between' }}><span style={{color: '#64748b', fontSize: '0.8rem'}}>Protein</span> <span style={{color: '#0f172a', fontWeight: 'bold', fontSize: '0.8rem'}}>{selectedVariant.protein}</span></div>}
+                  {selectedVariant.carbs && <div style={{ backgroundColor: '#f1f5f9', padding: '10px', borderRadius: '8px', display: 'flex', justifyContent: 'space-between' }}><span style={{color: '#64748b', fontSize: '0.8rem'}}>Carbs</span> <span style={{color: '#0f172a', fontWeight: 'bold', fontSize: '0.8rem'}}>{selectedVariant.carbs}</span></div>}
+                  {selectedVariant.fat && <div style={{ backgroundColor: '#f1f5f9', padding: '10px', borderRadius: '8px', display: 'flex', justifyContent: 'space-between' }}><span style={{color: '#64748b', fontSize: '0.8rem'}}>Total Fat</span> <span style={{color: '#0f172a', fontWeight: 'bold', fontSize: '0.8rem'}}>{selectedVariant.fat}</span></div>}
                 </div>
               </Accordion>
             )}
 
-            {/* 🏢 ACCORDION: MANUFACTURER INFO */}
             {selectedVariant.manufacturer && (
               <Accordion title="Manufacturer Details" icon="🏢">
                 <div style={{ backgroundColor: '#f8fafc', padding: '12px 16px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
@@ -218,7 +209,6 @@ export default function ProductModal({ product, isOpen, onClose, onAddToCart }) 
               </Accordion>
             )}
 
-            {/* STANDARD DISCLAIMER */}
             <div style={{ marginTop: '20px', padding: '12px', backgroundColor: '#f8fafc', borderRadius: '8px', border: '1px dashed #cbd5e1' }}>
               <p style={{ margin: 0, fontSize: '0.7rem', color: '#64748b', lineHeight: '1.4' }}>
                 <strong>Important Note:</strong> Every effort is made to maintain accuracy of all information. However, actual product packaging and materials may contain more and/or different information. It is recommended not to solely rely on the information presented.
@@ -228,35 +218,58 @@ export default function ProductModal({ product, isOpen, onClose, onAddToCart }) 
           </div>
         </div>
 
-        {/* 🛒 STICKY BOTTOM ACTION BAR (Unchanged) */}
+        {/* 🛒 STICKY BOTTOM ACTION BAR (WITH QUANTITY SELECTOR) */}
         <div style={{ 
           backgroundColor: '#fff', padding: '12px 15px', borderTop: '1px solid #e2e8f0', 
           display: 'flex', justifyContent: 'space-between', alignItems: 'center', 
           boxShadow: '0 -4px 10px rgba(0,0,0,0.03)'
         }}>
           <div>
-            <div style={{ fontSize: '1.25rem', fontWeight: 'bold', color: '#0f172a' }}>₹{displayPrice}</div>
-            {isDiscounted && <div style={{ fontSize: '0.8rem', color: '#94a3b8', textDecoration: 'line-through', marginTop: '0px' }}>MRP ₹{selectedVariant.mrp}</div>}
+            {/* Shows total price calculated by quantity */}
+            <div style={{ fontSize: '1.25rem', fontWeight: 'bold', color: '#0f172a' }}>₹{displayPrice * quantity}</div>
+            {isDiscounted && <div style={{ fontSize: '0.8rem', color: '#94a3b8', textDecoration: 'line-through', marginTop: '0px' }}>MRP ₹{selectedVariant.mrp * quantity}</div>}
           </div>
 
-          <button 
-            onClick={() => {
-              onAddToCart({ ...selectedVariant, mrp: displayPrice });
-              onClose(); 
-            }}
-            style={{ 
-              backgroundColor: '#0f9d58', color: '#fff', border: 'none', padding: '12px 28px', 
-              borderRadius: '10px', fontWeight: 'bold', fontSize: '1rem', cursor: 'pointer',
-              boxShadow: '0 4px 12px rgba(15, 157, 88, 0.25)', transition: 'transform 0.1s'
-            }}
-            onMouseDown={(e) => e.currentTarget.style.transform = 'scale(0.95)'}
-            onMouseUp={(e) => e.currentTarget.style.transform = 'scale(1)'}
-          >
-            Add to Cart
-          </button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            
+            {/* 👇 THE NEW QUANTITY SELECTOR 👇 */}
+            <div style={{ display: 'flex', alignItems: 'center', border: '1px solid #cbd5e1', borderRadius: '10px', overflow: 'hidden', backgroundColor: '#f8fafc' }}>
+              <button 
+                onClick={() => setQuantity(q => Math.max(1, q - 1))}
+                style={{ padding: '8px 12px', border: 'none', background: 'transparent', fontSize: '1.2rem', color: quantity > 1 ? '#0f172a' : '#cbd5e1', cursor: quantity > 1 ? 'pointer' : 'not-allowed' }}
+              >−</button>
+              <div style={{ width: '20px', textAlign: 'center', fontWeight: 'bold', fontSize: '1rem', color: '#0f172a' }}>
+                {quantity}
+              </div>
+              <button 
+                onClick={() => setQuantity(q => q + 1)}
+                style={{ padding: '8px 12px', border: 'none', background: 'transparent', fontSize: '1.2rem', color: '#0f9d58', cursor: 'pointer' }}
+              >+</button>
+            </div>
+
+            <button 
+              onClick={() => {
+                // 👇 SMART HACK: Loops your existing cart function to safely add multiple!
+                for(let i = 0; i < quantity; i++) {
+                  onAddToCart({ ...selectedVariant, mrp: displayPrice });
+                }
+                onClose(); 
+              }}
+              style={{ 
+                backgroundColor: '#0f9d58', color: '#fff', border: 'none', padding: '12px 20px', 
+                borderRadius: '10px', fontWeight: 'bold', fontSize: '1rem', cursor: 'pointer',
+                boxShadow: '0 4px 12px rgba(15, 157, 88, 0.25)', transition: 'transform 0.1s'
+              }}
+              onMouseDown={(e) => e.currentTarget.style.transform = 'scale(0.95)'}
+              onMouseUp={(e) => e.currentTarget.style.transform = 'scale(1)'}
+            >
+              Add
+            </button>
+          </div>
         </div>
 
       </div>
     </>
   );
-}
+        }
+        
