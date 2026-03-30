@@ -37,11 +37,15 @@ export default function CrossSellSlider({ title, items, onProductClick, onAddToC
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 'auto' }}>
                 <span style={{ fontWeight: 'bold', fontSize: '0.85rem' }}>₹{rPrice}</span>
                 <button 
+                  /* 🛡️ BULLETPROOF EVENT STOPPERS 🛡️ */
                   onClick={(e) => { 
+                    e.preventDefault();
                     e.stopPropagation(); 
                     onAddToCart({ ...item, mrp: rPrice }); 
                   }} 
-                  style={{ backgroundColor: '#ecfdf5', color: '#0f9d58', border: '1px solid #0f9d58', borderRadius: '4px', padding: '2px 8px', fontSize: '0.7rem', fontWeight: 'bold', cursor: 'pointer' }}
+                  onTouchStart={(e) => e.stopPropagation()} 
+                  onMouseDown={(e) => e.stopPropagation()}
+                  style={{ backgroundColor: '#ecfdf5', color: '#0f9d58', border: '1px solid #0f9d58', borderRadius: '4px', padding: '2px 8px', fontSize: '0.7rem', fontWeight: 'bold', cursor: 'pointer', position: 'relative', zIndex: 10 }}
                 >
                   ADD
                 </button>
