@@ -10,7 +10,7 @@ export default function Header({ user }) {
   const [activeShopName, setActiveShopName] = useState(user?.primaryShop?.name || "");
   
   // 🟢 Check if shop is open
-  const isShopOpen = user?.primaryShop?.isOpen !== false; // defaults to true if undefined
+  const isShopOpen = user?.primaryShop?.isOpen !== false; 
 
   const handleFindShops = async () => {
     if (!pincode) return;
@@ -66,7 +66,7 @@ export default function Header({ user }) {
       
       <div style={{ padding: '12px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         
-        {/* LEFT: Stacked Location Button with Open Status */}
+        {/* LEFT: Stacked Location Button with Open Status & CHANGE text */}
         <div 
           onClick={() => setIsChanging(!isChanging)} 
           style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}
@@ -86,13 +86,14 @@ export default function Header({ user }) {
               )}
             </div>
 
-            {/* Bottom row: Shop Name */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '4px', color: '#111827', fontWeight: '900', fontSize: '1.05rem', marginTop: '2px' }}>
-              <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '200px' }}>
+            {/* Bottom row: Shop Name + CHANGE button */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#111827', fontWeight: '900', fontSize: '1.05rem', marginTop: '2px' }}>
+              <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '180px' }}>
                 {bottomText}
               </span>
-              <span style={{ fontSize: '0.8rem', color: '#0c831f', transform: isChanging ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s' }}>
-                change 
+              {/* 🌟 REPLACED ARROW WITH "CHANGE" TEXT 🌟 */}
+              <span style={{ fontSize: '0.75rem', color: '#0c831f', fontWeight: '800', backgroundColor: '#f4fbf6', padding: '2px 6px', borderRadius: '4px', border: '1px solid #dcfce7' }}>
+                {isChanging ? 'CLOSE' : 'CHANGE'}
               </span>
             </div>
           </div>
