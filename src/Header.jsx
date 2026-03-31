@@ -1,22 +1,18 @@
 import React, { useState } from 'react';
 
 export default function Header({ user }) {
-  // 🧭 UI States for changing the shop
   const [isChanging, setIsChanging] = useState(false);
   const [pincode, setPincode] = useState("");
   const [shops, setShops] = useState([]);
   const [loadingShops, setLoadingShops] = useState(false);
   const [selectedShopId, setSelectedShopId] = useState("");
-  
-  // 🛡️ NEW: Tracks if the user actually clicked "Find" to prevent premature errors
   const [hasSearched, setHasSearched] = useState(false); 
-  
   const [activeShopName, setActiveShopName] = useState(user?.primaryShop?.name || "");
 
   const handleFindShops = async () => {
     if (!pincode) return;
     setLoadingShops(true);
-    setHasSearched(false); // Reset search state before fetching
+    setHasSearched(false); 
     
     try {
       const res = await fetch(`https://darkslategrey-snail-415133.hostingersite.com/shops/all/${pincode}`);
@@ -28,7 +24,7 @@ export default function Header({ user }) {
     }
     
     setLoadingShops(false);
-    setHasSearched(true); // Mark that a search has officially completed
+    setHasSearched(true); 
   };
 
   const handleSaveShop = async () => {
@@ -52,122 +48,105 @@ export default function Header({ user }) {
       setIsChanging(false);
       setShops([]); 
       setHasSearched(false);
+      window.location.reload(); // Instantly refresh feed to show new shop items
     } catch (err) {
       console.log("Error saving shop", err);
     }
   };
 
-  // 📝 UPDATED: Smart Text Logic
   const hasLocation = activeShopName || user?.pincode;
-  
-  const displayText = activeShopName 
-    ? `🏪 Shopping from: ${activeShopName}` 
-    : user?.pincode 
-    ? `📍 Shopping near: ${user.pincode}` 
-    : "📍 No shop selected";
-
-  const buttonText = isChanging 
-    ? "Cancel ❌" 
-    : hasLocation 
-    ? "Change 🔽" 
-    : "Select 🔽";
+  const topText = hasLocation ? "Shopping from" : "No location";
+  const bottomText = activeShopName ? activeShopName : user?.pincode ? `Pincode: ${user.pincode}` : "Select a shop";
 
   return (
-    <header style={{ position: 'sticky', top: 0, zIndex: 1000, boxShadow: '0 4px 10px rgba(0,0,0,0.1)' }}>
+    <header style={{ position: 'sticky', top: 0, zIndex: 1000, backgroundColor: '#ffffff', boxShadow: isChanging ? 'none' : '0 2px 10px rgba(0,0,0,0.05)' }}>
       
-      {/* 🟢 TOP ROW: Brand & Navigation */}
-      <div style={{ backgroundColor: '#2f3640', color: 'white', padding: '10px 15px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+      {/* 🌟 PREMIUM SINGLE-ROW HEADER 🌟 */}
+      <div style={{ padding: '12px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         
-        {/* Hamburger Menu & Logo */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <button style={{ background: 'none', border: 'none', color: 'white', fontSize: '1.4rem', cursor: 'pointer', padding: 0 }}>
-            ☰
-          </button>
-          <h1 
-            onClick={() => window.location.hash = ""} 
-            style={{ margin: 0, fontSize: '1.3rem', display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', color: '#10b981', fontWeight: '900' }}
-          >
-            📦 PackItOut
-          </h1>
-        </div>
-
-        {/* Clickable Icons */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
-          <button onClick={() => window.location.hash = "#account"} style={iconBtnStyle} title="My Profile">👤</button>
-          <button onClick={() => window.location.hash = "#cart"} style={iconBtnStyle} title="View Cart">🛒</button>
-        </div>
-      </div>
-
-      {/* 📍 BOTTOM ROW: The Slim Location Pill */}
-      <div style={{ backgroundColor: '#1e272e', padding: '6px 15px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid #3d566e' }}>
-        <span style={{ color: '#cbd5e1', fontSize: '0.8rem', fontWeight: 'bold', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-          {displayText}
-        </span>
-        <button 
-          onClick={() => {
-            setIsChanging(!isChanging);
-            setHasSearched(false); // Reset error state if they close and reopen
-          }}
-          style={{ background: 'none', border: 'none', color: '#10b981', fontSize: '0.8rem', fontWeight: 'bold', cursor: 'pointer', padding: 0 }}
+        {/* LEFT: Stacked Location Button */}
+        <div 
+          onClick={() => setIsChanging(!isChanging)} 
+          style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}
         >
-          {buttonText}
-        </button>
+          <div style={{ fontSize: '1.6rem' }}>📍</div>
+          <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+            <span style={{ fontSize: '0.7rem', color: '#6b7280', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+              {topText}
+            </span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '4px', color: '#111827', fontWeight: '900', fontSize: '1.05rem', marginTop: '2px' }}>
+              <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '200px' }}>
+                {bottomText}
+              </span>
+              <span style={{ fontSize: '0.8rem', color: '#0c831f', transform: isChanging ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s' }}>
+                ▼
+              </span>
+            </div>
+          </div>
+        </div>
+
+        {/* RIGHT: Profile Avatar */}
+        <div 
+          onClick={() => window.location.hash = "#account"} 
+          style={{ width: '38px', height: '38px', backgroundColor: '#f3f4f6', borderRadius: '50%', display: 'flex', justifyContent: 'center', alignItems: 'center', fontSize: '1.2rem', cursor: 'pointer', border: '1px solid #e5e7eb' }}
+          title="My Profile"
+        >
+          👤
+        </div>
       </div>
 
-      {/* 🔍 EXPANDING SHOP SELECTOR */}
+      {/* 🔍 EXPANDING SHOP SELECTOR (Clean Light Mode) */}
       {isChanging && (
-        <div style={{ backgroundColor: '#2f3640', padding: '15px', borderTop: '1px solid #3d566e', boxShadow: 'inset 0 4px 6px rgba(0,0,0,0.1)' }}>
+        <div style={{ backgroundColor: '#ffffff', padding: '16px', borderTop: '1px solid #f3f4f6', borderBottom: '1px solid #e5e7eb', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.05)', animation: 'slideDown 0.2s ease-out' }}>
           
-          {/* 1. Select Shop*/}
-          <div style={{ display: 'flex', gap: '8px', marginBottom: '10px' }}>
+          <style>{`@keyframes slideDown { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }`}</style>
+
+          <div style={{ fontSize: '0.85rem', color: '#111827', fontWeight: '800', marginBottom: '10px' }}>Change your location</div>
+          
+          <div style={{ display: 'flex', gap: '8px', marginBottom: '12px' }}>
             <input 
               type="text" 
-              placeholder="Enter Pincode..." 
+              placeholder="Enter Pincode (e.g. 110001)" 
               value={pincode} 
               onChange={e => {
                 setPincode(e.target.value);
-                setHasSearched(false); // 🛡️ Instantly hide errors when they start typing a new code
+                setHasSearched(false); 
               }}
-              style={{ flex: 1, padding: '10px', borderRadius: '8px', border: 'none', outline: 'none', backgroundColor: '#f1f5f9', fontWeight: 'bold' }}
+              style={{ flex: 1, padding: '12px 14px', borderRadius: '10px', border: '1px solid #cbd5e1', outline: 'none', backgroundColor: '#f8fafc', fontSize: '0.95rem', fontWeight: '600', color: '#111827' }}
             />
             <button 
               onClick={handleFindShops} 
-              style={{ backgroundColor: '#10b981', color: 'white', border: 'none', padding: '0 15px', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer' }}
+              style={{ backgroundColor: '#0c831f', color: 'white', border: 'none', padding: '0 20px', borderRadius: '10px', fontWeight: '800', cursor: 'pointer', fontSize: '0.95rem', boxShadow: '0 2px 6px rgba(12, 131, 31, 0.2)' }}
             >
               {loadingShops ? "..." : "Find"}
             </button>
           </div>
           
-          {/* 2. Select Shop (If shops are found) */}
           {shops.length > 0 && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', animation: 'fadeIn 0.3s' }}>
               <select 
                 value={selectedShopId} 
                 onChange={e => setSelectedShopId(e.target.value)}
-                style={{ width: '100%', padding: '10px', borderRadius: '8px', border: 'none', outline: 'none', backgroundColor: '#f1f5f9', fontWeight: 'bold', color: '#2f3640' }}
+                style={{ width: '100%', padding: '12px', borderRadius: '10px', border: '1px solid #cbd5e1', outline: 'none', backgroundColor: '#f8fafc', fontWeight: '700', color: '#111827', fontSize: '0.9rem' }}
               >
                 {shops.map(s => <option key={s._id} value={s._id}>{s.name} ({s.pincode})</option>)}
               </select>
               <button 
                 onClick={handleSaveShop} 
-                style={{ width: '100%', padding: '10px', backgroundColor: '#f59e0b', color: 'white', border: 'none', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer' }}
+                style={{ width: '100%', padding: '14px', backgroundColor: '#111827', color: 'white', border: 'none', borderRadius: '10px', fontWeight: '800', cursor: 'pointer', fontSize: '1rem' }}
               >
-                Save My Shop
+                Confirm Store
               </button>
             </div>
           )}
 
-          {/* 🛡️ Fixed Error Message: Only shows AFTER searching */}
           {shops.length === 0 && hasSearched && !loadingShops && (
-            <div style={{ color: '#fca5a5', fontSize: '0.85rem', textAlign: 'center', marginTop: '10px', padding: '8px', backgroundColor: 'rgba(252, 165, 165, 0.1)', borderRadius: '6px' }}>
+            <div style={{ color: '#b91c1c', fontSize: '0.85rem', textAlign: 'center', marginTop: '10px', padding: '10px', backgroundColor: '#fef2f2', borderRadius: '8px', fontWeight: '600' }}>
               ❌ No shops found in {pincode}. Try another area!
             </div>
           )}
         </div>
       )}
-
     </header>
   );
 }
-
-const iconBtnStyle = { background: 'none', border: 'none', color: 'white', fontSize: '1.3rem', cursor: 'pointer', padding: 0 };
