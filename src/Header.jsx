@@ -92,7 +92,7 @@ export default function Header({ user }) {
                 {bottomText}
               </span>
               <span style={{ fontSize: '0.8rem', color: '#0c831f', transform: isChanging ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s' }}>
-                ▼
+                change 
               </span>
             </div>
           </div>
