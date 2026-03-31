@@ -8,7 +8,7 @@ export default function Categories({ onCategorySelect }) {
     {
       sectionTitle: "Daily Fresh & Staples",
       items: [
-        { name: "Dairy, Bread & Eggs", icon: "🥛", image: "" }, 
+        { name: "Dairy, Bread & Eggs", icon: "🥛", image: "https://res.cloudinary.com/dj48tkcsw/image/upload/v1774944897/images_3_xsxbe0.jpg" }, 
         { name: "Fruits & Veg", icon: "🍎", image: "" },
         { name: "Atta, Rice & Dal", icon: "🌾", image: "" },
         { name: "Chicken, Meat & Fish", icon: "🍗", image: "" },
