@@ -1,4 +1,4 @@
-Import React, { useState } from 'react';
+import React, { useState } from 'react';
 
 // 📋 1. THE QUICK VARIANT SELECTION SHEET
 export function VariantBottomSheet({ product, onClose, onAddToCart }) {
