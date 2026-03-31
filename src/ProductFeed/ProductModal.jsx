@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import CrossSellSlider from './CrossSell.jsx';
+// Important: Ensure this path matches where you have the CrossSellSlider component
+import CrossSellSlider from './CrossSell.jsx'; 
 
 // ── Subcomponents moved OUTSIDE to prevent re-render state loss ──
 const DietaryIcon = ({ type }) => {
@@ -44,6 +45,9 @@ export default function ProductPage({
   const [showFullDesc, setShowFullDesc] = useState(false);
 
   useEffect(() => {
+    // Scroll to top when data loads
+    window.scrollTo(0, 0);
+
     if (product) {
       setCurrentProduct(product);
       setSelectedVariant(product);
@@ -51,29 +55,41 @@ export default function ProductPage({
     }
   }, [product]);
 
-  // Handle loading state if no product is passed yet
+  // Handle loading state smoothly if no product is passed yet
   if (!currentProduct || !selectedVariant) {
-    return <div style={{ minHeight: '100vh', display: 'flex', justifyContent: 'center', alignItems: 'center', backgroundColor: '#fff' }}>Loading...</div>;
+    return (
+      <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', backgroundColor: '#fff', textAlign: 'center', color: '#111827' }}>
+        <style>{`
+            @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+            .pm-page-loader { border: 4px solid #f1f5f9; border-top: 4px solid #0c831f; border-radius: 50%; width: 40px; height: 40px; animation: spin 0.8s linear infinite; margin-bottom: 20px; }
+        `}</style>
+        <div className="pm-page-loader" />
+        <h2 style={{ fontSize: '1.2rem', fontWeight: '800' }}>Loading Details</h2>
+        <p style={{ fontSize: '0.9rem', color: '#64748b' }}>Just a moment...</p>
+      </div>
+    );
   }
 
-  const displayPrice = selectedVariant.sellingPrice || selectedVariant.mrp;
-  const isDiscounted = displayPrice < selectedVariant.mrp;
+  // Safety first! Use optional chaining so the app never crashes
+  const displayPrice = selectedVariant?.sellingPrice || selectedVariant?.mrp || 0;
+  const originalMRP = selectedVariant?.mrp || displayPrice;
+  const isDiscounted = displayPrice < originalMRP;
   const discountPercent = isDiscounted
-    ? Math.round(((selectedVariant.mrp - displayPrice) / selectedVariant.mrp) * 100)
+    ? Math.round(((originalMRP - displayPrice) / originalMRP) * 100)
     : 0;
 
   // Cart Trackers
   const safeCart = Array.isArray(cart) ? cart : [];
-  const cartItem = safeCart.find(item => item._id === selectedVariant._id);
-  const cartCount = cartItem ? cartItem.qty : 0;
-  const cartTotalItems = safeCart.reduce((total, item) => total + (item.qty || 1), 0);
-  const cartTotalPrice = safeCart.reduce((total, item) => total + ((item.sellingPrice || item.mrp) * (item.qty || 1)), 0);
+  const cartItem = safeCart.find(item => item?._id === selectedVariant?._id);
+  const cartCount = cartItem?.qty || 0;
+  const cartTotalItems = safeCart.reduce((total, item) => total + (item?.qty || 1), 0);
+  const cartTotalPrice = safeCart.reduce((total, item) => total + ((item?.sellingPrice || item?.mrp || 0) * (item?.qty || 1)), 0);
 
-  // Memoized for performance
+  // Memoized for performance to prevent heavy re-filtering on every cart update
   const relatedItems = useMemo(() => {
-    if (!selectedVariant.relatedProducts || !allItems.length) return [];
-    return allItems.filter(item => selectedVariant.relatedProducts.includes(item._id) && item.inStock);
-  }, [selectedVariant.relatedProducts, allItems]);
+    if (!selectedVariant?.relatedProducts || !Array.isArray(selectedVariant.relatedProducts) || !allItems?.length) return [];
+    return allItems.filter(item => selectedVariant.relatedProducts.includes(item?._id) && item?.inStock);
+  }, [selectedVariant?.relatedProducts, allItems]);
 
   const handleRelatedProductClick = (item) => {
     setCurrentProduct(item);
@@ -92,17 +108,19 @@ export default function ProductPage({
         backgroundColor: '#fff', 
         display: 'flex', 
         flexDirection: 'column',
-        position: 'relative'
+        position: 'relative',
+        animation: 'fadeInPage 0.25s ease'
       }}
     >
       <style>{`
+        @keyframes fadeInPage { from { opacity: 0; } to { opacity: 1; } }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: translateY(0); } }
         .pm-hide-scroll::-webkit-scrollbar { display: none; }
         .pm-hide-scroll { -ms-overflow-style: none; scrollbar-width: none; }
         .pm-line-clamp { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
       `}</style>
 
-      {/* ── Top Navigation Bar (Sticky) ── */}
+      {/* ── Top Navigation Bar (Now Sticky at the Top) ── */}
       <div style={{ position: 'sticky', top: 0, display: 'flex', alignItems: 'center', padding: '12px 16px', backgroundColor: '#fff', boxShadow: '0 2px 4px rgba(0,0,0,0.02)', zIndex: 100 }}>
         <button
           onClick={onBack}
@@ -110,28 +128,28 @@ export default function ProductPage({
         >
           ←
         </button>
-        <div style={{ display: 'flex', flexDirection: 'column', textAlign: 'left' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', textAlign: 'left', overflow: 'hidden' }}>
           <h2 style={{ fontSize: '1.05rem', fontWeight: '800', margin: 0, color: '#111827', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-            {selectedVariant.brand ? selectedVariant.brand : 'Product Details'}
+            {selectedVariant?.brand || 'Product Details'}
           </h2>
         </div>
       </div>
 
-      {/* ── Page Content ── */}
+      {/* ── Main Page Content (Native scrolling) ── */}
       <div style={{ flex: 1, paddingBottom: cartTotalItems > 0 ? '160px' : '90px', backgroundColor: '#fff' }}>
         
         {/* Product Image */}
         <div style={{ width: '100%', height: '320px', display: 'flex', justifyContent: 'center', alignItems: 'center', position: 'relative', backgroundColor: '#f8fafc' }}>
-          {selectedVariant.image
-            ? <img src={selectedVariant.image} alt={selectedVariant.name} style={{ maxHeight: '90%', maxWidth: '90%', objectFit: 'contain', mixBlendMode: 'multiply' }} />
-            : <span style={{ fontSize: '90px' }}>{selectedVariant.emoji}</span>
+          {selectedVariant?.image
+            ? <img src={selectedVariant.image} alt={selectedVariant?.name || 'Product'} style={{ maxHeight: '90%', maxWidth: '90%', objectFit: 'contain', mixBlendMode: 'multiply' }} />
+            : <span style={{ fontSize: '90px' }}>{selectedVariant?.emoji || '📦'}</span>
           }
         </div>
 
         {/* Product Info */}
         <div style={{ padding: '20px', textAlign: 'left' }}>
 
-          {/* Rating Row */}
+          {/* Blinkit Style Rating Row */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.75rem', fontWeight: '800', marginBottom: '8px' }}>
              <div style={{ display: 'flex', alignItems: 'center', color: '#f59e0b', fontSize: '0.85rem' }}>
                 ★★★★★ <span style={{ color: '#9ca3af', fontWeight: '500', marginLeft: '4px', fontSize: '0.75rem' }}>(4.03 lac)</span>
@@ -141,36 +159,40 @@ export default function ProductPage({
           {/* Title & Dietary Icon */}
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '4px' }}>
             <h1 style={{ margin: '0', fontSize: '1.35rem', fontWeight: '800', color: '#111827', lineHeight: '1.3' }}>
-              {selectedVariant.name}
+              {selectedVariant?.name || 'Unnamed Product'}
             </h1>
             <div style={{ marginTop: '4px', marginLeft: '10px' }}>
-               <DietaryIcon type={selectedVariant.dietaryPreference} />
+               <DietaryIcon type={selectedVariant?.dietaryPreference} />
             </div>
           </div>
 
           {/* Stock / Brand info */}
           <div style={{ color: '#ea580c', fontWeight: '700', fontSize: '0.8rem', marginTop: '8px', marginBottom: '20px' }}>
-            {selectedVariant.brand ? `Explore ${selectedVariant.brand} ›` : 'Limited Stock!'}
+            {selectedVariant?.brand ? `Explore ${selectedVariant.brand} ›` : 'Limited Stock!'}
           </div>
 
           <div style={{ borderTop: '1px solid #f1f5f9', marginBottom: '20px' }} />
 
-          {/* ── Variant Selector ── */}
-          {currentProduct.variants && currentProduct.variants.length > 1 && (
+          {/* ── Variant Selector (Horizontal Scroll) ── */}
+          {currentProduct?.variants?.length > 1 && (
             <div style={{ marginBottom: '24px' }}>
               <p style={{ fontSize: '0.85rem', fontWeight: '800', color: '#111827', marginBottom: '12px' }}>Select Unit</p>
               <div className="pm-hide-scroll" style={{ display: 'flex', gap: '12px', overflowX: 'auto', paddingBottom: '10px', paddingTop: '10px', marginTop: '-10px' }}>
                 {currentProduct.variants.map((v, i) => {
-                  const isSel = selectedVariant._id === v._id;
-                  const vDisc = v.sellingPrice && v.sellingPrice < v.mrp
-                    ? Math.round(((v.mrp - v.sellingPrice) / v.mrp) * 100) : 0;
+                  if (!v) return null; // Safety check inside map
                   
-                  const vCartItem = safeCart.find(c => c._id === v._id);
-                  const variantCartCount = vCartItem ? vCartItem.qty : 0;
+                  const isSel = selectedVariant?._id === v._id;
+                  const vMrp = v.mrp || 0;
+                  const vPrice = v.sellingPrice || vMrp;
+                  const vDisc = vPrice < vMrp
+                    ? Math.round(((vMrp - vPrice) / vMrp) * 100) : 0;
+                  
+                  const vCartItem = safeCart.find(c => c?._id === v._id);
+                  const variantCartCount = vCartItem?.qty || 0;
 
                   return (
                     <div
-                      key={i}
+                      key={v._id || i}
                       onClick={() => setSelectedVariant(v)}
                       style={{ 
                         minWidth: '100px', 
@@ -198,8 +220,8 @@ export default function ProductPage({
                           {vDisc}% OFF
                         </span>
                       )}
-                      <div style={{ fontWeight: '700', fontSize: '0.9rem', color: '#111827', marginTop: vDisc > 0 ? '6px' : 0 }}>{v.qnty}</div>
-                      <div style={{ fontSize: '0.85rem', color: '#111827', fontWeight: '800', marginTop: '4px' }}>₹{v.sellingPrice || v.mrp}</div>
+                      <div style={{ fontWeight: '700', fontSize: '0.9rem', color: '#111827', marginTop: vDisc > 0 ? '6px' : 0 }}>{v.qnty || '1 Unit'}</div>
+                      <div style={{ fontSize: '0.85rem', color: '#111827', fontWeight: '800', marginTop: '4px' }}>₹{vPrice}</div>
                     </div>
                   );
                 })}
@@ -207,8 +229,8 @@ export default function ProductPage({
             </div>
           )}
 
-          {/* ── Description ── */}
-          {selectedVariant.description && (
+          {/* ── Description (Read More/Less) ── */}
+          {selectedVariant?.description && (
             <div style={{ marginBottom: '8px' }}>
               <h3 style={{ fontSize: '0.95rem', fontWeight: '800', color: '#111827', margin: '0 0 10px' }}>Product Details</h3>
               <div style={{ position: 'relative' }}>
@@ -234,7 +256,7 @@ export default function ProductPage({
           )}
 
           {/* ── Accordions ── */}
-          {(selectedVariant.energy || selectedVariant.protein || selectedVariant.carbs || selectedVariant.fat) && (
+          {(selectedVariant?.energy || selectedVariant?.protein || selectedVariant?.carbs || selectedVariant?.fat) && (
             <Accordion title="Nutritional Value">
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
                 {[['Energy', selectedVariant.energy], ['Protein', selectedVariant.protein], ['Carbs', selectedVariant.carbs], ['Total Fat', selectedVariant.fat]].filter(([, v]) => v).map(([label, val]) => (
@@ -247,7 +269,7 @@ export default function ProductPage({
             </Accordion>
           )}
 
-          {selectedVariant.manufacturer && (
+          {selectedVariant?.manufacturer && (
             <Accordion title="Manufacturer Details">
               <p style={{ fontSize: '0.9rem', color: '#4b5563', lineHeight: '1.6', margin: 0 }}>
                 {selectedVariant.manufacturer}
@@ -255,7 +277,7 @@ export default function ProductPage({
             </Accordion>
           )}
 
-          {/* ── Cross-sell ── */}
+          {/* ── Cross-sell slider ── */}
           <CrossSellSlider
             title="Frequently Bought Together"
             items={relatedItems}
@@ -265,7 +287,7 @@ export default function ProductPage({
         </div>
       </div>
 
-      {/* 🌟 FLOATING VIEW CART (Fixed Position) 🌟 */}
+      {/* 🌟 BLINKIT STYLE FLOATING VIEW CART (Fixed Viewport Position) 🌟 */}
       {cartTotalItems > 0 && (
         <div
           onClick={() => { if (onViewCart) onViewCart(); }}
@@ -288,17 +310,17 @@ export default function ProductPage({
         </div>
       )}
 
-      {/* 🌟 STICKY BOTTOM BAR 🌟 */}
+      {/* 🌟 BLINKIT STYLE STICKY BOTTOM BAR (Fixed Viewport Position) 🌟 */}
       <div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, backgroundColor: '#fff', borderTop: '1px solid #f1f5f9', padding: '10px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', zIndex: 102, minHeight: '75px', paddingBottom: 'max(10px, env(safe-area-inset-bottom))' }}>
 
         {/* Left Side: Price & Weight */}
         <div style={{ textAlign: 'left' }}>
           <div style={{ fontSize: '0.8rem', color: '#4b5563', fontWeight: '500', marginBottom: '2px' }}>
-            {selectedVariant.qnty}
+            {selectedVariant?.qnty || '1 Unit'}
           </div>
           <div style={{ display: 'flex', alignItems: 'baseline', gap: '6px' }}>
             <span style={{ fontSize: '1.2rem', fontWeight: '800', color: '#111827', lineHeight: 1 }}>₹{displayPrice}</span>
-            {isDiscounted && <span style={{ fontSize: '0.8rem', color: '#9ca3af', textDecoration: 'line-through' }}>MRP ₹{selectedVariant.mrp}</span>}
+            {isDiscounted && <span style={{ fontSize: '0.8rem', color: '#9ca3af', textDecoration: 'line-through' }}>MRP ₹{originalMRP}</span>}
             {isDiscounted && <span style={{ backgroundColor: '#eff6ff', color: '#2563eb', fontSize: '0.6rem', fontWeight: '800', padding: '2px 5px', borderRadius: '4px' }}>{discountPercent}% OFF</span>}
           </div>
           <div style={{ fontSize: '0.65rem', color: '#9ca3af', marginTop: '2px' }}>Inclusive of all taxes</div>
@@ -313,14 +335,14 @@ export default function ProductPage({
             >−</button>
             <span style={{ minWidth: '24px', textAlign: 'center', fontWeight: '800', fontSize: '0.95rem', color: '#fff' }}>{cartCount}</span>
             <button
-              // Note: Bug fixed here - passing the raw variant instead of overwriting mrp
-              onClick={() => onAddToCart(selectedVariant)}
+              // Note: Important bug fix carried over - pass selectedVariant as is
+              onClick={() => onAddToCart && onAddToCart(selectedVariant)}
               style={{ flex: 1, height: '100%', border: 'none', backgroundColor: 'transparent', color: '#fff', fontSize: '1.25rem', fontWeight: '500', cursor: 'pointer', display: 'flex', justifyContent: 'center', alignItems: 'center', paddingBottom: '2px' }}
             >+</button>
           </div>
         ) : (
           <button
-            onClick={() => onAddToCart(selectedVariant)}
+            onClick={() => onAddToCart && onAddToCart(selectedVariant)}
             style={{ height: '40px', minWidth: '100px', backgroundColor: '#0c831f', color: '#fff', border: '1px solid #0c831f', borderRadius: '8px', fontWeight: '800', fontSize: '0.9rem', cursor: 'pointer' }}
           >
             Add to cart
@@ -330,4 +352,4 @@ export default function ProductPage({
 
     </div>
   );
-                                                                                                     }
+                  }
