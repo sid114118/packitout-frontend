@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import Header from './Header.jsx';
 import Categories from './Categories.jsx';
-// Removed the Footer import!
 
 import AdminDashboard from './AdminDashboard.jsx';
 import AdminLogin from './AdminLogin.jsx';
@@ -20,12 +19,15 @@ export default function App() {
   const [selectedCategory, setSelectedCategory] = useState(null); 
   const [searchQuery, setSearchQuery] = useState("");
   
+  // 🌟 1. NEW: Smart Scroll States 🌟
+  const [isHeaderVisible, setIsHeaderVisible] = useState(true);
+  const [lastScrollY, setLastScrollY] = useState(0);
+  
   const [loggedInUser, setLoggedInUser] = useState(() => {
     const saved = localStorage.getItem("packitout_user");
     return saved ? JSON.parse(saved) : null;
   });
 
-  // 🛒 SMART CART
   const [cart, setCart] = useState(() => {
     const savedCart = localStorage.getItem("packitout_cart");
     return savedCart ? JSON.parse(savedCart) : [];
@@ -34,6 +36,26 @@ export default function App() {
   useEffect(() => {
     localStorage.setItem("packitout_cart", JSON.stringify(cart));
   }, [cart]);
+
+  // 🌟 2. NEW: Scroll Tracking Logic 🌟
+  useEffect(() => {
+    const handleScroll = () => {
+      const currentScrollY = window.scrollY;
+      
+      if (currentScrollY > lastScrollY && currentScrollY > 60) {
+        // User is scrolling DOWN past the top: Hide Header
+        setIsHeaderVisible(false);
+      } else if (currentScrollY < lastScrollY) {
+        // User is scrolling UP: Show Header
+        setIsHeaderVisible(true);
+      }
+      
+      setLastScrollY(currentScrollY);
+    };
+
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, [lastScrollY]);
 
   const handleAddToCart = (product) => {
     if (!loggedInUser) {
@@ -119,24 +141,32 @@ export default function App() {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', fontFamily: 'sans-serif', backgroundColor: '#f3f4f6', paddingBottom: cart.length > 0 ? '80px' : '0' }}>
       
-      <Header user={loggedInUser} />
+      {/* 🌟 3. NEW: SMART SCROLLING TOP BAR 🌟 */}
+      <div style={{
+        position: 'sticky',
+        top: isHeaderVisible ? '0px' : '-65px', // Slides up to hide header, keeping search bar at top
+        zIndex: 1001,
+        transition: 'top 0.3s ease-in-out',
+        backgroundColor: '#f3f4f6'
+      }}>
+        
+        <Header user={loggedInUser} />
 
-      <div style={{ position: 'sticky', top: 0, zIndex: 100, backgroundColor: '#f3f4f6', padding: '10px 15px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', backgroundColor: '#ffffff', borderRadius: '12px', padding: '10px 15px', boxShadow: '0 4px 10px rgba(0,0,0,0.05)', border: '1px solid #e2e8f0' }}>
-          <input 
-            type="text" 
-            placeholder='Search "Maggi", "Milk", "Chips"...'
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            style={{ border: 'none', outline: 'none', width: '100%', fontSize: '1rem', color: '#0f172a', backgroundColor: 'transparent' }}
-          />
-          {searchQuery && (
-            <button onClick={() => setSearchQuery("")} style={{ background: 'none', border: 'none', fontSize: '1.2rem', color: '#94a3b8', cursor: 'pointer' }}>✖</button>
-          )}
+        <div style={{ padding: '10px 15px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', backgroundColor: '#ffffff', borderRadius: '12px', padding: '10px 15px', boxShadow: '0 4px 10px rgba(0,0,0,0.05)', border: '1px solid #e2e8f0' }}>
+            <input 
+              type="text" 
+              placeholder='Search "Maggi", "Milk", "Chips"...'
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              style={{ border: 'none', outline: 'none', width: '100%', fontSize: '1rem', color: '#0f172a', backgroundColor: 'transparent' }}
+            />
+            {searchQuery && (
+              <button onClick={() => setSearchQuery("")} style={{ background: 'none', border: 'none', fontSize: '1.2rem', color: '#94a3b8', cursor: 'pointer' }}>✖</button>
+            )}
+          </div>
         </div>
       </div>
-      
-      {/* ✂️ Removed the redundant "Shopping From" Banner! */}
 
       {!selectedCategory && !searchQuery && <Categories onCategorySelect={setSelectedCategory} />}
       
@@ -151,12 +181,8 @@ export default function App() {
           onClearCategory={() => setSelectedCategory(null)} 
           searchQuery={searchQuery}
         />
-        {/* ✂️ Removed the floating User Profile button! */}
       </main>
       
-      {/* ✂️ Removed the Footer! */}
-
-      {/* 🌟 PREMIUM BLINKIT-STYLE GLOBAL CART 🌟 */}
       {cart.length > 0 && (
         <div
           onClick={() => window.location.hash = "#cart"}
