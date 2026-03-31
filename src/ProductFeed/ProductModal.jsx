@@ -1,38 +1,69 @@
+import React, { useState, useEffect, useMemo } from 'react';
+import CrossSellSlider from './CrossSell.jsx';
 
+// ── Subcomponents Moved Outside (Fixes accordion breaking on click) ──
+const DietaryIcon = ({ type }) => {
+  const isVeg = type !== 'Non-Veg';
+  return (
+    <div style={{ width: '16px', height: '16px', border: `1.5px solid ${isVeg ? '#166534' : '#7f1d1d'}`, display: 'flex', justifyContent: 'center', alignItems: 'center', borderRadius: '4px', backgroundColor: '#fff' }}>
+      <div style={{ width: '8px', height: '8px', backgroundColor: isVeg ? '#166534' : '#7f1d1d', borderRadius: '50%' }} />
+    </div>
+  );
+};
 
-  // ── Subcomponents ──────────────────────────────────────────────
-
-  const DietaryIcon = ({ type }) => {
-    const isVeg = type !== 'Non-Veg';
-    return (
-      <div style={{ width: '16px', height: '16px', border: `1.5px solid ${isVeg ? '#166534' : '#7f1d1d'}`, display: 'flex', justifyContent: 'center', alignItems: 'center', borderRadius: '4px', backgroundColor: '#fff' }}>
-        <div style={{ width: '8px', height: '8px', backgroundColor: isVeg ? '#166534' : '#7f1d1d', borderRadius: '50%' }} />
-      </div>
-    );
-  };
-
-  const Accordion = ({ title, children }) => {
-    const [open, setOpen] = useState(false);
-    return (
-      <div style={{ borderBottom: '1px solid #f1f5f9' }}>
-        <div onClick={() => setOpen(!open)} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px 0', cursor: 'pointer' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', fontWeight: '800', fontSize: '0.95rem', color: '#111827' }}>
-            {title}
-          </div>
-          <span style={{ color: '#94a3b8', fontSize: '1.2rem', transform: open ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }}>⌄</span>
+const Accordion = ({ title, children }) => {
+  const [open, setOpen] = useState(false);
+  return (
+    <div style={{ borderBottom: '1px solid #f1f5f9' }}>
+      <div onClick={() => setOpen(!open)} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px 0', cursor: 'pointer' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', fontWeight: '800', fontSize: '0.95rem', color: '#111827' }}>
+          {title}
         </div>
-        {open && (
-          <div style={{ paddingBottom: '16px', animation: 'fadeIn 0.15s ease', textAlign: 'left' }}>
-            {children}
-          </div>
-        )}
+        <span style={{ color: '#94a3b8', fontSize: '1.2rem', transform: open ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }}>⌄</span>
       </div>
-    );
-  };
+      {open && (
+        <div style={{ paddingBottom: '16px', animation: 'fadeIn 0.15s ease', textAlign: 'left' }}>
+          {children}
+        </div>
+      )}
+    </div>
+  );
+};
 
-  const relatedItems = selectedVariant.relatedProducts
-    ? allItems.filter(item => selectedVariant.relatedProducts.includes(item._id) && item.inStock)
-    : [];
+export default function ProductModal({ product, isOpen, onClose, onAddToCart, onRemoveFromCart, onViewCart, allItems = [], cart = [] }) {
+  const [currentProduct, setCurrentProduct] = useState(null);
+  const [selectedVariant, setSelectedVariant] = useState(null);
+  const [showFullDesc, setShowFullDesc] = useState(false);
+
+  // 🟢 Change this if your Nav Bar is taller or shorter!
+  const BOTTOM_NAV_HEIGHT = '70px'; 
+
+  useEffect(() => {
+    if (product) {
+      setCurrentProduct(product);
+      setSelectedVariant(product);
+      setShowFullDesc(false);
+    }
+  }, [product]);
+
+  if (!isOpen || !currentProduct || !selectedVariant) return null;
+
+  const displayPrice = selectedVariant.sellingPrice || selectedVariant.mrp;
+  const isDiscounted = displayPrice < selectedVariant.mrp;
+  const discountPercent = isDiscounted
+    ? Math.round(((selectedVariant.mrp - displayPrice) / selectedVariant.mrp) * 100)
+    : 0;
+
+  const safeCart = Array.isArray(cart) ? cart : [];
+  const cartItem = safeCart.find(item => item._id === selectedVariant._id);
+  const cartCount = cartItem ? cartItem.qty : 0;
+  const cartTotalItems = safeCart.reduce((total, item) => total + (item.qty || 1), 0);
+  const cartTotalPrice = safeCart.reduce((total, item) => total + ((item.sellingPrice || item.mrp) * (item.qty || 1)), 0);
+
+  const relatedItems = useMemo(() => {
+    if (!selectedVariant.relatedProducts || !allItems.length) return [];
+    return allItems.filter(item => selectedVariant.relatedProducts.includes(item._id) && item.inStock);
+  }, [selectedVariant.relatedProducts, allItems]);
 
   const handleRelatedProductClick = (item) => {
     setCurrentProduct(item);
@@ -42,13 +73,14 @@
     if (el) el.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  // ── Render ─────────────────────────────────────────────────────
-
   return (
     <div
       style={{ 
         position: 'fixed', 
-        inset: 0, 
+        top: 0, 
+        left: 0, 
+        right: 0, 
+        bottom: BOTTOM_NAV_HEIGHT, // 👈 Leaves space at the bottom for your Nav Bar!
         backgroundColor: '#fff', 
         zIndex: 10000, 
         display: 'flex', 
@@ -85,7 +117,6 @@
         className="pm-hide-scroll"
         style={{ flex: 1, overflowY: 'auto', paddingBottom: cartTotalItems > 0 ? '160px' : '90px', backgroundColor: '#fff' }}
       >
-        {/* Product Image */}
         <div style={{ width: '100%', height: '320px', display: 'flex', justifyContent: 'center', alignItems: 'center', position: 'relative', backgroundColor: '#f8fafc' }}>
           {selectedVariant.image
             ? <img src={selectedVariant.image} alt={selectedVariant.name} style={{ maxHeight: '90%', maxWidth: '90%', objectFit: 'contain', mixBlendMode: 'multiply' }} />
@@ -93,17 +124,13 @@
           }
         </div>
 
-        {/* Product Info */}
         <div style={{ padding: '20px', textAlign: 'left' }}>
-
-          {/* 🌟 BLINKIT STYLE RATING ROW 🌟 */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.75rem', fontWeight: '800', marginBottom: '8px' }}>
              <div style={{ display: 'flex', alignItems: 'center', color: '#f59e0b', fontSize: '0.85rem' }}>
                 ★★★★★ <span style={{ color: '#9ca3af', fontWeight: '500', marginLeft: '4px', fontSize: '0.75rem' }}>(4.03 lac)</span>
              </div>
           </div>
 
-          {/* Title & Dietary Icon */}
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '4px' }}>
             <h1 style={{ margin: '0', fontSize: '1.35rem', fontWeight: '800', color: '#111827', lineHeight: '1.3' }}>
               {selectedVariant.name}
@@ -113,14 +140,12 @@
             </div>
           </div>
 
-          {/* Stock / Brand info */}
           <div style={{ color: '#ea580c', fontWeight: '700', fontSize: '0.8rem', marginTop: '8px', marginBottom: '20px' }}>
             {selectedVariant.brand ? `Explore ${selectedVariant.brand} ›` : 'Limited Stock!'}
           </div>
 
           <div style={{ borderTop: '1px solid #f1f5f9', marginBottom: '20px' }} />
 
-          {/* ── Variant Selector ── */}
           {currentProduct.variants && currentProduct.variants.length > 1 && (
             <div style={{ marginBottom: '24px' }}>
               <p style={{ fontSize: '0.85rem', fontWeight: '800', color: '#111827', marginBottom: '12px' }}>Select Unit</p>
@@ -130,7 +155,6 @@
                   const vDisc = v.sellingPrice && v.sellingPrice < v.mrp
                     ? Math.round(((v.mrp - v.sellingPrice) / v.mrp) * 100) : 0;
                   
-                  // Also safely track variant counts!
                   const vCartItem = safeCart.find(c => c._id === v._id);
                   const variantCartCount = vCartItem ? vCartItem.qty : 0;
 
@@ -173,7 +197,6 @@
             </div>
           )}
 
-          {/* ── Description ── */}
           {selectedVariant.description && (
             <div style={{ marginBottom: '8px' }}>
               <h3 style={{ fontSize: '0.95rem', fontWeight: '800', color: '#111827', margin: '0 0 10px' }}>Product Details</h3>
@@ -199,7 +222,6 @@
             </div>
           )}
 
-          {/* ── Accordions ── */}
           {(selectedVariant.energy || selectedVariant.protein || selectedVariant.carbs || selectedVariant.fat) && (
             <Accordion title="Nutritional Value">
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
@@ -221,7 +243,6 @@
             </Accordion>
           )}
 
-          {/* ── Cross-sell ── */}
           <CrossSellSlider
             title="Frequently Bought Together"
             items={relatedItems}
@@ -231,11 +252,11 @@
         </div>
       </div>
 
-      {/* 🌟 BLINKIT STYLE FLOATING VIEW CART (Fixed Position) 🌟 */}
+      {/* 🌟 BLINKIT STYLE FLOATING VIEW CART 🌟 */}
       {cartTotalItems > 0 && (
         <div
           onClick={() => { onClose(); if (onViewCart) onViewCart(); }}
-          style={{ position: 'fixed', bottom: '85px', left: '12px', right: '12px', zIndex: 101, backgroundColor: '#0c831f', color: '#fff', padding: '10px 14px', borderRadius: '10px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer', boxShadow: '0 4px 15px rgba(0,0,0,0.1)', animation: 'fadeIn 0.2s ease' }}
+          style={{ position: 'fixed', bottom: `calc(${BOTTOM_NAV_HEIGHT} + 85px)`, left: '12px', right: '12px', zIndex: 101, backgroundColor: '#0c831f', color: '#fff', padding: '10px 14px', borderRadius: '10px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer', boxShadow: '0 4px 15px rgba(0,0,0,0.1)', animation: 'fadeIn 0.2s ease' }}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
             <div style={{ backgroundColor: 'rgba(255,255,255,0.2)', width: '38px', height: '38px', borderRadius: '8px', display: 'flex', justifyContent: 'center', alignItems: 'center', fontSize: '1.2rem' }}>
@@ -255,9 +276,8 @@
       )}
 
       {/* 🌟 BLINKIT STYLE STICKY BOTTOM BAR 🌟 */}
-      <div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, backgroundColor: '#fff', borderTop: '1px solid #f1f5f9', padding: '10px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', zIndex: 102, minHeight: '75px', paddingBottom: 'max(10px, env(safe-area-inset-bottom))' }}>
+      <div style={{ position: 'fixed', bottom: BOTTOM_NAV_HEIGHT, left: 0, right: 0, backgroundColor: '#fff', borderTop: '1px solid #f1f5f9', padding: '10px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', zIndex: 102, minHeight: '75px', paddingBottom: 'max(10px, env(safe-area-inset-bottom))' }}>
 
-        {/* Left Side: Price & Weight */}
         <div style={{ textAlign: 'left' }}>
           <div style={{ fontSize: '0.8rem', color: '#4b5563', fontWeight: '500', marginBottom: '2px' }}>
             {selectedVariant.qnty}
@@ -270,7 +290,7 @@
           <div style={{ fontSize: '0.65rem', color: '#9ca3af', marginTop: '2px' }}>Inclusive of all taxes</div>
         </div>
 
-        {/* Right Side: Solid Green Add/Stepper */}
+        {/* ── Fixed "Add to Cart" Price Bug ── */}
         {cartCount > 0 ? (
           <div style={{ display: 'flex', alignItems: 'center', backgroundColor: '#0c831f', borderRadius: '8px', overflow: 'hidden', height: '40px', minWidth: '100px' }}>
             <button
@@ -279,13 +299,13 @@
             >−</button>
             <span style={{ minWidth: '24px', textAlign: 'center', fontWeight: '800', fontSize: '0.95rem', color: '#fff' }}>{cartCount}</span>
             <button
-              onClick={() => onAddToCart({ ...selectedVariant, mrp: displayPrice })}
+              onClick={() => onAddToCart(selectedVariant)}
               style={{ flex: 1, height: '100%', border: 'none', backgroundColor: 'transparent', color: '#fff', fontSize: '1.25rem', fontWeight: '500', cursor: 'pointer', display: 'flex', justifyContent: 'center', alignItems: 'center', paddingBottom: '2px' }}
             >+</button>
           </div>
         ) : (
           <button
-            onClick={() => onAddToCart({ ...selectedVariant, mrp: displayPrice })}
+            onClick={() => onAddToCart(selectedVariant)}
             style={{ height: '40px', minWidth: '100px', backgroundColor: '#0c831f', color: '#fff', border: '1px solid #0c831f', borderRadius: '8px', fontWeight: '800', fontSize: '0.9rem', cursor: 'pointer' }}
           >
             Add to cart
@@ -295,4 +315,4 @@
 
     </div>
   );
-                   }
+}
