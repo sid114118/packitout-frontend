@@ -11,9 +11,16 @@ export default function Cart({ cart, setCart, user, onBack, onCheckoutSuccess })
   // 🧮 BILL CALCULATIONS
   const itemTotal = cart.reduce((sum, item) => sum + ((item.sellingPrice || item.mrp) * item.qty), 0);
   
-  // 🛠️ THE FIX: JavaScript Floating Point Correction
-  const maxCoinDiscount = (user?.coins || 0) / 10; 
-  let rawDiscount = useCoins ? Math.min(maxCoinDiscount, itemTotal) : 0; 
+  // 🛠️ THE CAPPED COIN LOGIC
+  const userCoinValueInRupees = (user?.coins || 0) / 10; 
+  
+  // 👇 Set your cap here! Currently capped at 10% (0.10) of the order total.
+  const maxDiscountAllowed = itemTotal * 0.10; 
+  
+  // The actual discount is either their coin balance OR the 10% cap (whichever is smaller)
+  const maxUsableDiscount = Math.min(userCoinValueInRupees, maxDiscountAllowed);
+
+  let rawDiscount = useCoins ? maxUsableDiscount : 0; 
   
   // Force money to have exactly 2 decimals (e.g., 5.9999999 -> 6.00)
   const discount = Number(rawDiscount.toFixed(2)); 
@@ -47,7 +54,7 @@ export default function Cart({ cart, setCart, user, onBack, onCheckoutSuccess })
           if (data.length > 0) {
             const primaryId = user.primaryShop?._id || user.primaryShop;
             const myPrimary = data.find(s => s._id === primaryId);
-            setTargetShop(myPrimary || data[0]); // Fallback to first shop if primary is missing
+            setTargetShop(myPrimary || data[0]); 
           }
           setLoadingShops(false);
         })
@@ -83,7 +90,7 @@ export default function Cart({ cart, setCart, user, onBack, onCheckoutSuccess })
 
       if (response.ok) {
         if (useCoins && coinsUsed > 0) {
-          const newCoinBalance = Math.round(user.coins - coinsUsed); // Force round just to be double safe
+          const newCoinBalance = Math.round(user.coins - coinsUsed); 
           await fetch(`https://darkslategrey-snail-415133.hostingersite.com/users/${user._id}`, {
             method: "PATCH",
             headers: { "Content-Type": "application/json" },
@@ -131,7 +138,7 @@ export default function Cart({ cart, setCart, user, onBack, onCheckoutSuccess })
 
       <div style={{ padding: '16px', maxWidth: '800px', margin: '0 auto' }}>
         
-        {/* 🏪 LOCKED SHOP SELECTION (Blinkit Style) */}
+        {/* 🏪 LOCKED SHOP SELECTION */}
         <div style={{ backgroundColor: 'white', padding: '16px', borderRadius: '12px', marginBottom: '16px', boxShadow: '0 2px 8px rgba(0,0,0,0.02)' }}>
           <div style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: '800', marginBottom: '12px', letterSpacing: '0.5px' }}>
             📍 PICK-UP POINT ({user?.pincode})
@@ -159,26 +166,23 @@ export default function Cart({ cart, setCart, user, onBack, onCheckoutSuccess })
           )}
         </div>
 
-        {/* 🛒 ITEM SUMMARY WITH PREMIUM STEPPERS */}
+        {/* 🛒 ITEM SUMMARY */}
         <div style={{ backgroundColor: 'white', borderRadius: '12px', padding: '16px', marginBottom: '16px', boxShadow: '0 2px 8px rgba(0,0,0,0.02)' }}>
           <div style={{ fontWeight: '800', fontSize: '1.05rem', marginBottom: '16px', color: '#111827' }}>Review Items</div>
           
           {cart.map((item, index) => (
             <div key={item._id} style={{ display: 'flex', gap: '15px', alignItems: 'center', paddingBottom: '16px', marginBottom: '16px', borderBottom: index === cart.length - 1 ? 'none' : '1px solid #f1f5f9' }}>
               
-              {/* Image */}
               <div style={{ width: '60px', height: '60px', backgroundColor: '#f8fafc', borderRadius: '8px', display: 'flex', justifyContent: 'center', alignItems: 'center', border: '1px solid #f1f5f9' }}>
                 {item.image ? <img src={item.image} style={{ maxWidth: '48px', maxHeight: '48px', objectFit: 'contain' }} alt={item.name} /> : <span style={{ fontSize: '30px' }}>{item.emoji}</span>}
               </div>
 
-              {/* Details */}
               <div style={{ flex: 1 }}>
                 <div style={{ fontWeight: '700', color: '#111827', fontSize: '0.9rem', lineHeight: '1.25', marginBottom: '4px' }}>{item.name}</div>
                 <div style={{ fontSize: '0.75rem', color: '#6b7280', marginBottom: '6px', fontWeight: '500' }}>{item.qnty}</div>
                 <div style={{ fontWeight: '800', color: '#111827', fontSize: '0.95rem' }}>₹{item.sellingPrice || item.mrp}</div>
               </div>
 
-              {/* 🌟 Premium Stepper 🌟 */}
               <div style={{ display: 'flex', alignItems: 'center', backgroundColor: '#0c831f', borderRadius: '8px', height: '32px', width: '80px', boxShadow: '0 2px 6px rgba(12, 131, 31, 0.2)' }}>
                 <button onClick={() => updateQty(item._id, -1)} style={{ flex: 1, height: '100%', border: 'none', background: 'transparent', color: '#fff', fontSize: '1.2rem', fontWeight: 'bold', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>−</button>
                 <span style={{ color: '#fff', fontSize: '0.95rem', fontWeight: '800', minWidth: '20px', textAlign: 'center' }}>{item.qty}</span>
@@ -189,14 +193,13 @@ export default function Cart({ cart, setCart, user, onBack, onCheckoutSuccess })
           ))}
         </div>
 
-        {/* 🪙 COIN DISCOUNT TOGGLE */}
+        {/* 🪙 COIN DISCOUNT TOGGLE WITH CAP UI */}
         {user?.coins > 0 && (
           <div style={{ backgroundColor: 'white', padding: '16px', borderRadius: '12px', marginBottom: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', border: '1px solid #fef08a', boxShadow: '0 2px 8px rgba(0,0,0,0.02)' }}>
             <div>
               <strong style={{ color: '#a16207', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.95rem', fontWeight: '800' }}>🪙 PackIt Coins</strong>
               <div style={{ fontSize: '0.75rem', color: '#ca8a04', marginTop: '4px', fontWeight: '600' }}>
-                {/* 👇 FIX APPLIED HERE: Math.round() prevents ugly decimals! */}
-                Balance: {Math.round(user.coins)} (Worth ₹{maxCoinDiscount.toFixed(2)})
+                Balance: {Math.round(user.coins)} • Max usable: ₹{maxUsableDiscount.toFixed(2)}
               </div>
             </div>
             <label style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer' }}>
@@ -241,7 +244,7 @@ export default function Cart({ cart, setCart, user, onBack, onCheckoutSuccess })
         </div>
       )}
 
-      {/* 🌟 BLINKIT STYLE STICKY CHECKOUT BUTTON 🌟 */}
+      {/* 🌟 STICKY CHECKOUT BUTTON */}
       <div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, backgroundColor: 'white', padding: '12px 16px', borderTop: '1px solid #e5e7eb', boxShadow: '0 -4px 10px rgba(0,0,0,0.03)', zIndex: 90, paddingBottom: 'max(12px, env(safe-area-inset-bottom))' }}>
         <button 
           onClick={handleCheckout} 
@@ -255,4 +258,5 @@ export default function Cart({ cart, setCart, user, onBack, onCheckoutSuccess })
 
     </div>
   );
-              }
+                         }
+  
