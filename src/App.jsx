@@ -10,8 +10,9 @@ import UserDashboard from './UserDashboard.jsx';
 import UserAuth from './UserAuth.jsx';
 import ProductFeed from './ProductFeed.jsx';
 import Cart from './Cart.jsx';
-// 🌟 NEW: Import the Success Screen
 import OrderSuccess from './OrderSuccess.jsx';
+// 🌟 NEW: Import the Bottom Navigation Bar
+import BottomNav from './BottomNav.jsx';
 
 export default function App() {
   const [currentView, setCurrentView] = useState("customer");
@@ -94,7 +95,6 @@ export default function App() {
       else if (window.location.hash === "#shop") setCurrentView("shop");
       else if (window.location.hash === "#account") setCurrentView("account");
       else if (window.location.hash === "#cart") setCurrentView("cart");
-      // 🌟 NEW: Listen for the success URL
       else if (window.location.hash === "#success") setCurrentView("success");
       else {
         setCurrentView("customer");
@@ -136,7 +136,6 @@ export default function App() {
     return <UserDashboard user={loggedInUser} onExit={() => window.location.hash = ""} onLogout={handleUserLogout} />;
   }
 
-  // 🌟 NEW: Render the Success Screen
   if (currentView === "success") {
     return <OrderSuccess />;
   }
@@ -148,7 +147,6 @@ export default function App() {
         setCart={setCart} 
         user={loggedInUser} 
         onBack={() => window.location.hash = ""} 
-        // 🌟 UPDATED: Send them to #success when checkout completes!
         onCheckoutSuccess={() => { setCart([]); window.location.hash = "#success"; }} 
       />
     );
@@ -158,7 +156,8 @@ export default function App() {
   const cartTotalPrice = cart.reduce((sum, item) => sum + ((item.sellingPrice || item.mrp) * item.qty), 0);
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', fontFamily: 'sans-serif', backgroundColor: '#f3f4f6', paddingBottom: cart.length > 0 ? '80px' : '0' }}>
+    // 🌟 UPDATED: paddingBottom dynamically accounts for both the Nav Bar (70px) AND the Cart (140px)
+    <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', fontFamily: 'sans-serif', backgroundColor: '#f3f4f6', paddingBottom: cart.length > 0 ? '140px' : '70px' }}>
       
       {/* 🌟 SMART SCROLLING TOP BAR */}
       <div style={{
@@ -205,7 +204,8 @@ export default function App() {
       {cart.length > 0 && (
         <div
           onClick={() => window.location.hash = "#cart"}
-          style={{ position: 'fixed', bottom: '20px', left: '12px', right: '12px', zIndex: 1000, backgroundColor: '#0c831f', color: '#fff', padding: '10px 14px', borderRadius: '10px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer', boxShadow: '0 4px 20px rgba(12, 131, 31, 0.3)', animation: 'fadeIn 0.2s ease' }}
+          // 👇 UPDATED: Changed bottom to 80px so it sits beautifully above the Nav Bar!
+          style={{ position: 'fixed', bottom: '80px', left: '12px', right: '12px', zIndex: 1000, backgroundColor: '#0c831f', color: '#fff', padding: '10px 14px', borderRadius: '10px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer', boxShadow: '0 4px 20px rgba(12, 131, 31, 0.3)', animation: 'fadeIn 0.2s ease' }}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
             <div style={{ backgroundColor: 'rgba(255,255,255,0.2)', width: '38px', height: '38px', borderRadius: '8px', display: 'flex', justifyContent: 'center', alignItems: 'center', fontSize: '1.2rem' }}>
@@ -223,6 +223,11 @@ export default function App() {
           </div>
         </div>
       )}
+
+      {/* 🌟 NEW: RENDER BOTTOM NAV BAR HERE 🌟 */}
+      <BottomNav currentView={currentView} />
+      
     </div>
   );
-    }
+          }
+        
