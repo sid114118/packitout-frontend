@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import Header from './Header.jsx';
 import Categories from './Categories.jsx';
-import Footer from './Footer.jsx';
+// Removed the Footer import!
 
 import AdminDashboard from './AdminDashboard.jsx';
 import AdminLogin from './AdminLogin.jsx';
@@ -25,18 +25,16 @@ export default function App() {
     return saved ? JSON.parse(saved) : null;
   });
 
-  // 🛒 1. SMART CART: Loads from memory so it survives page refreshes!
+  // 🛒 SMART CART
   const [cart, setCart] = useState(() => {
     const savedCart = localStorage.getItem("packitout_cart");
     return savedCart ? JSON.parse(savedCart) : [];
   });
 
-  // 💾 2. AUTO-SAVE: Saves the cart to memory EVERY time it changes!
   useEffect(() => {
     localStorage.setItem("packitout_cart", JSON.stringify(cart));
   }, [cart]);
 
-  // 🟢 ADD LOGIC
   const handleAddToCart = (product) => {
     if (!loggedInUser) {
       alert("Please log in or sign up to add items to your cart! 🛒");
@@ -53,7 +51,6 @@ export default function App() {
     });
   };
 
-  // 🔴 REMOVE LOGIC
   const handleRemoveFromCart = (product) => {
     setCart((prevCart) => {
       const existingItem = prevCart.find(item => item._id === product._id);
@@ -93,7 +90,7 @@ export default function App() {
   const handleUserLogout = () => {
     localStorage.removeItem("packitout_user");
     setLoggedInUser(null);
-    setCart([]); // This will auto-clear the LocalStorage too because of the useEffect!
+    setCart([]); 
     window.location.hash = "";
   };
 
@@ -120,14 +117,12 @@ export default function App() {
   const cartTotalPrice = cart.reduce((sum, item) => sum + (item.mrp * item.qty), 0);
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', fontFamily: 'sans-serif', backgroundColor: '#f4f7f6', paddingBottom: cart.length > 0 ? '80px' : '0' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', fontFamily: 'sans-serif', backgroundColor: '#f3f4f6', paddingBottom: cart.length > 0 ? '80px' : '0' }}>
       
       <Header user={loggedInUser} />
 
-      {/* 🔍 THE GLOBAL SEARCH BAR */}
-      <div style={{ position: 'sticky', top: 0, zIndex: 100, backgroundColor: '#f4f7f6', padding: '10px 15px' }}>
+      <div style={{ position: 'sticky', top: 0, zIndex: 100, backgroundColor: '#f3f4f6', padding: '10px 15px' }}>
         <div style={{ display: 'flex', alignItems: 'center', backgroundColor: '#ffffff', borderRadius: '12px', padding: '10px 15px', boxShadow: '0 4px 10px rgba(0,0,0,0.05)', border: '1px solid #e2e8f0' }}>
-          
           <input 
             type="text" 
             placeholder='Search "Maggi", "Milk", "Chips"...'
@@ -141,7 +136,6 @@ export default function App() {
         </div>
       </div>
       
-      {/* 👇 PREMIUM STORE BANNER 👇 */}
       {loggedInUser && loggedInUser.primaryShop && typeof loggedInUser.primaryShop === 'object' && !searchQuery && !selectedCategory && (
         <div style={{ margin: '5px 15px 15px 15px', backgroundColor: '#ffffff', padding: '12px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', boxShadow: '0 4px 10px rgba(0,0,0,0.03)', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
           <div style={{ display: 'flex', flexDirection: 'column', textAlign: 'left' }}>
@@ -153,12 +147,10 @@ export default function App() {
           </div>
         </div>
       )}
-      {/* 👆 END OF STORE BANNER 👆 */}
 
       {!selectedCategory && !searchQuery && <Categories onCategorySelect={setSelectedCategory} />}
       
       <main style={{ flex: 1, padding: '1rem 0 3rem 0', textAlign: 'center' }}>
-        
         <ProductFeed 
           user={loggedInUser} 
           cart={cart}
@@ -169,20 +161,33 @@ export default function App() {
           onClearCategory={() => setSelectedCategory(null)} 
           searchQuery={searchQuery}
         />
-        
-        <button onClick={() => window.location.hash = "#account"} style={{ marginTop: '30px', padding: '12px 24px', backgroundColor: '#2f3640', color: 'white', border: 'none', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer', boxShadow: '0 4px 6px rgba(0,0,0,0.1)' }}>
-          {loggedInUser ? `Go to My Profile (${loggedInUser.name}) 👤` : "Login / Sign Up 🛒"}
-        </button>
+        {/* ✂️ Removed the floating User Profile button! */}
       </main>
       
-      <Footer />
+      {/* ✂️ Removed the Footer! */}
 
+      {/* 🌟 PREMIUM BLINKIT-STYLE GLOBAL CART 🌟 */}
       {cart.length > 0 && (
-        <div onClick={() => window.location.hash = "#cart"} style={{ position: 'fixed', bottom: '15px', left: '15px', right: '15px', backgroundColor: '#10b981', color: 'white', padding: '15px 20px', borderRadius: '12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer', boxShadow: '0 10px 20px rgba(16, 185, 129, 0.4)', zIndex: 1000 }}>
-          <div style={{ fontWeight: 'bold' }}>{cartTotalItems} ITEM{cartTotalItems > 1 ? 'S' : ''} | ₹{cartTotalPrice}</div>
-          <div style={{ fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '8px' }}>View Cart 🛒 <span style={{ fontSize: '1.2rem' }}>➡️</span></div>
+        <div
+          onClick={() => window.location.hash = "#cart"}
+          style={{ position: 'fixed', bottom: '20px', left: '12px', right: '12px', zIndex: 1000, backgroundColor: '#0c831f', color: '#fff', padding: '10px 14px', borderRadius: '10px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer', boxShadow: '0 4px 20px rgba(12, 131, 31, 0.3)', animation: 'fadeIn 0.2s ease' }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <div style={{ backgroundColor: 'rgba(255,255,255,0.2)', width: '38px', height: '38px', borderRadius: '8px', display: 'flex', justifyContent: 'center', alignItems: 'center', fontSize: '1.2rem' }}>
+              🛒
+            </div>
+            <div style={{ textAlign: 'left', lineHeight: '1.3' }}>
+              <div style={{ fontWeight: '600', fontSize: '0.75rem', opacity: 0.95 }}>
+                {cartTotalItems} item{cartTotalItems > 1 ? 's' : ''}
+              </div>
+              <div style={{ fontWeight: '800', fontSize: '1rem' }}>₹ {cartTotalPrice}</div>
+            </div>
+          </div>
+          <div style={{ fontWeight: '800', fontSize: '0.95rem', display: 'flex', alignItems: 'center', gap: '4px' }}>
+            View Cart <span style={{ fontSize: '1.2rem' }}>▶</span>
+          </div>
         </div>
       )}
     </div>
   );
-}
+            }
