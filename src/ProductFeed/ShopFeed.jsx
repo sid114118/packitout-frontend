@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import ProductModal from './ProductModal.jsx';
 import { VariantBottomSheet, ModernProductCard, ProductRow } from './FeedComponents.jsx';
+import ShopCarousel from './ShopCarousel.jsx'; // 👈 IMPORTED HERE
 
 export default function ShopFeed({ user, onAddToCart, onRemoveFromCart, onViewCart, cart = [], selectedCategory, onClearCategory, searchQuery }) {
   const [items, setItems] = useState([]);
@@ -101,7 +102,6 @@ export default function ShopFeed({ user, onAddToCart, onRemoveFromCart, onViewCa
 
   if (loading) return <div style={{ padding: '40px', textAlign: 'center', color: '#6b7280' }}>Loading fresh products...</div>;
 
-  // 🌟 ENHANCED SEARCH LOGIC: Scans Name, Brand, AND searchTags Array
   const isSearching = searchQuery && searchQuery.trim().length > 0;
   let displayItems = items;
   if (isSearching) {
@@ -109,10 +109,7 @@ export default function ShopFeed({ user, onAddToCart, onRemoveFromCart, onViewCa
     displayItems = items.filter(i => {
       const nameMatch = (i.name || "").toLowerCase().includes(q);
       const brandMatch = (i.brand || "").toLowerCase().includes(q);
-      
-      // Check the searchTags array
       const tagMatch = i.searchTags && Array.isArray(i.searchTags) && i.searchTags.some(tag => tag.toLowerCase().includes(q));
-      
       return nameMatch || brandMatch || tagMatch;
     });
   } 
@@ -162,21 +159,12 @@ export default function ShopFeed({ user, onAddToCart, onRemoveFromCart, onViewCa
           <ProductRow title="Buy It Again" subtitle="Your recent favorites" items={buyItAgain} onViewAll={setViewAll} shopClosed={shopClosed} onOpenDetails={setSelectedProductDetails} onQuickAdd={handleQuickAdd} cart={cart} onRemoveFromCart={onRemoveFromCart} />
           <ProductRow title="Freshly Restocked" subtitle="Back on the shelves" items={newArrivals} onViewAll={setViewAll} shopClosed={shopClosed} onOpenDetails={setSelectedProductDetails} onQuickAdd={handleQuickAdd} cart={cart} onRemoveFromCart={onRemoveFromCart} />
 
-          {nearbyShops.length > 0 && (
-            <div style={{ padding: '20px 15px', backgroundColor: '#fff', marginTop: '10px' }}>
-              <h3 style={{ fontSize: '1.1rem', color: '#111827', marginBottom: '15px' }}>🏪 Explore Nearby Stores</h3>
-              <div className="hide-scroll" style={{ display: 'flex', overflowX: 'auto', gap: '12px', paddingBottom: '10px' }}>
-                {nearbyShops.map(shop => (
-                  <div key={shop._id} style={{ minWidth: '160px', padding: '15px', border: '1px solid #e5e7eb', borderRadius: '12px', textAlign: 'center', backgroundColor: '#f9fafb' }}>
-                    <div style={{ fontSize: '30px', marginBottom: '8px' }}>🏪</div>
-                    <div style={{ fontWeight: 'bold', color: '#111827', fontSize: '0.9rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{shop.name}</div>
-                    <div style={{ fontSize: '0.75rem', color: shop.isOpen ? '#10b981' : '#ef4444', fontWeight: 'bold', margin: '5px 0 12px 0' }}>{shop.isOpen ? '🟢 OPEN' : '🔴 CLOSED'}</div>
-                    <button onClick={() => handleSwitchShop(shop)} style={{ width: '100%', padding: '8px', backgroundColor: '#111827', color: '#fff', border: 'none', borderRadius: '6px', fontWeight: 'bold', cursor: 'pointer' }}>Visit Store</button>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
+          {/* 👇 NEW CLEAN CAROUSEL COMPONENT 👇 */}
+          <ShopCarousel shops={nearbyShops} onSwitchShop={handleSwitchShop} />
+          
+          <div style={{ textAlign: 'center', padding: '10px 0 40px 0', color: '#94a3b8', fontSize: '0.8rem', fontWeight: '600' }}>
+            You've reached the end! 🚀
+          </div>
         </>
       )}
 
@@ -194,4 +182,4 @@ export default function ShopFeed({ user, onAddToCart, onRemoveFromCart, onViewCa
       />
     </div>
   );
-                           }
+          }
