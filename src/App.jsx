@@ -25,7 +25,16 @@ export default function App() {
     return saved ? JSON.parse(saved) : null;
   });
 
-  const [cart, setCart] = useState([]);
+  // 🛒 1. SMART CART: Loads from memory so it survives page refreshes!
+  const [cart, setCart] = useState(() => {
+    const savedCart = localStorage.getItem("packitout_cart");
+    return savedCart ? JSON.parse(savedCart) : [];
+  });
+
+  // 💾 2. AUTO-SAVE: Saves the cart to memory EVERY time it changes!
+  useEffect(() => {
+    localStorage.setItem("packitout_cart", JSON.stringify(cart));
+  }, [cart]);
 
   // 🟢 ADD LOGIC
   const handleAddToCart = (product) => {
@@ -44,7 +53,7 @@ export default function App() {
     });
   };
 
-  // 🔴 NEW: REMOVE LOGIC (For the minus button in ProductModal)
+  // 🔴 REMOVE LOGIC
   const handleRemoveFromCart = (product) => {
     setCart((prevCart) => {
       const existingItem = prevCart.find(item => item._id === product._id);
@@ -84,7 +93,7 @@ export default function App() {
   const handleUserLogout = () => {
     localStorage.removeItem("packitout_user");
     setLoggedInUser(null);
-    setCart([]);
+    setCart([]); // This will auto-clear the LocalStorage too because of the useEffect!
     window.location.hash = "";
   };
 
@@ -150,7 +159,6 @@ export default function App() {
       
       <main style={{ flex: 1, padding: '1rem 0 3rem 0', textAlign: 'center' }}>
         
-        {/* 🌟 FIXED: Passed cart, onRemoveFromCart, and onViewCart down to the Feed! 🌟 */}
         <ProductFeed 
           user={loggedInUser} 
           cart={cart}
