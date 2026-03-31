@@ -1,8 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
-// Important: Ensure this path matches where you have the CrossSellSlider component
-import CrossSellSlider from './CrossSell.jsx'; 
+import CrossSellSlider from './CrossSell.jsx';
 
-// ── Subcomponents moved OUTSIDE to prevent re-render state loss ──
+// ── 1. Subcomponents moved OUTSIDE to prevent re-render state loss ──
 const DietaryIcon = ({ type }) => {
   const isVeg = type !== 'Non-Veg';
   return (
@@ -33,7 +32,7 @@ const Accordion = ({ title, children }) => {
 
 export default function ProductPage({ 
   product, 
-  onBack, // Replaced onClose with onBack
+  onBack, // Acts as your close/back button
   onAddToCart, 
   onRemoveFromCart, 
   onViewCart, 
@@ -45,7 +44,7 @@ export default function ProductPage({
   const [showFullDesc, setShowFullDesc] = useState(false);
 
   useEffect(() => {
-    // Scroll to top when data loads
+    // Scroll to top automatically when the page opens
     window.scrollTo(0, 0);
 
     if (product) {
@@ -55,7 +54,7 @@ export default function ProductPage({
     }
   }, [product]);
 
-  // Handle loading state smoothly if no product is passed yet
+  // Loading state (prevents blank screen crashes if data is delayed)
   if (!currentProduct || !selectedVariant) {
     return (
       <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', backgroundColor: '#fff', textAlign: 'center', color: '#111827' }}>
@@ -65,12 +64,10 @@ export default function ProductPage({
         `}</style>
         <div className="pm-page-loader" />
         <h2 style={{ fontSize: '1.2rem', fontWeight: '800' }}>Loading Details</h2>
-        <p style={{ fontSize: '0.9rem', color: '#64748b' }}>Just a moment...</p>
       </div>
     );
   }
 
-  // Safety first! Use optional chaining so the app never crashes
   const displayPrice = selectedVariant?.sellingPrice || selectedVariant?.mrp || 0;
   const originalMRP = selectedVariant?.mrp || displayPrice;
   const isDiscounted = displayPrice < originalMRP;
@@ -85,7 +82,7 @@ export default function ProductPage({
   const cartTotalItems = safeCart.reduce((total, item) => total + (item?.qty || 1), 0);
   const cartTotalPrice = safeCart.reduce((total, item) => total + ((item?.sellingPrice || item?.mrp || 0) * (item?.qty || 1)), 0);
 
-  // Memoized for performance to prevent heavy re-filtering on every cart update
+  // ── 2. Memoized for performance ──
   const relatedItems = useMemo(() => {
     if (!selectedVariant?.relatedProducts || !Array.isArray(selectedVariant.relatedProducts) || !allItems?.length) return [];
     return allItems.filter(item => selectedVariant.relatedProducts.includes(item?._id) && item?.inStock);
@@ -109,7 +106,7 @@ export default function ProductPage({
         display: 'flex', 
         flexDirection: 'column',
         position: 'relative',
-        animation: 'fadeInPage 0.25s ease'
+        animation: 'fadeInPage 0.2s ease'
       }}
     >
       <style>{`
@@ -120,7 +117,7 @@ export default function ProductPage({
         .pm-line-clamp { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
       `}</style>
 
-      {/* ── Top Navigation Bar (Now Sticky at the Top) ── */}
+      {/* ── Top Navigation Bar (Sticky at top of screen) ── */}
       <div style={{ position: 'sticky', top: 0, display: 'flex', alignItems: 'center', padding: '12px 16px', backgroundColor: '#fff', boxShadow: '0 2px 4px rgba(0,0,0,0.02)', zIndex: 100 }}>
         <button
           onClick={onBack}
@@ -135,7 +132,7 @@ export default function ProductPage({
         </div>
       </div>
 
-      {/* ── Main Page Content (Native scrolling) ── */}
+      {/* ── Main Content (Native Scroll) ── */}
       <div style={{ flex: 1, paddingBottom: cartTotalItems > 0 ? '160px' : '90px', backgroundColor: '#fff' }}>
         
         {/* Product Image */}
@@ -149,7 +146,7 @@ export default function ProductPage({
         {/* Product Info */}
         <div style={{ padding: '20px', textAlign: 'left' }}>
 
-          {/* Blinkit Style Rating Row */}
+          {/* Rating Row */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.75rem', fontWeight: '800', marginBottom: '8px' }}>
              <div style={{ display: 'flex', alignItems: 'center', color: '#f59e0b', fontSize: '0.85rem' }}>
                 ★★★★★ <span style={{ color: '#9ca3af', fontWeight: '500', marginLeft: '4px', fontSize: '0.75rem' }}>(4.03 lac)</span>
@@ -173,19 +170,18 @@ export default function ProductPage({
 
           <div style={{ borderTop: '1px solid #f1f5f9', marginBottom: '20px' }} />
 
-          {/* ── Variant Selector (Horizontal Scroll) ── */}
+          {/* ── Variant Selector ── */}
           {currentProduct?.variants?.length > 1 && (
             <div style={{ marginBottom: '24px' }}>
               <p style={{ fontSize: '0.85rem', fontWeight: '800', color: '#111827', marginBottom: '12px' }}>Select Unit</p>
               <div className="pm-hide-scroll" style={{ display: 'flex', gap: '12px', overflowX: 'auto', paddingBottom: '10px', paddingTop: '10px', marginTop: '-10px' }}>
                 {currentProduct.variants.map((v, i) => {
-                  if (!v) return null; // Safety check inside map
+                  if (!v) return null;
                   
                   const isSel = selectedVariant?._id === v._id;
                   const vMrp = v.mrp || 0;
                   const vPrice = v.sellingPrice || vMrp;
-                  const vDisc = vPrice < vMrp
-                    ? Math.round(((vMrp - vPrice) / vMrp) * 100) : 0;
+                  const vDisc = vPrice < vMrp ? Math.round(((vMrp - vPrice) / vMrp) * 100) : 0;
                   
                   const vCartItem = safeCart.find(c => c?._id === v._id);
                   const variantCartCount = vCartItem?.qty || 0;
@@ -229,7 +225,7 @@ export default function ProductPage({
             </div>
           )}
 
-          {/* ── Description (Read More/Less) ── */}
+          {/* ── Description ── */}
           {selectedVariant?.description && (
             <div style={{ marginBottom: '8px' }}>
               <h3 style={{ fontSize: '0.95rem', fontWeight: '800', color: '#111827', margin: '0 0 10px' }}>Product Details</h3>
@@ -277,7 +273,7 @@ export default function ProductPage({
             </Accordion>
           )}
 
-          {/* ── Cross-sell slider ── */}
+          {/* ── Cross-sell ── */}
           <CrossSellSlider
             title="Frequently Bought Together"
             items={relatedItems}
@@ -287,7 +283,7 @@ export default function ProductPage({
         </div>
       </div>
 
-      {/* 🌟 BLINKIT STYLE FLOATING VIEW CART (Fixed Viewport Position) 🌟 */}
+      {/* 🌟 BLINKIT STYLE FLOATING VIEW CART 🌟 */}
       {cartTotalItems > 0 && (
         <div
           onClick={() => { if (onViewCart) onViewCart(); }}
@@ -310,10 +306,9 @@ export default function ProductPage({
         </div>
       )}
 
-      {/* 🌟 BLINKIT STYLE STICKY BOTTOM BAR (Fixed Viewport Position) 🌟 */}
+      {/* 🌟 STICKY BOTTOM BAR 🌟 */}
       <div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, backgroundColor: '#fff', borderTop: '1px solid #f1f5f9', padding: '10px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', zIndex: 102, minHeight: '75px', paddingBottom: 'max(10px, env(safe-area-inset-bottom))' }}>
 
-        {/* Left Side: Price & Weight */}
         <div style={{ textAlign: 'left' }}>
           <div style={{ fontSize: '0.8rem', color: '#4b5563', fontWeight: '500', marginBottom: '2px' }}>
             {selectedVariant?.qnty || '1 Unit'}
@@ -326,7 +321,7 @@ export default function ProductPage({
           <div style={{ fontSize: '0.65rem', color: '#9ca3af', marginTop: '2px' }}>Inclusive of all taxes</div>
         </div>
 
-        {/* Right Side: Solid Green Add/Stepper */}
+        {/* ── Bug fixed: passing raw variant instead of overwriting mrp ── */}
         {cartCount > 0 ? (
           <div style={{ display: 'flex', alignItems: 'center', backgroundColor: '#0c831f', borderRadius: '8px', overflow: 'hidden', height: '40px', minWidth: '100px' }}>
             <button
@@ -335,7 +330,6 @@ export default function ProductPage({
             >−</button>
             <span style={{ minWidth: '24px', textAlign: 'center', fontWeight: '800', fontSize: '0.95rem', color: '#fff' }}>{cartCount}</span>
             <button
-              // Note: Important bug fix carried over - pass selectedVariant as is
               onClick={() => onAddToCart && onAddToCart(selectedVariant)}
               style={{ flex: 1, height: '100%', border: 'none', backgroundColor: 'transparent', color: '#fff', fontSize: '1.25rem', fontWeight: '500', cursor: 'pointer', display: 'flex', justifyContent: 'center', alignItems: 'center', paddingBottom: '2px' }}
             >+</button>
@@ -349,7 +343,6 @@ export default function ProductPage({
           </button>
         )}
       </div>
-
     </div>
   );
-                  }
+            }
