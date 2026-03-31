@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import ProductModal from './ProductModal.jsx';
+// 1. Notice we import it as ProductPage to match the new component name inside the file
+import ProductPage from './ProductModal.jsx'; 
 import { VariantBottomSheet, ModernProductCard, ProductRow } from './FeedComponents.jsx';
-import ShopCarousel from './ShopCarousel.jsx'; // 👈 IMPORTED HERE
+import ShopCarousel from './ShopCarousel.jsx';
 
 export default function ShopFeed({ user, onAddToCart, onRemoveFromCart, onViewCart, cart = [], selectedCategory, onClearCategory, searchQuery }) {
   const [items, setItems] = useState([]);
@@ -102,6 +103,22 @@ export default function ShopFeed({ user, onAddToCart, onRemoveFromCart, onViewCa
 
   if (loading) return <div style={{ padding: '40px', textAlign: 'center', color: '#6b7280' }}>Loading fresh products...</div>;
 
+  // 🛑 2. THE MAGIC TOGGLE: If a product is clicked, ONLY render the Product Page!
+  if (selectedProductDetails) {
+    return (
+      <ProductPage 
+        product={selectedProductDetails} 
+        onBack={() => setSelectedProductDetails(null)} // This makes the "Back" arrow work
+        onAddToCart={onAddToCart} 
+        onRemoveFromCart={onRemoveFromCart}
+        onViewCart={onViewCart}
+        cart={cart} 
+        allItems={items} 
+      />
+    );
+  }
+
+  // 🟢 IF NO PRODUCT IS CLICKED: Show the rest of the Feed
   const isSearching = searchQuery && searchQuery.trim().length > 0;
   let displayItems = items;
   if (isSearching) {
@@ -159,7 +176,6 @@ export default function ShopFeed({ user, onAddToCart, onRemoveFromCart, onViewCa
           <ProductRow title="Buy It Again" subtitle="Your recent favorites" items={buyItAgain} onViewAll={setViewAll} shopClosed={shopClosed} onOpenDetails={setSelectedProductDetails} onQuickAdd={handleQuickAdd} cart={cart} onRemoveFromCart={onRemoveFromCart} />
           <ProductRow title="Freshly Restocked" subtitle="Back on the shelves" items={newArrivals} onViewAll={setViewAll} shopClosed={shopClosed} onOpenDetails={setSelectedProductDetails} onQuickAdd={handleQuickAdd} cart={cart} onRemoveFromCart={onRemoveFromCart} />
 
-          {/* 👇 NEW CLEAN CAROUSEL COMPONENT 👇 */}
           <ShopCarousel shops={nearbyShops} onSwitchShop={handleSwitchShop} />
           
           <div style={{ textAlign: 'center', padding: '10px 0 40px 0', color: '#94a3b8', fontSize: '0.8rem', fontWeight: '600' }}>
@@ -168,18 +184,9 @@ export default function ShopFeed({ user, onAddToCart, onRemoveFromCart, onViewCa
         </>
       )}
 
+      {/* 3. The bottom sheet for variants is still a modal, so it stays here! */}
       <VariantBottomSheet product={selectedVariantProduct} onClose={() => setSelectedVariantProduct(null)} onAddToCart={onAddToCart} />
       
-      <ProductModal 
-        product={selectedProductDetails} 
-        isOpen={selectedProductDetails !== null} 
-        onClose={() => setSelectedProductDetails(null)} 
-        onAddToCart={onAddToCart} 
-        onRemoveFromCart={onRemoveFromCart}
-        onViewCart={onViewCart}
-        cart={cart} 
-        allItems={items} 
-      />
     </div>
   );
-          }
+}
