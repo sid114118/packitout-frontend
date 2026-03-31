@@ -21,6 +21,8 @@ export default function ShopFeed({ user, onAddToCart, onRemoveFromCart, onViewCa
   const [buyItAgain, setBuyItAgain] = useState([]);
 
   const BASE_URL = "https://darkslategrey-snail-415133.hostingersite.com";
+  // 🟢 Magic number for bottom nav gap
+  const BOTTOM_NAV_HEIGHT = '56px'; 
 
   useEffect(() => {
     const fetchShopProducts = async () => {
@@ -100,6 +102,16 @@ export default function ShopFeed({ user, onAddToCart, onRemoveFromCart, onViewCa
     else onAddToCart({ ...item, mrp: item.sellingPrice });
   };
 
+  // 🛑 Freeze background scrolling when "View All" is open
+  useEffect(() => {
+    if (viewAll || selectedCategory) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => { document.body.style.overflow = ''; };
+  }, [viewAll, selectedCategory]);
+
   if (loading) return <div style={{ padding: '40px', textAlign: 'center', color: '#6b7280' }}>Loading fresh products...</div>;
 
   const isSearching = searchQuery && searchQuery.trim().length > 0;
@@ -122,24 +134,31 @@ export default function ShopFeed({ user, onAddToCart, onRemoveFromCart, onViewCa
     <div style={{ padding: '0', maxWidth: '1000px', margin: '0 auto', overflowX: 'hidden', backgroundColor: '#f3f4f6' }}>
       <style>{`.hide-scroll::-webkit-scrollbar { display: none; } .hide-scroll { -ms-overflow-style: none; scrollbar-width: none; }`}</style>
 
-      {(selectedCategory || isSearching || viewAll) ? (
-        <div style={{ padding: '15px', backgroundColor: '#fff', minHeight: '100vh' }}>
-          <div style={{ display: 'flex', alignItems: 'center', marginBottom: '20px', gap: '15px' }}>
+      {/* 🌟 1. FULL SCREEN OVERLAY FOR "VIEW ALL" & CATEGORIES 🌟 */}
+      {(viewAll || selectedCategory) && (
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: BOTTOM_NAV_HEIGHT, backgroundColor: '#fff', zIndex: 90, overflowY: 'auto', padding: '15px', animation: 'fadeIn 0.2s ease', paddingBottom: '120px' }}>
+          <style>{`@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }`}</style>
+          
+          <div style={{ display: 'flex', alignItems: 'center', marginBottom: '20px', gap: '15px', position: 'sticky', top: '-15px', backgroundColor: '#fff', padding: '15px 0', zIndex: 91, borderBottom: '1px solid #f1f5f9' }}>
             <button onClick={() => { if (selectedCategory) onClearCategory(); setViewAll(null); }} style={{ backgroundColor: '#f1f5f9', border: '1px solid #cbd5e1', padding: '8px 16px', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold', color: '#334155' }}>⬅ Back</button>
-            <h2 style={{ margin: 0, color: '#0f172a', fontSize: '1.2rem' }}>{isSearching ? `Results for "${searchQuery}"` : (viewAll ? viewAll.title : selectedCategory)}</h2>
+            <h2 style={{ margin: 0, color: '#0f172a', fontSize: '1.2rem' }}>{viewAll ? viewAll.title : selectedCategory}</h2>
           </div>
+          
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: '12px' }}>
             {displayItems.map(item => (
-              <ModernProductCard 
-                key={item._id} 
-                item={item} 
-                isCarousel={false} 
-                shopClosed={shopClosed} 
-                onOpenDetails={setSelectedProductDetails} 
-                onQuickAdd={handleQuickAdd} 
-                cart={cart} 
-                onRemoveFromCart={onRemoveFromCart} 
-              />
+              <ModernProductCard key={item._id} item={item} isCarousel={false} shopClosed={shopClosed} onOpenDetails={setSelectedProductDetails} onQuickAdd={handleQuickAdd} cart={cart} onRemoveFromCart={onRemoveFromCart} />
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* 🌟 2. IN-PAGE GRID FOR LIVE SEARCHING (Does not cover search bar!) 🌟 */}
+      {isSearching && !viewAll && !selectedCategory && (
+        <div style={{ padding: '15px', backgroundColor: '#fff', minHeight: '100vh' }}>
+          <h2 style={{ margin: '0 0 20px 0', color: '#0f172a', fontSize: '1.2rem' }}>Results for "{searchQuery}"</h2>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: '12px' }}>
+            {displayItems.map(item => (
+              <ModernProductCard key={item._id} item={item} isCarousel={false} shopClosed={shopClosed} onOpenDetails={setSelectedProductDetails} onQuickAdd={handleQuickAdd} cart={cart} onRemoveFromCart={onRemoveFromCart} />
             ))}
           </div>
           {displayItems.length === 0 && (
@@ -150,7 +169,10 @@ export default function ShopFeed({ user, onAddToCart, onRemoveFromCart, onViewCa
              </div>
           )}
         </div>
-      ) : (
+      )}
+
+      {/* 🌟 3. NORMAL FEED (Only shows if not searching or viewing all) 🌟 */}
+      {!isSearching && !viewAll && !selectedCategory && (
         <>
           <ProductRow title={timeBased.title} subtitle={timeBased.subtitle} items={timeBased.items} onViewAll={setViewAll} shopClosed={shopClosed} onOpenDetails={setSelectedProductDetails} onQuickAdd={handleQuickAdd} cart={cart} onRemoveFromCart={onRemoveFromCart} />
           <ProductRow title="Price Crash" subtitle="Extra Savings" items={shopDeals} onViewAll={setViewAll} shopClosed={shopClosed} onOpenDetails={setSelectedProductDetails} onQuickAdd={handleQuickAdd} cart={cart} onRemoveFromCart={onRemoveFromCart} />
@@ -167,9 +189,9 @@ export default function ShopFeed({ user, onAddToCart, onRemoveFromCart, onViewCa
         </>
       )}
 
+      {/* 🌟 OVERLAYS (Variant Bottom Sheet & Product Modal) 🌟 */}
       <VariantBottomSheet product={selectedVariantProduct} onClose={() => setSelectedVariantProduct(null)} onAddToCart={onAddToCart} />
       
-      {/* 🛑 ORIGINAL MODAL CALL 🛑 */}
       <ProductModal 
         product={selectedProductDetails} 
         isOpen={selectedProductDetails !== null} 
@@ -182,5 +204,4 @@ export default function ShopFeed({ user, onAddToCart, onRemoveFromCart, onViewCa
       />
     </div>
   );
-                                                                                   }
-        
+          }
