@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
-// 1. Notice we import it as ProductPage to match the new component name inside the file
-import ProductPage from './ProductModal.jsx'; 
+import ProductModal from './ProductModal.jsx';
 import { VariantBottomSheet, ModernProductCard, ProductRow } from './FeedComponents.jsx';
 import ShopCarousel from './ShopCarousel.jsx';
 
@@ -103,22 +102,6 @@ export default function ShopFeed({ user, onAddToCart, onRemoveFromCart, onViewCa
 
   if (loading) return <div style={{ padding: '40px', textAlign: 'center', color: '#6b7280' }}>Loading fresh products...</div>;
 
-  // 🛑 2. THE MAGIC TOGGLE: If a product is clicked, ONLY render the Product Page!
-  if (selectedProductDetails) {
-    return (
-      <ProductPage 
-        product={selectedProductDetails} 
-        onBack={() => setSelectedProductDetails(null)} // This makes the "Back" arrow work
-        onAddToCart={onAddToCart} 
-        onRemoveFromCart={onRemoveFromCart}
-        onViewCart={onViewCart}
-        cart={cart} 
-        allItems={items} 
-      />
-    );
-  }
-
-  // 🟢 IF NO PRODUCT IS CLICKED: Show the rest of the Feed
   const isSearching = searchQuery && searchQuery.trim().length > 0;
   let displayItems = items;
   if (isSearching) {
@@ -184,9 +167,20 @@ export default function ShopFeed({ user, onAddToCart, onRemoveFromCart, onViewCa
         </>
       )}
 
-      {/* 3. The bottom sheet for variants is still a modal, so it stays here! */}
       <VariantBottomSheet product={selectedVariantProduct} onClose={() => setSelectedVariantProduct(null)} onAddToCart={onAddToCart} />
       
+      {/* 🛑 ORIGINAL MODAL CALL 🛑 */}
+      <ProductModal 
+        product={selectedProductDetails} 
+        isOpen={selectedProductDetails !== null} 
+        onClose={() => setSelectedProductDetails(null)} 
+        onAddToCart={onAddToCart} 
+        onRemoveFromCart={onRemoveFromCart}
+        onViewCart={onViewCart}
+        cart={cart} 
+        allItems={items} 
+      />
     </div>
   );
-}
+                                                                                   }
+        
