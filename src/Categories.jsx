@@ -12,7 +12,7 @@ export default function Categories({ onCategorySelect }) {
         { name: "Fruits & Veg", icon: "🍎", image: "https://res.cloudinary.com/dj48tkcsw/image/upload/v1774945247/images_5_faefgf.jpg" },
         { name: "Atta, Rice & Dal", icon: "🌾", image: "https://res.cloudinary.com/dj48tkcsw/image/upload/v1774945074/images_4_mbo5ob.jpg" },
         { name: "Chicken, Meat & Fish", icon: "🍗", image: "" },
-        { name: "Oil, Ghee & Masala", icon: "🍶", image: "" },
+        { name: "Oil, Ghee & Masala", icon: "🍶", image: "https://res.cloudinary.com/dj48tkcsw/image/upload/v1774945925/images_6_u1l8js.jpg" },
         { name: "Dry Fruits & Cereals", icon: "🥣", image: "" },
         { name: "Bakery & Biscuits", icon: "🥐", image: "" },
         { name: "Kitchen Appliances", icon: "🍳", image: "" } 
