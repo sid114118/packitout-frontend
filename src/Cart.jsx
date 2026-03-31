@@ -1,34 +1,26 @@
 import React, { useState, useEffect } from 'react';
+import Payment from './Payment.jsx'; // 👈 IMPORTING OUR NEW FILE
 
 export default function Cart({ cart, setCart, user, onBack, onCheckoutSuccess }) {
-  const [status, setStatus] = useState("");
   const [targetShop, setTargetShop] = useState(null); 
   const [loadingShops, setLoadingShops] = useState(true);
   
+  // 💳 Show Payment Screen State
+  const [showPayment, setShowPayment] = useState(false);
+
   // 🪙 Coin Discount State
   const [useCoins, setUseCoins] = useState(false);
 
   // 🧮 BILL CALCULATIONS
   const itemTotal = cart.reduce((sum, item) => sum + ((item.sellingPrice || item.mrp) * item.qty), 0);
   
-  // 🛠️ THE CAPPED COIN LOGIC
   const userCoinValueInRupees = (user?.coins || 0) / 10; 
-  
-  // 👇 Set your cap here! Currently capped at 10% (0.10) of the order total.
   const maxDiscountAllowed = itemTotal * 0.10; 
-  
-  // The actual discount is either their coin balance OR the 10% cap (whichever is smaller)
   const maxUsableDiscount = Math.min(userCoinValueInRupees, maxDiscountAllowed);
 
   let rawDiscount = useCoins ? maxUsableDiscount : 0; 
-  
-  // Force money to have exactly 2 decimals (e.g., 5.9999999 -> 6.00)
   const discount = Number(rawDiscount.toFixed(2)); 
-  
-  // Force coins to be a perfectly round integer so we don't deduct 5.9999 coins from DB!
   const coinsUsed = Math.round(discount * 10); 
-  
-  // Force final bill to be perfect money format
   const finalBill = Number((itemTotal - discount).toFixed(2));
 
   // --- 🛒 ADD/REMOVE ITEM LOGIC ---
@@ -62,57 +54,6 @@ export default function Cart({ cart, setCart, user, onBack, onCheckoutSuccess })
     }
   }, [user]);
 
-  const handleCheckout = async () => {
-    if (!targetShop) {
-      setStatus("❌ Error: No pick-up shop found.");
-      setTimeout(() => setStatus(""), 3000);
-      return;
-    }
-
-    setStatus(`⏳ Sending Order to ${targetShop.name}...`);
-    
-    try {
-      const response = await fetch("https://darkslategrey-snail-415133.hostingersite.com/orders", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          userId: user._id, 
-          shopId: targetShop._id,
-          items: cart.map(item => ({
-            productId: item._id,
-            name: item.name,
-            qty: item.qty,
-            price: item.sellingPrice || item.mrp
-          })),
-          totalAmount: finalBill
-        })
-      });
-
-      if (response.ok) {
-        if (useCoins && coinsUsed > 0) {
-          const newCoinBalance = Math.round(user.coins - coinsUsed); 
-          await fetch(`https://darkslategrey-snail-415133.hostingersite.com/users/${user._id}`, {
-            method: "PATCH",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ coins: newCoinBalance })
-          });
-          
-          const updatedUser = { ...user, coins: newCoinBalance };
-          localStorage.setItem("packitout_user", JSON.stringify(updatedUser));
-        }
-
-        setStatus("✅ Order Sent Successfully!");
-        setTimeout(() => onCheckoutSuccess(), 1500);
-      } else {
-        setStatus("❌ Failed to place order.");
-        setTimeout(() => setStatus(""), 3000);
-      }
-    } catch (err) { 
-      setStatus("❌ Connection error"); 
-      setTimeout(() => setStatus(""), 3000);
-    }
-  };
-
   // --- EMPTY CART UI ---
   if (cart.length === 0) {
     return (
@@ -127,6 +68,24 @@ export default function Cart({ cart, setCart, user, onBack, onCheckoutSuccess })
     );
   }
 
+  // 💳 ================= RENDER PAYMENT SCREEN ================= 💳
+  // If the user clicked "Select Payment", we hand off everything to the new Payment component!
+  if (showPayment) {
+    return (
+      <Payment 
+        user={user}
+        cart={cart}
+        targetShop={targetShop}
+        finalBill={finalBill}
+        useCoins={useCoins}
+        coinsUsed={coinsUsed}
+        onBack={() => setShowPayment(false)} // This lets them go back to the Cart!
+        onCheckoutSuccess={onCheckoutSuccess}
+      />
+    );
+  }
+
+  // 🛒 ================= CART SCREEN ================= 🛒
   return (
     <div style={{ backgroundColor: '#f3f4f6', minHeight: '100vh', fontFamily: 'sans-serif', paddingBottom: '140px' }}>
       
@@ -237,26 +196,18 @@ export default function Cart({ cart, setCart, user, onBack, onCheckoutSuccess })
         </div>
       </div>
 
-      {/* 🟢 STATUS MESSAGE TOAST */}
-      {status && (
-        <div style={{ position: 'fixed', bottom: '100px', left: '50%', transform: 'translateX(-50%)', backgroundColor: '#334155', color: 'white', padding: '12px 24px', borderRadius: '30px', fontWeight: 'bold', fontSize: '0.9rem', zIndex: 1000, boxShadow: '0 4px 15px rgba(0,0,0,0.2)', whiteSpace: 'nowrap' }}>
-          {status}
-        </div>
-      )}
-
-      {/* 🌟 STICKY CHECKOUT BUTTON */}
+      {/* 🌟 STICKY PROCEED TO PAYMENT BUTTON */}
       <div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, backgroundColor: 'white', padding: '12px 16px', borderTop: '1px solid #e5e7eb', boxShadow: '0 -4px 10px rgba(0,0,0,0.03)', zIndex: 90, paddingBottom: 'max(12px, env(safe-area-inset-bottom))' }}>
         <button 
-          onClick={handleCheckout} 
-          disabled={!targetShop || status.includes("⏳")}
-          style={{ width: '100%', maxWidth: '800px', margin: '0 auto', display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px 20px', backgroundColor: targetShop ? '#0c831f' : '#cbd5e1', color: 'white', border: 'none', borderRadius: '12px', fontWeight: '900', fontSize: '1.1rem', cursor: targetShop ? 'pointer' : 'not-allowed', boxShadow: targetShop ? '0 4px 12px rgba(12, 131, 31, 0.3)' : 'none', opacity: status.includes("⏳") ? 0.7 : 1, transition: 'all 0.2s ease' }}
+          onClick={() => setShowPayment(true)} 
+          disabled={!targetShop}
+          style={{ width: '100%', maxWidth: '800px', margin: '0 auto', display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px 20px', backgroundColor: targetShop ? '#0c831f' : '#cbd5e1', color: 'white', border: 'none', borderRadius: '12px', fontWeight: '900', fontSize: '1.1rem', cursor: targetShop ? 'pointer' : 'not-allowed', boxShadow: targetShop ? '0 4px 12px rgba(12, 131, 31, 0.3)' : 'none', transition: 'all 0.2s ease' }}
         >
-          <span>{status.includes("⏳") ? "Processing..." : "Place Order"}</span>
-          <span>₹{finalBill.toFixed(2)}</span>
+          <span>Select Payment</span>
+          <span>₹{finalBill.toFixed(2)} ➔</span>
         </button>
       </div>
 
     </div>
   );
-                         }
-  
+        }
