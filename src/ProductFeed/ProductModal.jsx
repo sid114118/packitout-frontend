@@ -22,9 +22,19 @@ export default function ProductModal({ product, isOpen, onClose, onAddToCart, on
     ? Math.round(((selectedVariant.mrp - displayPrice) / selectedVariant.mrp) * 100)
     : 0;
 
-  const cartCount = cart.filter(item => item._id === selectedVariant._id).length;
-  const cartTotalItems = cart.length;
-  const cartTotalPrice = cart.reduce((total, item) => total + (item.sellingPrice || item.mrp), 0);
+  // 🟢 FIXED CART TRACKERS (Now matches your Cart.jsx structure!)
+  const safeCart = Array.isArray(cart) ? cart : [];
+  
+  // Find if this exact item is in the cart, and get its 'qty'
+  const cartItem = safeCart.find(item => item._id === selectedVariant._id);
+  const cartCount = cartItem ? cartItem.qty : 0;
+  
+  // Sum up all 'qty' properties for the total item count
+  const cartTotalItems = safeCart.reduce((total, item) => total + (item.qty || 1), 0);
+  
+  // Sum up the (price * qty) for the total bill
+  const cartTotalPrice = safeCart.reduce((total, item) => total + ((item.sellingPrice || item.mrp) * (item.qty || 1)), 0);
+
 
   // ── Subcomponents ──────────────────────────────────────────────
 
@@ -37,7 +47,7 @@ export default function ProductModal({ product, isOpen, onClose, onAddToCart, on
     );
   };
 
-  const Accordion = ({ title, icon, children }) => {
+  const Accordion = ({ title, children }) => {
     const [open, setOpen] = useState(false);
     return (
       <div style={{ borderBottom: '1px solid #f1f5f9' }}>
@@ -100,9 +110,8 @@ export default function ProductModal({ product, isOpen, onClose, onAddToCart, on
         </button>
         <div style={{ display: 'flex', flexDirection: 'column', textAlign: 'left' }}>
           <h2 style={{ fontSize: '1.05rem', fontWeight: '800', margin: 0, color: '#111827', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-            Delivery in 15 minutes
+            {selectedVariant.brand ? selectedVariant.brand : 'Product Details'}
           </h2>
-          <span style={{ fontSize: '0.75rem', color: '#64748b' }}>Ship to your location ▾</span>
         </div>
       </div>
 
@@ -125,10 +134,6 @@ export default function ProductModal({ product, isOpen, onClose, onAddToCart, on
 
           {/* 🌟 BLINKIT STYLE RATING ROW 🌟 */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.75rem', fontWeight: '800', marginBottom: '8px' }}>
-             <div style={{ display: 'flex', alignItems: 'center', gap: '4px', color: '#4b5563', backgroundColor: '#f1f5f9', padding: '2px 6px', borderRadius: '4px' }}>
-                ⏱️ 15 MINS
-             </div>
-             <span style={{ color: '#d1d5db' }}>|</span>
              <div style={{ display: 'flex', alignItems: 'center', color: '#f59e0b', fontSize: '0.85rem' }}>
                 ★★★★★ <span style={{ color: '#9ca3af', fontWeight: '500', marginLeft: '4px', fontSize: '0.75rem' }}>(4.03 lac)</span>
              </div>
@@ -161,7 +166,9 @@ export default function ProductModal({ product, isOpen, onClose, onAddToCart, on
                   const vDisc = v.sellingPrice && v.sellingPrice < v.mrp
                     ? Math.round(((v.mrp - v.sellingPrice) / v.mrp) * 100) : 0;
                   
-                  const variantCartCount = cart.filter(c => c._id === v._id).length;
+                  // Also safely track variant counts!
+                  const vCartItem = safeCart.find(c => c._id === v._id);
+                  const variantCartCount = vCartItem ? vCartItem.qty : 0;
 
                   return (
                     <div
@@ -260,11 +267,11 @@ export default function ProductModal({ product, isOpen, onClose, onAddToCart, on
         </div>
       </div>
 
-      {/* 🌟 BLINKIT STYLE FLOATING VIEW CART 🌟 */}
+      {/* 🌟 BLINKIT STYLE FLOATING VIEW CART (Fixed Position) 🌟 */}
       {cartTotalItems > 0 && (
         <div
           onClick={() => { onClose(); if (onViewCart) onViewCart(); }}
-          style={{ position: 'absolute', bottom: '85px', left: '12px', right: '12px', zIndex: 101, backgroundColor: '#0c831f', color: '#fff', padding: '10px 14px', borderRadius: '10px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer', boxShadow: '0 4px 15px rgba(0,0,0,0.1)', animation: 'fadeIn 0.2s ease' }}
+          style={{ position: 'fixed', bottom: '85px', left: '12px', right: '12px', zIndex: 101, backgroundColor: '#0c831f', color: '#fff', padding: '10px 14px', borderRadius: '10px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer', boxShadow: '0 4px 15px rgba(0,0,0,0.1)', animation: 'fadeIn 0.2s ease' }}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
             <div style={{ backgroundColor: 'rgba(255,255,255,0.2)', width: '38px', height: '38px', borderRadius: '8px', display: 'flex', justifyContent: 'center', alignItems: 'center', fontSize: '1.2rem' }}>
@@ -324,4 +331,4 @@ export default function ProductModal({ product, isOpen, onClose, onAddToCart, on
 
     </div>
   );
-}
+            }
