@@ -31,10 +31,12 @@ const Accordion = ({ title, children }) => {
 };
 
 export default function ProductModal({ product, isOpen, onClose, onAddToCart, onRemoveFromCart, onViewCart, allItems = [], cart = [] }) {
-  // 🟢 1. ALL HOOKS MUST BE AT THE VERY TOP
   const [currentProduct, setCurrentProduct] = useState(null);
   const [selectedVariant, setSelectedVariant] = useState(null);
   const [showFullDesc, setShowFullDesc] = useState(false);
+
+  // 🟢 THIS IS THE MAGIC NUMBER: Adjust this if your nav bar is taller or shorter!
+  const BOTTOM_NAV_HEIGHT = '65px'; 
 
   useEffect(() => {
     if (product) {
@@ -44,16 +46,13 @@ export default function ProductModal({ product, isOpen, onClose, onAddToCart, on
     }
   }, [product]);
 
-  // BUG FIX: Memo moved above the early return so React doesn't crash!
   const relatedItems = useMemo(() => {
     if (!selectedVariant || !selectedVariant.relatedProducts || !allItems.length) return [];
     return allItems.filter(item => selectedVariant.relatedProducts.includes(item._id) && item.inStock);
   }, [selectedVariant, allItems]);
 
-  // 🟢 2. EARLY RETURN (Now safely below the hooks)
   if (!isOpen || !currentProduct || !selectedVariant) return null;
 
-  // 🟢 3. STANDARD VARIABLES (Calculated only when modal is open)
   const displayPrice = selectedVariant.sellingPrice || selectedVariant.mrp;
   const isDiscounted = displayPrice < selectedVariant.mrp;
   const discountPercent = isDiscounted
@@ -74,13 +73,14 @@ export default function ProductModal({ product, isOpen, onClose, onAddToCart, on
     if (el) el.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  // ── Render ─────────────────────────────────────────────────────
-
   return (
     <div
       style={{ 
         position: 'fixed', 
-        inset: 0, // Keeps it as your original full-screen pop-up
+        top: 0, 
+        left: 0, 
+        right: 0, 
+        bottom: BOTTOM_NAV_HEIGHT, // 👈 1. Stops the modal from covering the bottom nav bar
         backgroundColor: '#fff', 
         zIndex: 10000, 
         display: 'flex', 
@@ -257,7 +257,7 @@ export default function ProductModal({ product, isOpen, onClose, onAddToCart, on
       {cartTotalItems > 0 && (
         <div
           onClick={() => { onClose(); if (onViewCart) onViewCart(); }}
-          style={{ position: 'fixed', bottom: '85px', left: '12px', right: '12px', zIndex: 101, backgroundColor: '#0c831f', color: '#fff', padding: '10px 14px', borderRadius: '10px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer', boxShadow: '0 4px 15px rgba(0,0,0,0.1)', animation: 'fadeIn 0.2s ease' }}
+          style={{ position: 'fixed', bottom: `calc(${BOTTOM_NAV_HEIGHT} + 85px)`, left: '12px', right: '12px', zIndex: 101, backgroundColor: '#0c831f', color: '#fff', padding: '10px 14px', borderRadius: '10px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer', boxShadow: '0 4px 15px rgba(0,0,0,0.1)', animation: 'fadeIn 0.2s ease' }} // 👈 2. Moved View Cart up so it doesn't overlap
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
             <div style={{ backgroundColor: 'rgba(255,255,255,0.2)', width: '38px', height: '38px', borderRadius: '8px', display: 'flex', justifyContent: 'center', alignItems: 'center', fontSize: '1.2rem' }}>
@@ -277,7 +277,8 @@ export default function ProductModal({ product, isOpen, onClose, onAddToCart, on
       )}
 
       {/* 🌟 BLINKIT STYLE STICKY BOTTOM BAR 🌟 */}
-      <div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, backgroundColor: '#fff', borderTop: '1px solid #f1f5f9', padding: '10px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', zIndex: 102, minHeight: '75px', paddingBottom: 'max(10px, env(safe-area-inset-bottom))' }}>
+      <div style={{ position: 'fixed', bottom: BOTTOM_NAV_HEIGHT, left: 0, right: 0, backgroundColor: '#fff', borderTop: '1px solid #f1f5f9', padding: '10px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', zIndex: 102, minHeight: '75px', paddingBottom: 'max(10px, env(safe-area-inset-bottom))' }}> 
+        {/* 👈 3. Moved Sticky Bottom Bar up so it sits exactly on top of your Nav Bar */}
 
         <div style={{ textAlign: 'left' }}>
           <div style={{ fontSize: '0.8rem', color: '#4b5563', fontWeight: '500', marginBottom: '2px' }}>
@@ -314,5 +315,4 @@ export default function ProductModal({ product, isOpen, onClose, onAddToCart, on
       </div>
     </div>
   );
-                  }
-                                      
+              }
