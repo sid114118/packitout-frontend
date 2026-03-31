@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import CrossSellSlider from './CrossSell.jsx';
 
-// ── Subcomponents moved OUTSIDE to prevent re-render state loss ──
 const DietaryIcon = ({ type }) => {
   const isVeg = type !== 'Non-Veg';
   return (
@@ -35,8 +34,8 @@ export default function ProductModal({ product, isOpen, onClose, onAddToCart, on
   const [selectedVariant, setSelectedVariant] = useState(null);
   const [showFullDesc, setShowFullDesc] = useState(false);
 
-  // 🟢 THIS IS THE MAGIC NUMBER: Adjust this if your nav bar is taller or shorter!
-  const BOTTOM_NAV_HEIGHT = '65px'; 
+  // 🟢 Change this to 56px, 60px, or 65px to perfectly close the gap with your specific nav bar!
+  const BOTTOM_NAV_HEIGHT = '56px'; 
 
   useEffect(() => {
     if (product) {
@@ -80,7 +79,7 @@ export default function ProductModal({ product, isOpen, onClose, onAddToCart, on
         top: 0, 
         left: 0, 
         right: 0, 
-        bottom: BOTTOM_NAV_HEIGHT, // 👈 1. Stops the modal from covering the bottom nav bar
+        bottom: BOTTOM_NAV_HEIGHT, // Leaves exact space for the nav bar below
         backgroundColor: '#fff', 
         zIndex: 10000, 
         display: 'flex', 
@@ -97,7 +96,7 @@ export default function ProductModal({ product, isOpen, onClose, onAddToCart, on
       `}</style>
 
       {/* ── Top Navigation Bar ── */}
-      <div style={{ display: 'flex', alignItems: 'center', padding: '12px 16px', backgroundColor: '#fff', boxShadow: '0 2px 4px rgba(0,0,0,0.02)', zIndex: 10 }}>
+      <div style={{ flexShrink: 0, display: 'flex', alignItems: 'center', padding: '12px 16px', backgroundColor: '#fff', boxShadow: '0 2px 4px rgba(0,0,0,0.02)', zIndex: 10 }}>
         <button
           onClick={onClose}
           style={{ background: 'none', border: 'none', fontSize: '1.5rem', cursor: 'pointer', padding: '0 16px 0 0', color: '#111827', display: 'flex', alignItems: 'center' }}
@@ -115,7 +114,7 @@ export default function ProductModal({ product, isOpen, onClose, onAddToCart, on
       <div
         id="product-page-scroll"
         className="pm-hide-scroll"
-        style={{ flex: 1, overflowY: 'auto', paddingBottom: cartTotalItems > 0 ? '160px' : '90px', backgroundColor: '#fff' }}
+        style={{ flex: 1, overflowY: 'auto', paddingBottom: cartTotalItems > 0 ? '90px' : '20px', backgroundColor: '#fff', position: 'relative' }}
       >
         <div style={{ width: '100%', height: '320px', display: 'flex', justifyContent: 'center', alignItems: 'center', position: 'relative', backgroundColor: '#f8fafc' }}>
           {selectedVariant.image
@@ -253,11 +252,11 @@ export default function ProductModal({ product, isOpen, onClose, onAddToCart, on
         </div>
       </div>
 
-      {/* 🌟 BLINKIT STYLE FLOATING VIEW CART 🌟 */}
+      {/* 🌟 FLOATING VIEW CART (Uses Absolute now to stop the jump!) 🌟 */}
       {cartTotalItems > 0 && (
         <div
           onClick={() => { onClose(); if (onViewCart) onViewCart(); }}
-          style={{ position: 'fixed', bottom: `calc(${BOTTOM_NAV_HEIGHT} + 85px)`, left: '12px', right: '12px', zIndex: 101, backgroundColor: '#0c831f', color: '#fff', padding: '10px 14px', borderRadius: '10px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer', boxShadow: '0 4px 15px rgba(0,0,0,0.1)', animation: 'fadeIn 0.2s ease' }} // 👈 2. Moved View Cart up so it doesn't overlap
+          style={{ position: 'absolute', bottom: '85px', left: '12px', right: '12px', zIndex: 101, backgroundColor: '#0c831f', color: '#fff', padding: '10px 14px', borderRadius: '10px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer', boxShadow: '0 4px 15px rgba(0,0,0,0.1)', animation: 'fadeIn 0.2s ease' }}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
             <div style={{ backgroundColor: 'rgba(255,255,255,0.2)', width: '38px', height: '38px', borderRadius: '8px', display: 'flex', justifyContent: 'center', alignItems: 'center', fontSize: '1.2rem' }}>
@@ -276,9 +275,8 @@ export default function ProductModal({ product, isOpen, onClose, onAddToCart, on
         </div>
       )}
 
-      {/* 🌟 BLINKIT STYLE STICKY BOTTOM BAR 🌟 */}
-      <div style={{ position: 'fixed', bottom: BOTTOM_NAV_HEIGHT, left: 0, right: 0, backgroundColor: '#fff', borderTop: '1px solid #f1f5f9', padding: '10px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', zIndex: 102, minHeight: '75px', paddingBottom: 'max(10px, env(safe-area-inset-bottom))' }}> 
-        {/* 👈 3. Moved Sticky Bottom Bar up so it sits exactly on top of your Nav Bar */}
+      {/* 🌟 STICKY BOTTOM BAR (Uses Flexbox now to stop the jump!) 🌟 */}
+      <div style={{ flexShrink: 0, backgroundColor: '#fff', borderTop: '1px solid #f1f5f9', padding: '10px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', zIndex: 102, minHeight: '75px', paddingBottom: 'max(10px, env(safe-area-inset-bottom))' }}>
 
         <div style={{ textAlign: 'left' }}>
           <div style={{ fontSize: '0.8rem', color: '#4b5563', fontWeight: '500', marginBottom: '2px' }}>
@@ -315,4 +313,4 @@ export default function ProductModal({ product, isOpen, onClose, onAddToCart, on
       </div>
     </div>
   );
-              }
+                          }
