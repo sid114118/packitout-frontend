@@ -10,14 +10,19 @@ export default function Cart({ cart, setCart, user, onBack, onCheckoutSuccess })
 
   // 🧮 BILL CALCULATIONS
   const itemTotal = cart.reduce((sum, item) => sum + ((item.sellingPrice || item.mrp) * item.qty), 0);
-  const totalMrp = cart.reduce((sum, item) => sum + (item.mrp * item.qty), 0);
   
-  // Coin Logic (10 Coins = ₹1)
-  const maxCoinDiscount = (user?.coins || 0) * 0.10; 
-  const discount = useCoins ? Math.min(maxCoinDiscount, itemTotal) : 0; 
-  const coinsUsed = discount * 10; 
+  // 🛠️ THE FIX: JavaScript Floating Point Correction
+  const maxCoinDiscount = (user?.coins || 0) / 10; // Division is safer than multiplying by 0.10
+  let rawDiscount = useCoins ? Math.min(maxCoinDiscount, itemTotal) : 0; 
   
-  const finalBill = itemTotal - discount;
+  // Force money to have exactly 2 decimals (e.g., 5.9999999 -> 6.00)
+  const discount = Number(rawDiscount.toFixed(2)); 
+  
+  // Force coins to be a perfectly round integer so we don't deduct 5.9999 coins from DB!
+  const coinsUsed = Math.round(discount * 10); 
+  
+  // Force final bill to be perfect money format
+  const finalBill = Number((itemTotal - discount).toFixed(2));
 
   // --- 🛒 ADD/REMOVE ITEM LOGIC ---
   const updateQty = (productId, delta) => {
@@ -211,7 +216,7 @@ export default function Cart({ cart, setCart, user, onBack, onCheckoutSuccess })
           
           <div style={{ display: 'flex', justifyContent: 'space-between', color: '#4b5563', fontSize: '0.85rem', marginBottom: '10px', fontWeight: '500' }}>
             <span>Item Total</span>
-            <span style={{ color: '#111827', fontWeight: '600' }}>₹{itemTotal}</span>
+            <span style={{ color: '#111827', fontWeight: '600' }}>₹{itemTotal.toFixed(2)}</span>
           </div>
           
           {useCoins && discount > 0 && (
@@ -249,4 +254,5 @@ export default function Cart({ cart, setCart, user, onBack, onCheckoutSuccess })
 
     </div>
   );
-}
+              }
+            
