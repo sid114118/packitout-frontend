@@ -62,7 +62,8 @@ export default function Header({ user }) {
   const bottomText = activeShopName ? activeShopName : user?.pincode ? `Pincode: ${user.pincode}` : "Select a shop";
 
   return (
-    <header style={{ position: 'sticky', top: 0, zIndex: 1000, backgroundColor: '#ffffff', boxShadow: isChanging ? 'none' : '0 2px 10px rgba(0,0,0,0.05)' }}>
+    {/* 🌟 FIXED: Removed position: 'sticky' and top: 0 so App.jsx can control the animation! */}
+    <header style={{ backgroundColor: '#ffffff', position: 'relative', zIndex: 1000, borderBottom: isChanging ? 'none' : '1px solid #f3f4f6' }}>
       
       <div style={{ padding: '12px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         
@@ -91,7 +92,6 @@ export default function Header({ user }) {
               <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '180px' }}>
                 {bottomText}
               </span>
-              {/* 🌟 REPLACED ARROW WITH "CHANGE" TEXT 🌟 */}
               <span style={{ fontSize: '0.75rem', color: '#0c831f', fontWeight: '800', backgroundColor: '#f4fbf6', padding: '2px 6px', borderRadius: '4px', border: '1px solid #dcfce7' }}>
                 {isChanging ? 'CLOSE' : 'CHANGE'}
               </span>
@@ -111,7 +111,7 @@ export default function Header({ user }) {
 
       {/* 🔍 EXPANDING SHOP SELECTOR */}
       {isChanging && (
-        <div style={{ backgroundColor: '#ffffff', padding: '16px', borderTop: '1px solid #f3f4f6', borderBottom: '1px solid #e5e7eb', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.05)', animation: 'slideDown 0.2s ease-out' }}>
+        <div style={{ backgroundColor: '#ffffff', padding: '16px', borderTop: '1px solid #f3f4f6', borderBottom: '1px solid #e5e7eb', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.05)', animation: 'slideDown 0.2s ease-out', position: 'absolute', width: '100%', boxSizing: 'border-box' }}>
           
           <style>{`@keyframes slideDown { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }`}</style>
 
@@ -126,7 +126,7 @@ export default function Header({ user }) {
                 setPincode(e.target.value);
                 setHasSearched(false); 
               }}
-              style={{ flex: 1, padding: '12px 14px', borderRadius: '10px', border: '1px solid #cbd5e1', outline: 'none', backgroundColor: '#f8fafc', fontSize: '0.95rem', fontWeight: '600', color: '#111827' }}
+              style={{ flex: 1, padding: '12px 14px', borderRadius: '10px', border: '1px solid #cbd5e1', outline: 'none', backgroundColor: '#f8fafc', fontSize: '0.95rem', fontWeight: '600', color: '#111827', boxSizing: 'border-box' }}
             />
             <button 
               onClick={handleFindShops} 
@@ -141,7 +141,7 @@ export default function Header({ user }) {
               <select 
                 value={selectedShopId} 
                 onChange={e => setSelectedShopId(e.target.value)}
-                style={{ width: '100%', padding: '12px', borderRadius: '10px', border: '1px solid #cbd5e1', outline: 'none', backgroundColor: '#f8fafc', fontWeight: '700', color: '#111827', fontSize: '0.9rem' }}
+                style={{ width: '100%', padding: '12px', borderRadius: '10px', border: '1px solid #cbd5e1', outline: 'none', backgroundColor: '#f8fafc', fontWeight: '700', color: '#111827', fontSize: '0.9rem', boxSizing: 'border-box' }}
               >
                 {shops.map(s => <option key={s._id} value={s._id}>{s.name} ({s.pincode})</option>)}
               </select>
@@ -163,4 +163,5 @@ export default function Header({ user }) {
       )}
     </header>
   );
-}
+      }
+      
