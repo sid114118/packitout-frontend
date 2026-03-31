@@ -15,7 +15,11 @@ export default function Payment({ user, cart, targetShop, finalBill, useCoins, c
         body: JSON.stringify({
           userId: user._id, 
           shopId: targetShop._id,
+          
+          // 🌟 THE MAGIC HAPPENS HERE 🌟
           paymentMethod: paymentMethod, 
+          paymentStatus: paymentMethod === "COD" ? "Unpaid" : "Paid", 
+          
           items: cart.map(item => ({
             productId: item._id,
             name: item.name,
@@ -40,7 +44,7 @@ export default function Payment({ user, cart, targetShop, finalBill, useCoins, c
           localStorage.setItem("packitout_user", JSON.stringify(updatedUser));
         }
 
-        setStatus("✅ Payment Successful!");
+        setStatus("✅ Order Placed Successfully!");
         setTimeout(() => onCheckoutSuccess(), 1500);
       } else {
         setStatus("❌ Failed to process order.");
@@ -121,10 +125,10 @@ export default function Payment({ user, cart, targetShop, finalBill, useCoins, c
           disabled={status.includes("⏳")}
           style={{ width: '100%', maxWidth: '800px', margin: '0 auto', display: 'flex', justifyContent: 'center', alignItems: 'center', padding: '16px 20px', backgroundColor: '#0c831f', color: 'white', border: 'none', borderRadius: '12px', fontWeight: '900', fontSize: '1.1rem', cursor: 'pointer', boxShadow: '0 4px 12px rgba(12, 131, 31, 0.3)', opacity: status.includes("⏳") ? 0.7 : 1, transition: 'all 0.2s ease' }}
         >
-          {status.includes("⏳") ? "Processing..." : `Pay ₹${finalBill.toFixed(2)} Securely`}
+          {status.includes("⏳") ? "Processing..." : paymentMethod === "COD" ? `Place Order for ₹${finalBill.toFixed(2)}` : `Pay ₹${finalBill.toFixed(2)} Securely`}
         </button>
       </div>
 
     </div>
   );
-              }
+                           }
