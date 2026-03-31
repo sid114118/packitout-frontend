@@ -42,12 +42,20 @@ export function VariantBottomSheet({ product, onClose, onAddToCart }) {
   );
 }
 
-// 💎 2. THE MODERN PRODUCT CARD (Now completely clickable!)
-export function ModernProductCard({ item, isCarousel, shopClosed, onOpenDetails, onQuickAdd }) {
+// 💎 2. THE MODERN PRODUCT CARD (Now with Smart Cart Stepper!)
+export function ModernProductCard({ item, isCarousel, shopClosed, onOpenDetails, onQuickAdd, cart = [], onRemoveFromCart }) {
   const isOutOfStock = !item.inStock;
+  
+  // 🟢 SMART CART LOGIC FOR CARDS
+  const isMultiVariant = item.variants && item.variants.length > 1;
+  const variantIds = isMultiVariant ? item.variants.map(v => v._id) : [item._id];
+  
+  // Count how many of this item (or its variants) are in the cart
+  const cartCount = cart.filter(c => variantIds.includes(c._id)).reduce((sum, c) => sum + (c.qty || 1), 0);
+
   return (
     <div 
-      onClick={() => onOpenDetails(item)} // 👈 Moved click handler to the entire card
+      onClick={() => onOpenDetails(item)} 
       style={{ 
         minWidth: isCarousel ? '140px' : 'auto', 
         maxWidth: isCarousel ? '150px' : 'auto', 
@@ -61,7 +69,7 @@ export function ModernProductCard({ item, isCarousel, shopClosed, onOpenDetails,
         filter: isOutOfStock ? 'grayscale(80%)' : 'none', 
         boxShadow: '0 2px 4px rgba(0,0,0,0.02)', 
         scrollSnapAlign: 'start',
-        cursor: 'pointer' // 👈 Makes the whole card show a pointer finger on hover
+        cursor: 'pointer' 
       }}
     >
       <div style={{ position: 'relative', height: '110px', width: '100%', display: 'flex', justifyContent: 'center', alignItems: 'center', backgroundColor: '#f9fafb', borderRadius: '6px', marginBottom: '16px' }}>
@@ -69,20 +77,34 @@ export function ModernProductCard({ item, isCarousel, shopClosed, onOpenDetails,
         {item.image ? <img src={item.image} alt={item.name} style={{ maxHeight: '90%', maxWidth: '90%', objectFit: 'contain' }} /> : <span style={{fontSize: '40px'}}>{item.emoji}</span>}
         <div style={{ position: 'absolute', bottom: 0, left: 0, backgroundColor: '#fff', border: '1px solid #e5e7eb', fontSize: '0.65rem', padding: '2px 4px', borderRadius: '4px', display: 'flex', alignItems: 'center', gap: '2px', fontWeight: 'bold' }}>4.2 <span style={{ color: '#0f9d58' }}>★</span></div>
         
+        {/* 🟢 BLINKIT-STYLE STEPPER OR ADD BUTTON */}
         {!isOutOfStock && !shopClosed && (
-          <button 
-            onClick={(e) => { 
-              e.stopPropagation(); // 👈 This stops the "ADD" button from opening the modal!
-              onQuickAdd(item); 
-            }} 
-            style={{ position: 'absolute', bottom: '-12px', right: '5px', backgroundColor: '#fff', color: '#0f9d58', border: '1px solid #0f9d58', borderRadius: '6px', padding: '4px 14px', fontSize: '0.8rem', fontWeight: 'bold', display: 'flex', justifyContent: 'center', alignItems: 'center', cursor: 'pointer', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' }}
-          >
-            ADD
-          </button>
+          <div style={{ position: 'absolute', bottom: '-14px', right: '4px' }} onClick={(e) => e.stopPropagation()}>
+            {cartCount > 0 ? (
+              <div style={{ display: 'flex', alignItems: 'center', backgroundColor: '#0c831f', borderRadius: '6px', height: '28px', width: '70px', boxShadow: '0 2px 6px rgba(12, 131, 31, 0.3)' }}>
+                <button 
+                  onClick={() => isMultiVariant ? onQuickAdd(item) : onRemoveFromCart(item)} 
+                  style={{ flex: 1, height: '100%', border: 'none', background: 'transparent', color: '#fff', fontSize: '1.1rem', fontWeight: 'bold', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                >−</button>
+                <span style={{ color: '#fff', fontSize: '0.85rem', fontWeight: 'bold', minWidth: '16px', textAlign: 'center' }}>{cartCount}</span>
+                <button 
+                  onClick={() => isMultiVariant ? onQuickAdd(item) : onQuickAdd(item)} 
+                  style={{ flex: 1, height: '100%', border: 'none', background: 'transparent', color: '#fff', fontSize: '1.1rem', fontWeight: 'bold', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                >+</button>
+              </div>
+            ) : (
+              <button 
+                onClick={() => onQuickAdd(item)} 
+                style={{ backgroundColor: '#fff', color: '#0c831f', border: '1px solid #0c831f', borderRadius: '6px', padding: '4px 16px', fontSize: '0.85rem', fontWeight: 'bold', display: 'flex', justifyContent: 'center', alignItems: 'center', cursor: 'pointer', boxShadow: '0 2px 4px rgba(0,0,0,0.05)' }}
+              >
+                ADD
+              </button>
+            )}
+          </div>
         )}
       </div>
       <div>
-        <p style={{ fontSize: '0.75rem', color: '#6b7280', margin: '0 0 4px 0', minHeight: '14px' }}>{item.qnty || "1 pc"} {item.variants && item.variants.length > 1 && <span style={{color: '#d97706', fontWeight: 'bold'}}> ({item.variants.length} sizes)</span>}</p>
+        <p style={{ fontSize: '0.75rem', color: '#6b7280', margin: '0 0 4px 0', minHeight: '14px' }}>{item.qnty || "1 pc"} {isMultiVariant && <span style={{color: '#d97706', fontWeight: 'bold'}}> ({item.variants.length} sizes)</span>}</p>
         <h4 style={{ fontSize: '0.85rem', margin: '0 0 8px 0', color: '#111827', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden', textOverflow: 'ellipsis', height: '2.4em', lineHeight: '1.2em' }}>{item.brand ? `${item.brand} ` : ''}{item.name}</h4>
         <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
           <span style={{ backgroundColor: '#fef08a', padding: '2px 6px', borderRadius: '4px', fontWeight: 'bold', fontSize: '0.85rem', color: '#000' }}>₹{item.sellingPrice}</span>
@@ -96,7 +118,7 @@ export function ModernProductCard({ item, isCarousel, shopClosed, onOpenDetails,
 }
 
 // 🛤️ 3. THE PRODUCT ROW
-export function ProductRow({ title, subtitle, items, onViewAll, shopClosed, onOpenDetails, onQuickAdd }) {
+export function ProductRow({ title, subtitle, items, onViewAll, shopClosed, onOpenDetails, onQuickAdd, cart = [], onRemoveFromCart }) {
   if (!items || items.length === 0) return null;
   return (
     <div style={{ marginBottom: '24px', backgroundColor: '#fff', padding: '15px 0' }}>
@@ -111,9 +133,18 @@ export function ProductRow({ title, subtitle, items, onViewAll, shopClosed, onOp
       </div>
       <div className="hide-scroll" style={{ display: 'flex', overflowX: 'auto', gap: '12px', padding: '0 15px 10px 15px', scrollSnapType: 'x mandatory' }}>
         {items.map(item => (
-          <ModernProductCard key={item._id} item={item} isCarousel={true} shopClosed={shopClosed} onOpenDetails={onOpenDetails} onQuickAdd={onQuickAdd} />
+          <ModernProductCard 
+            key={item._id} 
+            item={item} 
+            isCarousel={true} 
+            shopClosed={shopClosed} 
+            onOpenDetails={onOpenDetails} 
+            onQuickAdd={onQuickAdd} 
+            cart={cart} 
+            onRemoveFromCart={onRemoveFromCart} 
+          />
         ))}
       </div>
     </div>
   );
-}
+                 }
