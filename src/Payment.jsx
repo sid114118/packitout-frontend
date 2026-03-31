@@ -2,9 +2,8 @@ import React, { useState } from 'react';
 
 export default function Payment({ user, cart, targetShop, finalBill, useCoins, coinsUsed, onBack, onCheckoutSuccess }) {
   const [status, setStatus] = useState("");
-  const [paymentMethod, setPaymentMethod] = useState("UPI"); // Default to UPI
+  const [paymentMethod, setPaymentMethod] = useState("UPI"); 
 
-  // 🚀 ACTUAL CHECKOUT FUNCTION
   const handleCheckout = async () => {
     setStatus(`⏳ Processing ${paymentMethod} Payment...`);
     
@@ -15,11 +14,8 @@ export default function Payment({ user, cart, targetShop, finalBill, useCoins, c
         body: JSON.stringify({
           userId: user._id, 
           shopId: targetShop._id,
-          
-          // 🌟 THE MAGIC HAPPENS HERE 🌟
           paymentMethod: paymentMethod, 
           paymentStatus: paymentMethod === "COD" ? "Unpaid" : "Paid", 
-          
           items: cart.map(item => ({
             productId: item._id,
             name: item.name,
@@ -31,7 +27,6 @@ export default function Payment({ user, cart, targetShop, finalBill, useCoins, c
       });
 
       if (response.ok) {
-        // Deduct coins if they were used
         if (useCoins && coinsUsed > 0) {
           const newCoinBalance = Math.round(user.coins - coinsUsed); 
           await fetch(`https://darkslategrey-snail-415133.hostingersite.com/users/${user._id}`, {
@@ -57,7 +52,8 @@ export default function Payment({ user, cart, targetShop, finalBill, useCoins, c
   };
 
   return (
-    <div style={{ backgroundColor: '#f3f4f6', minHeight: '100vh', fontFamily: 'sans-serif', paddingBottom: '140px', animation: 'fadeIn 0.2s ease-in' }}>
+    // 🌟 FIX: Increased paddingBottom to 180px
+    <div style={{ backgroundColor: '#f3f4f6', minHeight: '100vh', fontFamily: 'sans-serif', paddingBottom: '180px', animation: 'fadeIn 0.2s ease-in' }}>
       
       {/* Payment Header */}
       <div style={{ position: 'sticky', top: 0, backgroundColor: 'white', padding: '16px 20px', display: 'flex', alignItems: 'center', gap: '15px', borderBottom: '1px solid #e5e7eb', zIndex: 100 }}>
@@ -78,7 +74,6 @@ export default function Payment({ user, cart, targetShop, finalBill, useCoins, c
         {/* Payment Options */}
         <div style={{ backgroundColor: 'white', borderRadius: '12px', overflow: 'hidden', boxShadow: '0 2px 8px rgba(0,0,0,0.02)' }}>
           
-          {/* UPI Option */}
           <label style={{ display: 'flex', alignItems: 'center', padding: '16px', borderBottom: '1px solid #f1f5f9', cursor: 'pointer', backgroundColor: paymentMethod === 'UPI' ? '#f4fbf6' : 'white' }}>
             <input type="radio" name="payment" value="UPI" checked={paymentMethod === 'UPI'} onChange={() => setPaymentMethod('UPI')} style={{ width: '20px', height: '20px', accentColor: '#0c831f', marginRight: '16px' }} />
             <div style={{ fontSize: '1.5rem', marginRight: '12px' }}>📱</div>
@@ -88,7 +83,6 @@ export default function Payment({ user, cart, targetShop, finalBill, useCoins, c
             </div>
           </label>
 
-          {/* Credit/Debit Card Option */}
           <label style={{ display: 'flex', alignItems: 'center', padding: '16px', borderBottom: '1px solid #f1f5f9', cursor: 'pointer', backgroundColor: paymentMethod === 'Card' ? '#f4fbf6' : 'white' }}>
             <input type="radio" name="payment" value="Card" checked={paymentMethod === 'Card'} onChange={() => setPaymentMethod('Card')} style={{ width: '20px', height: '20px', accentColor: '#0c831f', marginRight: '16px' }} />
             <div style={{ fontSize: '1.5rem', marginRight: '12px' }}>💳</div>
@@ -98,7 +92,6 @@ export default function Payment({ user, cart, targetShop, finalBill, useCoins, c
             </div>
           </label>
 
-          {/* COD Option */}
           <label style={{ display: 'flex', alignItems: 'center', padding: '16px', cursor: 'pointer', backgroundColor: paymentMethod === 'COD' ? '#f4fbf6' : 'white' }}>
             <input type="radio" name="payment" value="COD" checked={paymentMethod === 'COD'} onChange={() => setPaymentMethod('COD')} style={{ width: '20px', height: '20px', accentColor: '#0c831f', marginRight: '16px' }} />
             <div style={{ fontSize: '1.5rem', marginRight: '12px' }}>💵</div>
@@ -111,15 +104,14 @@ export default function Payment({ user, cart, targetShop, finalBill, useCoins, c
         </div>
       </div>
 
-      {/* Status Toast */}
       {status && (
-        <div style={{ position: 'fixed', bottom: '100px', left: '50%', transform: 'translateX(-50%)', backgroundColor: '#334155', color: 'white', padding: '12px 24px', borderRadius: '30px', fontWeight: 'bold', fontSize: '0.9rem', zIndex: 1000, boxShadow: '0 4px 15px rgba(0,0,0,0.2)', whiteSpace: 'nowrap' }}>
+        <div style={{ position: 'fixed', bottom: '130px', left: '50%', transform: 'translateX(-50%)', backgroundColor: '#334155', color: 'white', padding: '12px 24px', borderRadius: '30px', fontWeight: 'bold', fontSize: '0.9rem', zIndex: 1000, boxShadow: '0 4px 15px rgba(0,0,0,0.2)', whiteSpace: 'nowrap' }}>
           {status}
         </div>
       )}
 
-      {/* Sticky Pay Button */}
-      <div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, backgroundColor: 'white', padding: '12px 16px', borderTop: '1px solid #e5e7eb', boxShadow: '0 -4px 10px rgba(0,0,0,0.03)', zIndex: 90, paddingBottom: 'max(12px, env(safe-area-inset-bottom))' }}>
+      {/* 🌟 FIX: Moved bottom to 70px here as well! */}
+      <div style={{ position: 'fixed', bottom: '70px', left: 0, right: 0, backgroundColor: 'white', padding: '12px 16px', borderTop: '1px solid #e5e7eb', boxShadow: '0 -4px 10px rgba(0,0,0,0.03)', zIndex: 90 }}>
         <button 
           onClick={handleCheckout} 
           disabled={status.includes("⏳")}
@@ -131,4 +123,4 @@ export default function Payment({ user, cart, targetShop, finalBill, useCoins, c
 
     </div>
   );
-                           }
+                   }
