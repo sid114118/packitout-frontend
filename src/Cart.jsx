@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import Payment from './Payment.jsx'; // 👈 IMPORTING OUR NEW FILE
+import Payment from './Payment.jsx'; 
 
 export default function Cart({ cart, setCart, user, onBack, onCheckoutSuccess }) {
   const [targetShop, setTargetShop] = useState(null); 
@@ -69,7 +69,6 @@ export default function Cart({ cart, setCart, user, onBack, onCheckoutSuccess })
   }
 
   // 💳 ================= RENDER PAYMENT SCREEN ================= 💳
-  // If the user clicked "Select Payment", we hand off everything to the new Payment component!
   if (showPayment) {
     return (
       <Payment 
@@ -79,7 +78,7 @@ export default function Cart({ cart, setCart, user, onBack, onCheckoutSuccess })
         finalBill={finalBill}
         useCoins={useCoins}
         coinsUsed={coinsUsed}
-        onBack={() => setShowPayment(false)} // This lets them go back to the Cart!
+        onBack={() => setShowPayment(false)} 
         onCheckoutSuccess={onCheckoutSuccess}
       />
     );
@@ -87,7 +86,8 @@ export default function Cart({ cart, setCart, user, onBack, onCheckoutSuccess })
 
   // 🛒 ================= CART SCREEN ================= 🛒
   return (
-    <div style={{ backgroundColor: '#f3f4f6', minHeight: '100vh', fontFamily: 'sans-serif', paddingBottom: '140px' }}>
+    // 🌟 FIX: Increased paddingBottom to 180px
+    <div style={{ backgroundColor: '#f3f4f6', minHeight: '100vh', fontFamily: 'sans-serif', paddingBottom: '180px' }}>
       
       {/* Header */}
       <div style={{ position: 'sticky', top: 0, backgroundColor: 'white', padding: '16px 20px', display: 'flex', alignItems: 'center', gap: '15px', borderBottom: '1px solid #e5e7eb', zIndex: 100 }}>
@@ -196,8 +196,8 @@ export default function Cart({ cart, setCart, user, onBack, onCheckoutSuccess })
         </div>
       </div>
 
-      {/* 🌟 STICKY PROCEED TO PAYMENT BUTTON */}
-      <div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, backgroundColor: 'white', padding: '12px 16px', borderTop: '1px solid #e5e7eb', boxShadow: '0 -4px 10px rgba(0,0,0,0.03)', zIndex: 90, paddingBottom: 'max(12px, env(safe-area-inset-bottom))' }}>
+      {/* 🌟 FIX: Moved bottom to 70px so it sits beautifully above the Nav Bar! */}
+      <div style={{ position: 'fixed', bottom: '70px', left: 0, right: 0, backgroundColor: 'white', padding: '12px 16px', borderTop: '1px solid #e5e7eb', boxShadow: '0 -4px 10px rgba(0,0,0,0.03)', zIndex: 90 }}>
         <button 
           onClick={() => setShowPayment(true)} 
           disabled={!targetShop}
