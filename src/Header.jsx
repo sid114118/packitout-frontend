@@ -61,8 +61,8 @@ export default function Header({ user }) {
   const topText = hasLocation ? "Shopping from" : "No location";
   const bottomText = activeShopName ? activeShopName : user?.pincode ? `Pincode: ${user.pincode}` : "Select a shop";
 
+  // Removed position: 'sticky' and top: 0 so App.jsx can control the animation!
   return (
-    {/* 🌟 FIXED: Removed position: 'sticky' and top: 0 so App.jsx can control the animation! */}
     <header style={{ backgroundColor: '#ffffff', position: 'relative', zIndex: 1000, borderBottom: isChanging ? 'none' : '1px solid #f3f4f6' }}>
       
       <div style={{ padding: '12px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -163,5 +163,4 @@ export default function Header({ user }) {
       )}
     </header>
   );
-      }
-      
+}
