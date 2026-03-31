@@ -11,13 +11,19 @@ import UserAuth from './UserAuth.jsx';
 import ProductFeed from './ProductFeed.jsx';
 import Cart from './Cart.jsx';
 import OrderSuccess from './OrderSuccess.jsx';
-import BottomNav from './BottomNav.jsx'; // 🌟 The Global Nav Bar
+import BottomNav from './BottomNav.jsx';
+// 🌟 NEW: Import the Nearby Components
+import Nearby from './Nearby.jsx';
+import ShopDetail from './ShopDetail.jsx';
 
 export default function App() {
   const [currentView, setCurrentView] = useState("customer");
   const [isAdminAuthenticated, setIsAdminAuthenticated] = useState(false);
   const [isShopAuthenticated, setIsShopAuthenticated] = useState(null);
   
+  // 🌟 NEW: State to track which shop is being viewed in detail
+  const [viewingShop, setViewingShop] = useState(null);
+
   const [selectedCategory, setSelectedCategory] = useState(null); 
   const [searchQuery, setSearchQuery] = useState("");
   
@@ -38,7 +44,7 @@ export default function App() {
     localStorage.setItem("packitout_cart", JSON.stringify(cart));
   }, [cart]);
 
-  // 🌟 Scroll Tracking
+  // Scroll Tracking
   useEffect(() => {
     const handleScroll = () => {
       const currentScrollY = window.scrollY;
@@ -50,7 +56,7 @@ export default function App() {
     return () => window.removeEventListener("scroll", handleScroll);
   }, [lastScrollY]);
 
-  // 🌟 THE FIX: URL Router updated with #nearby
+  // URL Router
   useEffect(() => {
     const checkUrl = () => {
       if (window.location.hash === "#admin") setCurrentView("admin");
@@ -58,12 +64,14 @@ export default function App() {
       else if (window.location.hash === "#account") setCurrentView("account");
       else if (window.location.hash === "#cart") setCurrentView("cart");
       else if (window.location.hash === "#success") setCurrentView("success");
-      else if (window.location.hash === "#nearby") setCurrentView("nearby"); // 👈 FIX IS HERE
+      else if (window.location.hash === "#nearby") setCurrentView("nearby");
       else {
         setCurrentView("customer");
         setSelectedCategory(null);
         setSearchQuery(""); 
       }
+      // Reset viewing shop when changing main routes
+      setViewingShop(null);
     };
     checkUrl();
     window.addEventListener("hashchange", checkUrl);
@@ -105,7 +113,26 @@ export default function App() {
     window.location.hash = "";
   };
 
-  // 🌟 THE MAGIC: We handle the views in a helper function so we can wrap the whole app!
+  // Helper function to update primary shop
+  const handleSetPrimaryShop = async (shopId) => {
+    try {
+      const response = await fetch(`https://darkslategrey-snail-415133.hostingersite.com/users/${loggedInUser._id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ primaryShop: shopId })
+      });
+      if (response.ok) {
+        const updatedUser = await response.json();
+        setLoggedInUser(updatedUser);
+        localStorage.setItem("packitout_user", JSON.stringify(updatedUser));
+        alert("Success! This is now your primary shop. 🏪");
+        window.location.hash = ""; // Redirect home to see new menu
+      }
+    } catch (err) {
+      alert("Failed to update primary shop.");
+    }
+  };
+
   const renderContent = () => {
     if (currentView === "admin") {
       if (!isAdminAuthenticated) return <AdminLogin onLogin={() => setIsAdminAuthenticated(true)} />;
@@ -128,16 +155,15 @@ export default function App() {
       return <Cart cart={cart} setCart={setCart} user={loggedInUser} onBack={() => window.location.hash = ""} onCheckoutSuccess={() => { setCart([]); window.location.hash = "#success"; }} />;
     }
 
-    // 🌟 THE FIX: Rendering the Nearby View properly
+    // 🌟 UPDATED: Nearby Route with Grid and Detail logic
     if (currentView === "nearby") {
+      if (viewingShop) {
+        return <ShopDetail shop={viewingShop} onBack={() => setViewingShop(null)} onSetPrimary={handleSetPrimaryShop} />;
+      }
       return (
-        <div style={{ minHeight: '100vh', backgroundColor: '#f3f4f6', paddingBottom: '80px' }}>
+        <div style={{ paddingBottom: '80px' }}>
           <Header user={loggedInUser} />
-          <div style={{ padding: '40px 20px', textAlign: 'center' }}>
-            <div style={{ fontSize: '4rem', marginBottom: '10px' }}>🏪</div>
-            <h2 style={{ color: '#0f172a', fontWeight: '900', marginBottom: '10px' }}>Nearby Shops</h2>
-            <p style={{ color: '#64748b' }}>We will add your Shop Carousel here soon so you can explore stores near you!</p>
-          </div>
+          <Nearby user={loggedInUser} onSelectShop={(shop) => setViewingShop(shop)} />
         </div>
       );
     }
@@ -182,17 +208,12 @@ export default function App() {
     );
   };
 
-  // 🌟 Determine if the Bottom Nav should be visible (Hide it on Admin and Shop dashboards)
   const showBottomNav = ["customer", "nearby", "account", "cart", "success"].includes(currentView);
 
   return (
     <>
-      {/* Load the screen content */}
       {renderContent()}
-
-      {/* ALWAYS load the Nav Bar on user pages! */}
       {showBottomNav && <BottomNav currentView={currentView} />}
     </>
   );
-            }
-        
+}
