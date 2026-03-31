@@ -1,8 +1,18 @@
 import React from 'react';
 
 export default function BottomNav({ currentView }) {
-  // Helper to determine if the icon should be green or gray
   const isActive = (views) => views.includes(currentView);
+
+  // Smart Navigation Logic
+  const handleNav = (hash) => {
+    // If they are already on this tab, scroll to the top!
+    if (window.location.hash === hash || (hash === "" && !window.location.hash)) {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    } else {
+      // Otherwise, change the page
+      window.location.hash = hash;
+    }
+  };
 
   return (
     <div style={{
@@ -16,14 +26,14 @@ export default function BottomNav({ currentView }) {
       justifyContent: 'space-around',
       alignItems: 'center',
       padding: '10px 0',
-      paddingBottom: 'max(10px, env(safe-area-inset-bottom))', // iOS support
-      zIndex: 998, // Sits just below the Z-index of the Cart popup!
+      paddingBottom: 'max(10px, env(safe-area-inset-bottom))',
+      zIndex: 998,
       boxShadow: '0 -4px 10px rgba(0,0,0,0.03)'
     }}>
       
       {/* 🏠 HOME */}
       <div 
-        onClick={() => window.location.hash = ""} 
+        onClick={() => handleNav("")} 
         style={navItemStyle(isActive(["customer", ""]))}
       >
         <div style={{ fontSize: '1.4rem', marginBottom: '2px', filter: isActive(["customer", ""]) ? 'grayscale(0%)' : 'grayscale(100%) opacity(50%)' }}>🏠</div>
@@ -32,7 +42,7 @@ export default function BottomNav({ currentView }) {
 
       {/* 🏪 NEARBY */}
       <div 
-        onClick={() => window.location.hash = "#nearby"} 
+        onClick={() => handleNav("#nearby")} 
         style={navItemStyle(isActive(["nearby"]))}
       >
         <div style={{ fontSize: '1.4rem', marginBottom: '2px', filter: isActive(["nearby"]) ? 'grayscale(0%)' : 'grayscale(100%) opacity(50%)' }}>🏪</div>
@@ -41,8 +51,8 @@ export default function BottomNav({ currentView }) {
 
       {/* 🧾 ORDERS */}
       <div 
-        onClick={() => window.location.hash = "#account"} 
-        style={navItemStyle(false)} // We will route this specifically to the Orders tab of the account later
+        onClick={() => handleNav("#account")} 
+        style={navItemStyle(false)} 
       >
         <div style={{ fontSize: '1.4rem', marginBottom: '2px', filter: 'grayscale(100%) opacity(50%)' }}>🧾</div>
         <span style={{ fontSize: '0.65rem', fontWeight: '800' }}>Orders</span>
@@ -50,7 +60,7 @@ export default function BottomNav({ currentView }) {
 
       {/* 👤 PROFILE */}
       <div 
-        onClick={() => window.location.hash = "#account"} 
+        onClick={() => handleNav("#account")} 
         style={navItemStyle(isActive(["account"]))}
       >
         <div style={{ fontSize: '1.4rem', marginBottom: '2px', filter: isActive(["account"]) ? 'grayscale(0%)' : 'grayscale(100%) opacity(50%)' }}>👤</div>
@@ -61,7 +71,7 @@ export default function BottomNav({ currentView }) {
   );
 }
 
-// Reusable style for the icons
+// 🌟 THE FIX: Added Anti-Select and Anti-Highlight CSS
 const navItemStyle = (active) => ({
   display: 'flex',
   flexDirection: 'column',
@@ -70,5 +80,10 @@ const navItemStyle = (active) => ({
   cursor: 'pointer',
   flex: 1,
   transition: 'color 0.2s ease',
-  WebkitTapHighlightColor: 'transparent' // Removes the ugly blue tap box on mobile
+  
+  // These 3 lines stop Android/iOS from showing text selection & search popups!
+  WebkitTapHighlightColor: 'transparent', 
+  WebkitUserSelect: 'none', 
+  userSelect: 'none',
+  WebkitTouchCallout: 'none' // Stops long-press popups on iOS
 });
