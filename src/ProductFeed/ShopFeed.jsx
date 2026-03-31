@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import ProductModal from './ProductModal.jsx';
-import { VariantBottomSheet, ModernProductCard, ProductRow } from './FeedComponents.jsx'; // 👈 LOOK HOW CLEAN THIS IS!
+import { VariantBottomSheet, ModernProductCard, ProductRow } from './FeedComponents.jsx';
 
-export default function ShopFeed({ user, onAddToCart, cart = [], selectedCategory, onClearCategory, searchQuery }) {
+// 👇 1. ADDED onViewCart and onRemoveFromCart HERE
+export default function ShopFeed({ user, onAddToCart, onRemoveFromCart, onViewCart, cart = [], selectedCategory, onClearCategory, searchQuery }) {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [shopInfo, setShopInfo] = useState(null);
@@ -94,7 +95,6 @@ export default function ShopFeed({ user, onAddToCart, cart = [], selectedCategor
     } catch (err) { alert("Failed to switch shop."); }
   };
 
-  // 👇 The Centralized Click Handler!
   const handleQuickAdd = (item) => {
     if (item.variants && item.variants.length > 1) setSelectedVariantProduct(item);
     else onAddToCart({ ...item, mrp: item.sellingPrice });
@@ -153,7 +153,18 @@ export default function ShopFeed({ user, onAddToCart, cart = [], selectedCategor
 
       {/* REUSABLE UI MAGIC ✨ */}
       <VariantBottomSheet product={selectedVariantProduct} onClose={() => setSelectedVariantProduct(null)} onAddToCart={onAddToCart} />
-      <ProductModal product={selectedProductDetails} isOpen={selectedProductDetails !== null} onClose={() => setSelectedProductDetails(null)} onAddToCart={onAddToCart} cart={cart} allItems={items} />
+      
+      {/* 👇 2. PASSED onViewCart and onRemoveFromCart TO THE MODAL HERE */}
+      <ProductModal 
+        product={selectedProductDetails} 
+        isOpen={selectedProductDetails !== null} 
+        onClose={() => setSelectedProductDetails(null)} 
+        onAddToCart={onAddToCart} 
+        onRemoveFromCart={onRemoveFromCart}
+        onViewCart={onViewCart}
+        cart={cart} 
+        allItems={items} 
+      />
     </div>
   );
 }
