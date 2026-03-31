@@ -1,39 +1,3 @@
-Import React, { useState, useEffect } from 'react';
-import CrossSellSlider from './CrossSell.jsx';
-
-export default function ProductModal({ product, isOpen, onClose, onAddToCart, onRemoveFromCart, onViewCart, allItems = [], cart = [] }) {
-  const [currentProduct, setCurrentProduct] = useState(null);
-  const [selectedVariant, setSelectedVariant] = useState(null);
-  const [showFullDesc, setShowFullDesc] = useState(false);
-
-  useEffect(() => {
-    if (product) {
-      setCurrentProduct(product);
-      setSelectedVariant(product);
-      setShowFullDesc(false);
-    }
-  }, [product]);
-
-  if (!isOpen || !currentProduct || !selectedVariant) return null;
-
-  const displayPrice = selectedVariant.sellingPrice || selectedVariant.mrp;
-  const isDiscounted = displayPrice < selectedVariant.mrp;
-  const discountPercent = isDiscounted
-    ? Math.round(((selectedVariant.mrp - displayPrice) / selectedVariant.mrp) * 100)
-    : 0;
-
-  // 🟢 FIXED CART TRACKERS (Now matches your Cart.jsx structure!)
-  const safeCart = Array.isArray(cart) ? cart : [];
-  
-  // Find if this exact item is in the cart, and get its 'qty'
-  const cartItem = safeCart.find(item => item._id === selectedVariant._id);
-  const cartCount = cartItem ? cartItem.qty : 0;
-  
-  // Sum up all 'qty' properties for the total item count
-  const cartTotalItems = safeCart.reduce((total, item) => total + (item.qty || 1), 0);
-  
-  // Sum up the (price * qty) for the total bill
-  const cartTotalPrice = safeCart.reduce((total, item) => total + ((item.sellingPrice || item.mrp) * (item.qty || 1)), 0);
 
 
   // ── Subcomponents ──────────────────────────────────────────────
