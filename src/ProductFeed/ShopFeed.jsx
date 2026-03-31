@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import ProductModal from './ProductModal.jsx';
 import { VariantBottomSheet, ModernProductCard, ProductRow } from './FeedComponents.jsx';
 
-// 👇 1. ADDED onViewCart and onRemoveFromCart HERE
 export default function ShopFeed({ user, onAddToCart, onRemoveFromCart, onViewCart, cart = [], selectedCategory, onClearCategory, searchQuery }) {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -121,17 +120,34 @@ export default function ShopFeed({ user, onAddToCart, onRemoveFromCart, onViewCa
             <h2 style={{ margin: 0, color: '#0f172a', fontSize: '1.2rem' }}>{isSearching ? `Results for "${searchQuery}"` : (viewAll ? viewAll.title : selectedCategory)}</h2>
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: '12px' }}>
-            {displayItems.map(item => <ModernProductCard key={item._id} item={item} isCarousel={false} shopClosed={shopClosed} onOpenDetails={setSelectedProductDetails} onQuickAdd={handleQuickAdd} />)}
+            {displayItems.map(item => (
+              <ModernProductCard 
+                key={item._id} 
+                item={item} 
+                isCarousel={false} 
+                shopClosed={shopClosed} 
+                onOpenDetails={setSelectedProductDetails} 
+                onQuickAdd={handleQuickAdd} 
+                cart={cart}                             // 👈 ADDED
+                onRemoveFromCart={onRemoveFromCart}     // 👈 ADDED
+              />
+            ))}
           </div>
         </div>
       ) : (
         <>
-          <ProductRow title={timeBased.title} subtitle={timeBased.subtitle} items={timeBased.items} onViewAll={setViewAll} shopClosed={shopClosed} onOpenDetails={setSelectedProductDetails} onQuickAdd={handleQuickAdd} />
-          <ProductRow title="Price Crash" subtitle="Extra Savings" items={shopDeals} onViewAll={setViewAll} shopClosed={shopClosed} onOpenDetails={setSelectedProductDetails} onQuickAdd={handleQuickAdd} />
-          <ProductRow title="Top Picks for You" subtitle="Based on what is popular around you" items={shopBestSellers} onViewAll={setViewAll} shopClosed={shopClosed} onOpenDetails={setSelectedProductDetails} onQuickAdd={handleQuickAdd} />
-          <ProductRow title="The Under ₹99 Store" subtitle="Budget friendly grabs" items={under99} onViewAll={setViewAll} shopClosed={shopClosed} onOpenDetails={setSelectedProductDetails} onQuickAdd={handleQuickAdd} />
-          <ProductRow title="Buy It Again" subtitle="Your recent favorites" items={buyItAgain} onViewAll={setViewAll} shopClosed={shopClosed} onOpenDetails={setSelectedProductDetails} onQuickAdd={handleQuickAdd} />
-          <ProductRow title="Freshly Restocked" subtitle="Back on the shelves" items={newArrivals} onViewAll={setViewAll} shopClosed={shopClosed} onOpenDetails={setSelectedProductDetails} onQuickAdd={handleQuickAdd} />
+          {/* 👇 ADDED cart and onRemoveFromCart TO EVERY PRODUCT ROW 👇 */}
+          <ProductRow title={timeBased.title} subtitle={timeBased.subtitle} items={timeBased.items} onViewAll={setViewAll} shopClosed={shopClosed} onOpenDetails={setSelectedProductDetails} onQuickAdd={handleQuickAdd} cart={cart} onRemoveFromCart={onRemoveFromCart} />
+          
+          <ProductRow title="Price Crash" subtitle="Extra Savings" items={shopDeals} onViewAll={setViewAll} shopClosed={shopClosed} onOpenDetails={setSelectedProductDetails} onQuickAdd={handleQuickAdd} cart={cart} onRemoveFromCart={onRemoveFromCart} />
+          
+          <ProductRow title="Top Picks for You" subtitle="Based on what is popular around you" items={shopBestSellers} onViewAll={setViewAll} shopClosed={shopClosed} onOpenDetails={setSelectedProductDetails} onQuickAdd={handleQuickAdd} cart={cart} onRemoveFromCart={onRemoveFromCart} />
+          
+          <ProductRow title="The Under ₹99 Store" subtitle="Budget friendly grabs" items={under99} onViewAll={setViewAll} shopClosed={shopClosed} onOpenDetails={setSelectedProductDetails} onQuickAdd={handleQuickAdd} cart={cart} onRemoveFromCart={onRemoveFromCart} />
+          
+          <ProductRow title="Buy It Again" subtitle="Your recent favorites" items={buyItAgain} onViewAll={setViewAll} shopClosed={shopClosed} onOpenDetails={setSelectedProductDetails} onQuickAdd={handleQuickAdd} cart={cart} onRemoveFromCart={onRemoveFromCart} />
+          
+          <ProductRow title="Freshly Restocked" subtitle="Back on the shelves" items={newArrivals} onViewAll={setViewAll} shopClosed={shopClosed} onOpenDetails={setSelectedProductDetails} onQuickAdd={handleQuickAdd} cart={cart} onRemoveFromCart={onRemoveFromCart} />
 
           {nearbyShops.length > 0 && (
             <div style={{ padding: '20px 15px', backgroundColor: '#fff', marginTop: '10px' }}>
@@ -154,7 +170,6 @@ export default function ShopFeed({ user, onAddToCart, onRemoveFromCart, onViewCa
       {/* REUSABLE UI MAGIC ✨ */}
       <VariantBottomSheet product={selectedVariantProduct} onClose={() => setSelectedVariantProduct(null)} onAddToCart={onAddToCart} />
       
-      {/* 👇 2. PASSED onViewCart and onRemoveFromCart TO THE MODAL HERE */}
       <ProductModal 
         product={selectedProductDetails} 
         isOpen={selectedProductDetails !== null} 
