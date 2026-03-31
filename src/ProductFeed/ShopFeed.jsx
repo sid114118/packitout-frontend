@@ -101,9 +101,21 @@ export default function ShopFeed({ user, onAddToCart, onRemoveFromCart, onViewCa
 
   if (loading) return <div style={{ padding: '40px', textAlign: 'center', color: '#6b7280' }}>Loading fresh products...</div>;
 
+  // 🌟 ENHANCED SEARCH LOGIC: Scans Name, Brand, AND searchTags Array
   const isSearching = searchQuery && searchQuery.trim().length > 0;
   let displayItems = items;
-  if (isSearching) displayItems = items.filter(i => (i.name || "").toLowerCase().includes(searchQuery.toLowerCase()) || (i.brand || "").toLowerCase().includes(searchQuery.toLowerCase()));
+  if (isSearching) {
+    const q = searchQuery.toLowerCase();
+    displayItems = items.filter(i => {
+      const nameMatch = (i.name || "").toLowerCase().includes(q);
+      const brandMatch = (i.brand || "").toLowerCase().includes(q);
+      
+      // Check the searchTags array
+      const tagMatch = i.searchTags && Array.isArray(i.searchTags) && i.searchTags.some(tag => tag.toLowerCase().includes(q));
+      
+      return nameMatch || brandMatch || tagMatch;
+    });
+  } 
   else if (viewAll) displayItems = viewAll.items;
   else if (selectedCategory) displayItems = items.filter(i => (i.category || "").toLowerCase().includes(selectedCategory.toLowerCase()));
 
@@ -128,25 +140,26 @@ export default function ShopFeed({ user, onAddToCart, onRemoveFromCart, onViewCa
                 shopClosed={shopClosed} 
                 onOpenDetails={setSelectedProductDetails} 
                 onQuickAdd={handleQuickAdd} 
-                cart={cart}                             // 👈 ADDED
-                onRemoveFromCart={onRemoveFromCart}     // 👈 ADDED
+                cart={cart} 
+                onRemoveFromCart={onRemoveFromCart} 
               />
             ))}
           </div>
+          {displayItems.length === 0 && (
+             <div style={{ textAlign: 'center', padding: '40px 20px', color: '#64748b' }}>
+                <div style={{ fontSize: '3rem', marginBottom: '10px' }}>🔍</div>
+                <p style={{ fontWeight: 'bold' }}>No products found for "{searchQuery}"</p>
+                <p style={{ fontSize: '0.85rem' }}>Try searching for generic terms like "chips" or "milk".</p>
+             </div>
+          )}
         </div>
       ) : (
         <>
-          {/* 👇 ADDED cart and onRemoveFromCart TO EVERY PRODUCT ROW 👇 */}
           <ProductRow title={timeBased.title} subtitle={timeBased.subtitle} items={timeBased.items} onViewAll={setViewAll} shopClosed={shopClosed} onOpenDetails={setSelectedProductDetails} onQuickAdd={handleQuickAdd} cart={cart} onRemoveFromCart={onRemoveFromCart} />
-          
           <ProductRow title="Price Crash" subtitle="Extra Savings" items={shopDeals} onViewAll={setViewAll} shopClosed={shopClosed} onOpenDetails={setSelectedProductDetails} onQuickAdd={handleQuickAdd} cart={cart} onRemoveFromCart={onRemoveFromCart} />
-          
           <ProductRow title="Top Picks for You" subtitle="Based on what is popular around you" items={shopBestSellers} onViewAll={setViewAll} shopClosed={shopClosed} onOpenDetails={setSelectedProductDetails} onQuickAdd={handleQuickAdd} cart={cart} onRemoveFromCart={onRemoveFromCart} />
-          
           <ProductRow title="The Under ₹99 Store" subtitle="Budget friendly grabs" items={under99} onViewAll={setViewAll} shopClosed={shopClosed} onOpenDetails={setSelectedProductDetails} onQuickAdd={handleQuickAdd} cart={cart} onRemoveFromCart={onRemoveFromCart} />
-          
           <ProductRow title="Buy It Again" subtitle="Your recent favorites" items={buyItAgain} onViewAll={setViewAll} shopClosed={shopClosed} onOpenDetails={setSelectedProductDetails} onQuickAdd={handleQuickAdd} cart={cart} onRemoveFromCart={onRemoveFromCart} />
-          
           <ProductRow title="Freshly Restocked" subtitle="Back on the shelves" items={newArrivals} onViewAll={setViewAll} shopClosed={shopClosed} onOpenDetails={setSelectedProductDetails} onQuickAdd={handleQuickAdd} cart={cart} onRemoveFromCart={onRemoveFromCart} />
 
           {nearbyShops.length > 0 && (
@@ -167,7 +180,6 @@ export default function ShopFeed({ user, onAddToCart, onRemoveFromCart, onViewCa
         </>
       )}
 
-      {/* REUSABLE UI MAGIC ✨ */}
       <VariantBottomSheet product={selectedVariantProduct} onClose={() => setSelectedVariantProduct(null)} onAddToCart={onAddToCart} />
       
       <ProductModal 
@@ -182,4 +194,4 @@ export default function ShopFeed({ user, onAddToCart, onRemoveFromCart, onViewCa
       />
     </div>
   );
-}
+                           }
