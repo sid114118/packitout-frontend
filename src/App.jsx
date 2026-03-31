@@ -11,8 +11,7 @@ import UserAuth from './UserAuth.jsx';
 import ProductFeed from './ProductFeed.jsx';
 import Cart from './Cart.jsx';
 import OrderSuccess from './OrderSuccess.jsx';
-// 🌟 NEW: Import the Bottom Navigation Bar
-import BottomNav from './BottomNav.jsx';
+import BottomNav from './BottomNav.jsx'; // 🌟 The Global Nav Bar
 
 export default function App() {
   const [currentView, setCurrentView] = useState("customer");
@@ -22,7 +21,6 @@ export default function App() {
   const [selectedCategory, setSelectedCategory] = useState(null); 
   const [searchQuery, setSearchQuery] = useState("");
   
-  // 🌟 Smart Scroll States
   const [isHeaderVisible, setIsHeaderVisible] = useState(true);
   const [lastScrollY, setLastScrollY] = useState(0);
   
@@ -40,55 +38,19 @@ export default function App() {
     localStorage.setItem("packitout_cart", JSON.stringify(cart));
   }, [cart]);
 
-  // 🌟 Scroll Tracking Logic
+  // 🌟 Scroll Tracking
   useEffect(() => {
     const handleScroll = () => {
       const currentScrollY = window.scrollY;
-      
-      if (currentScrollY > lastScrollY && currentScrollY > 60) {
-        // User is scrolling DOWN past the top: Hide Header
-        setIsHeaderVisible(false);
-      } else if (currentScrollY < lastScrollY) {
-        // User is scrolling UP: Show Header
-        setIsHeaderVisible(true);
-      }
-      
+      if (currentScrollY > lastScrollY && currentScrollY > 60) setIsHeaderVisible(false);
+      else if (currentScrollY < lastScrollY) setIsHeaderVisible(true);
       setLastScrollY(currentScrollY);
     };
-
     window.addEventListener("scroll", handleScroll, { passive: true });
     return () => window.removeEventListener("scroll", handleScroll);
   }, [lastScrollY]);
 
-  const handleAddToCart = (product) => {
-    if (!loggedInUser) {
-      alert("Please log in or sign up to add items to your cart! 🛒");
-      window.location.hash = "#account";
-      return;
-    }
-    setCart((prevCart) => {
-      const existingItem = prevCart.find(item => item._id === product._id);
-      if (existingItem) {
-        return prevCart.map(item => item._id === product._id ? { ...item, qty: item.qty + 1 } : item);
-      } else {
-        return [...prevCart, { ...product, qty: 1 }];
-      }
-    });
-  };
-
-  const handleRemoveFromCart = (product) => {
-    setCart((prevCart) => {
-      const existingItem = prevCart.find(item => item._id === product._id);
-      if (!existingItem) return prevCart;
-      
-      if (existingItem.qty > 1) {
-        return prevCart.map(item => item._id === product._id ? { ...item, qty: item.qty - 1 } : item);
-      } else {
-        return prevCart.filter(item => item._id !== product._id);
-      }
-    });
-  };
-
+  // 🌟 THE FIX: URL Router updated with #nearby
   useEffect(() => {
     const checkUrl = () => {
       if (window.location.hash === "#admin") setCurrentView("admin");
@@ -96,6 +58,7 @@ export default function App() {
       else if (window.location.hash === "#account") setCurrentView("account");
       else if (window.location.hash === "#cart") setCurrentView("cart");
       else if (window.location.hash === "#success") setCurrentView("success");
+      else if (window.location.hash === "#nearby") setCurrentView("nearby"); // 👈 FIX IS HERE
       else {
         setCurrentView("customer");
         setSelectedCategory(null);
@@ -106,6 +69,28 @@ export default function App() {
     window.addEventListener("hashchange", checkUrl);
     return () => window.removeEventListener("hashchange", checkUrl);
   }, []);
+
+  const handleAddToCart = (product) => {
+    if (!loggedInUser) {
+      alert("Please log in or sign up to add items to your cart! 🛒");
+      window.location.hash = "#account";
+      return;
+    }
+    setCart((prevCart) => {
+      const existingItem = prevCart.find(item => item._id === product._id);
+      if (existingItem) return prevCart.map(item => item._id === product._id ? { ...item, qty: item.qty + 1 } : item);
+      return [...prevCart, { ...product, qty: 1 }];
+    });
+  };
+
+  const handleRemoveFromCart = (product) => {
+    setCart((prevCart) => {
+      const existingItem = prevCart.find(item => item._id === product._id);
+      if (!existingItem) return prevCart;
+      if (existingItem.qty > 1) return prevCart.map(item => item._id === product._id ? { ...item, qty: item.qty - 1 } : item);
+      return prevCart.filter(item => item._id !== product._id);
+    });
+  };
 
   const handleUserLogin = (userData) => {
     localStorage.setItem("packitout_user", JSON.stringify(userData));
@@ -120,114 +105,94 @@ export default function App() {
     window.location.hash = "";
   };
 
-  // --- ROUTING VIEWS ---
-  if (currentView === "admin") {
-    if (!isAdminAuthenticated) return <AdminLogin onLogin={() => setIsAdminAuthenticated(true)} />;
-    return <AdminDashboard onExit={() => { setIsAdminAuthenticated(false); window.location.hash = ""; }} />;
-  }
+  // 🌟 THE MAGIC: We handle the views in a helper function so we can wrap the whole app!
+  const renderContent = () => {
+    if (currentView === "admin") {
+      if (!isAdminAuthenticated) return <AdminLogin onLogin={() => setIsAdminAuthenticated(true)} />;
+      return <AdminDashboard onExit={() => { setIsAdminAuthenticated(false); window.location.hash = ""; }} />;
+    }
 
-  if (currentView === "shop") {
-    if (!isShopAuthenticated) return <ShopLogin onLogin={(shopData) => setIsShopAuthenticated(shopData)} />;
-    return <ShopDashboard user={isShopAuthenticated} onExit={() => { setIsShopAuthenticated(null); window.location.hash = ""; }} />;
-  }
+    if (currentView === "shop") {
+      if (!isShopAuthenticated) return <ShopLogin onLogin={(shopData) => setIsShopAuthenticated(shopData)} />;
+      return <ShopDashboard user={isShopAuthenticated} onExit={() => { setIsShopAuthenticated(null); window.location.hash = ""; }} />;
+    }
 
-  if (currentView === "account") {
-    if (!loggedInUser) return <UserAuth onLoginSuccess={handleUserLogin} />;
-    return <UserDashboard user={loggedInUser} onExit={() => window.location.hash = ""} onLogout={handleUserLogout} />;
-  }
+    if (currentView === "account") {
+      if (!loggedInUser) return <UserAuth onLoginSuccess={handleUserLogin} />;
+      return <UserDashboard user={loggedInUser} onExit={() => window.location.hash = ""} onLogout={handleUserLogout} />;
+    }
 
-  if (currentView === "success") {
-    return <OrderSuccess />;
-  }
+    if (currentView === "success") return <OrderSuccess />;
 
-  if (currentView === "cart") {
+    if (currentView === "cart") {
+      return <Cart cart={cart} setCart={setCart} user={loggedInUser} onBack={() => window.location.hash = ""} onCheckoutSuccess={() => { setCart([]); window.location.hash = "#success"; }} />;
+    }
+
+    // 🌟 THE FIX: Rendering the Nearby View properly
+    if (currentView === "nearby") {
+      return (
+        <div style={{ minHeight: '100vh', backgroundColor: '#f3f4f6', paddingBottom: '80px' }}>
+          <Header user={loggedInUser} />
+          <div style={{ padding: '40px 20px', textAlign: 'center' }}>
+            <div style={{ fontSize: '4rem', marginBottom: '10px' }}>🏪</div>
+            <h2 style={{ color: '#0f172a', fontWeight: '900', marginBottom: '10px' }}>Nearby Shops</h2>
+            <p style={{ color: '#64748b' }}>We will add your Shop Carousel here soon so you can explore stores near you!</p>
+          </div>
+        </div>
+      );
+    }
+
+    // Default Customer Feed
+    const cartTotalItems = cart.reduce((sum, item) => sum + item.qty, 0);
+    const cartTotalPrice = cart.reduce((sum, item) => sum + ((item.sellingPrice || item.mrp) * item.qty), 0);
+
     return (
-      <Cart 
-        cart={cart} 
-        setCart={setCart} 
-        user={loggedInUser} 
-        onBack={() => window.location.hash = ""} 
-        onCheckoutSuccess={() => { setCart([]); window.location.hash = "#success"; }} 
-      />
-    );
-  }
+      <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', fontFamily: 'sans-serif', backgroundColor: '#f3f4f6', paddingBottom: cart.length > 0 ? '140px' : '70px' }}>
+        <div style={{ position: 'sticky', top: isHeaderVisible ? '0px' : '-65px', zIndex: 1001, transition: 'top 0.3s ease-in-out', backgroundColor: '#f3f4f6' }}>
+          <Header user={loggedInUser} />
+          <div style={{ padding: '10px 15px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', backgroundColor: '#ffffff', borderRadius: '12px', padding: '10px 15px', boxShadow: '0 4px 10px rgba(0,0,0,0.05)', border: '1px solid #e2e8f0' }}>
+              <input type="text" placeholder='Search "Maggi", "Milk", "Chips"...' value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} style={{ border: 'none', outline: 'none', width: '100%', fontSize: '1rem', color: '#0f172a', backgroundColor: 'transparent' }} />
+              {searchQuery && <button onClick={() => setSearchQuery("")} style={{ background: 'none', border: 'none', fontSize: '1.2rem', color: '#94a3b8', cursor: 'pointer' }}>✖</button>}
+            </div>
+          </div>
+        </div>
 
-  const cartTotalItems = cart.reduce((sum, item) => sum + item.qty, 0);
-  const cartTotalPrice = cart.reduce((sum, item) => sum + ((item.sellingPrice || item.mrp) * item.qty), 0);
+        {!selectedCategory && !searchQuery && <Categories onCategorySelect={setSelectedCategory} />}
+        
+        <main style={{ flex: 1, padding: '1rem 0 3rem 0', textAlign: 'center' }}>
+          <ProductFeed user={loggedInUser} cart={cart} onAddToCart={handleAddToCart} onRemoveFromCart={handleRemoveFromCart} onViewCart={() => window.location.hash = "#cart"} selectedCategory={selectedCategory} onClearCategory={() => setSelectedCategory(null)} searchQuery={searchQuery} />
+        </main>
+        
+        {cart.length > 0 && (
+          <div onClick={() => window.location.hash = "#cart"} style={{ position: 'fixed', bottom: '80px', left: '12px', right: '12px', zIndex: 1000, backgroundColor: '#0c831f', color: '#fff', padding: '10px 14px', borderRadius: '10px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer', boxShadow: '0 4px 20px rgba(12, 131, 31, 0.3)', animation: 'fadeIn 0.2s ease' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <div style={{ backgroundColor: 'rgba(255,255,255,0.2)', width: '38px', height: '38px', borderRadius: '8px', display: 'flex', justifyContent: 'center', alignItems: 'center', fontSize: '1.2rem' }}>🛒</div>
+              <div style={{ textAlign: 'left', lineHeight: '1.3' }}>
+                <div style={{ fontWeight: '600', fontSize: '0.75rem', opacity: 0.95 }}>{cartTotalItems} item{cartTotalItems > 1 ? 's' : ''}</div>
+                <div style={{ fontWeight: '800', fontSize: '1rem' }}>₹ {cartTotalPrice.toFixed(2)}</div>
+              </div>
+            </div>
+            <div style={{ fontWeight: '800', fontSize: '0.95rem', display: 'flex', alignItems: 'center', gap: '4px' }}>
+              View Cart <span style={{ fontSize: '1.2rem' }}>▶</span>
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  // 🌟 Determine if the Bottom Nav should be visible (Hide it on Admin and Shop dashboards)
+  const showBottomNav = ["customer", "nearby", "account", "cart", "success"].includes(currentView);
 
   return (
-    // 🌟 UPDATED: paddingBottom dynamically accounts for both the Nav Bar (70px) AND the Cart (140px)
-    <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', fontFamily: 'sans-serif', backgroundColor: '#f3f4f6', paddingBottom: cart.length > 0 ? '140px' : '70px' }}>
-      
-      {/* 🌟 SMART SCROLLING TOP BAR */}
-      <div style={{
-        position: 'sticky',
-        top: isHeaderVisible ? '0px' : '-65px', 
-        zIndex: 1001,
-        transition: 'top 0.3s ease-in-out',
-        backgroundColor: '#f3f4f6'
-      }}>
-        
-        <Header user={loggedInUser} />
+    <>
+      {/* Load the screen content */}
+      {renderContent()}
 
-        <div style={{ padding: '10px 15px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', backgroundColor: '#ffffff', borderRadius: '12px', padding: '10px 15px', boxShadow: '0 4px 10px rgba(0,0,0,0.05)', border: '1px solid #e2e8f0' }}>
-            <input 
-              type="text" 
-              placeholder='Search "Maggi", "Milk", "Chips"...'
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              style={{ border: 'none', outline: 'none', width: '100%', fontSize: '1rem', color: '#0f172a', backgroundColor: 'transparent' }}
-            />
-            {searchQuery && (
-              <button onClick={() => setSearchQuery("")} style={{ background: 'none', border: 'none', fontSize: '1.2rem', color: '#94a3b8', cursor: 'pointer' }}>✖</button>
-            )}
-          </div>
-        </div>
-      </div>
-
-      {!selectedCategory && !searchQuery && <Categories onCategorySelect={setSelectedCategory} />}
-      
-      <main style={{ flex: 1, padding: '1rem 0 3rem 0', textAlign: 'center' }}>
-        <ProductFeed 
-          user={loggedInUser} 
-          cart={cart}
-          onAddToCart={handleAddToCart} 
-          onRemoveFromCart={handleRemoveFromCart}
-          onViewCart={() => window.location.hash = "#cart"}
-          selectedCategory={selectedCategory} 
-          onClearCategory={() => setSelectedCategory(null)} 
-          searchQuery={searchQuery}
-        />
-      </main>
-      
-      {cart.length > 0 && (
-        <div
-          onClick={() => window.location.hash = "#cart"}
-          // 👇 UPDATED: Changed bottom to 80px so it sits beautifully above the Nav Bar!
-          style={{ position: 'fixed', bottom: '80px', left: '12px', right: '12px', zIndex: 1000, backgroundColor: '#0c831f', color: '#fff', padding: '10px 14px', borderRadius: '10px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer', boxShadow: '0 4px 20px rgba(12, 131, 31, 0.3)', animation: 'fadeIn 0.2s ease' }}
-        >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <div style={{ backgroundColor: 'rgba(255,255,255,0.2)', width: '38px', height: '38px', borderRadius: '8px', display: 'flex', justifyContent: 'center', alignItems: 'center', fontSize: '1.2rem' }}>
-              🛒
-            </div>
-            <div style={{ textAlign: 'left', lineHeight: '1.3' }}>
-              <div style={{ fontWeight: '600', fontSize: '0.75rem', opacity: 0.95 }}>
-                {cartTotalItems} item{cartTotalItems > 1 ? 's' : ''}
-              </div>
-              <div style={{ fontWeight: '800', fontSize: '1rem' }}>₹ {cartTotalPrice.toFixed(2)}</div>
-            </div>
-          </div>
-          <div style={{ fontWeight: '800', fontSize: '0.95rem', display: 'flex', alignItems: 'center', gap: '4px' }}>
-            View Cart <span style={{ fontSize: '1.2rem' }}>▶</span>
-          </div>
-        </div>
-      )}
-
-      {/* 🌟 NEW: RENDER BOTTOM NAV BAR HERE 🌟 */}
-      <BottomNav currentView={currentView} />
-      
-    </div>
+      {/* ALWAYS load the Nav Bar on user pages! */}
+      {showBottomNav && <BottomNav currentView={currentView} />}
+    </>
   );
-          }
+            }
         
