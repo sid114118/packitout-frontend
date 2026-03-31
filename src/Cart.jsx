@@ -12,7 +12,7 @@ export default function Cart({ cart, setCart, user, onBack, onCheckoutSuccess })
   const itemTotal = cart.reduce((sum, item) => sum + ((item.sellingPrice || item.mrp) * item.qty), 0);
   
   // 🛠️ THE FIX: JavaScript Floating Point Correction
-  const maxCoinDiscount = (user?.coins || 0) / 10; // Division is safer than multiplying by 0.10
+  const maxCoinDiscount = (user?.coins || 0) / 10; 
   let rawDiscount = useCoins ? Math.min(maxCoinDiscount, itemTotal) : 0; 
   
   // Force money to have exactly 2 decimals (e.g., 5.9999999 -> 6.00)
@@ -83,7 +83,7 @@ export default function Cart({ cart, setCart, user, onBack, onCheckoutSuccess })
 
       if (response.ok) {
         if (useCoins && coinsUsed > 0) {
-          const newCoinBalance = user.coins - coinsUsed;
+          const newCoinBalance = Math.round(user.coins - coinsUsed); // Force round just to be double safe
           await fetch(`https://darkslategrey-snail-415133.hostingersite.com/users/${user._id}`, {
             method: "PATCH",
             headers: { "Content-Type": "application/json" },
@@ -195,7 +195,8 @@ export default function Cart({ cart, setCart, user, onBack, onCheckoutSuccess })
             <div>
               <strong style={{ color: '#a16207', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.95rem', fontWeight: '800' }}>🪙 PackIt Coins</strong>
               <div style={{ fontSize: '0.75rem', color: '#ca8a04', marginTop: '4px', fontWeight: '600' }}>
-                Balance: {user.coins} (Worth ₹{maxCoinDiscount.toFixed(2)})
+                {/* 👇 FIX APPLIED HERE: Math.round() prevents ugly decimals! */}
+                Balance: {Math.round(user.coins)} (Worth ₹{maxCoinDiscount.toFixed(2)})
               </div>
             </div>
             <label style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer' }}>
@@ -255,4 +256,3 @@ export default function Cart({ cart, setCart, user, onBack, onCheckoutSuccess })
     </div>
   );
               }
-            
