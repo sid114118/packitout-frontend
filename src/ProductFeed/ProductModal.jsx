@@ -34,7 +34,6 @@ export default function ProductModal({ product, isOpen, onClose, onAddToCart, on
   const [selectedVariant, setSelectedVariant] = useState(null);
   const [showFullDesc, setShowFullDesc] = useState(false);
 
-  // 🟢 Change this to 56px, 60px, or 65px to perfectly close the gap with your specific nav bar!
   const BOTTOM_NAV_HEIGHT = '56px'; 
 
   useEffect(() => {
@@ -44,6 +43,20 @@ export default function ProductModal({ product, isOpen, onClose, onAddToCart, on
       setShowFullDesc(false);
     }
   }, [product]);
+
+  // 🛑 THE NEW FIX: Freeze background scrolling when modal opens!
+  useEffect(() => {
+    if (isOpen) {
+      document.body.style.overflow = 'hidden'; // Freezes the home page
+    } else {
+      document.body.style.overflow = ''; // Unfreezes it when closed
+    }
+
+    // Cleanup function just in case the component unexpectedly unmounts
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [isOpen]);
 
   const relatedItems = useMemo(() => {
     if (!selectedVariant || !selectedVariant.relatedProducts || !allItems.length) return [];
@@ -79,7 +92,7 @@ export default function ProductModal({ product, isOpen, onClose, onAddToCart, on
         top: 0, 
         left: 0, 
         right: 0, 
-        bottom: BOTTOM_NAV_HEIGHT, // Leaves exact space for the nav bar below
+        bottom: BOTTOM_NAV_HEIGHT, 
         backgroundColor: '#fff', 
         zIndex: 10000, 
         display: 'flex', 
@@ -252,7 +265,7 @@ export default function ProductModal({ product, isOpen, onClose, onAddToCart, on
         </div>
       </div>
 
-      {/* 🌟 FLOATING VIEW CART (Uses Absolute now to stop the jump!) 🌟 */}
+      {/* 🌟 FLOATING VIEW CART 🌟 */}
       {cartTotalItems > 0 && (
         <div
           onClick={() => { onClose(); if (onViewCart) onViewCart(); }}
@@ -275,7 +288,7 @@ export default function ProductModal({ product, isOpen, onClose, onAddToCart, on
         </div>
       )}
 
-      {/* 🌟 STICKY BOTTOM BAR (Uses Flexbox now to stop the jump!) 🌟 */}
+      {/* 🌟 STICKY BOTTOM BAR 🌟 */}
       <div style={{ flexShrink: 0, backgroundColor: '#fff', borderTop: '1px solid #f1f5f9', padding: '10px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', zIndex: 102, minHeight: '75px', paddingBottom: 'max(10px, env(safe-area-inset-bottom))' }}>
 
         <div style={{ textAlign: 'left' }}>
@@ -313,4 +326,5 @@ export default function ProductModal({ product, isOpen, onClose, onAddToCart, on
       </div>
     </div>
   );
-                          }
+                        }
+        
