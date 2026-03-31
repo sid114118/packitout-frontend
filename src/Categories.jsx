@@ -9,7 +9,7 @@ export default function Categories({ onCategorySelect }) {
       sectionTitle: "Daily Fresh & Staples",
       items: [
         { name: "Dairy, Bread & Eggs", icon: "🥛", image: "https://res.cloudinary.com/dj48tkcsw/image/upload/v1774944897/images_3_xsxbe0.jpg" }, 
-        { name: "Fruits & Veg", icon: "🍎", image: "" },
+        { name: "Fruits & Veg", icon: "🍎", image: "https://res.cloudinary.com/dj48tkcsw/image/upload/v1774945247/images_5_faefgf.jpg" },
         { name: "Atta, Rice & Dal", icon: "🌾", image: "https://res.cloudinary.com/dj48tkcsw/image/upload/v1774945074/images_4_mbo5ob.jpg" },
         { name: "Chicken, Meat & Fish", icon: "🍗", image: "" },
         { name: "Oil, Ghee & Masala", icon: "🍶", image: "" },
