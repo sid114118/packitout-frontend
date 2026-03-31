@@ -10,6 +10,8 @@ import UserDashboard from './UserDashboard.jsx';
 import UserAuth from './UserAuth.jsx';
 import ProductFeed from './ProductFeed.jsx';
 import Cart from './Cart.jsx';
+// 🌟 NEW: Import the Success Screen
+import OrderSuccess from './OrderSuccess.jsx';
 
 export default function App() {
   const [currentView, setCurrentView] = useState("customer");
@@ -19,7 +21,7 @@ export default function App() {
   const [selectedCategory, setSelectedCategory] = useState(null); 
   const [searchQuery, setSearchQuery] = useState("");
   
-  // 🌟 1. NEW: Smart Scroll States 🌟
+  // 🌟 Smart Scroll States
   const [isHeaderVisible, setIsHeaderVisible] = useState(true);
   const [lastScrollY, setLastScrollY] = useState(0);
   
@@ -37,7 +39,7 @@ export default function App() {
     localStorage.setItem("packitout_cart", JSON.stringify(cart));
   }, [cart]);
 
-  // 🌟 2. NEW: Scroll Tracking Logic 🌟
+  // 🌟 Scroll Tracking Logic
   useEffect(() => {
     const handleScroll = () => {
       const currentScrollY = window.scrollY;
@@ -92,6 +94,8 @@ export default function App() {
       else if (window.location.hash === "#shop") setCurrentView("shop");
       else if (window.location.hash === "#account") setCurrentView("account");
       else if (window.location.hash === "#cart") setCurrentView("cart");
+      // 🌟 NEW: Listen for the success URL
+      else if (window.location.hash === "#success") setCurrentView("success");
       else {
         setCurrentView("customer");
         setSelectedCategory(null);
@@ -116,6 +120,7 @@ export default function App() {
     window.location.hash = "";
   };
 
+  // --- ROUTING VIEWS ---
   if (currentView === "admin") {
     if (!isAdminAuthenticated) return <AdminLogin onLogin={() => setIsAdminAuthenticated(true)} />;
     return <AdminDashboard onExit={() => { setIsAdminAuthenticated(false); window.location.hash = ""; }} />;
@@ -131,20 +136,34 @@ export default function App() {
     return <UserDashboard user={loggedInUser} onExit={() => window.location.hash = ""} onLogout={handleUserLogout} />;
   }
 
+  // 🌟 NEW: Render the Success Screen
+  if (currentView === "success") {
+    return <OrderSuccess />;
+  }
+
   if (currentView === "cart") {
-    return <Cart cart={cart} setCart={setCart} user={loggedInUser} onBack={() => window.location.hash = ""} onCheckoutSuccess={() => { setCart([]); window.location.hash = "#account"; }} />;
+    return (
+      <Cart 
+        cart={cart} 
+        setCart={setCart} 
+        user={loggedInUser} 
+        onBack={() => window.location.hash = ""} 
+        // 🌟 UPDATED: Send them to #success when checkout completes!
+        onCheckoutSuccess={() => { setCart([]); window.location.hash = "#success"; }} 
+      />
+    );
   }
 
   const cartTotalItems = cart.reduce((sum, item) => sum + item.qty, 0);
-  const cartTotalPrice = cart.reduce((sum, item) => sum + (item.mrp * item.qty), 0);
+  const cartTotalPrice = cart.reduce((sum, item) => sum + ((item.sellingPrice || item.mrp) * item.qty), 0);
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', fontFamily: 'sans-serif', backgroundColor: '#f3f4f6', paddingBottom: cart.length > 0 ? '80px' : '0' }}>
       
-      {/* 🌟 3. NEW: SMART SCROLLING TOP BAR 🌟 */}
+      {/* 🌟 SMART SCROLLING TOP BAR */}
       <div style={{
         position: 'sticky',
-        top: isHeaderVisible ? '0px' : '-65px', // Slides up to hide header, keeping search bar at top
+        top: isHeaderVisible ? '0px' : '-65px', 
         zIndex: 1001,
         transition: 'top 0.3s ease-in-out',
         backgroundColor: '#f3f4f6'
@@ -196,7 +215,7 @@ export default function App() {
               <div style={{ fontWeight: '600', fontSize: '0.75rem', opacity: 0.95 }}>
                 {cartTotalItems} item{cartTotalItems > 1 ? 's' : ''}
               </div>
-              <div style={{ fontWeight: '800', fontSize: '1rem' }}>₹ {cartTotalPrice}</div>
+              <div style={{ fontWeight: '800', fontSize: '1rem' }}>₹ {cartTotalPrice.toFixed(2)}</div>
             </div>
           </div>
           <div style={{ fontWeight: '800', fontSize: '0.95rem', display: 'flex', alignItems: 'center', gap: '4px' }}>
@@ -206,4 +225,4 @@ export default function App() {
       )}
     </div>
   );
-}
+    }
