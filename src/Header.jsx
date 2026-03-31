@@ -8,6 +8,9 @@ export default function Header({ user }) {
   const [selectedShopId, setSelectedShopId] = useState("");
   const [hasSearched, setHasSearched] = useState(false); 
   const [activeShopName, setActiveShopName] = useState(user?.primaryShop?.name || "");
+  
+  // 🟢 Check if shop is open
+  const isShopOpen = user?.primaryShop?.isOpen !== false; // defaults to true if undefined
 
   const handleFindShops = async () => {
     if (!pincode) return;
@@ -48,7 +51,7 @@ export default function Header({ user }) {
       setIsChanging(false);
       setShops([]); 
       setHasSearched(false);
-      window.location.reload(); // Instantly refresh feed to show new shop items
+      window.location.reload(); 
     } catch (err) {
       console.log("Error saving shop", err);
     }
@@ -61,19 +64,29 @@ export default function Header({ user }) {
   return (
     <header style={{ position: 'sticky', top: 0, zIndex: 1000, backgroundColor: '#ffffff', boxShadow: isChanging ? 'none' : '0 2px 10px rgba(0,0,0,0.05)' }}>
       
-      {/* 🌟 PREMIUM SINGLE-ROW HEADER 🌟 */}
       <div style={{ padding: '12px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         
-        {/* LEFT: Stacked Location Button */}
+        {/* LEFT: Stacked Location Button with Open Status */}
         <div 
           onClick={() => setIsChanging(!isChanging)} 
           style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}
         >
           <div style={{ fontSize: '1.6rem' }}>📍</div>
           <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-            <span style={{ fontSize: '0.7rem', color: '#6b7280', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-              {topText}
-            </span>
+            
+            {/* Top row: Shopping From + OPEN Badge */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <span style={{ fontSize: '0.7rem', color: '#6b7280', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                {topText}
+              </span>
+              {activeShopName && (
+                <span style={{ fontSize: '0.55rem', padding: '2px 5px', borderRadius: '4px', backgroundColor: isShopOpen ? '#d1fae5' : '#fee2e2', color: isShopOpen ? '#059669' : '#dc2626', fontWeight: '900', letterSpacing: '0.5px' }}>
+                  {isShopOpen ? '🟢 OPEN' : '🔴 CLOSED'}
+                </span>
+              )}
+            </div>
+
+            {/* Bottom row: Shop Name */}
             <div style={{ display: 'flex', alignItems: 'center', gap: '4px', color: '#111827', fontWeight: '900', fontSize: '1.05rem', marginTop: '2px' }}>
               <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '200px' }}>
                 {bottomText}
@@ -95,7 +108,7 @@ export default function Header({ user }) {
         </div>
       </div>
 
-      {/* 🔍 EXPANDING SHOP SELECTOR (Clean Light Mode) */}
+      {/* 🔍 EXPANDING SHOP SELECTOR */}
       {isChanging && (
         <div style={{ backgroundColor: '#ffffff', padding: '16px', borderTop: '1px solid #f3f4f6', borderBottom: '1px solid #e5e7eb', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.05)', animation: 'slideDown 0.2s ease-out' }}>
           
