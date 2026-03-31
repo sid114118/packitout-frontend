@@ -27,6 +27,7 @@ export default function App() {
 
   const [cart, setCart] = useState([]);
 
+  // 🟢 ADD LOGIC
   const handleAddToCart = (product) => {
     if (!loggedInUser) {
       alert("Please log in or sign up to add items to your cart! 🛒");
@@ -39,6 +40,20 @@ export default function App() {
         return prevCart.map(item => item._id === product._id ? { ...item, qty: item.qty + 1 } : item);
       } else {
         return [...prevCart, { ...product, qty: 1 }];
+      }
+    });
+  };
+
+  // 🔴 NEW: REMOVE LOGIC (For the minus button in ProductModal)
+  const handleRemoveFromCart = (product) => {
+    setCart((prevCart) => {
+      const existingItem = prevCart.find(item => item._id === product._id);
+      if (!existingItem) return prevCart;
+      
+      if (existingItem.qty > 1) {
+        return prevCart.map(item => item._id === product._id ? { ...item, qty: item.qty - 1 } : item);
+      } else {
+        return prevCart.filter(item => item._id !== product._id);
       }
     });
   };
@@ -88,7 +103,6 @@ export default function App() {
     return <UserDashboard user={loggedInUser} onExit={() => window.location.hash = ""} onLogout={handleUserLogout} />;
   }
 
-  // 👇 THIS IS THE ONLY CHANGE: Added setCart={setCart}
   if (currentView === "cart") {
     return <Cart cart={cart} setCart={setCart} user={loggedInUser} onBack={() => window.location.hash = ""} onCheckoutSuccess={() => { setCart([]); window.location.hash = "#account"; }} />;
   }
@@ -136,9 +150,13 @@ export default function App() {
       
       <main style={{ flex: 1, padding: '1rem 0 3rem 0', textAlign: 'center' }}>
         
+        {/* 🌟 FIXED: Passed cart, onRemoveFromCart, and onViewCart down to the Feed! 🌟 */}
         <ProductFeed 
           user={loggedInUser} 
+          cart={cart}
           onAddToCart={handleAddToCart} 
+          onRemoveFromCart={handleRemoveFromCart}
+          onViewCart={() => window.location.hash = "#cart"}
           selectedCategory={selectedCategory} 
           onClearCategory={() => setSelectedCategory(null)} 
           searchQuery={searchQuery}
