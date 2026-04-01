@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import ProductModal from './ProductModal.jsx';
 import ProductListView from './ProductListView.jsx'; 
-import SearchPage from '././SearchPage.jsx'; // 👈 1. Import your new Search Page!
+import SearchPage from '../SearchPage.jsx'; // 👈 1. Import your new Search Page!
 import { VariantBottomSheet, ModernProductCard, ProductRow } from './FeedComponents.jsx';
 import ShopCarousel from './ShopCarousel.jsx';
 
