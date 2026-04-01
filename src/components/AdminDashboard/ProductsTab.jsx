@@ -1,15 +1,78 @@
-import React from 'react';
+import React, { useState } from 'react';
 
 export default function ProductsTab({ products, form, setForm, handleProductSubmit, CATEGORIES, editingProductId, startEditingProduct, cancelEdit }) {
   
+  // 🌟 BULK UPLOAD STATES
+  const [file, setFile] = useState(null);
+  const [uploading, setUploading] = useState(false);
+  const BASE_URL = "https://darkslategrey-snail-415133.hostingersite.com";
+
   // Helper function to handle the multi-select dropdowns for related/substitute products
   const handleMultiSelect = (e, fieldName) => {
     const selectedOptions = Array.from(e.target.selectedOptions, option => option.value);
     setForm({ ...form, [fieldName]: selectedOptions });
   };
 
+  // 🚀 THE BULK UPLOAD HANDLER
+  const handleBulkUpload = async () => {
+    if (!file) return alert('Please select a CSV file first! 📁');
+
+    const formData = new FormData();
+    formData.append('file', file);
+
+    setUploading(true);
+    try {
+      const response = await fetch(`${BASE_URL}/master-products/bulk-upload`, {
+        method: 'POST',
+        body: formData, 
+      });
+
+      const data = await response.json();
+      
+      if (response.ok) {
+        alert(`🎉 ${data.message}`);
+        setFile(null);
+        // Refresh the page to load the newly added catalog items
+        window.location.reload(); 
+      } else {
+        alert(`❌ Error: ${data.error}`);
+      }
+    } catch (err) {
+      console.error(err);
+      alert('Upload failed. Please check your connection or server.');
+    }
+    setUploading(false);
+  };
+
   return (
     <div>
+      {/* 📦 THE NEW BULK UPLOAD SECTION */}
+      {!editingProductId && (
+        <div style={{ backgroundColor: '#f8fafc', padding: '20px', borderRadius: '12px', border: '2px dashed #cbd5e1', marginBottom: '30px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '15px' }}>
+          <div>
+            <h4 style={{ margin: '0 0 5px 0', color: '#0f172a', display: 'flex', alignItems: 'center', gap: '8px' }}>
+              ⚡ Fast-Track: Bulk CSV Upload
+            </h4>
+            <p style={{ margin: 0, fontSize: '0.85rem', color: '#64748b' }}>Upload hundreds of master products at once. Ensure columns match the database schema.</p>
+          </div>
+          
+          <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+            <input 
+              type="file" 
+              accept=".csv" 
+              onChange={(e) => setFile(e.target.files[0])} 
+              style={{ padding: '8px', backgroundColor: 'white', border: '1px solid #cbd5e1', borderRadius: '6px', fontSize: '0.85rem' }}
+            />
+            <button 
+              onClick={handleBulkUpload} 
+              disabled={uploading}
+              style={{ backgroundColor: uploading ? '#94a3b8' : '#0f172a', color: 'white', border: 'none', padding: '10px 16px', borderRadius: '8px', cursor: uploading ? 'not-allowed' : 'pointer', fontWeight: 'bold', transition: '0.2s' }}>
+              {uploading ? '⏳ Uploading...' : '🚀 Upload CSV'}
+            </button>
+          </div>
+        </div>
+      )}
+
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
         <h3 style={{ color: '#0f172a', margin: 0 }}>
           {editingProductId ? "✏️ Edit Product in Catalog" : "Add New Product to Master Catalog"}
