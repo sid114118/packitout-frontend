@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import ProductModal from './ProductModal.jsx';
-import ProductListView from './ProductListView.jsx'; // 👈 1. Added the centralized list view
+import ProductListView from './ProductListView.jsx'; // 👈 Centralized list view
 import { VariantBottomSheet, ModernProductCard, ProductRow } from './FeedComponents.jsx';
 
-export default function GuestFeed({ user, onAddToCart, selectedCategory, onClearCategory, searchQuery }) {
+// 👈 Added cart, onRemoveFromCart, and onViewCart to the props!
+export default function GuestFeed({ user, onAddToCart, onRemoveFromCart, onViewCart, cart = [], selectedCategory, onClearCategory, searchQuery }) {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -155,8 +156,13 @@ export default function GuestFeed({ user, onAddToCart, selectedCategory, onClear
           shopClosed={false}
           onOpenDetails={setSelectedProductDetails}
           onQuickAdd={handleQuickAdd}
-          cart={[]} // Guests typically don't have the full cart passed here in the same way
-          onRemoveFromCart={() => {}}
+          cart={cart} // 👈 Added cart
+          onRemoveFromCart={onRemoveFromCart} // 👈 Added remove
+          onViewCart={onViewCart} // 👈 Added view cart prop
+          onSearchClick={() => {  // 👈 Added search click logic
+             if (selectedCategory) onClearCategory(); 
+             setViewAll(null); 
+          }}
         />
       )}
 
@@ -172,7 +178,7 @@ export default function GuestFeed({ user, onAddToCart, selectedCategory, onClear
             </div>
           ) : (
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: '12px' }}>
-              {displayItems.map(item => <ModernProductCard key={item._id} item={item} isCarousel={false} shopClosed={false} onOpenDetails={setSelectedProductDetails} onQuickAdd={handleQuickAdd} cart={[]} onRemoveFromCart={() => {}} />)}
+              {displayItems.map(item => <ModernProductCard key={item._id} item={item} isCarousel={false} shopClosed={false} onOpenDetails={setSelectedProductDetails} onQuickAdd={handleQuickAdd} cart={cart} onRemoveFromCart={onRemoveFromCart} />)}
             </div>
           )}
         </div>
@@ -181,13 +187,13 @@ export default function GuestFeed({ user, onAddToCart, selectedCategory, onClear
       {/* 🌟 3. NORMAL FEED 🌟 */}
       {!isSearching && !viewAll && !selectedCategory && (
         <>
-          <ProductRow title="🚀 Trending on PackItOut" subtitle="What everyone is ordering" items={trendingPlatform} onViewAll={setViewAll} shopClosed={false} onOpenDetails={setSelectedProductDetails} onQuickAdd={handleQuickAdd} />
-          <ProductRow title={timeBased.title} subtitle={timeBased.subtitle} items={timeBased.items} onViewAll={setViewAll} shopClosed={false} onOpenDetails={setSelectedProductDetails} onQuickAdd={handleQuickAdd} />
-          <ProductRow title="🔥 Today's Mega Steals" subtitle="Unbeatable prices" items={shopDeals} onViewAll={setViewAll} shopClosed={false} onOpenDetails={setSelectedProductDetails} onQuickAdd={handleQuickAdd} />
-          <ProductRow title="🛍️ Recommended For You" subtitle="Top picks for guests" items={buyItAgain} onViewAll={setViewAll} shopClosed={false} onOpenDetails={setSelectedProductDetails} onQuickAdd={handleQuickAdd} />
-          <ProductRow title="💰 The Under ₹99 Store" subtitle="Budget friendly grabs" items={under99} onViewAll={setViewAll} shopClosed={false} onOpenDetails={setSelectedProductDetails} onQuickAdd={handleQuickAdd} />
-          <ProductRow title="🆕 Freshly Restocked" subtitle="Back on the shelves" items={newArrivals} onViewAll={setViewAll} shopClosed={false} onOpenDetails={setSelectedProductDetails} onQuickAdd={handleQuickAdd} />
-          <ProductRow title="👑 Top Selling Today" subtitle="Customer favorites" items={shopBestSellers} onViewAll={setViewAll} shopClosed={false} onOpenDetails={setSelectedProductDetails} onQuickAdd={handleQuickAdd} />
+          <ProductRow title="🚀 Trending on PackItOut" subtitle="What everyone is ordering" items={trendingPlatform} onViewAll={setViewAll} shopClosed={false} onOpenDetails={setSelectedProductDetails} onQuickAdd={handleQuickAdd} cart={cart} onRemoveFromCart={onRemoveFromCart} />
+          <ProductRow title={timeBased.title} subtitle={timeBased.subtitle} items={timeBased.items} onViewAll={setViewAll} shopClosed={false} onOpenDetails={setSelectedProductDetails} onQuickAdd={handleQuickAdd} cart={cart} onRemoveFromCart={onRemoveFromCart} />
+          <ProductRow title="🔥 Today's Mega Steals" subtitle="Unbeatable prices" items={shopDeals} onViewAll={setViewAll} shopClosed={false} onOpenDetails={setSelectedProductDetails} onQuickAdd={handleQuickAdd} cart={cart} onRemoveFromCart={onRemoveFromCart} />
+          <ProductRow title="🛍️ Recommended For You" subtitle="Top picks for guests" items={buyItAgain} onViewAll={setViewAll} shopClosed={false} onOpenDetails={setSelectedProductDetails} onQuickAdd={handleQuickAdd} cart={cart} onRemoveFromCart={onRemoveFromCart} />
+          <ProductRow title="💰 The Under ₹99 Store" subtitle="Budget friendly grabs" items={under99} onViewAll={setViewAll} shopClosed={false} onOpenDetails={setSelectedProductDetails} onQuickAdd={handleQuickAdd} cart={cart} onRemoveFromCart={onRemoveFromCart} />
+          <ProductRow title="🆕 Freshly Restocked" subtitle="Back on the shelves" items={newArrivals} onViewAll={setViewAll} shopClosed={false} onOpenDetails={setSelectedProductDetails} onQuickAdd={handleQuickAdd} cart={cart} onRemoveFromCart={onRemoveFromCart} />
+          <ProductRow title="👑 Top Selling Today" subtitle="Customer favorites" items={shopBestSellers} onViewAll={setViewAll} shopClosed={false} onOpenDetails={setSelectedProductDetails} onQuickAdd={handleQuickAdd} cart={cart} onRemoveFromCart={onRemoveFromCart} />
           
           <div style={{ textAlign: 'center', padding: '10px 0 40px 0', color: '#94a3b8', fontSize: '0.8rem', fontWeight: '600' }}>
             Sign in to see nearby shops! 🚀
@@ -206,7 +212,9 @@ export default function GuestFeed({ user, onAddToCart, selectedCategory, onClear
           onAddToCart({ ...item, mrp: item.sellingPrice });
           setSelectedProductDetails(null); 
         }}
-        cart={[]} 
+        onRemoveFromCart={onRemoveFromCart}
+        onViewCart={onViewCart}
+        cart={cart} 
         allItems={items} 
       />
     </div>
