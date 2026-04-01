@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import ProductModal from './ProductModal.jsx';
-import { VariantBottomSheet, ModernProductCard, ProductRow } from './FeedComponents.jsx'; // 👈 Centralized UI Imports!
+import ProductListView from './ProductListView.jsx'; // 👈 1. Added the centralized list view
+import { VariantBottomSheet, ModernProductCard, ProductRow } from './FeedComponents.jsx';
 
 export default function GuestFeed({ user, onAddToCart, selectedCategory, onClearCategory, searchQuery }) {
   const [items, setItems] = useState([]);
@@ -105,11 +106,20 @@ export default function GuestFeed({ user, onAddToCart, selectedCategory, onClear
     fetchGuestProducts();
   }, []);
 
-  // 👇 The Centralized Click Handler!
   const handleQuickAdd = (item) => {
     if (item.variants && item.variants.length > 1) setSelectedVariantProduct(item);
     else onAddToCart({ ...item, mrp: item.sellingPrice });
   };
+
+  // 🛑 2. Freeze background scrolling when "View All" or "Category" is open
+  useEffect(() => {
+    if (viewAll || selectedCategory) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => { document.body.style.overflow = ''; };
+  }, [viewAll, selectedCategory]);
 
   if (loading) return <div style={{ padding: '40px', textAlign: 'center', color: '#6b7280' }}>Loading fresh products...</div>;
 
@@ -136,35 +146,41 @@ export default function GuestFeed({ user, onAddToCart, selectedCategory, onClear
     <div style={{ padding: '0', maxWidth: '1000px', margin: '0 auto', overflowX: 'hidden', backgroundColor: '#f3f4f6' }}>
       <style>{`.hide-scroll::-webkit-scrollbar { display: none; } .hide-scroll { -ms-overflow-style: none; scrollbar-width: none; }`}</style>
 
-      {(selectedCategory || isSearching || viewAll) ? (
-        <div style={{ padding: '15px', backgroundColor: '#fff', minHeight: '100vh' }}>
-          <div style={{ display: 'flex', alignItems: 'center', marginBottom: '20px', gap: '15px' }}>
-            <button 
-              onClick={() => {
-                if (selectedCategory) onClearCategory();
-                setViewAll(null);
-              }} 
-              style={{ backgroundColor: '#f1f5f9', border: '1px solid #cbd5e1', padding: '8px 16px', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold', color: '#334155' }}
-            >
-              ⬅ Back
-            </button>
-            <h2 style={{ margin: 0, color: '#0f172a', fontSize: '1.2rem' }}>
-              {isSearching ? `Results for "${searchQuery}"` : (viewAll ? viewAll.title : selectedCategory)}
-            </h2>
-          </div>
+      {/* 🌟 1. FULL SCREEN OVERLAY FOR "VIEW ALL" & CATEGORIES 🌟 */}
+      {(viewAll || selectedCategory) && (
+        <ProductListView
+          title={viewAll ? viewAll.title : selectedCategory}
+          items={displayItems}
+          onBack={() => { if (selectedCategory) onClearCategory(); setViewAll(null); }}
+          shopClosed={false}
+          onOpenDetails={setSelectedProductDetails}
+          onQuickAdd={handleQuickAdd}
+          cart={[]} // Guests typically don't have the full cart passed here in the same way
+          onRemoveFromCart={() => {}}
+        />
+      )}
 
+      {/* 🌟 2. IN-PAGE GRID FOR LIVE SEARCHING (Leaves search bar visible) 🌟 */}
+      {isSearching && !viewAll && !selectedCategory && (
+        <div style={{ padding: '15px', backgroundColor: '#fff', minHeight: '100vh' }}>
+          <h2 style={{ margin: '0 0 20px 0', color: '#0f172a', fontSize: '1.2rem' }}>Results for "{searchQuery}"</h2>
+          
           {displayItems.length === 0 ? (
-            <div style={{ padding: '40px', textAlign: 'center', color: '#64748b', backgroundColor: '#f8fafc', borderRadius: '12px', border: '1px dashed #cbd5e1' }}>No products found.</div>
+            <div style={{ padding: '40px', textAlign: 'center', color: '#64748b', backgroundColor: '#f8fafc', borderRadius: '12px', border: '1px dashed #cbd5e1' }}>
+              <div style={{ fontSize: '3rem', marginBottom: '10px' }}>🔍</div>
+              <p style={{ fontWeight: 'bold' }}>No products found for "{searchQuery}"</p>
+            </div>
           ) : (
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: '12px' }}>
-              {/* Using imported ModernProductCard */}
-              {displayItems.map(item => <ModernProductCard key={item._id} item={item} isCarousel={false} shopClosed={false} onOpenDetails={setSelectedProductDetails} onQuickAdd={handleQuickAdd} />)}
+              {displayItems.map(item => <ModernProductCard key={item._id} item={item} isCarousel={false} shopClosed={false} onOpenDetails={setSelectedProductDetails} onQuickAdd={handleQuickAdd} cart={[]} onRemoveFromCart={() => {}} />)}
             </div>
           )}
         </div>
-      ) : (
+      )}
+
+      {/* 🌟 3. NORMAL FEED 🌟 */}
+      {!isSearching && !viewAll && !selectedCategory && (
         <>
-          {/* Using imported ProductRow */}
           <ProductRow title="🚀 Trending on PackItOut" subtitle="What everyone is ordering" items={trendingPlatform} onViewAll={setViewAll} shopClosed={false} onOpenDetails={setSelectedProductDetails} onQuickAdd={handleQuickAdd} />
           <ProductRow title={timeBased.title} subtitle={timeBased.subtitle} items={timeBased.items} onViewAll={setViewAll} shopClosed={false} onOpenDetails={setSelectedProductDetails} onQuickAdd={handleQuickAdd} />
           <ProductRow title="🔥 Today's Mega Steals" subtitle="Unbeatable prices" items={shopDeals} onViewAll={setViewAll} shopClosed={false} onOpenDetails={setSelectedProductDetails} onQuickAdd={handleQuickAdd} />
@@ -172,6 +188,10 @@ export default function GuestFeed({ user, onAddToCart, selectedCategory, onClear
           <ProductRow title="💰 The Under ₹99 Store" subtitle="Budget friendly grabs" items={under99} onViewAll={setViewAll} shopClosed={false} onOpenDetails={setSelectedProductDetails} onQuickAdd={handleQuickAdd} />
           <ProductRow title="🆕 Freshly Restocked" subtitle="Back on the shelves" items={newArrivals} onViewAll={setViewAll} shopClosed={false} onOpenDetails={setSelectedProductDetails} onQuickAdd={handleQuickAdd} />
           <ProductRow title="👑 Top Selling Today" subtitle="Customer favorites" items={shopBestSellers} onViewAll={setViewAll} shopClosed={false} onOpenDetails={setSelectedProductDetails} onQuickAdd={handleQuickAdd} />
+          
+          <div style={{ textAlign: 'center', padding: '10px 0 40px 0', color: '#94a3b8', fontSize: '0.8rem', fontWeight: '600' }}>
+            Sign in to see nearby shops! 🚀
+          </div>
         </>
       )}
 
