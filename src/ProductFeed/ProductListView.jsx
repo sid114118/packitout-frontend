@@ -1,4 +1,5 @@
 import React, { useEffect } from 'react';
+import { createPortal } from 'react-dom'; // 👈 1. Import createPortal
 import { ModernProductCard } from './FeedComponents.jsx';
 
 export default function ProductListView({ 
@@ -19,9 +20,24 @@ export default function ProductListView({
     return () => { document.body.style.overflow = ''; };
   }, []);
 
-  return (
-    <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: BOTTOM_NAV_HEIGHT, backgroundColor: '#fff', zIndex: 90, overflowY: 'auto', padding: '15px', animation: 'fadeIn 0.2s ease', paddingBottom: '120px' }}>
-      <style>{`@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }`}</style>
+  // 👈 2. Wrap the entire return inside createPortal
+  return createPortal(
+    <div 
+      style={{ 
+        position: 'fixed', 
+        top: 0, 
+        left: 0, 
+        right: 0, 
+        bottom: BOTTOM_NAV_HEIGHT, 
+        backgroundColor: '#fff', 
+        zIndex: 99999, // Super high z-index to cover the header
+        overflowY: 'auto', 
+        padding: '15px', 
+        animation: 'fadeIn 0.2s ease', 
+        paddingBottom: '120px' 
+      }}
+    >
+      <style>{`@keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }`}</style>
       
       {/* Sticky Header */}
       <div style={{ display: 'flex', alignItems: 'center', marginBottom: '20px', gap: '15px', position: 'sticky', top: '-15px', backgroundColor: '#fff', padding: '15px 0', zIndex: 91, borderBottom: '1px solid #f1f5f9' }}>
@@ -49,6 +65,7 @@ export default function ProductListView({
           />
         ))}
       </div>
-    </div>
+    </div>,
+    document.body // 👈 3. Teleports this HTML to the very end of the document
   );
 }
