@@ -25,7 +25,9 @@ export default function App() {
   const [viewingShop, setViewingShop] = useState(null);
 
   const [selectedCategory, setSelectedCategory] = useState(null); 
-  const [searchQuery, setSearchQuery] = useState("");
+  
+  // 🟢 NEW: Replaced searchQuery with isSearchOpen to trigger the full-screen overlay
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
   
   const [isHeaderVisible, setIsHeaderVisible] = useState(true);
   const [lastScrollY, setLastScrollY] = useState(0);
@@ -68,7 +70,7 @@ export default function App() {
       else {
         setCurrentView("customer");
         setSelectedCategory(null);
-        setSearchQuery(""); 
+        setIsSearchOpen(false); // 🟢 Reset search when returning home
       }
       // Reset viewing shop when changing main routes
       setViewingShop(null);
@@ -177,17 +179,38 @@ export default function App() {
         <div style={{ position: 'sticky', top: isHeaderVisible ? '0px' : '-65px', zIndex: 1001, transition: 'top 0.3s ease-in-out', backgroundColor: '#f3f4f6' }}>
           <Header user={loggedInUser} />
           <div style={{ padding: '10px 15px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', backgroundColor: '#ffffff', borderRadius: '12px', padding: '10px 15px', boxShadow: '0 4px 10px rgba(0,0,0,0.05)', border: '1px solid #e2e8f0' }}>
-              <input type="text" placeholder='Search "Maggi", "Milk", "Chips"...' value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} style={{ border: 'none', outline: 'none', width: '100%', fontSize: '1rem', color: '#0f172a', backgroundColor: 'transparent' }} />
-              {searchQuery && <button onClick={() => setSearchQuery("")} style={{ background: 'none', border: 'none', fontSize: '1.2rem', color: '#94a3b8', cursor: 'pointer' }}>✖</button>}
+            
+            {/* 🟢 THIS IS THE DUMMY TRIGGER! Looks identical to your old input */}
+            <div 
+              onClick={() => setIsSearchOpen(true)}
+              style={{ display: 'flex', alignItems: 'center', backgroundColor: '#ffffff', borderRadius: '12px', padding: '10px 15px', boxShadow: '0 4px 10px rgba(0,0,0,0.05)', border: '1px solid #e2e8f0', cursor: 'text' }}
+            >
+              <span style={{ fontSize: '1rem', color: '#94a3b8', width: '100%', textAlign: 'left' }}>
+                Search "Maggi", "Milk", "Chips"...
+              </span>
             </div>
+
           </div>
         </div>
 
-        {!selectedCategory && !searchQuery && <Categories onCategorySelect={setSelectedCategory} />}
+        {/* 🟢 Hide categories if search overlay is open */}
+        {!selectedCategory && !isSearchOpen && <Categories onCategorySelect={setSelectedCategory} />}
         
         <main style={{ flex: 1, padding: '1rem 0 3rem 0', textAlign: 'center' }}>
-          <ProductFeed user={loggedInUser} cart={cart} onAddToCart={handleAddToCart} onRemoveFromCart={handleRemoveFromCart} onViewCart={() => window.location.hash = "#cart"} selectedCategory={selectedCategory} onClearCategory={() => setSelectedCategory(null)} searchQuery={searchQuery} />
+          <ProductFeed 
+            user={loggedInUser} 
+            cart={cart} 
+            onAddToCart={handleAddToCart} 
+            onRemoveFromCart={handleRemoveFromCart} 
+            onViewCart={() => window.location.hash = "#cart"} 
+            selectedCategory={selectedCategory} 
+            onClearCategory={() => setSelectedCategory(null)} 
+            
+            // 🟢 Pass the Search Triggers into the Feed!
+            isSearchOpen={isSearchOpen}
+            onOpenSearch={() => setIsSearchOpen(true)}
+            onCloseSearch={() => setIsSearchOpen(false)}
+          />
         </main>
         
         {cart.length > 0 && (
@@ -216,4 +239,5 @@ export default function App() {
       {showBottomNav && <BottomNav currentView={currentView} />}
     </>
   );
-}
+              }
+      
