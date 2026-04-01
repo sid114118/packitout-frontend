@@ -1,10 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import ProductModal from './ProductModal.jsx';
-import ProductListView from './ProductListView.jsx'; // 👈 1. IMPORT YOUR NEW FILE
+import ProductListView from './ProductListView.jsx'; 
+import SearchPage from './SearchPage.jsx'; // 👈 1. Import your new Search Page!
 import { VariantBottomSheet, ModernProductCard, ProductRow } from './FeedComponents.jsx';
 import ShopCarousel from './ShopCarousel.jsx';
 
-export default function ShopFeed({ user, onAddToCart, onRemoveFromCart, onViewCart, cart = [], selectedCategory, onClearCategory, searchQuery }) {
+export default function ShopFeed({ 
+  user, onAddToCart, onRemoveFromCart, onViewCart, cart = [], 
+  selectedCategory, onClearCategory, 
+  // 🟢 2. Changed from searchQuery to our new triggers!
+  isSearchOpen, onOpenSearch, onCloseSearch 
+}) {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [shopInfo, setShopInfo] = useState(null);
@@ -103,27 +109,34 @@ export default function ShopFeed({ user, onAddToCart, onRemoveFromCart, onViewCa
 
   if (loading) return <div style={{ padding: '40px', textAlign: 'center', color: '#6b7280' }}>Loading fresh products...</div>;
 
-  const isSearching = searchQuery && searchQuery.trim().length > 0;
+  // 🟢 3. Filtering logic is much cleaner now because Search is handled in SearchPage.jsx!
   let displayItems = items;
-  if (isSearching) {
-    const q = searchQuery.toLowerCase();
-    displayItems = items.filter(i => {
-      const nameMatch = (i.name || "").toLowerCase().includes(q);
-      const brandMatch = (i.brand || "").toLowerCase().includes(q);
-      const tagMatch = i.searchTags && Array.isArray(i.searchTags) && i.searchTags.some(tag => tag.toLowerCase().includes(q));
-      return nameMatch || brandMatch || tagMatch;
-    });
-  } 
-  else if (viewAll) displayItems = viewAll.items;
-  else if (selectedCategory) displayItems = items.filter(i => (i.category || "").toLowerCase().includes(selectedCategory.toLowerCase()));
+  if (viewAll) {
+    displayItems = viewAll.items;
+  } else if (selectedCategory) {
+    displayItems = items.filter(i => (i.category || "").toLowerCase().includes(selectedCategory.toLowerCase()));
+  }
 
   const shopClosed = shopInfo && !shopInfo.isOpen;
 
   return (
     <div style={{ padding: '0', maxWidth: '1000px', margin: '0 auto', overflowX: 'hidden', backgroundColor: '#f3f4f6' }}>
       
-      {/* 🌟 1. USE YOUR NEW COMPONENT HERE 🌟 */}
-      {(viewAll || selectedCategory) && (
+      {/* 🌟 1. THE DEDICATED SEARCH OVERLAY 🌟 */}
+      {isSearchOpen && (
+        <SearchPage 
+          items={items}
+          onClose={onCloseSearch}
+          onOpenDetails={setSelectedProductDetails}
+          onQuickAdd={handleQuickAdd}
+          cart={cart}
+          onRemoveFromCart={onRemoveFromCart}
+          onViewCart={onViewCart}
+        />
+      )}
+
+      {/* 🌟 2. CATEGORY & VIEW ALL OVERLAY 🌟 */}
+      {(viewAll || selectedCategory) && !isSearchOpen && (
         <ProductListView
           title={viewAll ? viewAll.title : selectedCategory}
           items={displayItems}
@@ -133,35 +146,17 @@ export default function ShopFeed({ user, onAddToCart, onRemoveFromCart, onViewCa
           onQuickAdd={handleQuickAdd}
           cart={cart}
           onRemoveFromCart={onRemoveFromCart}
-          onViewCart={onViewCart} // 👈 Added view cart prop
-          onSearchClick={() => {  // 👈 Added search click logic
+          onViewCart={onViewCart}
+          onSearchClick={() => {  
              if (selectedCategory) onClearCategory(); 
              setViewAll(null); 
+             onOpenSearch(); // 👈 Clicking the 🔍 icon here opens the SearchPage!
           }}
         />
       )}
 
-      {/* 🌟 2. IN-PAGE GRID FOR LIVE SEARCHING 🌟 */}
-      {isSearching && !viewAll && !selectedCategory && (
-        <div style={{ padding: '15px', backgroundColor: '#fff', minHeight: '100vh' }}>
-          <h2 style={{ margin: '0 0 20px 0', color: '#0f172a', fontSize: '1.2rem' }}>Results for "{searchQuery}"</h2>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: '12px' }}>
-            {displayItems.map(item => (
-              <ModernProductCard key={item._id} item={item} isCarousel={false} shopClosed={shopClosed} onOpenDetails={setSelectedProductDetails} onQuickAdd={handleQuickAdd} cart={cart} onRemoveFromCart={onRemoveFromCart} />
-            ))}
-          </div>
-          {displayItems.length === 0 && (
-             <div style={{ textAlign: 'center', padding: '40px 20px', color: '#64748b' }}>
-                <div style={{ fontSize: '3rem', marginBottom: '10px' }}>🔍</div>
-                <p style={{ fontWeight: 'bold' }}>No products found for "{searchQuery}"</p>
-                <p style={{ fontSize: '0.85rem' }}>Try searching for generic terms like "chips" or "milk".</p>
-             </div>
-          )}
-        </div>
-      )}
-
       {/* 🌟 3. NORMAL FEED 🌟 */}
-      {!isSearching && !viewAll && !selectedCategory && (
+      {!isSearchOpen && !viewAll && !selectedCategory && (
         <>
           <ProductRow title={timeBased.title} subtitle={timeBased.subtitle} items={timeBased.items} onViewAll={setViewAll} shopClosed={shopClosed} onOpenDetails={setSelectedProductDetails} onQuickAdd={handleQuickAdd} cart={cart} onRemoveFromCart={onRemoveFromCart} />
           <ProductRow title="Price Crash" subtitle="Extra Savings" items={shopDeals} onViewAll={setViewAll} shopClosed={shopClosed} onOpenDetails={setSelectedProductDetails} onQuickAdd={handleQuickAdd} cart={cart} onRemoveFromCart={onRemoveFromCart} />
@@ -192,4 +187,4 @@ export default function ShopFeed({ user, onAddToCart, onRemoveFromCart, onViewCa
       />
     </div>
   );
-                }
+}
