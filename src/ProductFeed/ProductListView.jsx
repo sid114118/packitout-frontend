@@ -11,12 +11,12 @@ export default function ProductListView({
   onQuickAdd, 
   cart = [], 
   onRemoveFromCart,
-  onViewCart,     // 👈 Added prop for the cart click
-  onSearchClick   // 👈 Added prop for the search icon click
+  onViewCart,     
+  onSearchClick   
 }) {
   const BOTTOM_NAV_HEIGHT = '56px';
 
-  // 🟢 Cart Calculations for the floating bar
+  // Cart Calculations for the floating bar
   const safeCart = Array.isArray(cart) ? cart : [];
   const cartTotalItems = safeCart.reduce((total, item) => total + (item.qty || 1), 0);
   const cartTotalPrice = safeCart.reduce((total, item) => total + ((item.sellingPrice || item.mrp || 0) * (item.qty || 1)), 0);
@@ -40,12 +40,12 @@ export default function ProductListView({
         overflowY: 'auto', 
         padding: '15px', 
         animation: 'fadeIn 0.2s ease', 
-        paddingBottom: cartTotalItems > 0 ? '120px' : '40px' // Extra padding if cart is visible
+        paddingBottom: cartTotalItems > 0 ? '120px' : '40px' 
       }}
     >
       <style>{`@keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }`}</style>
       
-      {/* 🌟 STICKY HEADER WITH SEARCH ICON 🌟 */}
+      {/* 🌟 STICKY HEADER 🌟 */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px', position: 'sticky', top: '-15px', backgroundColor: '#fff', padding: '15px 0', zIndex: 91, borderBottom: '1px solid #f1f5f9' }}>
         
         {/* Left Side: Back Button & Title */}
@@ -59,9 +59,9 @@ export default function ProductListView({
           <h2 style={{ margin: 0, color: '#0f172a', fontSize: '1.2rem' }}>{title}</h2>
         </div>
 
-        {/* Right Side: Search Icon */}
+        {/* Right Side: Search Icon (Triggers onSearchClick) */}
         <button 
-          onClick={onSearchClick || onBack} // If no search handler is provided, it acts as a back button to reveal the main search bar
+          onClick={onSearchClick} 
           style={{ background: 'none', border: 'none', fontSize: '1.4rem', cursor: 'pointer', padding: '8px', color: '#334155', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
         >
           🔍
@@ -88,7 +88,7 @@ export default function ProductListView({
       {/* 🌟 FLOATING VIEW CART BAR 🌟 */}
       {cartTotalItems > 0 && (
         <div
-          onClick={() => { onBack(); if (onViewCart) onViewCart(); }} // Closes the list view, then opens the cart!
+          onClick={() => { onBack(); if (onViewCart) onViewCart(); }} 
           style={{ position: 'fixed', bottom: `calc(${BOTTOM_NAV_HEIGHT} + 15px)`, left: '12px', right: '12px', zIndex: 101, backgroundColor: '#0c831f', color: '#fff', padding: '10px 14px', borderRadius: '10px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer', boxShadow: '0 4px 15px rgba(0,0,0,0.1)', animation: 'fadeIn 0.2s ease' }}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
