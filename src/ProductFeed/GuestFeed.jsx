@@ -1,10 +1,19 @@
 import React, { useState, useEffect } from 'react';
 import ProductModal from './ProductModal.jsx';
-import ProductListView from './ProductListView.jsx'; // 👈 Centralized list view
+import ProductListView from './ProductListView.jsx'; 
+
+// 🟢 STEP OUT OF THE FOLDER TO GRAB THE SEARCH PAGE
+import SearchPage from '../SearchPage.jsx'; 
+
 import { VariantBottomSheet, ModernProductCard, ProductRow } from './FeedComponents.jsx';
 
-// 👈 Added cart, onRemoveFromCart, and onViewCart to the props!
-export default function GuestFeed({ user, onAddToCart, onRemoveFromCart, onViewCart, cart = [], selectedCategory, onClearCategory, searchQuery }) {
+export default function GuestFeed({ 
+  user, onAddToCart, onRemoveFromCart, onViewCart, cart = [], 
+  selectedCategory, onClearCategory, 
+  
+  // 🟢 Search Triggers from App.jsx
+  isSearchOpen, onOpenSearch, onCloseSearch 
+}) {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -31,7 +40,6 @@ export default function GuestFeed({ user, onAddToCart, onRemoveFromCart, onViewC
         const res = await fetch(`${BASE_URL}/master-products`);
         const masterData = await res.json();
         
-        // 🛡️ BULLETPROOF GROUPING LOGIC
         const groupedMap = new Map();
         const finalItems = [];
 
@@ -41,7 +49,7 @@ export default function GuestFeed({ user, onAddToCart, onRemoveFromCart, onViewC
             sellingPrice: p.mrp, 
             isDiscounted: false, 
             discountPercent: 0, 
-            inStock: true, // Guests always see items as in-stock
+            inStock: true, 
             variants: [] 
           };
 
@@ -62,7 +70,6 @@ export default function GuestFeed({ user, onAddToCart, onRemoveFromCart, onViewC
         
         setItems(finalItems);
         
-        // Slice the grouped items for the guest feed sections
         setTrendingPlatform(finalItems.slice(0, 8)); 
         setShopDeals([...finalItems].reverse().slice(0, 8)); 
         setShopBestSellers(finalItems.slice(0, 8));
@@ -70,7 +77,6 @@ export default function GuestFeed({ user, onAddToCart, onRemoveFromCart, onViewC
         setNewArrivals([...finalItems].reverse().slice(0, 8)); 
         setBuyItAgain(finalItems.slice(0, 8));
 
-        // Smart Time-Based Logic
         const hour = new Date().getHours();
         let timeTitle = ""; let timeSubtitle = ""; let keywords = [];
 
@@ -112,28 +118,10 @@ export default function GuestFeed({ user, onAddToCart, onRemoveFromCart, onViewC
     else onAddToCart({ ...item, mrp: item.sellingPrice });
   };
 
-  // 🛑 2. Freeze background scrolling when "View All" or "Category" is open
-  useEffect(() => {
-    if (viewAll || selectedCategory) {
-      document.body.style.overflow = 'hidden';
-    } else {
-      document.body.style.overflow = '';
-    }
-    return () => { document.body.style.overflow = ''; };
-  }, [viewAll, selectedCategory]);
-
   if (loading) return <div style={{ padding: '40px', textAlign: 'center', color: '#6b7280' }}>Loading fresh products...</div>;
 
-  const isSearching = searchQuery && searchQuery.trim().length > 0;
   let displayItems = items;
-
-  if (isSearching) {
-    displayItems = items.filter(item => {
-      const nameMatch = (item.name || "").toLowerCase().includes(searchQuery.toLowerCase());
-      const brandMatch = (item.brand || "").toLowerCase().includes(searchQuery.toLowerCase());
-      return nameMatch || brandMatch;
-    });
-  } else if (viewAll) {
+  if (viewAll) {
     displayItems = viewAll.items;
   } else if (selectedCategory) {
     displayItems = items.filter(item => {
@@ -145,10 +133,22 @@ export default function GuestFeed({ user, onAddToCart, onRemoveFromCart, onViewC
 
   return (
     <div style={{ padding: '0', maxWidth: '1000px', margin: '0 auto', overflowX: 'hidden', backgroundColor: '#f3f4f6' }}>
-      <style>{`.hide-scroll::-webkit-scrollbar { display: none; } .hide-scroll { -ms-overflow-style: none; scrollbar-width: none; }`}</style>
+      
+      {/* 🌟 1. THE DEDICATED SEARCH PAGE OVERLAY 🌟 */}
+      {isSearchOpen && (
+        <SearchPage 
+          items={items}
+          onClose={onCloseSearch}
+          onOpenDetails={setSelectedProductDetails}
+          onQuickAdd={handleQuickAdd}
+          cart={cart}
+          onRemoveFromCart={onRemoveFromCart}
+          onViewCart={onViewCart}
+        />
+      )}
 
-      {/* 🌟 1. FULL SCREEN OVERLAY FOR "VIEW ALL" & CATEGORIES 🌟 */}
-      {(viewAll || selectedCategory) && (
+      {/* 🌟 2. CATEGORY & VIEW ALL OVERLAY 🌟 */}
+      {(viewAll || selectedCategory) && !isSearchOpen && (
         <ProductListView
           title={viewAll ? viewAll.title : selectedCategory}
           items={displayItems}
@@ -156,36 +156,19 @@ export default function GuestFeed({ user, onAddToCart, onRemoveFromCart, onViewC
           shopClosed={false}
           onOpenDetails={setSelectedProductDetails}
           onQuickAdd={handleQuickAdd}
-          cart={cart} // 👈 Added cart
-          onRemoveFromCart={onRemoveFromCart} // 👈 Added remove
-          onViewCart={onViewCart} // 👈 Added view cart prop
-          onSearchClick={() => {  // 👈 Added search click logic
+          cart={cart} 
+          onRemoveFromCart={onRemoveFromCart} 
+          onViewCart={onViewCart} 
+          onSearchClick={() => {  
              if (selectedCategory) onClearCategory(); 
              setViewAll(null); 
+             onOpenSearch(); // 👈 Pops open the Search Page!
           }}
         />
       )}
 
-      {/* 🌟 2. IN-PAGE GRID FOR LIVE SEARCHING (Leaves search bar visible) 🌟 */}
-      {isSearching && !viewAll && !selectedCategory && (
-        <div style={{ padding: '15px', backgroundColor: '#fff', minHeight: '100vh' }}>
-          <h2 style={{ margin: '0 0 20px 0', color: '#0f172a', fontSize: '1.2rem' }}>Results for "{searchQuery}"</h2>
-          
-          {displayItems.length === 0 ? (
-            <div style={{ padding: '40px', textAlign: 'center', color: '#64748b', backgroundColor: '#f8fafc', borderRadius: '12px', border: '1px dashed #cbd5e1' }}>
-              <div style={{ fontSize: '3rem', marginBottom: '10px' }}>🔍</div>
-              <p style={{ fontWeight: 'bold' }}>No products found for "{searchQuery}"</p>
-            </div>
-          ) : (
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: '12px' }}>
-              {displayItems.map(item => <ModernProductCard key={item._id} item={item} isCarousel={false} shopClosed={false} onOpenDetails={setSelectedProductDetails} onQuickAdd={handleQuickAdd} cart={cart} onRemoveFromCart={onRemoveFromCart} />)}
-            </div>
-          )}
-        </div>
-      )}
-
       {/* 🌟 3. NORMAL FEED 🌟 */}
-      {!isSearching && !viewAll && !selectedCategory && (
+      {!isSearchOpen && !viewAll && !selectedCategory && (
         <>
           <ProductRow title="🚀 Trending on PackItOut" subtitle="What everyone is ordering" items={trendingPlatform} onViewAll={setViewAll} shopClosed={false} onOpenDetails={setSelectedProductDetails} onQuickAdd={handleQuickAdd} cart={cart} onRemoveFromCart={onRemoveFromCart} />
           <ProductRow title={timeBased.title} subtitle={timeBased.subtitle} items={timeBased.items} onViewAll={setViewAll} shopClosed={false} onOpenDetails={setSelectedProductDetails} onQuickAdd={handleQuickAdd} cart={cart} onRemoveFromCart={onRemoveFromCart} />
@@ -201,7 +184,6 @@ export default function GuestFeed({ user, onAddToCart, onRemoveFromCart, onViewC
         </>
       )}
 
-      {/* REUSABLE UI MAGIC ✨ */}
       <VariantBottomSheet product={selectedVariantProduct} onClose={() => setSelectedVariantProduct(null)} onAddToCart={onAddToCart} />
       
       <ProductModal 
