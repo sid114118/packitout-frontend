@@ -133,6 +133,11 @@ export default function ShopFeed({ user, onAddToCart, onRemoveFromCart, onViewCa
           onQuickAdd={handleQuickAdd}
           cart={cart}
           onRemoveFromCart={onRemoveFromCart}
+          onViewCart={onViewCart} // 👈 Added view cart prop
+          onSearchClick={() => {  // 👈 Added search click logic
+             if (selectedCategory) onClearCategory(); 
+             setViewAll(null); 
+          }}
         />
       )}
 
@@ -187,4 +192,4 @@ export default function ShopFeed({ user, onAddToCart, onRemoveFromCart, onViewCa
       />
     </div>
   );
-}
+                }
