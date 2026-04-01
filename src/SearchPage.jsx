@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
-import { ModernProductCard } from './FeedComponents.jsx';
+
+// 🟢 FIX: Pointing inside the ProductFeed folder!
+import { ModernProductCard } from './ProductFeed/FeedComponents.jsx';
 
 export default function SearchPage({ 
   items, 
@@ -100,4 +102,4 @@ export default function SearchPage({
     </div>,
     document.body
   );
-          }
+}
