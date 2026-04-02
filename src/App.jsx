@@ -12,23 +12,50 @@ import ProductFeed from './ProductFeed.jsx';
 import Cart from './Cart.jsx';
 import OrderSuccess from './OrderSuccess.jsx';
 import BottomNav from './BottomNav.jsx';
-// 🌟 NEW: Import the Nearby Components
 import Nearby from './Nearby.jsx';
 import ShopDetail from './ShopDetail.jsx';
+
+// 🚨 MOBILE DEBUGGER: This catches the "White Screen" and shows the error on your phone
+class CrashCatcher extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = { err: null, info: null };
+  }
+  componentDidCatch(error, info) {
+    this.setState({ err: error.toString(), info: info.componentStack });
+  }
+  render() {
+    if (this.state.err) {
+      return (
+        <div style={{ padding: '60px 20px', background: '#991b1b', color: 'white', minHeight: '100vh', wordBreak: 'break-word', textAlign: 'left', fontFamily: 'monospace' }}>
+          <h2 style={{ margin: '0 0 10px 0' }}>🚨 BUG CAUGHT!</h2>
+          <p style={{ fontWeight: 'bold', fontSize: '1.1rem', background: 'rgba(0,0,0,0.2)', padding: '10px', borderRadius: '5px' }}>
+            {this.state.err}
+          </p>
+          <p style={{ fontSize: '0.8rem', marginTop: '20px', opacity: 0.8 }}>Exact code location:</p>
+          <pre style={{ fontSize: '0.7rem', background: 'rgba(0,0,0,0.3)', padding: '10px', overflowX: 'auto', whiteSpace: 'pre-wrap' }}>
+            {this.state.info}
+          </pre>
+          <button 
+            onClick={() => window.location.reload()} 
+            style={{ marginTop: '20px', padding: '12px 20px', background: 'white', color: '#991b1b', border: 'none', borderRadius: '8px', fontWeight: 'bold' }}
+          >
+            Try Refreshing
+          </button>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
 
 export default function App() {
   const [currentView, setCurrentView] = useState("customer");
   const [isAdminAuthenticated, setIsAdminAuthenticated] = useState(false);
   const [isShopAuthenticated, setIsShopAuthenticated] = useState(null);
-  
-  // 🌟 NEW: State to track which shop is being viewed in detail
   const [viewingShop, setViewingShop] = useState(null);
-
   const [selectedCategory, setSelectedCategory] = useState(null); 
-  
-  // 🟢 NEW: Replaced searchQuery with isSearchOpen to trigger the full-screen overlay
   const [isSearchOpen, setIsSearchOpen] = useState(false);
-  
   const [isHeaderVisible, setIsHeaderVisible] = useState(true);
   const [lastScrollY, setLastScrollY] = useState(0);
   
@@ -46,7 +73,6 @@ export default function App() {
     localStorage.setItem("packitout_cart", JSON.stringify(cart));
   }, [cart]);
 
-  // Scroll Tracking
   useEffect(() => {
     const handleScroll = () => {
       const currentScrollY = window.scrollY;
@@ -58,7 +84,6 @@ export default function App() {
     return () => window.removeEventListener("scroll", handleScroll);
   }, [lastScrollY]);
 
-  // URL Router
   useEffect(() => {
     const checkUrl = () => {
       if (window.location.hash === "#admin") setCurrentView("admin");
@@ -70,9 +95,8 @@ export default function App() {
       else {
         setCurrentView("customer");
         setSelectedCategory(null);
-        setIsSearchOpen(false); // 🟢 Reset search when returning home
+        setIsSearchOpen(false);
       }
-      // Reset viewing shop when changing main routes
       setViewingShop(null);
     };
     checkUrl();
@@ -80,52 +104,34 @@ export default function App() {
     return () => window.removeEventListener("hashchange", checkUrl);
   }, []);
 
-  // 🛡️ BULLETPROOF: Safe Add to Cart
+  // 🛡️ Safe Add to Cart
   const handleAddToCart = (product) => {
-    try {
-      if (!loggedInUser) {
-        alert("Please log in or sign up to add items to your cart! 🛒");
-        window.location.hash = "#account";
-        return;
-      }
-      
-      if (!product || !product._id) {
-        alert("Oops! This product is missing data and cannot be added.");
-        return;
-      }
-
-      setCart((prevCart) => {
-        const cleanCart = prevCart.filter(item => item !== null && item !== undefined);
-        const existingItem = cleanCart.find(item => item._id === product._id);
-        
-        if (existingItem) {
-          return cleanCart.map(item => item._id === product._id ? { ...item, qty: (item.qty || 1) + 1 } : item);
-        }
-        return [...cleanCart, { ...product, qty: 1 }];
-      });
-    } catch (err) {
-      alert("Failed to add to cart: " + err.message);
+    if (!loggedInUser) {
+      alert("Please log in or sign up to add items to your cart! 🛒");
+      window.location.hash = "#account";
+      return;
     }
+    if (!product || !product._id) return;
+
+    setCart((prevCart) => {
+      const existingItem = prevCart.find(item => item._id === product._id);
+      if (existingItem) {
+        return prevCart.map(item => item._id === product._id ? { ...item, qty: (item.qty || 1) + 1 } : item);
+      }
+      return [...prevCart, { ...product, qty: 1 }];
+    });
   };
 
-  // 🛡️ BULLETPROOF: Safe Remove from Cart
   const handleRemoveFromCart = (product) => {
-    try {
-      if (!product || !product._id) return;
-      
-      setCart((prevCart) => {
-        const cleanCart = prevCart.filter(item => item !== null && item !== undefined);
-        const existingItem = cleanCart.find(item => item._id === product._id);
-        
-        if (!existingItem) return cleanCart;
-        if ((existingItem.qty || 1) > 1) {
-          return cleanCart.map(item => item._id === product._id ? { ...item, qty: (item.qty || 1) - 1 } : item);
-        }
-        return cleanCart.filter(item => item._id !== product._id);
-      });
-    } catch (err) {
-      console.error(err);
-    }
+    if (!product || !product._id) return;
+    setCart((prevCart) => {
+      const existingItem = prevCart.find(item => item._id === product._id);
+      if (!existingItem) return prevCart;
+      if (existingItem.qty > 1) {
+        return prevCart.map(item => item._id === product._id ? { ...item, qty: item.qty - 1 } : item);
+      }
+      return prevCart.filter(item => item._id !== product._id);
+    });
   };
 
   const handleUserLogin = (userData) => {
@@ -141,7 +147,6 @@ export default function App() {
     window.location.hash = "";
   };
 
-  // Helper function to update primary shop
   const handleSetPrimaryShop = async (shopId) => {
     try {
       const response = await fetch(`https://darkslategrey-snail-415133.hostingersite.com/users/${loggedInUser._id}`, {
@@ -153,11 +158,11 @@ export default function App() {
         const updatedUser = await response.json();
         setLoggedInUser(updatedUser);
         localStorage.setItem("packitout_user", JSON.stringify(updatedUser));
-        alert("Success! This is now your primary shop. 🏪");
-        window.location.hash = ""; // Redirect home to see new menu
+        alert("Success! Primary shop updated. 🏪");
+        window.location.hash = "";
       }
     } catch (err) {
-      alert("Failed to update primary shop.");
+      alert("Failed to update shop.");
     }
   };
 
@@ -180,14 +185,15 @@ export default function App() {
     if (currentView === "success") return <OrderSuccess />;
 
     if (currentView === "cart") {
-      return <Cart cart={cart} setCart={setCart} user={loggedInUser} onBack={() => window.location.hash = ""} onCheckoutSuccess={() => { setCart([]); window.location.hash = "#success"; }} />;
+      return (
+        <CrashCatcher>
+          <Cart cart={cart} setCart={setCart} user={loggedInUser} onBack={() => window.location.hash = ""} onCheckoutSuccess={() => { setCart([]); window.location.hash = "#success"; }} />
+        </CrashCatcher>
+      );
     }
 
-    // 🌟 UPDATED: Nearby Route with Grid and Detail logic
     if (currentView === "nearby") {
-      if (viewingShop) {
-        return <ShopDetail shop={viewingShop} onBack={() => setViewingShop(null)} onSetPrimary={handleSetPrimaryShop} />;
-      }
+      if (viewingShop) return <ShopDetail shop={viewingShop} onBack={() => setViewingShop(null)} onSetPrimary={handleSetPrimaryShop} />;
       return (
         <div style={{ paddingBottom: '80px' }}>
           <Header user={loggedInUser} />
@@ -196,69 +202,42 @@ export default function App() {
       );
     }
 
-    // 🛡️ BULLETPROOF MATH: Handles missing quantities and prices
-    const cartTotalItems = cart.reduce((sum, item) => {
-      if (!item) return sum; 
-      return sum + (item.qty || 1);
-    }, 0);
-    
-    const cartTotalPrice = cart.reduce((sum, item) => {
-      if (!item) return sum;
-      const safePrice = item.sellingPrice !== undefined ? item.sellingPrice : (item.mrp || 0);
-      return sum + (safePrice * (item.qty || 1));
-    }, 0);
+    // 🛡️ Bulletproof Math for Bottom Bar
+    const cartTotalItems = cart.reduce((sum, item) => sum + (item.qty || 1), 0);
+    const cartTotalPrice = cart.reduce((sum, item) => sum + ((item.sellingPrice || item.mrp || 0) * (item.qty || 1)), 0);
 
     return (
       <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', fontFamily: 'sans-serif', backgroundColor: '#f3f4f6', paddingBottom: cart.length > 0 ? '140px' : '70px' }}>
         <div style={{ position: 'sticky', top: isHeaderVisible ? '0px' : '-65px', zIndex: 1001, transition: 'top 0.3s ease-in-out', backgroundColor: '#f3f4f6' }}>
           <Header user={loggedInUser} />
           <div style={{ padding: '10px 15px' }}>
-            
-            {/* 🟢 THIS IS THE DUMMY TRIGGER! Looks identical to your old input */}
-            <div 
-              onClick={() => setIsSearchOpen(true)}
-              style={{ display: 'flex', alignItems: 'center', backgroundColor: '#ffffff', borderRadius: '12px', padding: '10px 15px', boxShadow: '0 4px 10px rgba(0,0,0,0.05)', border: '1px solid #e2e8f0', cursor: 'text' }}
-            >
-              <span style={{ fontSize: '1rem', color: '#94a3b8', width: '100%', textAlign: 'left' }}>
-                Search "Maggi", "Milk", "Chips"...
-              </span>
+            <div onClick={() => setIsSearchOpen(true)} style={{ display: 'flex', alignItems: 'center', backgroundColor: '#ffffff', borderRadius: '12px', padding: '10px 15px', boxShadow: '0 4px 10px rgba(0,0,0,0.05)', border: '1px solid #e2e8f0', cursor: 'text' }}>
+              <span style={{ fontSize: '1rem', color: '#94a3b8' }}>Search "Maggi", "Milk"...</span>
             </div>
-
           </div>
         </div>
 
-        {/* 🟢 Hide categories if search overlay is open */}
         {!selectedCategory && !isSearchOpen && <Categories onCategorySelect={setSelectedCategory} />}
         
         <main style={{ flex: 1, padding: '1rem 0 3rem 0', textAlign: 'center' }}>
-          <ProductFeed 
-            user={loggedInUser} 
-            cart={cart} 
-            onAddToCart={handleAddToCart} 
-            onRemoveFromCart={handleRemoveFromCart} 
-            onViewCart={() => window.location.hash = "#cart"} 
-            selectedCategory={selectedCategory} 
-            onClearCategory={() => setSelectedCategory(null)} 
-            
-            // 🟢 Pass the Search Triggers into the Feed!
-            isSearchOpen={isSearchOpen}
-            onOpenSearch={() => setIsSearchOpen(true)}
-            onCloseSearch={() => setIsSearchOpen(false)}
-          />
+          <CrashCatcher>
+            <ProductFeed 
+              user={loggedInUser} cart={cart} 
+              onAddToCart={handleAddToCart} onRemoveFromCart={handleRemoveFromCart} 
+              onViewCart={() => window.location.hash = "#cart"} 
+              selectedCategory={selectedCategory} onClearCategory={() => setSelectedCategory(null)} 
+              isSearchOpen={isSearchOpen} onOpenSearch={() => setIsSearchOpen(true)} onCloseSearch={() => setIsSearchOpen(false)}
+            />
+          </CrashCatcher>
         </main>
         
         {cart.length > 0 && (
-          <div onClick={() => window.location.hash = "#cart"} style={{ position: 'fixed', bottom: '80px', left: '12px', right: '12px', zIndex: 1000, backgroundColor: '#0c831f', color: '#fff', padding: '10px 14px', borderRadius: '10px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer', boxShadow: '0 4px 20px rgba(12, 131, 31, 0.3)', animation: 'fadeIn 0.2s ease' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-              <div style={{ backgroundColor: 'rgba(255,255,255,0.2)', width: '38px', height: '38px', borderRadius: '8px', display: 'flex', justifyContent: 'center', alignItems: 'center', fontSize: '1.2rem' }}>🛒</div>
-              <div style={{ textAlign: 'left', lineHeight: '1.3' }}>
-                <div style={{ fontWeight: '600', fontSize: '0.75rem', opacity: 0.95 }}>{cartTotalItems} item{cartTotalItems > 1 ? 's' : ''}</div>
-                <div style={{ fontWeight: '800', fontSize: '1rem' }}>₹ {cartTotalPrice.toFixed(2)}</div>
-              </div>
+          <div onClick={() => window.location.hash = "#cart"} style={{ position: 'fixed', bottom: '80px', left: '12px', right: '12px', zIndex: 1000, backgroundColor: '#0c831f', color: '#fff', padding: '10px 14px', borderRadius: '10px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer', boxShadow: '0 4px 20px rgba(12,131, 31, 0.3)' }}>
+            <div style={{ textAlign: 'left' }}>
+              <div style={{ fontWeight: '600', fontSize: '0.75rem' }}>{cartTotalItems} items</div>
+              <div style={{ fontWeight: '800', fontSize: '1rem' }}>₹ {cartTotalPrice.toFixed(2)}</div>
             </div>
-            <div style={{ fontWeight: '800', fontSize: '0.95rem', display: 'flex', alignItems: 'center', gap: '4px' }}>
-              View Cart <span style={{ fontSize: '1.2rem' }}>▶</span>
-            </div>
+            <div style={{ fontWeight: '800' }}>View Cart ▶</div>
           </div>
         )}
       </div>
@@ -273,4 +252,4 @@ export default function App() {
       {showBottomNav && <BottomNav currentView={currentView} />}
     </>
   );
-        }
+}
