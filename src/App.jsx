@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import ErrorBoundary from './ErrorBoundary.jsx'; // 🛡️ NEW: Imported the Safety Net!
 import Header from './Header.jsx';
 import Categories from './Categories.jsx';
 
@@ -233,11 +234,11 @@ export default function App() {
 
   const showBottomNav = ["customer", "nearby", "account", "cart", "success"].includes(currentView);
 
+  // 🛡️ THE WRAPPER: ErrorBoundary now surrounds your entire application
   return (
-    <>
+    <ErrorBoundary>
       {renderContent()}
       {showBottomNav && <BottomNav currentView={currentView} />}
-    </>
+    </ErrorBoundary>
   );
-              }
-      
+}
