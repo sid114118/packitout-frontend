@@ -11,8 +11,13 @@ export default function Cart({ cart, setCart, user, onBack, onCheckoutSuccess })
   // 🪙 Coin Discount State
   const [useCoins, setUseCoins] = useState(false);
 
-  // 🧮 BILL CALCULATIONS
-  const itemTotal = cart.reduce((sum, item) => sum + ((item.sellingPrice || item.mrp) * item.qty), 0);
+  // 🧮 BILL CALCULATIONS (Fixed NaN Crash)
+  const itemTotal = cart.reduce((sum, item) => {
+    // 🛡️ Fallback: If no qty exists, assume 1. If no sellingPrice, use mrp.
+    const safeQty = item.qty || 1; 
+    const safePrice = item.sellingPrice !== undefined ? item.sellingPrice : (item.mrp || 0);
+    return sum + (safePrice * safeQty);
+  }, 0);
   
   const userCoinValueInRupees = (user?.coins || 0) / 10; 
   const maxDiscountAllowed = itemTotal * 0.10; 
@@ -28,7 +33,8 @@ export default function Cart({ cart, setCart, user, onBack, onCheckoutSuccess })
     setCart(prevCart => {
       return prevCart.map(item => {
         if (item._id === productId) {
-          const newQty = item.qty + delta;
+          const currentQty = item.qty || 1; // 🛡️ Safety fallback here too
+          const newQty = currentQty + delta;
           return newQty > 0 ? { ...item, qty: newQty } : null; 
         }
         return item;
@@ -86,7 +92,6 @@ export default function Cart({ cart, setCart, user, onBack, onCheckoutSuccess })
 
   // 🛒 ================= CART SCREEN ================= 🛒
   return (
-    // 🌟 FIX: Increased paddingBottom to 180px
     <div style={{ backgroundColor: '#f3f4f6', minHeight: '100vh', fontFamily: 'sans-serif', paddingBottom: '180px' }}>
       
       {/* Header */}
@@ -129,27 +134,33 @@ export default function Cart({ cart, setCart, user, onBack, onCheckoutSuccess })
         <div style={{ backgroundColor: 'white', borderRadius: '12px', padding: '16px', marginBottom: '16px', boxShadow: '0 2px 8px rgba(0,0,0,0.02)' }}>
           <div style={{ fontWeight: '800', fontSize: '1.05rem', marginBottom: '16px', color: '#111827' }}>Review Items</div>
           
-          {cart.map((item, index) => (
-            <div key={item._id} style={{ display: 'flex', gap: '15px', alignItems: 'center', paddingBottom: '16px', marginBottom: '16px', borderBottom: index === cart.length - 1 ? 'none' : '1px solid #f1f5f9' }}>
-              
-              <div style={{ width: '60px', height: '60px', backgroundColor: '#f8fafc', borderRadius: '8px', display: 'flex', justifyContent: 'center', alignItems: 'center', border: '1px solid #f1f5f9' }}>
-                {item.image ? <img src={item.image} style={{ maxWidth: '48px', maxHeight: '48px', objectFit: 'contain' }} alt={item.name} /> : <span style={{ fontSize: '30px' }}>{item.emoji}</span>}
-              </div>
+          {cart.map((item, index) => {
+            // 🛡️ Added safety fallbacks directly in the render logic to prevent missing value crashes
+            const safeQty = item.qty || 1;
+            const safePrice = item.sellingPrice !== undefined ? item.sellingPrice : (item.mrp || 0);
+            
+            return (
+              <div key={item._id} style={{ display: 'flex', gap: '15px', alignItems: 'center', paddingBottom: '16px', marginBottom: '16px', borderBottom: index === cart.length - 1 ? 'none' : '1px solid #f1f5f9' }}>
+                
+                <div style={{ width: '60px', height: '60px', backgroundColor: '#f8fafc', borderRadius: '8px', display: 'flex', justifyContent: 'center', alignItems: 'center', border: '1px solid #f1f5f9' }}>
+                  {item.image ? <img src={item.image} style={{ maxWidth: '48px', maxHeight: '48px', objectFit: 'contain' }} alt={item.name} /> : <span style={{ fontSize: '30px' }}>{item.emoji}</span>}
+                </div>
 
-              <div style={{ flex: 1 }}>
-                <div style={{ fontWeight: '700', color: '#111827', fontSize: '0.9rem', lineHeight: '1.25', marginBottom: '4px' }}>{item.name}</div>
-                <div style={{ fontSize: '0.75rem', color: '#6b7280', marginBottom: '6px', fontWeight: '500' }}>{item.qnty}</div>
-                <div style={{ fontWeight: '800', color: '#111827', fontSize: '0.95rem' }}>₹{item.sellingPrice || item.mrp}</div>
-              </div>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontWeight: '700', color: '#111827', fontSize: '0.9rem', lineHeight: '1.25', marginBottom: '4px' }}>{item.name}</div>
+                  <div style={{ fontSize: '0.75rem', color: '#6b7280', marginBottom: '6px', fontWeight: '500' }}>{item.qnty}</div>
+                  <div style={{ fontWeight: '800', color: '#111827', fontSize: '0.95rem' }}>₹{safePrice}</div>
+                </div>
 
-              <div style={{ display: 'flex', alignItems: 'center', backgroundColor: '#0c831f', borderRadius: '8px', height: '32px', width: '80px', boxShadow: '0 2px 6px rgba(12, 131, 31, 0.2)' }}>
-                <button onClick={() => updateQty(item._id, -1)} style={{ flex: 1, height: '100%', border: 'none', background: 'transparent', color: '#fff', fontSize: '1.2rem', fontWeight: 'bold', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>−</button>
-                <span style={{ color: '#fff', fontSize: '0.95rem', fontWeight: '800', minWidth: '20px', textAlign: 'center' }}>{item.qty}</span>
-                <button onClick={() => updateQty(item._id, 1)} style={{ flex: 1, height: '100%', border: 'none', background: 'transparent', color: '#fff', fontSize: '1.2rem', fontWeight: 'bold', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>+</button>
-              </div>
+                <div style={{ display: 'flex', alignItems: 'center', backgroundColor: '#0c831f', borderRadius: '8px', height: '32px', width: '80px', boxShadow: '0 2px 6px rgba(12, 131, 31, 0.2)' }}>
+                  <button onClick={() => updateQty(item._id, -1)} style={{ flex: 1, height: '100%', border: 'none', background: 'transparent', color: '#fff', fontSize: '1.2rem', fontWeight: 'bold', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>−</button>
+                  <span style={{ color: '#fff', fontSize: '0.95rem', fontWeight: '800', minWidth: '20px', textAlign: 'center' }}>{safeQty}</span>
+                  <button onClick={() => updateQty(item._id, 1)} style={{ flex: 1, height: '100%', border: 'none', background: 'transparent', color: '#fff', fontSize: '1.2rem', fontWeight: 'bold', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>+</button>
+                </div>
 
-            </div>
-          ))}
+              </div>
+            );
+          })}
         </div>
 
         {/* 🪙 COIN DISCOUNT TOGGLE WITH CAP UI */}
@@ -196,7 +207,6 @@ export default function Cart({ cart, setCart, user, onBack, onCheckoutSuccess })
         </div>
       </div>
 
-      {/* 🌟 FIX: Moved bottom to 70px so it sits beautifully above the Nav Bar! */}
       <div style={{ position: 'fixed', bottom: '70px', left: 0, right: 0, backgroundColor: 'white', padding: '12px 16px', borderTop: '1px solid #e5e7eb', boxShadow: '0 -4px 10px rgba(0,0,0,0.03)', zIndex: 90 }}>
         <button 
           onClick={() => setShowPayment(true)} 
@@ -210,4 +220,4 @@ export default function Cart({ cart, setCart, user, onBack, onCheckoutSuccess })
 
     </div>
   );
-        }
+}
