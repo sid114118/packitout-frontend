@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import CrossSellSlider from './CrossSell.jsx';
 
-const DietaryIcon = ({ type }) => {
-  const isVeg = type !== 'Non-Veg';
+// 👇 UPDATED: Now uses the `isVeg` boolean directly from your new MongoDB schema
+const DietaryIcon = ({ isVeg }) => {
   return (
     <div style={{ width: '16px', height: '16px', border: `1.5px solid ${isVeg ? '#166534' : '#7f1d1d'}`, display: 'flex', justifyContent: 'center', alignItems: 'center', borderRadius: '4px', backgroundColor: '#fff' }}>
       <div style={{ width: '8px', height: '8px', backgroundColor: isVeg ? '#166534' : '#7f1d1d', borderRadius: '50%' }} />
@@ -44,18 +44,13 @@ export default function ProductModal({ product, isOpen, onClose, onAddToCart, on
     }
   }, [product]);
 
-  // 🛑 THE NEW FIX: Freeze background scrolling when modal opens!
   useEffect(() => {
     if (isOpen) {
-      document.body.style.overflow = 'hidden'; // Freezes the home page
+      document.body.style.overflow = 'hidden'; 
     } else {
-      document.body.style.overflow = ''; // Unfreezes it when closed
+      document.body.style.overflow = ''; 
     }
-
-    // Cleanup function just in case the component unexpectedly unmounts
-    return () => {
-      document.body.style.overflow = '';
-    };
+    return () => { document.body.style.overflow = ''; };
   }, [isOpen]);
 
   const relatedItems = useMemo(() => {
@@ -88,15 +83,8 @@ export default function ProductModal({ product, isOpen, onClose, onAddToCart, on
   return (
     <div
       style={{ 
-        position: 'fixed', 
-        top: 0, 
-        left: 0, 
-        right: 0, 
-        bottom: BOTTOM_NAV_HEIGHT, 
-        backgroundColor: '#fff', 
-        zIndex: 10000, 
-        display: 'flex', 
-        flexDirection: 'column', 
+        position: 'fixed', top: 0, left: 0, right: 0, bottom: BOTTOM_NAV_HEIGHT, 
+        backgroundColor: '#fff', zIndex: 10000, display: 'flex', flexDirection: 'column', 
         animation: 'slideUpPage 0.25s cubic-bezier(0.32,0.72,0,1)' 
       }}
     >
@@ -110,25 +98,19 @@ export default function ProductModal({ product, isOpen, onClose, onAddToCart, on
 
       {/* ── Top Navigation Bar ── */}
       <div style={{ flexShrink: 0, display: 'flex', alignItems: 'center', padding: '12px 16px', backgroundColor: '#fff', boxShadow: '0 2px 4px rgba(0,0,0,0.02)', zIndex: 10 }}>
-        <button
-          onClick={onClose}
-          style={{ background: 'none', border: 'none', fontSize: '1.5rem', cursor: 'pointer', padding: '0 16px 0 0', color: '#111827', display: 'flex', alignItems: 'center' }}
-        >
+        <button onClick={onClose} style={{ background: 'none', border: 'none', fontSize: '1.5rem', cursor: 'pointer', padding: '0 16px 0 0', color: '#111827', display: 'flex', alignItems: 'center' }}>
           ←
         </button>
         <div style={{ display: 'flex', flexDirection: 'column', textAlign: 'left' }}>
           <h2 style={{ fontSize: '1.05rem', fontWeight: '800', margin: 0, color: '#111827', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-            {selectedVariant.brand ? selectedVariant.brand : 'Product Details'}
+            {selectedVariant.Brand ? selectedVariant.Brand : 'Product Details'}
           </h2>
         </div>
       </div>
 
       {/* ── Scrollable Content ── */}
-      <div
-        id="product-page-scroll"
-        className="pm-hide-scroll"
-        style={{ flex: 1, overflowY: 'auto', paddingBottom: cartTotalItems > 0 ? '90px' : '20px', backgroundColor: '#fff', position: 'relative' }}
-      >
+      <div id="product-page-scroll" className="pm-hide-scroll" style={{ flex: 1, overflowY: 'auto', paddingBottom: cartTotalItems > 0 ? '90px' : '20px', backgroundColor: '#fff', position: 'relative' }}>
+        
         <div style={{ width: '100%', height: '320px', display: 'flex', justifyContent: 'center', alignItems: 'center', position: 'relative', backgroundColor: '#f8fafc' }}>
           {selectedVariant.image
             ? <img src={selectedVariant.image} alt={selectedVariant.name} style={{ maxHeight: '90%', maxWidth: '90%', objectFit: 'contain', mixBlendMode: 'multiply' }} />
@@ -137,7 +119,8 @@ export default function ProductModal({ product, isOpen, onClose, onAddToCart, on
         </div>
 
         <div style={{ padding: '20px', textAlign: 'left' }}>
-
+          
+          {/* Reviews Mockup */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.75rem', fontWeight: '800', marginBottom: '8px' }}>
              <div style={{ display: 'flex', alignItems: 'center', color: '#f59e0b', fontSize: '0.85rem' }}>
                 ★★★★★ <span style={{ color: '#9ca3af', fontWeight: '500', marginLeft: '4px', fontSize: '0.75rem' }}>(4.03 lac)</span>
@@ -149,16 +132,18 @@ export default function ProductModal({ product, isOpen, onClose, onAddToCart, on
               {selectedVariant.name}
             </h1>
             <div style={{ marginTop: '4px', marginLeft: '10px' }}>
-               <DietaryIcon type={selectedVariant.dietaryPreference} />
+               {/* 👇 UPDATED: Passing the boolean properly */}
+               <DietaryIcon isVeg={selectedVariant.isVeg} />
             </div>
           </div>
 
           <div style={{ color: '#ea580c', fontWeight: '700', fontSize: '0.8rem', marginTop: '8px', marginBottom: '20px' }}>
-            {selectedVariant.brand ? `Explore ${selectedVariant.brand} ›` : 'Limited Stock!'}
+            {selectedVariant.Brand ? `Explore ${selectedVariant.Brand} ›` : 'Limited Stock!'}
           </div>
 
           <div style={{ borderTop: '1px solid #f1f5f9', marginBottom: '20px' }} />
 
+          {/* Variants Selector */}
           {currentProduct.variants && currentProduct.variants.length > 1 && (
             <div style={{ marginBottom: '24px' }}>
               <p style={{ fontSize: '0.85rem', fontWeight: '800', color: '#111827', marginBottom: '12px' }}>Select Unit</p>
@@ -172,35 +157,9 @@ export default function ProductModal({ product, isOpen, onClose, onAddToCart, on
                   const variantCartCount = vCartItem ? vCartItem.qty : 0;
 
                   return (
-                    <div
-                      key={i}
-                      onClick={() => setSelectedVariant(v)}
-                      style={{ 
-                        minWidth: '100px', 
-                        padding: '12px 14px', 
-                        border: isSel ? '2px solid #0c831f' : '1.5px solid #e5e7eb', 
-                        borderRadius: '12px', 
-                        backgroundColor: isSel ? '#f4fbf6' : '#fff', 
-                        textAlign: 'left', 
-                        display: 'flex',
-                        flexDirection: 'column',
-                        alignItems: 'flex-start',
-                        position: 'relative', 
-                        cursor: 'pointer', 
-                        flexShrink: 0, 
-                        transition: 'all 0.15s' 
-                      }}
-                    >
-                      {variantCartCount > 0 && (
-                        <div style={{ position: 'absolute', top: '-8px', right: '-8px', backgroundColor: '#0c831f', color: '#fff', borderRadius: '50%', width: '22px', height: '22px', display: 'flex', justifyContent: 'center', alignItems: 'center', fontSize: '0.75rem', fontWeight: '800', border: '2px solid #fff', zIndex: 2 }}>
-                          {variantCartCount}
-                        </div>
-                      )}
-                      {vDisc > 0 && (
-                        <span style={{ position: 'absolute', top: '-10px', left: '12px', background: 'linear-gradient(to right, #60a5fa, #3b82f6)', color: '#fff', fontSize: '0.55rem', padding: '3px 6px', borderRadius: '4px', whiteSpace: 'nowrap', fontWeight: '800' }}>
-                          {vDisc}% OFF
-                        </span>
-                      )}
+                    <div key={i} onClick={() => setSelectedVariant(v)} style={{ minWidth: '100px', padding: '12px 14px', border: isSel ? '2px solid #0c831f' : '1.5px solid #e5e7eb', borderRadius: '12px', backgroundColor: isSel ? '#f4fbf6' : '#fff', textAlign: 'left', display: 'flex', flexDirection: 'column', alignItems: 'flex-start', position: 'relative', cursor: 'pointer', flexShrink: 0, transition: 'all 0.15s' }}>
+                      {variantCartCount > 0 && <div style={{ position: 'absolute', top: '-8px', right: '-8px', backgroundColor: '#0c831f', color: '#fff', borderRadius: '50%', width: '22px', height: '22px', display: 'flex', justifyContent: 'center', alignItems: 'center', fontSize: '0.75rem', fontWeight: '800', border: '2px solid #fff', zIndex: 2 }}>{variantCartCount}</div>}
+                      {vDisc > 0 && <span style={{ position: 'absolute', top: '-10px', left: '12px', background: 'linear-gradient(to right, #60a5fa, #3b82f6)', color: '#fff', fontSize: '0.55rem', padding: '3px 6px', borderRadius: '4px', whiteSpace: 'nowrap', fontWeight: '800' }}>{vDisc}% OFF</span>}
                       <div style={{ fontWeight: '700', fontSize: '0.9rem', color: '#111827', marginTop: vDisc > 0 ? '6px' : 0 }}>{v.qnty}</div>
                       <div style={{ fontSize: '0.85rem', color: '#111827', fontWeight: '800', marginTop: '4px' }}>₹{v.sellingPrice || v.mrp}</div>
                     </div>
@@ -210,35 +169,45 @@ export default function ProductModal({ product, isOpen, onClose, onAddToCart, on
             </div>
           )}
 
-          {selectedVariant.description && (
+          {/* Description */}
+          {selectedVariant.description && selectedVariant.description !== "nan" && (
             <div style={{ marginBottom: '8px' }}>
               <h3 style={{ fontSize: '0.95rem', fontWeight: '800', color: '#111827', margin: '0 0 10px' }}>Product Details</h3>
               <div style={{ position: 'relative' }}>
-                <p
-                  className={showFullDesc ? '' : 'pm-line-clamp'}
-                  style={{ fontSize: '0.9rem', color: '#4b5563', lineHeight: '1.65', margin: 0 }}
-                >
+                <p className={showFullDesc ? '' : 'pm-line-clamp'} style={{ fontSize: '0.9rem', color: '#4b5563', lineHeight: '1.65', margin: 0 }}>
                   {selectedVariant.description}
                 </p>
-                {!showFullDesc && selectedVariant.description.length > 120 && (
-                  <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: '30px', background: 'linear-gradient(transparent, #fff)' }} />
-                )}
+                {!showFullDesc && selectedVariant.description.length > 120 && <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: '30px', background: 'linear-gradient(transparent, #fff)' }} />}
               </div>
               {selectedVariant.description.length > 120 && (
-                <button
-                  onClick={() => setShowFullDesc(!showFullDesc)}
-                  style={{ background: 'none', border: 'none', color: '#0c831f', fontWeight: '700', fontSize: '0.9rem', padding: '8px 0 0', cursor: 'pointer' }}
-                >
+                <button onClick={() => setShowFullDesc(!showFullDesc)} style={{ background: 'none', border: 'none', color: '#0c831f', fontWeight: '700', fontSize: '0.9rem', padding: '8px 0 0', cursor: 'pointer' }}>
                   {showFullDesc ? 'Read Less ⌃' : 'Read More ⌄'}
                 </button>
               )}
             </div>
           )}
 
+          {/* 👇 NEW: Ingredients Accordion */}
+          {selectedVariant.ingredients && selectedVariant.ingredients !== "nan" && (
+            <Accordion title="Ingredients">
+              <p style={{ fontSize: '0.9rem', color: '#4b5563', lineHeight: '1.6', margin: 0 }}>
+                {selectedVariant.ingredients}
+              </p>
+            </Accordion>
+          )}
+
+          {/* 👇 UPDATED: Nutritional Value Accordion (Added Sugar) */}
           {(selectedVariant.energy || selectedVariant.protein || selectedVariant.carbs || selectedVariant.fat) && (
-            <Accordion title="Nutritional Value">
+            <Accordion title="Nutritional Value (Per 100g)">
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
-                {[['Energy', selectedVariant.energy], ['Protein', selectedVariant.protein], ['Carbs', selectedVariant.carbs], ['Total Fat', selectedVariant.fat]].filter(([, v]) => v).map(([label, val]) => (
+                {/* Dynamically filter out empty values so blank boxes don't show up */}
+                {[
+                  ['Energy', selectedVariant.energy ? `${selectedVariant.energy} kcal` : null], 
+                  ['Protein', selectedVariant.protein ? `${selectedVariant.protein} g` : null], 
+                  ['Carbs', selectedVariant.carbs ? `${selectedVariant.carbs} g` : null], 
+                  ['Sugar', selectedVariant.sugar ? `${selectedVariant.sugar} g` : null], 
+                  ['Total Fat', selectedVariant.fat ? `${selectedVariant.fat} g` : null]
+                ].filter(([, v]) => v && v !== "nan kcal" && v !== "nan g").map(([label, val]) => (
                   <div key={label} style={{ backgroundColor: '#f8fafc', padding: '12px', borderRadius: '8px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
                     <span style={{ fontSize: '0.8rem', color: '#64748b' }}>{label}</span>
                     <span style={{ fontSize: '0.9rem', fontWeight: '800', color: '#111827' }}>{val}</span>
@@ -248,53 +217,43 @@ export default function ProductModal({ product, isOpen, onClose, onAddToCart, on
             </Accordion>
           )}
 
-          {selectedVariant.manufacturer && (
+          {/* 👇 UPDATED: Manufacturer Details Accordion (Added Address) */}
+          {selectedVariant.manufacturer && selectedVariant.manufacturer !== "nan" && (
             <Accordion title="Manufacturer Details">
               <p style={{ fontSize: '0.9rem', color: '#4b5563', lineHeight: '1.6', margin: 0 }}>
-                {selectedVariant.manufacturer}
+                <strong style={{ color: '#111827' }}>Name:</strong> {selectedVariant.manufacturer}
+                {selectedVariant.manufactureraddress && selectedVariant.manufactureraddress !== "nan" && (
+                  <>
+                    <br /><br />
+                    <strong style={{ color: '#111827' }}>Address:</strong> {selectedVariant.manufactureraddress}
+                  </>
+                )}
               </p>
             </Accordion>
           )}
 
-          <CrossSellSlider
-            title="Frequently Bought Together"
-            items={relatedItems}
-            onProductClick={handleRelatedProductClick}
-            onAddToCart={onAddToCart}
-          />
+          <CrossSellSlider title="Frequently Bought Together" items={relatedItems} onProductClick={handleRelatedProductClick} onAddToCart={onAddToCart} />
         </div>
       </div>
 
-      {/* 🌟 FLOATING VIEW CART 🌟 */}
+      {/* ... [FLOATING CART AND STICKY BOTTOM BAR REMAIN EXACTLY THE SAME] ... */}
+      
       {cartTotalItems > 0 && (
-        <div
-          onClick={() => { onClose(); if (onViewCart) onViewCart(); }}
-          style={{ position: 'absolute', bottom: '85px', left: '12px', right: '12px', zIndex: 101, backgroundColor: '#0c831f', color: '#fff', padding: '10px 14px', borderRadius: '10px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer', boxShadow: '0 4px 15px rgba(0,0,0,0.1)', animation: 'fadeIn 0.2s ease' }}
-        >
+        <div onClick={() => { onClose(); if (onViewCart) onViewCart(); }} style={{ position: 'absolute', bottom: '85px', left: '12px', right: '12px', zIndex: 101, backgroundColor: '#0c831f', color: '#fff', padding: '10px 14px', borderRadius: '10px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer', boxShadow: '0 4px 15px rgba(0,0,0,0.1)', animation: 'fadeIn 0.2s ease' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <div style={{ backgroundColor: 'rgba(255,255,255,0.2)', width: '38px', height: '38px', borderRadius: '8px', display: 'flex', justifyContent: 'center', alignItems: 'center', fontSize: '1.2rem' }}>
-              🛒
-            </div>
+            <div style={{ backgroundColor: 'rgba(255,255,255,0.2)', width: '38px', height: '38px', borderRadius: '8px', display: 'flex', justifyContent: 'center', alignItems: 'center', fontSize: '1.2rem' }}>🛒</div>
             <div style={{ textAlign: 'left', lineHeight: '1.3' }}>
-              <div style={{ fontWeight: '600', fontSize: '0.75rem', opacity: 0.95 }}>
-                {cartTotalItems} item{cartTotalItems > 1 ? 's' : ''}
-              </div>
+              <div style={{ fontWeight: '600', fontSize: '0.75rem', opacity: 0.95 }}>{cartTotalItems} item{cartTotalItems > 1 ? 's' : ''}</div>
               <div style={{ fontWeight: '800', fontSize: '1rem' }}>₹ {cartTotalPrice}</div>
             </div>
           </div>
-          <div style={{ fontWeight: '800', fontSize: '0.95rem', display: 'flex', alignItems: 'center', gap: '4px' }}>
-            View Cart <span style={{ fontSize: '1.2rem' }}>▶</span>
-          </div>
+          <div style={{ fontWeight: '800', fontSize: '0.95rem', display: 'flex', alignItems: 'center', gap: '4px' }}>View Cart <span style={{ fontSize: '1.2rem' }}>▶</span></div>
         </div>
       )}
 
-      {/* 🌟 STICKY BOTTOM BAR 🌟 */}
       <div style={{ flexShrink: 0, backgroundColor: '#fff', borderTop: '1px solid #f1f5f9', padding: '10px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', zIndex: 102, minHeight: '75px', paddingBottom: 'max(10px, env(safe-area-inset-bottom))' }}>
-
         <div style={{ textAlign: 'left' }}>
-          <div style={{ fontSize: '0.8rem', color: '#4b5563', fontWeight: '500', marginBottom: '2px' }}>
-            {selectedVariant.qnty}
-          </div>
+          <div style={{ fontSize: '0.8rem', color: '#4b5563', fontWeight: '500', marginBottom: '2px' }}>{selectedVariant.qnty}</div>
           <div style={{ display: 'flex', alignItems: 'baseline', gap: '6px' }}>
             <span style={{ fontSize: '1.2rem', fontWeight: '800', color: '#111827', lineHeight: 1 }}>₹{displayPrice}</span>
             {isDiscounted && <span style={{ fontSize: '0.8rem', color: '#9ca3af', textDecoration: 'line-through' }}>MRP ₹{selectedVariant.mrp}</span>}
@@ -302,29 +261,16 @@ export default function ProductModal({ product, isOpen, onClose, onAddToCart, on
           </div>
           <div style={{ fontSize: '0.65rem', color: '#9ca3af', marginTop: '2px' }}>Inclusive of all taxes</div>
         </div>
-
         {cartCount > 0 ? (
           <div style={{ display: 'flex', alignItems: 'center', backgroundColor: '#0c831f', borderRadius: '8px', overflow: 'hidden', height: '40px', minWidth: '100px' }}>
-            <button
-              onClick={() => onRemoveFromCart && onRemoveFromCart(selectedVariant)}
-              style={{ flex: 1, height: '100%', border: 'none', backgroundColor: 'transparent', color: '#fff', fontSize: '1.4rem', fontWeight: '300', cursor: 'pointer', display: 'flex', justifyContent: 'center', alignItems: 'center', paddingBottom: '2px' }}
-            >−</button>
+            <button onClick={() => onRemoveFromCart && onRemoveFromCart(selectedVariant)} style={{ flex: 1, height: '100%', border: 'none', backgroundColor: 'transparent', color: '#fff', fontSize: '1.4rem', fontWeight: '300', cursor: 'pointer', display: 'flex', justifyContent: 'center', alignItems: 'center', paddingBottom: '2px' }}>−</button>
             <span style={{ minWidth: '24px', textAlign: 'center', fontWeight: '800', fontSize: '0.95rem', color: '#fff' }}>{cartCount}</span>
-            <button
-              onClick={() => onAddToCart(selectedVariant)}
-              style={{ flex: 1, height: '100%', border: 'none', backgroundColor: 'transparent', color: '#fff', fontSize: '1.25rem', fontWeight: '500', cursor: 'pointer', display: 'flex', justifyContent: 'center', alignItems: 'center', paddingBottom: '2px' }}
-            >+</button>
+            <button onClick={() => onAddToCart(selectedVariant)} style={{ flex: 1, height: '100%', border: 'none', backgroundColor: 'transparent', color: '#fff', fontSize: '1.25rem', fontWeight: '500', cursor: 'pointer', display: 'flex', justifyContent: 'center', alignItems: 'center', paddingBottom: '2px' }}>+</button>
           </div>
         ) : (
-          <button
-            onClick={() => onAddToCart(selectedVariant)}
-            style={{ height: '40px', minWidth: '100px', backgroundColor: '#0c831f', color: '#fff', border: '1px solid #0c831f', borderRadius: '8px', fontWeight: '800', fontSize: '0.9rem', cursor: 'pointer' }}
-          >
-            Add to cart
-          </button>
+          <button onClick={() => onAddToCart(selectedVariant)} style={{ height: '40px', minWidth: '100px', backgroundColor: '#0c831f', color: '#fff', border: '1px solid #0c831f', borderRadius: '8px', fontWeight: '800', fontSize: '0.9rem', cursor: 'pointer' }}>Add to cart</button>
         )}
       </div>
     </div>
   );
-                        }
-        
+                                                                                                                                                                                                                                                                                                                         }
