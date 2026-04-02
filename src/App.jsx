@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import ErrorBoundary from './ErrorBoundary.jsx'; // 🛡️ NEW: Imported the Safety Net!
 import Header from './Header.jsx';
 import Categories from './Categories.jsx';
 
@@ -81,26 +80,52 @@ export default function App() {
     return () => window.removeEventListener("hashchange", checkUrl);
   }, []);
 
+  // 🛡️ BULLETPROOF: Safe Add to Cart
   const handleAddToCart = (product) => {
-    if (!loggedInUser) {
-      alert("Please log in or sign up to add items to your cart! 🛒");
-      window.location.hash = "#account";
-      return;
+    try {
+      if (!loggedInUser) {
+        alert("Please log in or sign up to add items to your cart! 🛒");
+        window.location.hash = "#account";
+        return;
+      }
+      
+      if (!product || !product._id) {
+        alert("Oops! This product is missing data and cannot be added.");
+        return;
+      }
+
+      setCart((prevCart) => {
+        const cleanCart = prevCart.filter(item => item !== null && item !== undefined);
+        const existingItem = cleanCart.find(item => item._id === product._id);
+        
+        if (existingItem) {
+          return cleanCart.map(item => item._id === product._id ? { ...item, qty: (item.qty || 1) + 1 } : item);
+        }
+        return [...cleanCart, { ...product, qty: 1 }];
+      });
+    } catch (err) {
+      alert("Failed to add to cart: " + err.message);
     }
-    setCart((prevCart) => {
-      const existingItem = prevCart.find(item => item._id === product._id);
-      if (existingItem) return prevCart.map(item => item._id === product._id ? { ...item, qty: item.qty + 1 } : item);
-      return [...prevCart, { ...product, qty: 1 }];
-    });
   };
 
+  // 🛡️ BULLETPROOF: Safe Remove from Cart
   const handleRemoveFromCart = (product) => {
-    setCart((prevCart) => {
-      const existingItem = prevCart.find(item => item._id === product._id);
-      if (!existingItem) return prevCart;
-      if (existingItem.qty > 1) return prevCart.map(item => item._id === product._id ? { ...item, qty: item.qty - 1 } : item);
-      return prevCart.filter(item => item._id !== product._id);
-    });
+    try {
+      if (!product || !product._id) return;
+      
+      setCart((prevCart) => {
+        const cleanCart = prevCart.filter(item => item !== null && item !== undefined);
+        const existingItem = cleanCart.find(item => item._id === product._id);
+        
+        if (!existingItem) return cleanCart;
+        if ((existingItem.qty || 1) > 1) {
+          return cleanCart.map(item => item._id === product._id ? { ...item, qty: (item.qty || 1) - 1 } : item);
+        }
+        return cleanCart.filter(item => item._id !== product._id);
+      });
+    } catch (err) {
+      console.error(err);
+    }
   };
 
   const handleUserLogin = (userData) => {
@@ -171,9 +196,17 @@ export default function App() {
       );
     }
 
-    // Default Customer Feed
-    const cartTotalItems = cart.reduce((sum, item) => sum + item.qty, 0);
-    const cartTotalPrice = cart.reduce((sum, item) => sum + ((item.sellingPrice || item.mrp) * item.qty), 0);
+    // 🛡️ BULLETPROOF MATH: Handles missing quantities and prices
+    const cartTotalItems = cart.reduce((sum, item) => {
+      if (!item) return sum; 
+      return sum + (item.qty || 1);
+    }, 0);
+    
+    const cartTotalPrice = cart.reduce((sum, item) => {
+      if (!item) return sum;
+      const safePrice = item.sellingPrice !== undefined ? item.sellingPrice : (item.mrp || 0);
+      return sum + (safePrice * (item.qty || 1));
+    }, 0);
 
     return (
       <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', fontFamily: 'sans-serif', backgroundColor: '#f3f4f6', paddingBottom: cart.length > 0 ? '140px' : '70px' }}>
@@ -234,11 +267,10 @@ export default function App() {
 
   const showBottomNav = ["customer", "nearby", "account", "cart", "success"].includes(currentView);
 
-  // 🛡️ THE WRAPPER: ErrorBoundary now surrounds your entire application
   return (
-    <ErrorBoundary>
+    <>
       {renderContent()}
       {showBottomNav && <BottomNav currentView={currentView} />}
-    </ErrorBoundary>
+    </>
   );
-}
+        }
