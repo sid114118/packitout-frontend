@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import CrossSellSlider from './CrossSell.jsx';
+import ReviewSection from './ReviewSection.jsx'; // 👈 NEW IMPORT
 
 // 👇 Dietary Icon (Veg/Non-Veg)
 const DietaryIcon = ({ isVeg }) => {
@@ -36,7 +37,7 @@ export default function ProductModal({ product, isOpen, onClose, onAddToCart, on
 
   const BOTTOM_NAV_HEIGHT = '56px'; 
 
-  // 🛡️ NEW: THE MOBILE BACK BUTTON INTERCEPTOR
+  // 🛡️ THE MOBILE BACK BUTTON INTERCEPTOR
   useEffect(() => {
     if (isOpen) {
       // Push a "fake" state into the phone's browser history
@@ -118,7 +119,7 @@ export default function ProductModal({ product, isOpen, onClose, onAddToCart, on
 
       {/* ── Top Navigation Bar ── */}
       <div style={{ flexShrink: 0, display: 'flex', alignItems: 'center', padding: '12px 16px', backgroundColor: '#fff', boxShadow: '0 2px 4px rgba(0,0,0,0.02)', zIndex: 10 }}>
-        {/* 🛡️ UPDATED: Uses window.history.back() to pop the fake history state and trigger onClose gracefully */}
+        {/* 🛡️ Uses window.history.back() to pop the fake history state and trigger onClose gracefully */}
         <button onClick={() => window.history.back()} style={{ background: 'none', border: 'none', fontSize: '1.5rem', cursor: 'pointer', padding: '0 16px 0 0', color: '#111827', display: 'flex', alignItems: 'center' }}>
           ←
         </button>
@@ -252,13 +253,21 @@ export default function ProductModal({ product, isOpen, onClose, onAddToCart, on
           )}
 
           <CrossSellSlider title="Frequently Bought Together" items={relatedItems} onProductClick={handleRelatedProductClick} onAddToCart={onAddToCart} />
+
+          {/* 👇 THE REVIEW SECTION IS NOW MOUNTED HERE */}
+          <ReviewSection 
+            targetId={selectedVariant._id} 
+            reviews={selectedVariant.reviews || []} 
+            type="Product" 
+          />
+
         </div>
       </div>
 
       {/* 🛒 FLOATING CART */}
       {cartTotalItems > 0 && (
         <div 
-          /* 🛡️ UPDATED: Pops history before going to Cart to keep navigation clean */
+          /* 🛡️ Pops history before going to Cart to keep navigation clean */
           onClick={() => { window.history.back(); setTimeout(() => { if (onViewCart) onViewCart(); }, 50); }} 
           style={{ position: 'absolute', bottom: '85px', left: '12px', right: '12px', zIndex: 101, backgroundColor: '#0c831f', color: '#fff', padding: '10px 14px', borderRadius: '10px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer', boxShadow: '0 4px 15px rgba(0,0,0,0.1)', animation: 'fadeIn 0.2s ease' }}
         >
@@ -296,4 +305,5 @@ export default function ProductModal({ product, isOpen, onClose, onAddToCart, on
       </div>
     </div>
   );
-}
+      }
+                    
