@@ -209,8 +209,13 @@ export default function ShopFeed({
         onViewCart={onViewCart}
         cart={cart} 
         allItems={items} 
-        onViewBrand={onBrandSelect} /* 👈 FIXED: Matches the prop in ProductModal exactly */
+        onViewBrand={(brand) => {
+          // 🛡️ THE FIX: Wipe all other states so Brand View takes control!
+          if (onClearCategory) onClearCategory(); 
+          setViewAll(null);                       
+          if (onBrandSelect) onBrandSelect(brand);
+        }}
       />
     </div>
   );
-}
+    }
