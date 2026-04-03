@@ -3,10 +3,10 @@ import ProductsTab from './components/AdminDashboard/ProductsTab';
 import ShopsTab from './components/AdminDashboard/ShopsTab';
 import UsersTab from './components/AdminDashboard/UsersTab';
 import GlobalOrdersTab from './components/AdminDashboard/GlobalOrdersTab';
-import AdminParchiManager from './components/AdminDashboard/AdminParchiManager'; 
+import AdminParchiManager from './components/AdminDashboard/AdminParchiManager'; // 🌟 Your Master POS!
 
 export default function AdminDashboard({ onExit }) {
-  const [activeTab, setActiveTab] = useState("shops"); // Defaulting to shops to test it!
+  const [activeTab, setActiveTab] = useState("shops"); 
   
   const [products, setProducts] = useState([]);
   const [shops, setShops] = useState([]);
@@ -15,7 +15,6 @@ export default function AdminDashboard({ onExit }) {
   const [globalParchis, setGlobalParchis] = useState([]); 
   const [loading, setLoading] = useState(true);
 
-  // 👇 UPDATED: Added Pro Fields to initial form state
   const initialProductForm = { 
     name: "", brand: "", category: "", mrp: "", qnty: "", emoji: "", image: "", searchTags: "", 
     description: "", manufacturer: "", energy: "", protein: "", carbs: "", sugar: "", fat: "",
@@ -24,7 +23,6 @@ export default function AdminDashboard({ onExit }) {
   const [form, setForm] = useState(initialProductForm);
   const [editingProductId, setEditingProductId] = useState(null); 
   
-  // Shop Form State
   const initialShopForm = { 
     name: "", phone: "", password: "", pincode: "",
     ownerName: "", fullAddress: "", operatingHours: "", shopImage: "",
@@ -54,11 +52,10 @@ export default function AdminDashboard({ onExit }) {
 
   // --- UPGRADED PRODUCT LOGIC --- 
   const handleProductSubmit = async (e) => {
-    e.preventDefault(); // 🛑 Stops the page from refreshing!
+    e.preventDefault(); 
 
     try {
       if (editingProductId) {
-        // Edit Existing Product
         const res = await fetch(`${BASE_URL}/master-products/${editingProductId}`, {
           method: "PATCH", 
           headers: { "Content-Type": "application/json" },
@@ -66,7 +63,6 @@ export default function AdminDashboard({ onExit }) {
         });
         if (res.ok) alert("✅ Product Updated Successfully!");
       } else {
-        // Add New Product
         const res = await fetch(`${BASE_URL}/master-products`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -77,7 +73,7 @@ export default function AdminDashboard({ onExit }) {
 
       setForm(initialProductForm);
       setEditingProductId(null);
-      fetchData(); // Refresh the list instantly
+      fetchData(); 
     } catch (err) {
       console.error(err);
       alert("❌ Failed to save product. Check your connection.");
@@ -101,13 +97,12 @@ export default function AdminDashboard({ onExit }) {
       carbs: product.carbs || "",
       sugar: product.sugar || "",
       fat: product.fat || "",
-      // 👇 UPDATED: Load existing pro data when editing
       itemGroupId: product.itemGroupId || "",
       relatedProducts: product.relatedProducts || [],
       substitutes: product.substitutes || []
     });
     setEditingProductId(product._id);
-    window.scrollTo({ top: 0, behavior: 'smooth' }); // Smoothly scrolls back to the form
+    window.scrollTo({ top: 0, behavior: 'smooth' }); 
   };
 
   const cancelEditProduct = () => { 
@@ -153,18 +148,33 @@ export default function AdminDashboard({ onExit }) {
     <div style={{ backgroundColor: '#f1f5f9', minHeight: '100vh', fontFamily: 'sans-serif', paddingBottom: '50px' }}>
       <nav style={{ backgroundColor: '#0f172a', color: 'white', padding: '15px 30px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', position: 'sticky', top: 0, zIndex: 10 }}>
         <h2 style={{ margin: 0, color: '#10b981', fontSize: '1.4rem' }}>PackItOut ADMIN</h2>
-        <div style={{ display: 'flex', gap: '8px', overflowX: 'auto' }}>
+        
+        {/* 🌟 NEW: Added the Orders and Master POS buttons to the navbar! */}
+        <div style={{ display: 'flex', gap: '8px', overflowX: 'auto', paddingBottom: '5px' }} className="hide-scroll">
+          <style>{`.hide-scroll::-webkit-scrollbar { display: none; }`}</style>
+          
           <button onClick={() => setActiveTab("products")} style={tabButtonStyle(activeTab === "products")}>📦 Catalog</button>
           <button onClick={() => setActiveTab("shops")} style={tabButtonStyle(activeTab === "shops")}>🏪 Shops</button>
           <button onClick={() => setActiveTab("users")} style={tabButtonStyle(activeTab === "users")}>👤 Users</button>
+          <button onClick={() => setActiveTab("orders")} style={tabButtonStyle(activeTab === "orders")}>🛒 Orders</button>
+          <button onClick={() => setActiveTab("parchis")} style={tabButtonStyle(activeTab === "parchis")}>🧾 Master POS</button>
         </div>
       </nav>
 
       <div style={{ padding: '30px' }}>
-        {loading ? <div style={{ textAlign: 'center', marginTop: '50px' }}>Loading...</div> : (
+        {loading ? <div style={{ textAlign: 'center', marginTop: '50px', color: '#64748b' }}>Loading data...</div> : (
           <>
+            {/* 🔀 ROUTING: This tells React which component to show based on the active tab */}
             {activeTab === "products" && <ProductsTab products={products} form={form} setForm={setForm} handleProductSubmit={handleProductSubmit} CATEGORIES={CATEGORIES} editingProductId={editingProductId} startEditingProduct={startEditingProduct} cancelEdit={cancelEditProduct} />}
+            
             {activeTab === "shops" && <ShopsTab shops={shops} shopForm={shopForm} setShopForm={setShopForm} handleShopSubmit={handleShopSubmit} editingShopId={editingShopId} startEditingShop={startEditingShop} cancelEditShop={cancelEditShop} />}
+            
+            {activeTab === "users" && <UsersTab users={users} />}
+            
+            {/* 🌟 NEW: Render the Orders and Master POS components */}
+            {activeTab === "orders" && <GlobalOrdersTab orders={orders} />}
+            
+            {activeTab === "parchis" && <AdminParchiManager />}
           </>
         )}
       </div>
@@ -179,5 +189,6 @@ const tabButtonStyle = (isActive) => ({
   padding: '8px 15px', 
   borderRadius: '6px', 
   fontWeight: 'bold', 
-  cursor: 'pointer' 
+  cursor: 'pointer',
+  whiteSpace: 'nowrap' // Prevents buttons from squishing on small screens
 });
