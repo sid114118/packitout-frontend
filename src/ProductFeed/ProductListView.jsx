@@ -36,7 +36,7 @@ export default function ProductListView({
         right: 0, 
         bottom: BOTTOM_NAV_HEIGHT, 
         backgroundColor: '#fff', 
-        zIndex: 99999, 
+        zIndex: 2000, 
         overflowY: 'auto', 
         padding: '15px', 
         animation: 'fadeIn 0.2s ease', 
