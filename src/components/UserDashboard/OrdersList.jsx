@@ -1,16 +1,14 @@
 import React, { useState, useEffect } from 'react';
 
-// 🔗 IMPORTING YOUR WORKERS!
+// 🔗 IMPORTING YOUR NEW WORKERS!
 import OrdersTab from './components/ShopDashboard/OrdersTab';
 import ParchiTab from './components/ShopDashboard/ParchiTab';
 import InventoryTab from './components/ShopDashboard/InventoryTab';
-import NotificationBell from './NotificationBell'; 
-// 🌟 IMPORT THE NEW REVIEWS COMPONENT
-import ShopReviews from './components/ShopDashboard/ShopReviews'; 
+import NotificationBell from './NotificationBell'; // 🔔 IMPORTED THE BELL! (Adjust path if needed)
 
 export default function ShopDashboard({ user, onExit }) {
   // --- STATE ---
-  const [activeTab, setActiveTab] = useState("orders"); 
+  const [activeTab, setActiveTab] = useState("orders"); // Changed default to orders for better UX
   const [orders, setOrders] = useState([]); 
   const [masterCatalog, setMasterCatalog] = useState([]); 
   const [shopData, setShopData] = useState(user); 
@@ -37,21 +35,12 @@ export default function ShopDashboard({ user, onExit }) {
     return () => clearInterval(interval);
   }, [shopData._id]);
 
-  // 🛡️ THE FIX: Safely match the shop ID to make orders appear!
   const fetchOrders = async () => { 
     try { 
       const res = await fetch(`${BASE_URL}/orders`); 
       const allOrders = await res.json(); 
-      
-      const myShopOrders = allOrders.filter(o => {
-        const orderShopId = typeof o.shopId === 'object' ? o.shopId?._id : o.shopId;
-        return String(orderShopId) === String(shopData._id);
-      });
-      
-      setOrders(myShopOrders); 
-    } catch (err) { 
-      console.log("Failed to fetch shop orders:", err); 
-    } 
+      setOrders(allOrders.filter(o => o.shopId?._id === shopData._id)); 
+    } catch (err) { console.log(err); } 
   }; 
 
   const fetchMasterCatalog = async () => { 
@@ -160,7 +149,9 @@ export default function ShopDashboard({ user, onExit }) {
           <span style={{ fontSize: '0.8rem', color: '#94a3b8' }}>Partner Dashboard</span> 
         </div> 
         
+        {/* 👇 THE NEW BUTTON GROUP 👇 */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}> 
+          
           <NotificationBell ownerType="shop" ownerId={shopData._id} />
 
           <button onClick={toggleShopStatus} style={{ padding: '6px 12px', borderRadius: '20px', fontWeight: 'bold', border: 'none', cursor: 'pointer', backgroundColor: shopData.isOpen ? '#d1fae5' : '#fee2e2', color: shopData.isOpen ? '#059669' : '#b91c1c' }} > 
@@ -173,30 +164,17 @@ export default function ShopDashboard({ user, onExit }) {
       </div> 
 
       {/* 🗂️ TAB NAVIGATION */}
-      <div className="hide-scroll" style={{ display: 'flex', backgroundColor: '#1e293b', padding: '10px 20px', gap: '15px', overflowX: 'auto', whiteSpace: 'nowrap' }}>
+      <div style={{ display: 'flex', backgroundColor: '#1e293b', padding: '10px 20px', gap: '15px', overflowX: 'auto', whiteSpace: 'nowrap' }}>
         <button onClick={() => setActiveTab("orders")} style={tabStyle(activeTab === "orders")}>📦 Live Orders ({orders.length})</button>
         <button onClick={() => setActiveTab("parchis")} style={tabStyle(activeTab === "parchis")}>🧾 Parchis {parchiRequests.length > 0 && <span style={badgeStyle}>{parchiRequests.length}</span>}</button>
         <button onClick={() => setActiveTab("inventory")} style={tabStyle(activeTab === "inventory")}>📊 Manage Inventory</button>
-        
-        {/* 🌟 NEW REVIEWS TAB */}
-        <button onClick={() => setActiveTab("reviews")} style={tabStyle(activeTab === "reviews")}>⭐ Reviews</button>
       </div>
 
       <div style={{ padding: '15px', maxWidth: '800px', margin: '0 auto' }}> 
         
-        {/* 🔀 TAB ROUTING */}
         {activeTab === "orders" && <OrdersTab orders={orders} updateOrderStatus={updateOrderStatus} />}
         {activeTab === "parchis" && <ParchiTab parchiRequests={parchiRequests} selectedParchi={selectedParchi} setSelectedParchi={setSelectedParchi} parchiBill={parchiBill} setParchiBill={setParchiBill} handleAddToBill={handleAddToBill} handleSendBill={handleSendBill} shopData={shopData} />}
         {activeTab === "inventory" && <InventoryTab shopData={shopData} masterCatalog={masterCatalog} handleInventoryUpdate={handleInventoryUpdate} />}
-        
-        {/* 🌟 NEW TAB CONTENT */}
-        {activeTab === "reviews" && (
-          <ShopReviews 
-            shopId={shopData._id} 
-            shopRating={shopData.rating} 
-            totalReviews={shopData.totalReviews} 
-          />
-        )}
 
       </div>
     </div>
