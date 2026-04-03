@@ -12,7 +12,7 @@ export default function ParchiTab({
 }) {
   const [searchQuery, setSearchQuery] = useState("");
 
-  // --- 🛠️ NEW: CART MANAGEMENT HELPERS ---
+  // --- 🛠️ CART MANAGEMENT HELPERS ---
   const updateItemQty = (itemId, change) => {
     setParchiBill(prev => prev.map(item => {
       if (item._id === itemId) {
@@ -89,7 +89,7 @@ export default function ParchiTab({
           {/* 🔀 MAIN SPLIT SCREEN */}
           <div style={{ display: 'flex', flex: 1, overflow: 'hidden', flexDirection: window.innerWidth < 1024 ? 'column' : 'row' }}>
             
-            {/* 📸 LEFT SIDE: DARK MODE IMAGE VIEWER (Easier to read white paper) */}
+            {/* 📸 LEFT SIDE: DARK MODE IMAGE VIEWER */}
             <div style={{ flex: '1 1 45%', backgroundColor: '#1e293b', padding: '20px', display: 'flex', flexDirection: 'column', overflowY: 'auto', borderRight: '1px solid #334155' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
                 <h4 style={{ margin: 0, color: '#e2e8f0', fontSize: '1.1rem' }}>Original List</h4>
@@ -113,7 +113,7 @@ export default function ParchiTab({
                   <span style={{ position: 'absolute', left: '15px', top: '50%', transform: 'translateY(-50%)', fontSize: '1.2rem' }}>🔍</span>
                   <input 
                     type="text" 
-                    placeholder="Search items to add..." 
+                    placeholder="Search items by name to add..." 
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     style={{ width: '100%', padding: '14px 14px 14px 45px', borderRadius: '12px', border: '2px solid #e2e8f0', fontSize: '1.05rem', boxSizing: 'border-box', outline: 'none', transition: 'border-color 0.2s', backgroundColor: '#f8fafc' }}
@@ -124,30 +124,46 @@ export default function ParchiTab({
 
                 {/* 📦 INVENTORY BUTTONS (Scrollable) */}
                 <div className="hide-scroll" style={{ flex: 1, overflowY: 'auto', alignContent: 'flex-start' }}>
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: '10px', paddingBottom: '10px' }}>
-                    {shopData.inventory
-                      ?.filter(i => i.product)
-                      ?.filter(i => i.product.name.toLowerCase().includes(searchQuery.toLowerCase()))
-                      .map(item => (
-                        <button 
-                          key={item.product._id} 
-                          onClick={() => handleAddToBill(item)}
-                          style={{ padding: '12px 10px', backgroundColor: 'white', border: '1px solid #cbd5e1', borderRadius: '10px', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '5px', transition: 'all 0.1s', boxShadow: '0 2px 4px rgba(0,0,0,0.02)' }}
-                          onMouseDown={(e) => Object.assign(e.currentTarget.style, { transform: 'scale(0.96)', backgroundColor: '#f1f5f9', borderColor: '#3b82f6' })}
-                          onMouseUp={(e) => Object.assign(e.currentTarget.style, { transform: 'scale(1)', backgroundColor: 'white', borderColor: '#cbd5e1' })}
-                          onMouseLeave={(e) => Object.assign(e.currentTarget.style, { transform: 'scale(1)', backgroundColor: 'white', borderColor: '#cbd5e1' })}
-                        >
-                          <span style={{ fontSize: '1.8rem' }}>{item.product.emoji || '📦'}</span>
-                          <span style={{ fontSize: '0.8rem', fontWeight: '700', color: '#1e293b', textAlign: 'center', lineHeight: '1.2' }}>{item.product.name}</span>
-                          <span style={{ fontSize: '0.85rem', fontWeight: '900', color: '#10b981' }}>₹{item.sellingPrice || item.product.mrp}</span>
-                        </button>
-                    ))}
-                  </div>
                   
-                  {shopData.inventory?.filter(i => i.product && i.product.name.toLowerCase().includes(searchQuery.toLowerCase())).length === 0 && (
-                    <div style={{ padding: '40px 20px', color: '#94a3b8', fontSize: '1rem', textAlign: 'center', backgroundColor: '#f8fafc', borderRadius: '12px', border: '1px dashed #cbd5e1' }}>
-                      No items found matching "{searchQuery}"
+                  {/* 🛡️ NEW LOGIC: Hide items if search is empty */}
+                  {searchQuery.trim() === "" ? (
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', color: '#94a3b8', backgroundColor: '#f8fafc', borderRadius: '12px', border: '1px dashed #cbd5e1' }}>
+                      <span style={{ fontSize: '3rem', marginBottom: '10px' }}>⌨️</span>
+                      <span style={{ fontWeight: 'bold', color: '#64748b', fontSize: '1.1rem' }}>Search to find items</span>
+                      <span style={{ fontSize: '0.9rem', marginTop: '4px' }}>Type a product name above to add it to the bill.</span>
                     </div>
+                  ) : (
+                    <>
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: '10px', paddingBottom: '10px' }}>
+                        {shopData.inventory
+                          ?.filter(i => i.product)
+                          ?.filter(i => i.product.name.toLowerCase().includes(searchQuery.toLowerCase()))
+                          .map(item => (
+                            <button 
+                              key={item.product._id} 
+                              onClick={() => {
+                                handleAddToBill(item);
+                                setSearchQuery(""); // Automatically clear search bar after tapping!
+                              }}
+                              style={{ padding: '12px 10px', backgroundColor: 'white', border: '1px solid #cbd5e1', borderRadius: '10px', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '5px', transition: 'all 0.1s', boxShadow: '0 2px 4px rgba(0,0,0,0.02)' }}
+                              onMouseDown={(e) => Object.assign(e.currentTarget.style, { transform: 'scale(0.96)', backgroundColor: '#f1f5f9', borderColor: '#3b82f6' })}
+                              onMouseUp={(e) => Object.assign(e.currentTarget.style, { transform: 'scale(1)', backgroundColor: 'white', borderColor: '#cbd5e1' })}
+                              onMouseLeave={(e) => Object.assign(e.currentTarget.style, { transform: 'scale(1)', backgroundColor: 'white', borderColor: '#cbd5e1' })}
+                            >
+                              <span style={{ fontSize: '1.8rem' }}>{item.product.emoji || '📦'}</span>
+                              <span style={{ fontSize: '0.8rem', fontWeight: '700', color: '#1e293b', textAlign: 'center', lineHeight: '1.2' }}>{item.product.name}</span>
+                              <span style={{ fontSize: '0.85rem', fontWeight: '900', color: '#10b981' }}>₹{item.sellingPrice || item.product.mrp}</span>
+                            </button>
+                        ))}
+                      </div>
+                      
+                      {shopData.inventory?.filter(i => i.product && i.product.name.toLowerCase().includes(searchQuery.toLowerCase())).length === 0 && (
+                        <div style={{ padding: '40px 20px', color: '#94a3b8', fontSize: '1rem', textAlign: 'center', backgroundColor: '#f8fafc', borderRadius: '12px', border: '1px dashed #ef4444' }}>
+                          <div style={{ fontSize: '2rem', marginBottom: '10px' }}>🚫</div>
+                          No items found matching <strong>"{searchQuery}"</strong>
+                        </div>
+                      )}
+                    </>
                   )}
                 </div>
               </div>
@@ -162,7 +178,7 @@ export default function ParchiTab({
                   {parchiBill.length === 0 ? (
                     <div style={{ color: '#94a3b8', fontSize: '1rem', fontStyle: 'italic', textAlign: 'center', marginTop: '40px' }}>
                       <div style={{ fontSize: '2.5rem', marginBottom: '10px' }}>🛒</div>
-                      Tap items above to build the bill.
+                      Your cart is empty.
                     </div>
                   ) : (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
@@ -174,7 +190,7 @@ export default function ParchiTab({
                             <div style={{ fontSize: '0.8rem', color: '#64748b', fontWeight: '600' }}>₹{item.price} each</div>
                           </div>
 
-                          {/* 🎛️ NEW: CART CONTROLS */}
+                          {/* 🎛️ CART CONTROLS */}
                           <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginRight: '15px' }}>
                             <button onClick={() => updateItemQty(item._id, -1)} style={cartBtnStyle}>-</button>
                             <span style={{ fontWeight: '800', width: '20px', textAlign: 'center' }}>{item.qty}</span>
@@ -236,4 +252,4 @@ const cartBtnStyle = {
   justifyContent: 'center', 
   alignItems: 'center'
 };
-                                                 
+                          
