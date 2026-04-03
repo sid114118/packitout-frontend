@@ -37,7 +37,7 @@ const Accordion = ({ title, children, defaultOpen = false }) => {
   );
 };
 
-export default function ProductModal({ product, isOpen, onClose, onAddToCart, onRemoveFromCart, onViewCart, allItems = [], cart = [], onBrandClick }) {
+export default function ProductModal({ product, isOpen, onClose, onAddToCart, onRemoveFromCart, onViewCart, allItems = [], cart = [], onViewBrand }) {
   const [currentProduct, setCurrentProduct] = useState(null);
   const [selectedVariant, setSelectedVariant] = useState(null);
 
@@ -59,10 +59,12 @@ export default function ProductModal({ product, isOpen, onClose, onAddToCart, on
     }
   }, [product]);
 
+  // 🛡️ SAFE CART CALCULATIONS
   const safeCart = Array.isArray(cart) ? cart.filter(item => item !== null) : [];
   
   if (!isOpen || !currentProduct || !selectedVariant) return null;
 
+  // 🧮 PRICE & SAVINGS MATH
   const mrp = Number(selectedVariant.mrp || 0);
   const displayPrice = Number(selectedVariant.sellingPrice || mrp || 0);
   const isDiscounted = displayPrice < mrp;
@@ -110,7 +112,7 @@ export default function ProductModal({ product, isOpen, onClose, onAddToCart, on
           <h1 style={{ margin: 0, fontSize: '1.2rem', fontWeight: '700', color: '#111827', lineHeight: '1.4' }}>{selectedVariant.name}</h1>
           <p style={{ fontSize: '0.85rem', color: '#64748b', margin: '4px 0 15px 0', fontWeight: '500' }}>{selectedVariant.qnty}</p>
 
-          {/* Action Section */}
+          {/* 💵 VALUE-FOCUSED ACTION SECTION */}
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 0', borderTop: '1px solid #f3f4f6' }}>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -150,7 +152,7 @@ export default function ProductModal({ product, isOpen, onClose, onAddToCart, on
               <p style={{ fontSize: '0.8rem', fontWeight: '700', color: '#111827', marginBottom: '10px' }}>Select Unit</p>
               <div className="pm-hide-scroll" style={{ display: 'flex', gap: '10px', overflowX: 'auto', paddingBottom: '5px' }}>
                 {currentProduct.variants.map((v, i) => (
-                  <div key={i} onClick={() => handleVariantChange(v)} style={{ minWidth: '90px', padding: '10px', border: selectedVariant._id === v._id ? '2px solid #0c831f' : '1px solid #e5e7eb', borderRadius: '10px', backgroundColor: selectedVariant._id === v._id ? '#f4fbf6' : '#fff' }}>
+                  <div key={i} onClick={() => handleVariantChange(v)} style={{ minWidth: '90px', padding: '10px', border: selectedVariant._id === v._id ? '2px solid #0c831f' : '1px solid #e5e7eb', borderRadius: '10px', backgroundColor: selectedVariant._id === v._id ? '#f4fbf6' : '#fff', cursor: 'pointer' }}>
                     <div style={{ fontWeight: '700', fontSize: '0.85rem' }}>{v.qnty}</div>
                     <div style={{ fontWeight: '700', fontSize: '0.8rem' }}>₹{v.sellingPrice || v.mrp}</div>
                   </div>
@@ -159,15 +161,13 @@ export default function ProductModal({ product, isOpen, onClose, onAddToCart, on
             </div>
           )}
 
-          {/* 🏷️ NEW: BRAND EXPLORE CARD */}
+          {/* 🏷️ BRAND VIEW CARD */}
           {selectedVariant.brand && selectedVariant.brand !== "nan" && (
             <div 
               onClick={() => {
-                if(onBrandClick) {
-                  onClose(); // Close modal first
-                  setTimeout(() => onBrandClick(selectedVariant.brand), 100);
-                } else {
-                  alert(`Explore all ${selectedVariant.brand} products coming soon!`);
+                if(onViewBrand) {
+                  onClose(); 
+                  setTimeout(() => onViewBrand(selectedVariant.brand), 100); 
                 }
               }}
               style={{ 
@@ -184,13 +184,12 @@ export default function ProductModal({ product, isOpen, onClose, onAddToCart, on
               }}
             >
               <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                {/* Brand Initial Placeholder Box */}
                 <div style={{ width: '40px', height: '40px', backgroundColor: '#f1f5f9', borderRadius: '8px', display: 'flex', justifyContent: 'center', alignItems: 'center', fontWeight: '900', color: '#0c831f', fontSize: '1.2rem', border: '1px solid #e2e8f0' }}>
                   {selectedVariant.brand.charAt(0).toUpperCase()}
                 </div>
                 <div>
                   <div style={{ fontWeight: '800', fontSize: '1rem', color: '#111827' }}>{selectedVariant.brand}</div>
-                  <div style={{ fontSize: '0.8rem', color: '#64748b', fontWeight: '500' }}>Explore all products</div>
+                  <div style={{ fontSize: '0.8rem', color: '#64748b', fontWeight: '500' }}>View all products</div>
                 </div>
               </div>
               <div style={{ color: '#94a3b8', fontSize: '1.4rem', paddingBottom: '2px' }}>›</div>
@@ -249,5 +248,4 @@ export default function ProductModal({ product, isOpen, onClose, onAddToCart, on
       )}
     </div>
   );
-          }
-                
+}
