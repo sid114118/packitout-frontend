@@ -2,16 +2,14 @@ import React, { useState, useEffect, useMemo } from 'react';
 import CrossSellSlider from './CrossSell.jsx';
 import ReviewSection from './ReviewSection.jsx';
 
-// ── Corrected Highlight Row (Labels are now BOLD, Content is NORMAL) ──
+// ── Highlight Row Component ──
 const HighlightRow = ({ label, value }) => {
   if (!value || value === "nan" || value === "") return null;
   return (
     <div style={{ display: 'flex', padding: '12px 0', borderBottom: '1px solid #f1f5f9', alignItems: 'flex-start' }}>
-      {/* Label: Now Bold */}
       <div style={{ flex: '0 0 35%', color: '#111827', fontSize: '0.9rem', fontWeight: '800' }}>
         {label}
       </div>
-      {/* Value: Now Normal */}
       <div style={{ flex: 1, color: '#4b5563', fontSize: '0.9rem', fontWeight: '500', paddingLeft: '15px', lineHeight: '1.5' }}>
         {value}
       </div>
@@ -23,7 +21,7 @@ const HighlightRow = ({ label, value }) => {
 const Accordion = ({ title, children, defaultOpen = false }) => {
   const [open, setOpen] = useState(defaultOpen);
   return (
-    <div style={{ borderTop: '4px solid #f8fafc', marginTop: '20px' }}>
+    <div style={{ borderTop: '4px solid #f8fafc', marginTop: '10px' }}>
       <div onClick={() => setOpen(!open)} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '18px 0', cursor: 'pointer' }}>
         <div style={{ fontWeight: '900', fontSize: '1.1rem', color: '#111827' }}>
           {title}
@@ -108,9 +106,29 @@ export default function ProductModal({ product, isOpen, onClose, onAddToCart, on
           <h1 style={{ margin: 0, fontSize: '1.4rem', fontWeight: '900', color: '#111827' }}>{selectedVariant.name}</h1>
           <p style={{ fontSize: '0.95rem', color: '#64748b', margin: '5px 0 20px 0', fontWeight: '600' }}>{selectedVariant.qnty}</p>
 
+          {/* 💵 NEW: THE "ADD TO CART" SECTION (Moved from bottom to here) */}
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '15px 0', borderTop: '1px solid #f1f5f9' }}>
+            <div>
+              <div style={{ fontSize: '1.4rem', fontWeight: '900', color: '#111827' }}>₹{displayPrice}</div>
+              {isDiscounted && <div style={{ fontSize: '0.85rem', color: '#94a3b8' }}>MRP <span style={{ textDecoration: 'line-through' }}>₹{selectedVariant.mrp}</span></div>}
+            </div>
+            
+            {cartCount > 0 ? (
+              <div style={{ display: 'flex', alignItems: 'center', backgroundColor: '#0c831f', borderRadius: '10px', height: '44px', width: '110px', boxShadow: '0 4px 10px rgba(12, 131, 31, 0.2)' }}>
+                <button onClick={() => onRemoveFromCart(selectedVariant)} style={{ flex: 1, color: '#fff', border: 'none', background: 'none', fontSize: '1.4rem', fontWeight: 'bold' }}>-</button>
+                <span style={{ color: '#fff', fontWeight: '900' }}>{cartCount}</span>
+                <button onClick={() => onAddToCart(selectedVariant)} style={{ flex: 1, color: '#fff', border: 'none', background: 'none', fontSize: '1.4rem', fontWeight: 'bold' }}>+</button>
+              </div>
+            ) : (
+              <button onClick={() => onAddToCart(selectedVariant)} style={{ height: '44px', padding: '0 30px', backgroundColor: '#0c831f', color: '#fff', border: 'none', borderRadius: '10px', fontWeight: '800', fontSize: '1rem', boxShadow: '0 4px 10px rgba(12, 131, 31, 0.2)' }}>
+                Add to cart
+              </button>
+            )}
+          </div>
+
           {/* Variants Selector */}
           {currentProduct.variants?.length > 1 && (
-            <div style={{ marginBottom: '24px' }}>
+            <div style={{ margin: '15px 0 24px 0' }}>
               <p style={{ fontSize: '0.85rem', fontWeight: '800', color: '#111827', marginBottom: '12px' }}>Select Unit</p>
               <div className="pm-hide-scroll" style={{ display: 'flex', gap: '12px', overflowX: 'auto', paddingBottom: '5px' }}>
                 {currentProduct.variants.map((v, i) => (
@@ -123,7 +141,7 @@ export default function ProductModal({ product, isOpen, onClose, onAddToCart, on
             </div>
           )}
 
-          {/* 📋 THE UNIFIED PRODUCT DETAILS DROPDOWN */}
+          {/* 📋 THE PRODUCT INFORMATION DROPDOWN */}
           <Accordion title="Product Information" defaultOpen={true}>
             <div style={{ display: 'flex', flexDirection: 'column' }}>
               <HighlightRow label="Brand" value={selectedVariant.brand} />
@@ -135,7 +153,6 @@ export default function ProductModal({ product, isOpen, onClose, onAddToCart, on
               <HighlightRow label="Address" value={selectedVariant.manufactureraddress} />
             </div>
 
-            {/* Nutritional Grid inside the same dropdown */}
             {(selectedVariant.energy || selectedVariant.protein) && (
               <div style={{ marginTop: '25px' }}>
                 <p style={{ fontSize: '0.85rem', fontWeight: '800', color: '#111827', marginBottom: '12px' }}>Nutritional Information</p>
@@ -162,35 +179,13 @@ export default function ProductModal({ product, isOpen, onClose, onAddToCart, on
         </div>
       </div>
 
-      {/* 💵 Sticky Bottom Add to Cart (Original Green) */}
-      <div style={{ flexShrink: 0, padding: '12px 20px', borderTop: '1px solid #f1f5f9', backgroundColor: '#fff', zIndex: 100 }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <div>
-                <div style={{ fontSize: '1.3rem', fontWeight: '900', color: '#111827' }}>₹{displayPrice}</div>
-                {isDiscounted && <div style={{ fontSize: '0.8rem', color: '#94a3b8' }}>MRP <span style={{ textDecoration: 'line-through' }}>₹{selectedVariant.mrp}</span></div>}
-            </div>
-            
-            {cartCount > 0 ? (
-                <div style={{ display: 'flex', alignItems: 'center', backgroundColor: '#0c831f', borderRadius: '10px', height: '48px', width: '110px' }}>
-                    <button onClick={() => onRemoveFromCart(selectedVariant)} style={{ flex: 1, color: '#fff', border: 'none', background: 'none', fontSize: '1.5rem', fontWeight: 'bold' }}>-</button>
-                    <span style={{ color: '#fff', fontWeight: '900' }}>{cartCount}</span>
-                    <button onClick={() => onAddToCart(selectedVariant)} style={{ flex: 1, color: '#fff', border: 'none', background: 'none', fontSize: '1.5rem', fontWeight: 'bold' }}>+</button>
-                </div>
-            ) : (
-                <button onClick={() => onAddToCart(selectedVariant)} style={{ height: '48px', padding: '0 30px', backgroundColor: '#0c831f', color: '#fff', border: 'none', borderRadius: '10px', fontWeight: '800', fontSize: '1rem' }}>
-                    Add to cart
-                </button>
-            )}
-        </div>
-      </div>
-
-      {/* Floating View Cart Bar */}
+      {/* 🛒 FLOATING VIEW CART BAR (Remains sticky above Bottom Nav) */}
       {cartTotalItems > 0 && (
-        <div onClick={() => { window.history.back(); setTimeout(onViewCart, 100); }} style={{ position: 'absolute', bottom: '85px', left: '12px', right: '12px', backgroundColor: '#0c831f', color: '#fff', padding: '12px 16px', borderRadius: '12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontWeight: '800', boxShadow: '0 4px 15px rgba(0,0,0,0.2)' }}>
+        <div onClick={() => { window.history.back(); setTimeout(onViewCart, 100); }} style={{ position: 'absolute', bottom: '15px', left: '12px', right: '12px', backgroundColor: '#0c831f', color: '#fff', padding: '12px 16px', borderRadius: '12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontWeight: '800', boxShadow: '0 8px 20px rgba(12, 131, 31, 0.3)', zIndex: 1000 }}>
           <span>{cartTotalItems} items | ₹{cartTotalPrice}</span>
           <span>View Cart ▶</span>
         </div>
       )}
     </div>
   );
-          }
+                }
