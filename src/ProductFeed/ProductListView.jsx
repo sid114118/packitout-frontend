@@ -21,6 +21,14 @@ export default function ProductListView({
   const cartTotalItems = safeCart.reduce((total, item) => total + (item.qty || 1), 0);
   const cartTotalPrice = safeCart.reduce((total, item) => total + ((item.sellingPrice || item.mrp || 0) * (item.qty || 1)), 0);
 
+  // 🛡️ MOBILE BACK BUTTON FIX
+  useEffect(() => {
+    window.history.pushState({ listViewOpen: true }, '');
+    const handlePopState = () => onBack();
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, [onBack]);
+
   // Freeze background scrolling when this list opens
   useEffect(() => {
     document.body.style.overflow = 'hidden';
@@ -50,8 +58,9 @@ export default function ProductListView({
         
         {/* Left Side: Back Button & Title */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
+          {/* 🛡️ UPDATED: Uses history.back() to pop the state safely */}
           <button 
-            onClick={onBack} 
+            onClick={() => window.history.back()} 
             style={{ backgroundColor: '#f1f5f9', border: '1px solid #cbd5e1', padding: '8px 16px', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold', color: '#334155' }}
           >
             ⬅ Back
@@ -88,7 +97,7 @@ export default function ProductListView({
       {/* 🌟 FLOATING VIEW CART BAR 🌟 */}
       {cartTotalItems > 0 && (
         <div
-          onClick={() => { onBack(); if (onViewCart) onViewCart(); }} 
+          onClick={() => { window.history.back(); setTimeout(() => { if (onViewCart) onViewCart(); }, 100); }} 
           style={{ position: 'fixed', bottom: `calc(${BOTTOM_NAV_HEIGHT} + 15px)`, left: '12px', right: '12px', zIndex: 101, backgroundColor: '#0c831f', color: '#fff', padding: '10px 14px', borderRadius: '10px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer', boxShadow: '0 4px 15px rgba(0,0,0,0.1)', animation: 'fadeIn 0.2s ease' }}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
