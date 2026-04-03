@@ -5,7 +5,7 @@ import { createPortal } from 'react-dom';
 import { ModernProductCard } from './ProductFeed/FeedComponents.jsx';
 
 export default function SearchPage({ 
-  items, 
+  items = [], 
   onClose, 
   onOpenDetails, 
   onQuickAdd, 
@@ -26,8 +26,9 @@ export default function SearchPage({
     return () => { document.body.style.overflow = ''; };
   }, []);
 
-  // Live Filtering Logic
+  // 🛡️ SAFE FILTERING LOGIC
   const displayItems = query.trim().length === 0 ? [] : items.filter(item => {
+    if (!item) return false; // Skips corrupted data
     const q = query.toLowerCase();
     const nameMatch = (item.name || "").toLowerCase().includes(q);
     const brandMatch = (item.brand || "").toLowerCase().includes(q);
@@ -35,10 +36,13 @@ export default function SearchPage({
     return nameMatch || brandMatch || tagMatch;
   });
 
-  // Cart Logic
-  const safeCart = Array.isArray(cart) ? cart : [];
-  const cartTotalItems = safeCart.reduce((total, item) => total + (item.qty || 1), 0);
-  const cartTotalPrice = safeCart.reduce((total, item) => total + ((item.sellingPrice || item.mrp || 0) * (item.qty || 1)), 0);
+  // 🛡️ SAFE CART MATH
+  const safeCart = Array.isArray(cart) ? cart.filter(c => c !== null) : [];
+  const cartTotalItems = safeCart.reduce((total, item) => total + (Number(item.qty) || 1), 0);
+  const cartTotalPrice = safeCart.reduce((total, item) => {
+    const price = Number(item.sellingPrice !== undefined ? item.sellingPrice : (item.mrp || 0));
+    return total + (price * (Number(item.qty) || 1));
+  }, 0);
 
   return createPortal(
     <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: BOTTOM_NAV_HEIGHT, backgroundColor: '#fff', zIndex: 99999, overflowY: 'auto', animation: 'fadeIn 0.2s ease', paddingBottom: cartTotalItems > 0 ? '120px' : '40px' }}>
@@ -79,8 +83,17 @@ export default function SearchPage({
           </div>
         ) : (
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: '12px' }}>
-            {displayItems.map(item => (
-              <ModernProductCard key={item._id} item={item} isCarousel={false} shopClosed={false} onOpenDetails={onOpenDetails} onQuickAdd={onQuickAdd} cart={cart} onRemoveFromCart={onRemoveFromCart} />
+            {displayItems.map((item, index) => (
+              <ModernProductCard 
+                key={`${item._id}-${index}`} 
+                item={item} 
+                isCarousel={false} 
+                shopClosed={false} 
+                onOpenDetails={onOpenDetails} 
+                onQuickAdd={onQuickAdd} 
+                cart={safeCart} 
+                onRemoveFromCart={onRemoveFromCart} 
+              />
             ))}
           </div>
         )}
@@ -93,7 +106,7 @@ export default function SearchPage({
             <div style={{ backgroundColor: 'rgba(255,255,255,0.2)', width: '38px', height: '38px', borderRadius: '8px', display: 'flex', justifyContent: 'center', alignItems: 'center', fontSize: '1.2rem' }}>🛒</div>
             <div style={{ textAlign: 'left', lineHeight: '1.3' }}>
               <div style={{ fontWeight: '600', fontSize: '0.75rem', opacity: 0.95 }}>{cartTotalItems} item{cartTotalItems > 1 ? 's' : ''}</div>
-              <div style={{ fontWeight: '800', fontSize: '1rem' }}>₹ {cartTotalPrice}</div>
+              <div style={{ fontWeight: '800', fontSize: '1rem' }}>₹{cartTotalPrice.toFixed(2)}</div>
             </div>
           </div>
           <div style={{ fontWeight: '800', fontSize: '0.95rem', display: 'flex', alignItems: 'center', gap: '4px' }}>View Cart ▶</div>
