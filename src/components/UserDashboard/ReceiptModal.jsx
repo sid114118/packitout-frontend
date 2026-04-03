@@ -5,19 +5,31 @@ import { createPortal } from 'react-dom';
 function OrderReviewModal({ isOpen, onClose, order, onSubmitReviews }) {
   const [shopRating, setShopRating] = useState(0);
   const [shopReviewText, setShopReviewText] = useState('');
-  // Stores item ratings as a dictionary: { "itemId123": 5, "itemId456": 4 }
+  // Stores item ratings as a dictionary: { "64abcd1234": 5 }
   const [itemRatings, setItemRatings] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   if (!isOpen || !order) return null;
+
+  // 🛡️ THE FIX: Safely extract a pure string ID so products don't overlap!
+  const getProductId = (item) => {
+    let id = item._id;
+    if (item.product && typeof item.product === 'object' && item.product._id) id = item.product._id;
+    else if (item.product && typeof item.product === 'string') id = item.product;
+    else if (item.productId) id = item.productId;
+    return id?.toString();
+  };
 
   const handleItemRating = (itemId, rating) => {
     setItemRatings(prev => ({ ...prev, [itemId]: rating }));
   };
 
   const handleSubmit = async () => {
-    if (shopRating === 0) {
-      alert("Please rate the delivery/shop first! ⭐");
+    // 🛡️ THE FIX: Allow submitting if EITHER the shop OR an item has a rating.
+    const hasProductRating = Object.values(itemRatings).some(rating => rating > 0);
+    
+    if (shopRating === 0 && !hasProductRating) {
+      alert("Please rate the shop or at least one item first! ⭐");
       return;
     }
     
@@ -25,15 +37,17 @@ function OrderReviewModal({ isOpen, onClose, order, onSubmitReviews }) {
 
     const reviewPayload = {
       orderId: order._id,
-      shop: {
+      shop: shopRating > 0 ? {
         shopId: typeof order.shopId === 'object' ? order.shopId._id : order.shopId,
         rating: shopRating,
         reviewText: shopReviewText
-      },
-      items: Object.keys(itemRatings).map(itemId => ({
-        productId: itemId,
-        rating: itemRatings[itemId]
-      }))
+      } : null,
+      items: Object.keys(itemRatings)
+        .filter(id => itemRatings[id] > 0) // Only send items that were actually rated
+        .map(itemId => ({
+          productId: itemId,
+          rating: itemRatings[itemId]
+        }))
     };
 
     if (onSubmitReviews) {
@@ -51,13 +65,11 @@ function OrderReviewModal({ isOpen, onClose, order, onSubmitReviews }) {
 
   return createPortal(
     <>
-      {/* Dark Overlay */}
       <div 
         onClick={onClose} 
         style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.6)', zIndex: 10000, backdropFilter: 'blur(3px)', animation: 'fadeIn 0.2s ease' }} 
       />
       
-      {/* Bottom Sheet */}
       <div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 10001, display: 'flex', flexDirection: 'column', alignItems: 'center', animation: 'slideUpPage 0.3s cubic-bezier(0.32,0.72,0,1)' }}>
         <style>{`
           @keyframes slideUpPage { from { transform: translateY(100%); } to { transform: translateY(0); } }
@@ -94,7 +106,6 @@ function OrderReviewModal({ isOpen, onClose, order, onSubmitReviews }) {
               ))}
             </div>
 
-            {/* Smart Text Box: Only show if rated 3 stars or below */}
             {shopRating > 0 && shopRating < 4 && (
               <textarea 
                 value={shopReviewText}
@@ -112,7 +123,7 @@ function OrderReviewModal({ isOpen, onClose, order, onSubmitReviews }) {
               
               <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
                 {order.items.map((item, idx) => {
-                  const itemId = item.product || item._id;
+                  const itemId = getProductId(item);
                   const currentRating = itemRatings[itemId] || 0;
                   
                   return (
@@ -130,7 +141,7 @@ function OrderReviewModal({ isOpen, onClose, order, onSubmitReviews }) {
                       <div style={{ display: 'flex', gap: '2px' }}>
                         {[1, 2, 3, 4, 5].map((star) => (
                           <button 
-                            key={star} 
+                            key={`item-${idx}-${star}`} 
                             onClick={() => handleItemRating(itemId, star)}
                             style={{ background: 'none', border: 'none', fontSize: '1.4rem', color: star <= currentRating ? '#facc15' : '#e2e8f0', cursor: 'pointer', padding: '0 2px' }}
                           >
@@ -161,17 +172,13 @@ function OrderReviewModal({ isOpen, onClose, order, onSubmitReviews }) {
   );
 }
 
-
 // --- 🧾 MAIN RECEIPT MODAL ---
 export default function ReceiptModal({ selectedOrder, setSelectedOrder, onSubmitReviews }) {
   const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
 
   if (!selectedOrder) return null;
 
-  // Check if order is complete to allow reviews
   const isDelivered = selectedOrder.status && (selectedOrder.status.includes('✅') || selectedOrder.status.includes('🎉'));
-  
-  // Check our new database field to see if it was already reviewed
   const isAlreadyReviewed = selectedOrder.isReviewed === true;
 
   return (
@@ -242,7 +249,6 @@ export default function ReceiptModal({ selectedOrder, setSelectedOrder, onSubmit
                Status: {selectedOrder.status}
              </span>
 
-             {/* 🌟 ONE UNIFIED REVIEW BUTTON */}
              {isDelivered && !isAlreadyReviewed && (
                <button 
                  onClick={() => setIsReviewModalOpen(true)}
@@ -252,7 +258,6 @@ export default function ReceiptModal({ selectedOrder, setSelectedOrder, onSubmit
                </button>
              )}
              
-             {/* 🌟 SHOW IF ALREADY REVIEWED */}
              {isDelivered && isAlreadyReviewed && (
                <div style={{ width: '100%', padding: '12px', backgroundColor: '#fefce8', color: '#ca8a04', border: '1px dashed #fef08a', borderRadius: '12px', fontSize: '0.9rem', fontWeight: '700', textAlign: 'center' }}>
                  ⭐ You rated this order!
@@ -263,7 +268,6 @@ export default function ReceiptModal({ selectedOrder, setSelectedOrder, onSubmit
         </div>
       </div>
 
-      {/* 🌟 THE UNIFIED ORDER REVIEW MODAL */}
       <OrderReviewModal 
         isOpen={isReviewModalOpen}
         onClose={() => setIsReviewModalOpen(false)}
@@ -272,4 +276,4 @@ export default function ReceiptModal({ selectedOrder, setSelectedOrder, onSubmit
       />
     </>
   );
-                    }
+                                                                                                                                    }
