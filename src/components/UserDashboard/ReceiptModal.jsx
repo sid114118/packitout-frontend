@@ -1,31 +1,33 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 
-// --- 🌟 UNIFIED ORDER REVIEW MODAL ---
+// --- 🛡️ HELPER FUNCTION ---
+// Safely extract a pure string ID so products don't overlap!
+const getProductId = (item) => {
+  let id = item._id;
+  if (item.product && typeof item.product === 'object' && item.product._id) id = item.product._id;
+  else if (item.product && typeof item.product === 'string') id = item.product;
+  else if (item.productId) id = item.productId;
+  return id?.toString();
+};
+
+
+// ==========================================
+// 🌟 1. UNIFIED ORDER REVIEW MODAL (SUBMIT)
+// ==========================================
 function OrderReviewModal({ isOpen, onClose, order, onSubmitReviews }) {
   const [shopRating, setShopRating] = useState(0);
   const [shopReviewText, setShopReviewText] = useState('');
-  // Stores item ratings as a dictionary: { "64abcd1234": 5 }
   const [itemRatings, setItemRatings] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   if (!isOpen || !order) return null;
-
-  // 🛡️ THE FIX: Safely extract a pure string ID so products don't overlap!
-  const getProductId = (item) => {
-    let id = item._id;
-    if (item.product && typeof item.product === 'object' && item.product._id) id = item.product._id;
-    else if (item.product && typeof item.product === 'string') id = item.product;
-    else if (item.productId) id = item.productId;
-    return id?.toString();
-  };
 
   const handleItemRating = (itemId, rating) => {
     setItemRatings(prev => ({ ...prev, [itemId]: rating }));
   };
 
   const handleSubmit = async () => {
-    // 🛡️ THE FIX: Allow submitting if EITHER the shop OR an item has a rating.
     const hasProductRating = Object.values(itemRatings).some(rating => rating > 0);
     
     if (shopRating === 0 && !hasProductRating) {
@@ -43,7 +45,7 @@ function OrderReviewModal({ isOpen, onClose, order, onSubmitReviews }) {
         reviewText: shopReviewText
       } : null,
       items: Object.keys(itemRatings)
-        .filter(id => itemRatings[id] > 0) // Only send items that were actually rated
+        .filter(id => itemRatings[id] > 0) 
         .map(itemId => ({
           productId: itemId,
           rating: itemRatings[itemId]
@@ -53,7 +55,6 @@ function OrderReviewModal({ isOpen, onClose, order, onSubmitReviews }) {
     if (onSubmitReviews) {
       await onSubmitReviews(reviewPayload);
     } else {
-      console.log("Submitting unified review:", reviewPayload);
       setTimeout(() => alert("Thank you for your valuable feedback! 🎉"), 400);
     }
 
@@ -65,11 +66,7 @@ function OrderReviewModal({ isOpen, onClose, order, onSubmitReviews }) {
 
   return createPortal(
     <>
-      <div 
-        onClick={onClose} 
-        style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.6)', zIndex: 10000, backdropFilter: 'blur(3px)', animation: 'fadeIn 0.2s ease' }} 
-      />
-      
+      <div onClick={onClose} style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.6)', zIndex: 10000, backdropFilter: 'blur(3px)', animation: 'fadeIn 0.2s ease' }} />
       <div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 10001, display: 'flex', flexDirection: 'column', alignItems: 'center', animation: 'slideUpPage 0.3s cubic-bezier(0.32,0.72,0,1)' }}>
         <style>{`
           @keyframes slideUpPage { from { transform: translateY(100%); } to { transform: translateY(0); } }
@@ -78,16 +75,13 @@ function OrderReviewModal({ isOpen, onClose, order, onSubmitReviews }) {
           .hide-scroll { -ms-overflow-style: none; scrollbar-width: none; }
         `}</style>
         
-        <button onClick={onClose} style={{ marginBottom: '15px', backgroundColor: '#333', color: '#fff', border: 'none', borderRadius: '50%', width: '40px', height: '40px', fontSize: '1.2rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 10px rgba(0,0,0,0.2)' }}>
-          ✕
-        </button>
+        <button onClick={onClose} style={{ marginBottom: '15px', backgroundColor: '#333', color: '#fff', border: 'none', borderRadius: '50%', width: '40px', height: '40px', fontSize: '1.2rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 10px rgba(0,0,0,0.2)' }}>✕</button>
         
         <div style={{ backgroundColor: '#f8fafc', width: '100%', borderTopLeftRadius: '24px', borderTopRightRadius: '24px', padding: '24px 20px', paddingBottom: '40px', maxHeight: '85vh', overflowY: 'auto' }} className="hide-scroll">
-          
           <h2 style={{ margin: '0 0 5px 0', fontSize: '1.3rem', fontWeight: '800', color: '#0f172a', textAlign: 'center' }}>How was your order?</h2>
           <p style={{ margin: '0 0 25px 0', fontSize: '0.9rem', color: '#64748b', textAlign: 'center' }}>Your feedback helps us improve.</p>
 
-          {/* 🏪 RATE THE SHOP SECTION */}
+          {/* 🏪 RATE THE SHOP */}
           <div style={{ backgroundColor: '#fff', padding: '20px', borderRadius: '16px', boxShadow: '0 2px 8px rgba(0,0,0,0.02)', marginBottom: '20px', border: '1px solid #f1f5f9' }}>
             <div style={{ textAlign: 'center', marginBottom: '15px' }}>
               <div style={{ fontSize: '2rem', marginBottom: '5px' }}>🚚</div>
@@ -96,57 +90,34 @@ function OrderReviewModal({ isOpen, onClose, order, onSubmitReviews }) {
             
             <div style={{ display: 'flex', justifyContent: 'center', gap: '8px', marginBottom: '15px' }}>
               {[1, 2, 3, 4, 5].map((star) => (
-                <button 
-                  key={star} 
-                  onClick={() => setShopRating(star)}
-                  style={{ background: 'none', border: 'none', fontSize: '2.5rem', color: star <= shopRating ? '#facc15' : '#e2e8f0', cursor: 'pointer', transition: 'transform 0.1s, color 0.2s', padding: 0, transform: star <= shopRating ? 'scale(1.1)' : 'scale(1)' }}
-                >
-                  ★
-                </button>
+                <button key={star} onClick={() => setShopRating(star)} style={{ background: 'none', border: 'none', fontSize: '2.5rem', color: star <= shopRating ? '#facc15' : '#e2e8f0', cursor: 'pointer', transition: 'transform 0.1s, color 0.2s', padding: 0, transform: star <= shopRating ? 'scale(1.1)' : 'scale(1)' }}>★</button>
               ))}
             </div>
 
             {shopRating > 0 && shopRating < 4 && (
-              <textarea 
-                value={shopReviewText}
-                onChange={(e) => setShopReviewText(e.target.value)}
-                placeholder="What went wrong? (Optional)"
-                style={{ width: '100%', height: '80px', padding: '12px', borderRadius: '12px', border: '1px solid #e2e8f0', backgroundColor: '#f8fafc', fontSize: '0.9rem', color: '#1e293b', resize: 'none', fontFamily: 'inherit', boxSizing: 'border-box', animation: 'fadeIn 0.2s ease' }}
-              />
+              <textarea value={shopReviewText} onChange={(e) => setShopReviewText(e.target.value)} placeholder="What went wrong? (Optional)" style={{ width: '100%', height: '80px', padding: '12px', borderRadius: '12px', border: '1px solid #e2e8f0', backgroundColor: '#f8fafc', fontSize: '0.9rem', color: '#1e293b', resize: 'none', fontFamily: 'inherit', boxSizing: 'border-box', animation: 'fadeIn 0.2s ease' }} />
             )}
           </div>
 
-          {/* 📦 RATE THE ITEMS SECTION */}
+          {/* 📦 RATE THE ITEMS */}
           {order.items && order.items.length > 0 && (
             <div style={{ backgroundColor: '#fff', padding: '20px', borderRadius: '16px', boxShadow: '0 2px 8px rgba(0,0,0,0.02)', marginBottom: '20px', border: '1px solid #f1f5f9' }}>
               <h3 style={{ margin: '0 0 15px 0', fontSize: '1rem', color: '#1e293b', borderBottom: '1px solid #f1f5f9', paddingBottom: '10px' }}>Rate the items (Optional)</h3>
-              
               <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
                 {order.items.map((item, idx) => {
                   const itemId = getProductId(item);
                   const currentRating = itemRatings[itemId] || 0;
-                  
                   return (
                     <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flex: 1, paddingRight: '10px' }}>
                         <div style={{ width: '35px', height: '35px', backgroundColor: '#f1f5f9', borderRadius: '8px', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
                            {item.image ? <img src={item.image} alt="" style={{ maxWidth: '80%', maxHeight: '80%', objectFit: 'contain' }} /> : <span>📦</span>}
                         </div>
-                        <div style={{ fontSize: '0.85rem', fontWeight: '600', color: '#334155', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
-                          {item.name}
-                        </div>
+                        <div style={{ fontSize: '0.85rem', fontWeight: '600', color: '#334155', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{item.name}</div>
                       </div>
-                      
-                      {/* Mini Star Rater */}
                       <div style={{ display: 'flex', gap: '2px' }}>
                         {[1, 2, 3, 4, 5].map((star) => (
-                          <button 
-                            key={`item-${idx}-${star}`} 
-                            onClick={() => handleItemRating(itemId, star)}
-                            style={{ background: 'none', border: 'none', fontSize: '1.4rem', color: star <= currentRating ? '#facc15' : '#e2e8f0', cursor: 'pointer', padding: '0 2px' }}
-                          >
-                            ★
-                          </button>
+                          <button key={`item-${idx}-${star}`} onClick={() => handleItemRating(itemId, star)} style={{ background: 'none', border: 'none', fontSize: '1.4rem', color: star <= currentRating ? '#facc15' : '#e2e8f0', cursor: 'pointer', padding: '0 2px' }}>★</button>
                         ))}
                       </div>
                     </div>
@@ -156,14 +127,114 @@ function OrderReviewModal({ isOpen, onClose, order, onSubmitReviews }) {
             </div>
           )}
 
-          {/* 🚀 SUBMIT BUTTON */}
-          <button 
-            onClick={handleSubmit} 
-            disabled={isSubmitting}
-            style={{ width: '100%', padding: '16px', backgroundColor: '#0c831f', color: '#fff', border: 'none', borderRadius: '14px', fontSize: '1.05rem', fontWeight: '800', cursor: isSubmitting ? 'not-allowed' : 'pointer', opacity: isSubmitting ? 0.7 : 1, boxShadow: '0 4px 15px rgba(12, 131, 31, 0.25)', transition: 'transform 0.1s' }}
-          >
+          <button onClick={handleSubmit} disabled={isSubmitting} style={{ width: '100%', padding: '16px', backgroundColor: '#0c831f', color: '#fff', border: 'none', borderRadius: '14px', fontSize: '1.05rem', fontWeight: '800', cursor: isSubmitting ? 'not-allowed' : 'pointer', opacity: isSubmitting ? 0.7 : 1, boxShadow: '0 4px 15px rgba(12, 131, 31, 0.25)' }}>
             {isSubmitting ? 'Submitting Feedback...' : 'Submit Feedback'}
           </button>
+        </div>
+      </div>
+    </>,
+    document.body
+  );
+}
+
+
+// ==========================================
+// 🔍 2. VIEW REVIEW MODAL (READ-ONLY)
+// ==========================================
+function ViewReviewModal({ isOpen, onClose, order }) {
+  const [reviews, setReviews] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const BASE_URL = "https://darkslategrey-snail-415133.hostingersite.com";
+
+  useEffect(() => {
+    if (isOpen && order?._id) {
+      setLoading(true);
+      fetch(`${BASE_URL}/reviews/order/${order._id}`)
+        .then(res => res.json())
+        .then(data => {
+          setReviews(Array.isArray(data) ? data : []);
+          setLoading(false);
+        })
+        .catch(() => setLoading(false));
+    }
+  }, [isOpen, order?._id]);
+
+  if (!isOpen || !order) return null;
+
+  const shopName = order.shopId?.name || "Local Shop";
+  const shopReview = reviews.find(r => r.targetType === 'shop');
+  const itemReviews = reviews.filter(r => r.targetType === 'product');
+
+  return createPortal(
+    <>
+      <div onClick={onClose} style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.6)', zIndex: 10000, backdropFilter: 'blur(3px)', animation: 'fadeIn 0.2s ease' }} />
+      <div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 10001, display: 'flex', flexDirection: 'column', alignItems: 'center', animation: 'slideUpPage 0.3s cubic-bezier(0.32,0.72,0,1)' }}>
+        
+        <button onClick={onClose} style={{ marginBottom: '15px', backgroundColor: '#333', color: '#fff', border: 'none', borderRadius: '50%', width: '40px', height: '40px', fontSize: '1.2rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 10px rgba(0,0,0,0.2)' }}>✕</button>
+        
+        <div style={{ backgroundColor: '#f8fafc', width: '100%', borderTopLeftRadius: '24px', borderTopRightRadius: '24px', padding: '24px 20px', paddingBottom: '40px', maxHeight: '85vh', overflowY: 'auto' }} className="hide-scroll">
+          <h2 style={{ margin: '0 0 5px 0', fontSize: '1.3rem', fontWeight: '800', color: '#0f172a', textAlign: 'center' }}>Your Feedback</h2>
+          <p style={{ margin: '0 0 25px 0', fontSize: '0.9rem', color: '#16a34a', textAlign: 'center', fontWeight: '600' }}>Thanks for rating this order!</p>
+
+          {loading ? (
+            <div style={{ textAlign: 'center', padding: '40px 0', color: '#64748b' }}>Loading your ratings...</div>
+          ) : (
+            <>
+              {/* 🏪 VIEW SHOP RATING */}
+              {shopReview && (
+                <div style={{ backgroundColor: '#fff', padding: '20px', borderRadius: '16px', boxShadow: '0 2px 8px rgba(0,0,0,0.02)', marginBottom: '20px', border: '1px solid #f1f5f9' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '10px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                      <div style={{ fontSize: '1.5rem' }}>🚚</div>
+                      <h3 style={{ margin: 0, fontSize: '1.05rem', color: '#1e293b' }}>{shopName}</h3>
+                    </div>
+                    <div style={{ color: '#facc15', fontSize: '1.2rem', letterSpacing: '2px' }}>
+                      {'★'.repeat(shopReview.rating)}{'☆'.repeat(5 - shopReview.rating)}
+                    </div>
+                  </div>
+                  {shopReview.comment && (
+                    <div style={{ backgroundColor: '#f8fafc', padding: '12px', borderRadius: '10px', fontSize: '0.85rem', color: '#475569', fontStyle: 'italic', border: '1px solid #e2e8f0' }}>
+                      "{shopReview.comment}"
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* 📦 VIEW ITEM RATINGS */}
+              {itemReviews.length > 0 && (
+                <div style={{ backgroundColor: '#fff', padding: '20px', borderRadius: '16px', boxShadow: '0 2px 8px rgba(0,0,0,0.02)', marginBottom: '20px', border: '1px solid #f1f5f9' }}>
+                  <h3 style={{ margin: '0 0 15px 0', fontSize: '1rem', color: '#1e293b', borderBottom: '1px solid #f1f5f9', paddingBottom: '10px' }}>Items you rated</h3>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
+                    {order.items.map((item, idx) => {
+                      const itemId = getProductId(item);
+                      const reviewForItem = itemReviews.find(r => r.targetId === itemId);
+                      
+                      // Only show items the user actually rated
+                      if (!reviewForItem) return null;
+
+                      return (
+                        <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flex: 1, paddingRight: '10px' }}>
+                            <div style={{ width: '35px', height: '35px', backgroundColor: '#f1f5f9', borderRadius: '8px', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+                               {item.image ? <img src={item.image} alt="" style={{ maxWidth: '80%', maxHeight: '80%', objectFit: 'contain' }} /> : <span>📦</span>}
+                            </div>
+                            <div style={{ fontSize: '0.85rem', fontWeight: '600', color: '#334155', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{item.name}</div>
+                          </div>
+                          <div style={{ color: '#facc15', fontSize: '1.1rem', letterSpacing: '1px' }}>
+                            {'★'.repeat(reviewForItem.rating)}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+              
+              {!shopReview && itemReviews.length === 0 && (
+                <div style={{ textAlign: 'center', padding: '20px', color: '#64748b' }}>No rating details found.</div>
+              )}
+            </>
+          )}
 
         </div>
       </div>
@@ -172,9 +243,13 @@ function OrderReviewModal({ isOpen, onClose, order, onSubmitReviews }) {
   );
 }
 
-// --- 🧾 MAIN RECEIPT MODAL ---
+
+// ==========================================
+// 🧾 3. MAIN RECEIPT MODAL
+// ==========================================
 export default function ReceiptModal({ selectedOrder, setSelectedOrder, onSubmitReviews }) {
   const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
+  const [isViewReviewModalOpen, setIsViewReviewModalOpen] = useState(false);
 
   if (!selectedOrder) return null;
 
@@ -249,7 +324,7 @@ export default function ReceiptModal({ selectedOrder, setSelectedOrder, onSubmit
                Status: {selectedOrder.status}
              </span>
 
-             {isDelivered && !isAlreadyReviewed && (
+            {isDelivered && !isAlreadyReviewed && (
                <button 
                  onClick={() => setIsReviewModalOpen(true)}
                  style={{ width: '100%', padding: '14px', backgroundColor: '#fff', color: '#111827', border: '1px solid #e2e8f0', borderRadius: '12px', fontSize: '1rem', fontWeight: '800', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', boxShadow: '0 4px 6px rgba(0,0,0,0.02)' }}
@@ -258,10 +333,14 @@ export default function ReceiptModal({ selectedOrder, setSelectedOrder, onSubmit
                </button>
              )}
              
+             {/* 🌟 NEW: VIEW RATING BUTTON */}
              {isDelivered && isAlreadyReviewed && (
-               <div style={{ width: '100%', padding: '12px', backgroundColor: '#fefce8', color: '#ca8a04', border: '1px dashed #fef08a', borderRadius: '12px', fontSize: '0.9rem', fontWeight: '700', textAlign: 'center' }}>
-                 ⭐ You rated this order!
-               </div>
+               <button 
+                 onClick={() => setIsViewReviewModalOpen(true)}
+                 style={{ width: '100%', padding: '14px', backgroundColor: '#fefce8', color: '#ca8a04', border: '1px dashed #fef08a', borderRadius: '12px', fontSize: '1rem', fontWeight: '800', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
+               >
+                 <span style={{ fontSize: '1.3rem' }}>⭐</span> View Your Rating
+               </button>
              )}
           </div>
 
@@ -274,6 +353,13 @@ export default function ReceiptModal({ selectedOrder, setSelectedOrder, onSubmit
         order={selectedOrder}
         onSubmitReviews={onSubmitReviews}
       />
+
+      {/* 🌟 NEW: RENDER THE READ-ONLY MODAL */}
+      <ViewReviewModal 
+        isOpen={isViewReviewModalOpen}
+        onClose={() => setIsViewReviewModalOpen(false)}
+        order={selectedOrder}
+      />
     </>
   );
-                                                                                                                                    }
+}
