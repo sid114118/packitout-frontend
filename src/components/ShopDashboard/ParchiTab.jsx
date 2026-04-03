@@ -10,33 +10,54 @@ export default function ParchiTab({
   handleSendBill,
   shopData
 }) {
-  // 🔍 NEW: State to hold the search text
   const [searchQuery, setSearchQuery] = useState("");
+
+  // --- 🛠️ NEW: CART MANAGEMENT HELPERS ---
+  const updateItemQty = (itemId, change) => {
+    setParchiBill(prev => prev.map(item => {
+      if (item._id === itemId) {
+        const newQty = item.qty + change;
+        return newQty > 0 ? { ...item, qty: newQty } : item;
+      }
+      return item;
+    }));
+  };
+
+  const removeItem = (itemId) => {
+    setParchiBill(prev => prev.filter(item => item._id !== itemId));
+  };
 
   return (
     <div>
       {/* --- PENDING PARCHI LIST --- */}
-      <h3 style={{ marginTop: 0, color: '#0f172a' }}>Pending Parchi Lists</h3>
+      <h3 style={{ marginTop: 0, color: '#0f172a', fontSize: '1.4rem' }}>Pending Parchi Lists</h3>
       
       {parchiRequests.length === 0 ? (
-        <div style={{ padding: '40px', textAlign: 'center', backgroundColor: 'white', borderRadius: '12px', color: '#94a3b8', border: '2px dashed #cbd5e1' }}>
-          <span style={{ fontSize: '2.5rem' }}>📭</span><br/>No pending parchis right now.
+        <div style={{ padding: '60px 20px', textAlign: 'center', backgroundColor: 'white', borderRadius: '16px', color: '#94a3b8', border: '2px dashed #cbd5e1' }}>
+          <span style={{ fontSize: '3.5rem' }}>📭</span>
+          <h3 style={{ color: '#475569', margin: '10px 0 5px 0' }}>All Caught Up!</h3>
+          <p style={{ margin: 0, fontSize: '0.9rem' }}>No pending parchis right now.</p>
         </div>
       ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '15px' }}>
           {parchiRequests.map(req => (
-            <div key={req._id} style={{ backgroundColor: 'white', padding: '20px', borderRadius: '12px', boxShadow: '0 4px 6px rgba(0,0,0,0.05)', border: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <div>
-                <div style={{ fontWeight: 'bold', color: '#0f172a', fontSize: '1.1rem' }}>{req.customerName || "Customer"}</div>
-                <div style={{ fontSize: '0.8rem', color: '#64748b' }}>
-                  Uploaded at {new Date(req.createdAt).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+            <div key={req._id} style={{ backgroundColor: 'white', padding: '20px', borderRadius: '16px', boxShadow: '0 4px 15px rgba(0,0,0,0.03)', border: '1px solid #e2e8f0', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '15px', marginBottom: '15px' }}>
+                <div style={{ width: '50px', height: '50px', borderRadius: '10px', backgroundColor: '#f1f5f9', overflow: 'hidden', flexShrink: 0 }}>
+                  <img src={req.imageUrl} alt="Parchi Thumbnail" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                </div>
+                <div>
+                  <div style={{ fontWeight: '800', color: '#0f172a', fontSize: '1.1rem' }}>{req.customerName || "Customer"}</div>
+                  <div style={{ fontSize: '0.8rem', color: '#64748b', fontWeight: '500' }}>
+                    Uploaded at {new Date(req.createdAt).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                  </div>
                 </div>
               </div>
               <button 
                 onClick={() => setSelectedParchi(req)}
-                style={{ backgroundColor: '#3b82f6', color: 'white', border: 'none', padding: '10px 15px', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer' }}
+                style={{ width: '100%', backgroundColor: '#0f172a', color: 'white', border: 'none', padding: '12px', borderRadius: '10px', fontWeight: 'bold', cursor: 'pointer', transition: '0.2s', fontSize: '0.95rem' }}
               >
-                Process ➡️
+                Process List ➡️
               </button>
             </div>
           ))}
@@ -44,109 +65,150 @@ export default function ParchiTab({
       )}
 
       {/* --------------------------------------------------- */}
-      {/* 🚀 THE SPLIT-SCREEN PARCHI PROCESSING MODAL         */}
+      {/* 🚀 FULL-SCREEN PARCHI PROCESSING WORKSPACE          */}
       {/* --------------------------------------------------- */}
       {selectedParchi && (
-        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.8)', zIndex: 1000, display: 'flex', justifyContent: 'center', alignItems: 'center', padding: '20px' }}>
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: '#f8fafc', zIndex: 10000, display: 'flex', flexDirection: 'column', animation: 'fadeIn 0.2s ease-out' }}>
           
-          <div style={{ backgroundColor: '#f8fafc', width: '100%', maxWidth: '1000px', height: '90vh', borderRadius: '16px', overflow: 'hidden', display: 'flex', flexDirection: 'column', boxShadow: '0 25px 50px rgba(0,0,0,0.25)' }}>
+          <style>{`@keyframes fadeIn { from { opacity: 0; transform: scale(0.98); } to { opacity: 1; transform: scale(1); } }`}</style>
+          
+          {/* 🔝 WORKSPACE HEADER */}
+          <div style={{ padding: '15px 25px', backgroundColor: '#0f172a', color: 'white', display: 'flex', justifyContent: 'space-between', alignItems: 'center', boxShadow: '0 4px 15px rgba(0,0,0,0.1)', zIndex: 10 }}>
+            <div>
+              <span style={{ fontSize: '0.75rem', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '1px', fontWeight: 'bold' }}>DIGITAL POS TERMINAL</span>
+              <h2 style={{ margin: 0, fontSize: '1.3rem', color: '#f8fafc' }}>Building Bill for <span style={{ color: '#38bdf8' }}>{selectedParchi.customerName || "Customer"}</span></h2>
+            </div>
+            <button 
+              onClick={() => { setSelectedParchi(null); setParchiBill([]); setSearchQuery(""); }} 
+              style={{ background: 'rgba(255,255,255,0.1)', border: 'none', color: 'white', width: '40px', height: '40px', borderRadius: '50%', fontSize: '1.2rem', cursor: 'pointer', display: 'flex', justifyContent: 'center', alignItems: 'center', transition: 'background 0.2s' }}
+            >
+              ✕
+            </button>
+          </div>
+
+          {/* 🔀 MAIN SPLIT SCREEN */}
+          <div style={{ display: 'flex', flex: 1, overflow: 'hidden', flexDirection: window.innerWidth < 1024 ? 'column' : 'row' }}>
             
-            <div style={{ padding: '15px 20px', backgroundColor: '#1e293b', color: 'white', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <h3 style={{ margin: 0 }}>Processing Parchi for {selectedParchi.customerName || "Customer"}</h3>
-              <button 
-                onClick={() => { 
-                  setSelectedParchi(null); 
-                  setParchiBill([]); 
-                  setSearchQuery(""); // Clear search when closing
-                }} 
-                style={{ background: 'none', border: 'none', color: 'white', fontSize: '1.5rem', cursor: 'pointer' }}
-              >
-                ✖
-              </button>
+            {/* 📸 LEFT SIDE: DARK MODE IMAGE VIEWER (Easier to read white paper) */}
+            <div style={{ flex: '1 1 45%', backgroundColor: '#1e293b', padding: '20px', display: 'flex', flexDirection: 'column', overflowY: 'auto', borderRight: '1px solid #334155' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
+                <h4 style={{ margin: 0, color: '#e2e8f0', fontSize: '1.1rem' }}>Original List</h4>
+                <a href={selectedParchi.imageUrl} target="_blank" rel="noreferrer" style={{ fontSize: '0.85rem', color: '#38bdf8', textDecoration: 'none', backgroundColor: 'rgba(56, 189, 248, 0.1)', padding: '6px 12px', borderRadius: '20px', fontWeight: 'bold' }}>
+                  Open Full Size ↗
+                </a>
+              </div>
+              <div style={{ flex: 1, display: 'flex', justifyContent: 'center', alignItems: 'flex-start' }}>
+                <img src={selectedParchi.imageUrl} alt="Parchi" style={{ maxWidth: '100%', borderRadius: '12px', boxShadow: '0 10px 30px rgba(0,0,0,0.5)' }} />
+              </div>
             </div>
 
-            <div style={{ display: 'flex', flex: 1, overflow: 'hidden', flexDirection: window.innerWidth < 768 ? 'column' : 'row' }}>
+            {/* 💻 RIGHT SIDE: POS SYSTEM */}
+            <div style={{ flex: '1 1 55%', display: 'flex', flexDirection: 'column', backgroundColor: '#f8fafc' }}>
               
-              {/* LEFT SIDE: Image */}
-              <div style={{ flex: 1, borderRight: '2px solid #e2e8f0', backgroundColor: '#e2e8f0', padding: '20px', display: 'flex', flexDirection: 'column', alignItems: 'center', overflowY: 'auto' }}>
-                <h4 style={{ margin: '0 0 15px 0', color: '#475569' }}>Customer's List</h4>
-                <img src={selectedParchi.imageUrl} alt="Parchi" style={{ maxWidth: '100%', borderRadius: '12px', boxShadow: '0 4px 10px rgba(0,0,0,0.1)' }} />
-              </div>
-
-              {/* RIGHT SIDE: POS Register */}
-              <div style={{ flex: 1, display: 'flex', flexDirection: 'column', backgroundColor: 'white' }}>
+              {/* --- TOP HALF: INVENTORY SEARCH & TAP --- */}
+              <div style={{ padding: '20px', backgroundColor: 'white', borderBottom: '1px solid #e2e8f0', display: 'flex', flexDirection: 'column', height: '50%' }}>
                 
-                <div style={{ padding: '15px', borderBottom: '1px solid #e2e8f0', backgroundColor: '#f1f5f9', overflowY: 'auto', maxHeight: '50%' }}>
-                  <h4 style={{ margin: '0 0 10px 0', color: '#0f172a', fontSize: '0.9rem' }}>Tap items to add to bill:</h4>
-                  
-                  {/* 🔍 THE NEW SEARCH BAR */}
+                {/* 🔍 SEARCH BAR */}
+                <div style={{ position: 'relative', marginBottom: '15px' }}>
+                  <span style={{ position: 'absolute', left: '15px', top: '50%', transform: 'translateY(-50%)', fontSize: '1.2rem' }}>🔍</span>
                   <input 
                     type="text" 
-                    placeholder="🔍 Search inventory..." 
+                    placeholder="Search items to add..." 
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    style={{ width: '100%', padding: '10px 12px', marginBottom: '15px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '0.95rem', boxSizing: 'border-box', outline: 'none' }}
+                    style={{ width: '100%', padding: '14px 14px 14px 45px', borderRadius: '12px', border: '2px solid #e2e8f0', fontSize: '1.05rem', boxSizing: 'border-box', outline: 'none', transition: 'border-color 0.2s', backgroundColor: '#f8fafc' }}
+                    onFocus={(e) => e.target.style.borderColor = '#3b82f6'}
+                    onBlur={(e) => e.target.style.borderColor = '#e2e8f0'}
                   />
+                </div>
 
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                {/* 📦 INVENTORY BUTTONS (Scrollable) */}
+                <div className="hide-scroll" style={{ flex: 1, overflowY: 'auto', alignContent: 'flex-start' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: '10px', paddingBottom: '10px' }}>
                     {shopData.inventory
                       ?.filter(i => i.product)
-                      // 🔍 FILTER LOGIC: Check if the product name includes the search text
                       ?.filter(i => i.product.name.toLowerCase().includes(searchQuery.toLowerCase()))
                       .map(item => (
                         <button 
                           key={item.product._id} 
                           onClick={() => handleAddToBill(item)}
-                          style={{ padding: '8px 12px', backgroundColor: 'white', border: '1px solid #cbd5e1', borderRadius: '6px', cursor: 'pointer', fontSize: '0.8rem', fontWeight: 'bold', color: '#334155', display: 'flex', alignItems: 'center', gap: '5px', transition: 'background 0.2s' }}
-                          onMouseOver={(e) => e.target.style.backgroundColor = '#f8fafc'}
-                          onMouseOut={(e) => e.target.style.backgroundColor = 'white'}
+                          style={{ padding: '12px 10px', backgroundColor: 'white', border: '1px solid #cbd5e1', borderRadius: '10px', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '5px', transition: 'all 0.1s', boxShadow: '0 2px 4px rgba(0,0,0,0.02)' }}
+                          onMouseDown={(e) => Object.assign(e.currentTarget.style, { transform: 'scale(0.96)', backgroundColor: '#f1f5f9', borderColor: '#3b82f6' })}
+                          onMouseUp={(e) => Object.assign(e.currentTarget.style, { transform: 'scale(1)', backgroundColor: 'white', borderColor: '#cbd5e1' })}
+                          onMouseLeave={(e) => Object.assign(e.currentTarget.style, { transform: 'scale(1)', backgroundColor: 'white', borderColor: '#cbd5e1' })}
                         >
-                          {item.product.emoji} {item.product.name} (₹{item.sellingPrice || item.product.mrp})
+                          <span style={{ fontSize: '1.8rem' }}>{item.product.emoji || '📦'}</span>
+                          <span style={{ fontSize: '0.8rem', fontWeight: '700', color: '#1e293b', textAlign: 'center', lineHeight: '1.2' }}>{item.product.name}</span>
+                          <span style={{ fontSize: '0.85rem', fontWeight: '900', color: '#10b981' }}>₹{item.sellingPrice || item.product.mrp}</span>
                         </button>
                     ))}
-                    
-                    {/* Fallback if search finds nothing */}
-                    {shopData.inventory?.filter(i => i.product && i.product.name.toLowerCase().includes(searchQuery.toLowerCase())).length === 0 && (
-                      <div style={{ padding: '10px', color: '#94a3b8', fontSize: '0.85rem', width: '100%', textAlign: 'center' }}>
-                        No items found matching "{searchQuery}"
-                      </div>
-                    )}
                   </div>
+                  
+                  {shopData.inventory?.filter(i => i.product && i.product.name.toLowerCase().includes(searchQuery.toLowerCase())).length === 0 && (
+                    <div style={{ padding: '40px 20px', color: '#94a3b8', fontSize: '1rem', textAlign: 'center', backgroundColor: '#f8fafc', borderRadius: '12px', border: '1px dashed #cbd5e1' }}>
+                      No items found matching "{searchQuery}"
+                    </div>
+                  )}
                 </div>
+              </div>
 
-                <div style={{ flex: 1, padding: '20px', overflowY: 'auto' }}>
-                  <h4 style={{ margin: '0 0 15px 0', color: '#0f172a' }}>Generated Bill</h4>
+              {/* --- BOTTOM HALF: LIVE CART --- */}
+              <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+                
+                {/* 🛒 CART LIST */}
+                <div className="hide-scroll" style={{ flex: 1, padding: '20px', overflowY: 'auto', backgroundColor: '#f8fafc' }}>
+                  <h4 style={{ margin: '0 0 15px 0', color: '#0f172a', fontSize: '1.1rem', borderBottom: '2px solid #e2e8f0', paddingBottom: '10px' }}>Current Bill</h4>
+                  
                   {parchiBill.length === 0 ? (
-                    <div style={{ color: '#94a3b8', fontSize: '0.9rem', fontStyle: 'italic' }}>Tap items above to build the bill.</div>
+                    <div style={{ color: '#94a3b8', fontSize: '1rem', fontStyle: 'italic', textAlign: 'center', marginTop: '40px' }}>
+                      <div style={{ fontSize: '2.5rem', marginBottom: '10px' }}>🛒</div>
+                      Tap items above to build the bill.
+                    </div>
                   ) : (
-                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.9rem' }}>
-                      <tbody>
-                        {parchiBill.map((item, index) => (
-                          <tr key={index} style={{ borderBottom: '1px solid #f1f5f9' }}>
-                            <td style={{ padding: '10px 0' }}>{item.name}</td>
-                            <td style={{ padding: '10px 0', textAlign: 'center' }}>x{item.qty}</td>
-                            <td style={{ padding: '10px 0', textAlign: 'right', fontWeight: 'bold' }}>₹{item.price * item.qty}</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                      {parchiBill.map((item, index) => (
+                        <div key={index} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', backgroundColor: 'white', padding: '12px 15px', borderRadius: '12px', boxShadow: '0 2px 5px rgba(0,0,0,0.02)', border: '1px solid #f1f5f9' }}>
+                          
+                          <div style={{ flex: 1 }}>
+                            <div style={{ fontWeight: '700', color: '#1e293b', fontSize: '0.95rem' }}>{item.name}</div>
+                            <div style={{ fontSize: '0.8rem', color: '#64748b', fontWeight: '600' }}>₹{item.price} each</div>
+                          </div>
+
+                          {/* 🎛️ NEW: CART CONTROLS */}
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginRight: '15px' }}>
+                            <button onClick={() => updateItemQty(item._id, -1)} style={cartBtnStyle}>-</button>
+                            <span style={{ fontWeight: '800', width: '20px', textAlign: 'center' }}>{item.qty}</span>
+                            <button onClick={() => updateItemQty(item._id, 1)} style={cartBtnStyle}>+</button>
+                          </div>
+
+                          <div style={{ width: '70px', textAlign: 'right', fontWeight: '900', color: '#0f172a', fontSize: '1.05rem', marginRight: '15px' }}>
+                            ₹{item.price * item.qty}
+                          </div>
+
+                          <button onClick={() => removeItem(item._id)} style={{ background: '#fee2e2', color: '#ef4444', border: 'none', width: '32px', height: '32px', borderRadius: '8px', cursor: 'pointer', display: 'flex', justifyContent: 'center', alignItems: 'center', fontSize: '1rem' }}>
+                            🗑️
+                          </button>
+                        </div>
+                      ))}
+                    </div>
                   )}
                 </div>
 
-                <div style={{ padding: '20px', backgroundColor: '#f8fafc', borderTop: '2px solid #e2e8f0' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '15px', fontSize: '1.2rem', fontWeight: 'bold', color: '#0f172a' }}>
-                    <span>Total Bill:</span>
-                    <span>₹{parchiBill.reduce((sum, i) => sum + (i.price * i.qty), 0)}</span>
+                {/* 💳 CHECKOUT FOOTER */}
+                <div style={{ padding: '20px', backgroundColor: 'white', borderTop: '1px solid #e2e8f0', boxShadow: '0 -10px 20px rgba(0,0,0,0.02)', zIndex: 10 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: '15px' }}>
+                    <span style={{ fontSize: '1.1rem', fontWeight: 'bold', color: '#64748b', textTransform: 'uppercase' }}>Total Amount</span>
+                    <span style={{ fontSize: '2rem', fontWeight: '900', color: '#10b981', lineHeight: '1' }}>
+                      ₹{parchiBill.reduce((sum, i) => sum + (i.price * i.qty), 0)}
+                    </span>
                   </div>
+                  
                   <button 
-                    onClick={() => {
-                      handleSendBill();
-                      setSearchQuery(""); // Clear search after sending
-                    }}
+                    onClick={() => { handleSendBill(); setSearchQuery(""); }}
                     disabled={parchiBill.length === 0}
-                    style={{ width: '100%', padding: '15px', backgroundColor: parchiBill.length > 0 ? '#10b981' : '#cbd5e1', color: 'white', border: 'none', borderRadius: '8px', fontSize: '1.1rem', fontWeight: 'bold', cursor: parchiBill.length > 0 ? 'pointer' : 'not-allowed' }}
+                    style={{ width: '100%', padding: '18px', backgroundColor: parchiBill.length > 0 ? '#0c831f' : '#cbd5e1', color: 'white', border: 'none', borderRadius: '12px', fontSize: '1.2rem', fontWeight: '900', cursor: parchiBill.length > 0 ? 'pointer' : 'not-allowed', boxShadow: parchiBill.length > 0 ? '0 8px 20px rgba(12, 131, 31, 0.25)' : 'none', transition: 'all 0.2s' }}
                   >
-                    {parchiBill.length > 0 ? "Send Bill to Customer 🚀" : "Add items to send"}
+                    {parchiBill.length > 0 ? "Send Digital Bill to Customer 🚀" : "Add items to send bill"}
                   </button>
                 </div>
 
@@ -158,3 +220,20 @@ export default function ParchiTab({
     </div>
   );
 }
+
+// Helper style for the + and - cart buttons
+const cartBtnStyle = {
+  width: '30px', 
+  height: '30px', 
+  borderRadius: '8px', 
+  border: '1px solid #cbd5e1', 
+  backgroundColor: '#f8fafc', 
+  color: '#0f172a', 
+  fontWeight: 'bold', 
+  fontSize: '1.1rem', 
+  cursor: 'pointer', 
+  display: 'flex', 
+  justifyContent: 'center', 
+  alignItems: 'center'
+};
+                                                 
