@@ -1,14 +1,16 @@
 import React, { useState, useEffect } from 'react';
 
-// 🔗 IMPORTING YOUR NEW WORKERS!
+// 🔗 IMPORTING YOUR WORKERS!
 import OrdersTab from './components/ShopDashboard/OrdersTab';
 import ParchiTab from './components/ShopDashboard/ParchiTab';
 import InventoryTab from './components/ShopDashboard/InventoryTab';
-import NotificationBell from './NotificationBell'; // 🔔 IMPORTED THE BELL! (Adjust path if needed)
+import NotificationBell from './NotificationBell'; 
+// 🌟 IMPORT THE NEW REVIEWS COMPONENT
+import ShopReviews from './components/ShopDashboard/ShopReviews'; 
 
 export default function ShopDashboard({ user, onExit }) {
   // --- STATE ---
-  const [activeTab, setActiveTab] = useState("orders"); // Changed default to orders for better UX
+  const [activeTab, setActiveTab] = useState("orders"); 
   const [orders, setOrders] = useState([]); 
   const [masterCatalog, setMasterCatalog] = useState([]); 
   const [shopData, setShopData] = useState(user); 
@@ -149,9 +151,7 @@ export default function ShopDashboard({ user, onExit }) {
           <span style={{ fontSize: '0.8rem', color: '#94a3b8' }}>Partner Dashboard</span> 
         </div> 
         
-        {/* 👇 THE NEW BUTTON GROUP 👇 */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}> 
-          
           <NotificationBell ownerType="shop" ownerId={shopData._id} />
 
           <button onClick={toggleShopStatus} style={{ padding: '6px 12px', borderRadius: '20px', fontWeight: 'bold', border: 'none', cursor: 'pointer', backgroundColor: shopData.isOpen ? '#d1fae5' : '#fee2e2', color: shopData.isOpen ? '#059669' : '#b91c1c' }} > 
@@ -163,18 +163,31 @@ export default function ShopDashboard({ user, onExit }) {
         </div> 
       </div> 
 
-      {/* 🗂️ TAB NAVIGATION */}
-      <div style={{ display: 'flex', backgroundColor: '#1e293b', padding: '10px 20px', gap: '15px', overflowX: 'auto', whiteSpace: 'nowrap' }}>
+      {/* 🗂️ TAB NAVIGATION (NEW REVIEWS TAB ADDED) */}
+      <div className="hide-scroll" style={{ display: 'flex', backgroundColor: '#1e293b', padding: '10px 20px', gap: '15px', overflowX: 'auto', whiteSpace: 'nowrap' }}>
         <button onClick={() => setActiveTab("orders")} style={tabStyle(activeTab === "orders")}>📦 Live Orders ({orders.length})</button>
         <button onClick={() => setActiveTab("parchis")} style={tabStyle(activeTab === "parchis")}>🧾 Parchis {parchiRequests.length > 0 && <span style={badgeStyle}>{parchiRequests.length}</span>}</button>
         <button onClick={() => setActiveTab("inventory")} style={tabStyle(activeTab === "inventory")}>📊 Manage Inventory</button>
+        
+        {/* 🌟 NEW TAB */}
+        <button onClick={() => setActiveTab("reviews")} style={tabStyle(activeTab === "reviews")}>⭐ Reviews</button>
       </div>
 
       <div style={{ padding: '15px', maxWidth: '800px', margin: '0 auto' }}> 
         
+        {/* 🔀 TAB ROUTING */}
         {activeTab === "orders" && <OrdersTab orders={orders} updateOrderStatus={updateOrderStatus} />}
         {activeTab === "parchis" && <ParchiTab parchiRequests={parchiRequests} selectedParchi={selectedParchi} setSelectedParchi={setSelectedParchi} parchiBill={parchiBill} setParchiBill={setParchiBill} handleAddToBill={handleAddToBill} handleSendBill={handleSendBill} shopData={shopData} />}
         {activeTab === "inventory" && <InventoryTab shopData={shopData} masterCatalog={masterCatalog} handleInventoryUpdate={handleInventoryUpdate} />}
+        
+        {/* 🌟 NEW TAB CONTENT */}
+        {activeTab === "reviews" && (
+          <ShopReviews 
+            shopId={shopData._id} 
+            shopRating={shopData.rating} 
+            totalReviews={shopData.totalReviews} 
+          />
+        )}
 
       </div>
     </div>
@@ -183,3 +196,4 @@ export default function ShopDashboard({ user, onExit }) {
 
 const tabStyle = (isActive) => ({ backgroundColor: isActive ? 'rgba(255,255,255,0.1)' : 'transparent', color: isActive ? '#38bdf8' : '#cbd5e1', border: 'none', padding: '8px 15px', borderRadius: '6px', fontWeight: 'bold', cursor: 'pointer', transition: '0.2s', display: 'flex', alignItems: 'center', gap: '8px' });
 const badgeStyle = { backgroundColor: '#ef4444', color: 'white', padding: '2px 6px', borderRadius: '10px', fontSize: '0.7rem', fontWeight: 'bold' };
+        
