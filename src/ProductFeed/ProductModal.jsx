@@ -40,9 +40,13 @@ const Accordion = ({ title, children, defaultOpen = false }) => {
 export default function ProductModal({ product, isOpen, onClose, onAddToCart, onRemoveFromCart, onViewCart, allItems = [], cart = [], onViewBrand }) {
   const [currentProduct, setCurrentProduct] = useState(null);
   const [selectedVariant, setSelectedVariant] = useState(null);
+  const [productReviews, setProductReviews] = useState([]);
+  const [loadingReviews, setLoadingReviews] = useState(false);
 
+  const BASE_URL = "https://darkslategrey-snail-415133.hostingersite.com";
   const BOTTOM_NAV_HEIGHT = '56px';
 
+  // 🛡️ MOBILE BACK BUTTON & POPSTATE
   useEffect(() => {
     if (isOpen) {
       window.history.pushState({ modalOpen: true }, '');
@@ -52,6 +56,7 @@ export default function ProductModal({ product, isOpen, onClose, onAddToCart, on
     }
   }, [isOpen, onClose]);
 
+  // SET INITIAL PRODUCT
   useEffect(() => {
     if (product) {
       setCurrentProduct(product);
@@ -59,12 +64,24 @@ export default function ProductModal({ product, isOpen, onClose, onAddToCart, on
     }
   }, [product]);
 
-  // 🛡️ SAFE CART CALCULATIONS
+  // 📝 FETCH DYNAMIC REVIEWS FOR THIS PRODUCT
+  useEffect(() => {
+    if (isOpen && selectedVariant?._id) {
+      setLoadingReviews(true);
+      fetch(`${BASE_URL}/reviews/product/${selectedVariant._id}`)
+        .then(res => res.json())
+        .then(data => {
+          setProductReviews(Array.isArray(data) ? data : []);
+          setLoadingReviews(false);
+        })
+        .catch(() => setLoadingReviews(false));
+    }
+  }, [isOpen, selectedVariant?._id]);
+
   const safeCart = Array.isArray(cart) ? cart.filter(item => item !== null) : [];
   
   if (!isOpen || !currentProduct || !selectedVariant) return null;
 
-  // 🧮 PRICE & SAVINGS MATH
   const mrp = Number(selectedVariant.mrp || 0);
   const displayPrice = Number(selectedVariant.sellingPrice || mrp || 0);
   const isDiscounted = displayPrice < mrp;
@@ -110,10 +127,19 @@ export default function ProductModal({ product, isOpen, onClose, onAddToCart, on
 
         <div style={{ padding: '0 20px 20px 20px' }}>
           <h1 style={{ margin: 0, fontSize: '1.2rem', fontWeight: '700', color: '#111827', lineHeight: '1.4' }}>{selectedVariant.name}</h1>
-          <p style={{ fontSize: '0.85rem', color: '#64748b', margin: '4px 0 15px 0', fontWeight: '500' }}>{selectedVariant.qnty}</p>
+          
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginTop: '6px' }}>
+             <p style={{ fontSize: '0.85rem', color: '#64748b', margin: 0, fontWeight: '500' }}>{selectedVariant.qnty}</p>
+             {/* Dynamic Rating Badge */}
+             {productReviews.length > 0 && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '3px', backgroundColor: '#f0fdf4', padding: '2px 6px', borderRadius: '6px', fontSize: '0.75rem', fontWeight: '800', color: '#166534', border: '1px solid #dcfce7' }}>
+                   ⭐ {(productReviews.reduce((a, b) => a + b.rating, 0) / productReviews.length).toFixed(1)}
+                </div>
+             )}
+          </div>
 
-          {/* 💵 VALUE-FOCUSED ACTION SECTION */}
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 0', borderTop: '1px solid #f3f4f6' }}>
+          {/* 💵 ACTION SECTION */}
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '15px 0', borderTop: '1px solid #f3f4f6', marginTop: '15px' }}>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <span style={{ fontSize: '1.25rem', fontWeight: '700', color: '#111827' }}>₹{displayPrice}</span>
@@ -170,18 +196,7 @@ export default function ProductModal({ product, isOpen, onClose, onAddToCart, on
                   setTimeout(() => onViewBrand(selectedVariant.brand), 100); 
                 }
               }}
-              style={{ 
-                display: 'flex', 
-                alignItems: 'center', 
-                justifyContent: 'space-between', 
-                padding: '12px 16px', 
-                backgroundColor: '#fff', 
-                border: '1px solid #e2e8f0', 
-                borderRadius: '12px',
-                margin: '15px 0',
-                cursor: 'pointer',
-                boxShadow: '0 2px 4px rgba(0,0,0,0.02)'
-              }}
+              style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px', backgroundColor: '#fff', border: '1px solid #e2e8f0', borderRadius: '12px', margin: '15px 0', cursor: 'pointer', boxShadow: '0 2px 4px rgba(0,0,0,0.02)' }}
             >
               <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                 <div style={{ width: '40px', height: '40px', backgroundColor: '#f1f5f9', borderRadius: '8px', display: 'flex', justifyContent: 'center', alignItems: 'center', fontWeight: '900', color: '#0c831f', fontSize: '1.2rem', border: '1px solid #e2e8f0' }}>
@@ -192,7 +207,7 @@ export default function ProductModal({ product, isOpen, onClose, onAddToCart, on
                   <div style={{ fontSize: '0.8rem', color: '#64748b', fontWeight: '500' }}>View all products</div>
                 </div>
               </div>
-              <div style={{ color: '#94a3b8', fontSize: '1.4rem', paddingBottom: '2px' }}>›</div>
+              <div style={{ color: '#94a3b8', fontSize: '1.4rem' }}>›</div>
             </div>
           )}
 
@@ -206,25 +221,6 @@ export default function ProductModal({ product, isOpen, onClose, onAddToCart, on
               <HighlightRow label="Manufacturer" value={selectedVariant.manufacturer} />
               <HighlightRow label="Address" value={selectedVariant.manufactureraddress} />
             </div>
-
-            {(selectedVariant.energy || selectedVariant.protein) && (
-              <div style={{ marginTop: '20px' }}>
-                <p style={{ fontSize: '0.8rem', fontWeight: '700', color: '#111827', marginBottom: '10px' }}>Nutritional Information</p>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
-                    {[
-                      ['Energy', selectedVariant.energy], 
-                      ['Protein', selectedVariant.protein], 
-                      ['Carbs', selectedVariant.carbs], 
-                      ['Fat', selectedVariant.fat]
-                    ].filter(([, v]) => v && v !== "nan").map(([label, val]) => (
-                        <div key={label} style={{ padding: '10px', backgroundColor: '#f9fafb', borderRadius: '10px', border: '1px solid #f1f5f9' }}>
-                            <div style={{ fontSize: '0.7rem', color: '#64748b', fontWeight: '700' }}>{label}</div>
-                            <div style={{ fontSize: '0.85rem', fontWeight: '700', color: '#1e293b' }}>{val}</div>
-                        </div>
-                    ))}
-                </div>
-              </div>
-            )}
           </Accordion>
 
           <CrossSellSlider 
@@ -235,7 +231,19 @@ export default function ProductModal({ product, isOpen, onClose, onAddToCart, on
             cart={safeCart}
           />
           
-          <ReviewSection reviews={selectedVariant.reviews || []} readOnly={true} />
+          {/* 💬 REVIEWS SECTION */}
+          <div style={{ marginTop: '20px' }}>
+             <h3 style={{ fontSize: '1rem', fontWeight: '800', color: '#111827', marginBottom: '15px' }}>Ratings & Reviews</h3>
+             {loadingReviews ? (
+                <div style={{ fontSize: '0.85rem', color: '#94a3b8' }}>Loading reviews...</div>
+             ) : productReviews.length > 0 ? (
+                <ReviewSection reviews={productReviews} readOnly={true} />
+             ) : (
+                <div style={{ padding: '20px', textAlign: 'center', backgroundColor: '#f8fafc', borderRadius: '12px', border: '1px dashed #e2e8f0' }}>
+                   <p style={{ margin: 0, fontSize: '0.85rem', color: '#94a3b8', fontWeight: '600' }}>No reviews yet. Be the first to rate it!</p>
+                </div>
+             )}
+          </div>
         </div>
       </div>
 
@@ -248,4 +256,4 @@ export default function ProductModal({ product, isOpen, onClose, onAddToCart, on
       )}
     </div>
   );
-}
+                }
