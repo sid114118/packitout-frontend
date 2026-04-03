@@ -46,23 +46,16 @@ export default function ShopFeed({
         const groupedMap = new Map();
         const availableItems = [];
 
-        shopData.inventory?.filter(item => item.product).forEach(item => {
-          // 🛡️ 1. SAFE PRICE LOGIC
+        shopData.inventory?.filter(item => item && item.product).forEach(item => {
           const mrp = Number(item.product.mrp || 0);
-          const sellingPrice = (item.sellingPrice !== undefined && item.sellingPrice !== null) 
-            ? Number(item.sellingPrice) 
-            : mrp;
-
-          // 🛡️ 2. CRASH-PROOF DISCOUNT MATH
+          const sellingPrice = (item.sellingPrice !== undefined && item.sellingPrice !== null) ? Number(item.sellingPrice) : mrp;
           const isDiscounted = mrp > 0 && sellingPrice < mrp;
-          const discountPercent = (isDiscounted && mrp > 0) 
-            ? Math.round(((mrp - sellingPrice) / mrp) * 100) 
-            : 0;
+          const discountPercent = (isDiscounted && mrp > 0) ? Math.round(((mrp - sellingPrice) / mrp) * 100) : 0;
 
           const formattedItem = {
             ...item.product, 
             sellingPrice, 
-            mrp, // Ensure original MRP is preserved
+            mrp, 
             inStock: item.inStock,
             isDiscounted,
             discountPercent,
@@ -70,12 +63,16 @@ export default function ShopFeed({
 
           if (formattedItem.itemGroupId && formattedItem.itemGroupId.trim() !== "") {
             const groupId = String(formattedItem.itemGroupId).trim().toUpperCase();
+            
+            // 🛑 THE BUG WAS HERE: This clone breaks the infinite loop!
+            const safeVariantChild = { ...formattedItem };
+            
             if (!groupedMap.has(groupId)) {
-              formattedItem.variants = [formattedItem]; 
+              formattedItem.variants = [safeVariantChild]; 
               groupedMap.set(groupId, formattedItem);
               availableItems.push(formattedItem);
             } else {
-              groupedMap.get(groupId).variants.push(formattedItem);
+              groupedMap.get(groupId).variants.push(safeVariantChild);
             }
           } else {
             availableItems.push(formattedItem);
@@ -84,14 +81,12 @@ export default function ShopFeed({
         
         setItems(availableItems);
         
-        // 🛡️ 3. SECTION FILTERING (Ensures no empty/broken items get through)
         setShopDeals(availableItems.filter(i => i.isDiscounted && i.inStock).sort((a, b) => b.discountPercent - a.discountPercent).slice(0, 12));
         setShopBestSellers(availableItems.filter(i => i.inStock).slice(0, 12));
         setUnder99(availableItems.filter(i => i.sellingPrice > 0 && i.sellingPrice < 100 && i.inStock).slice(0, 12));
         setNewArrivals([...availableItems].reverse().filter(i => i.inStock).slice(0, 12));
         setBuyItAgain(availableItems.filter(i => i.inStock).sort(() => 0.5 - Math.random()).slice(0, 12));
 
-        // Time-based logic
         const hour = new Date().getHours();
         let timeTitle = ""; let timeSubtitle = ""; let keywords = [];
         if (hour >= 5 && hour < 11) { timeTitle = "🌤️ Breakfast & Dairy"; timeSubtitle = "Start your morning right"; keywords = ["dairy", "bread", "milk", "eggs", "breakfast"]; } 
@@ -124,7 +119,6 @@ export default function ShopFeed({
     if (item.variants && item.variants.length > 1) {
       setSelectedVariantProduct(item);
     } else {
-      // 🛡️ 4. FIXED: Do not overwrite MRP with SellingPrice here!
       onAddToCart(item);
     }
   };
