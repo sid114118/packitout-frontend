@@ -207,7 +207,8 @@ function ViewReviewModal({ isOpen, onClose, order }) {
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
                     {order.items.map((item, idx) => {
                       const itemId = getProductId(item);
-                      const reviewForItem = itemReviews.find(r => r.targetId === itemId);
+                      const reviewForItem = itemReviews.find(r => String(r.targetId) === String(itemId));
+                  
                       
                       // Only show items the user actually rated
                       if (!reviewForItem) return null;
