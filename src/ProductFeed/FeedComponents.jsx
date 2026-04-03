@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { memo } from 'react';
 
 // 📋 1. FIXED VARIANT SELECTION SHEET
 export function VariantBottomSheet({ product, onClose, onAddToCart }) {
@@ -20,7 +20,8 @@ export function VariantBottomSheet({ product, onClose, onAddToCart }) {
                   <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
                     <div style={{ position: 'relative', width: '50px', height: '50px', backgroundColor: '#f9fafb', borderRadius: '8px', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
                       {vDiscounted && <span style={{ position: 'absolute', top: '-5px', left: '-5px', backgroundColor: '#2563eb', color: '#fff', fontSize: '0.6rem', fontWeight: 'bold', padding: '2px 4px', borderRadius: '4px' }}>{vDiscountPercent}% OFF</span>}
-                      {variant.image ? <img src={variant.image} alt="" style={{ maxWidth: '40px', maxHeight: '40px', objectFit: 'contain' }} /> : <span style={{ fontSize: '24px' }}>{variant.emoji}</span>}
+                      {/* ⚡ LAZY LOADING ADDED HERE */}
+                      {variant.image ? <img src={variant.image} alt="" loading="lazy" style={{ maxWidth: '40px', maxHeight: '40px', objectFit: 'contain' }} /> : <span style={{ fontSize: '24px' }}>{variant.emoji}</span>}
                     </div>
                     <div>
                       <div style={{ fontSize: '0.85rem', color: '#4b5563', fontWeight: '500' }}>{variant.qnty}</div>
@@ -41,8 +42,8 @@ export function VariantBottomSheet({ product, onClose, onAddToCart }) {
   );
 }
 
-// 💎 2. FIXED MODERN PRODUCT CARD
-export function ModernProductCard({ item, isCarousel, shopClosed, onOpenDetails, onQuickAdd, cart = [], onRemoveFromCart }) {
+// 💎 2. HIGH-PERFORMANCE MODERN PRODUCT CARD (Base Component)
+const ModernProductCardBase = ({ item, isCarousel, shopClosed, onOpenDetails, onQuickAdd, cart = [], onRemoveFromCart }) => {
   const isOutOfStock = !item.inStock;
   const isMultiVariant = item.variants && item.variants.length > 1;
   const variantIds = isMultiVariant ? item.variants.map(v => v._id) : [item._id];
@@ -55,7 +56,8 @@ export function ModernProductCard({ item, isCarousel, shopClosed, onOpenDetails,
     >
       <div style={{ position: 'relative', height: '110px', width: '100%', display: 'flex', justifyContent: 'center', alignItems: 'center', backgroundColor: '#f9fafb', borderRadius: '6px', marginBottom: '16px' }}>
         {item.isDiscounted && !isOutOfStock && <span style={{ position: 'absolute', top: 0, left: '-8px', backgroundColor: '#0f9d58', color: '#fff', fontSize: '0.7rem', fontWeight: 'bold', padding: '2px 6px', borderRadius: '0 8px 8px 0', zIndex: 1 }}>↓{item.discountPercent}%</span>}
-        {item.image ? <img src={item.image} alt={item.name} style={{ maxHeight: '90%', maxWidth: '90%', objectFit: 'contain' }} /> : <span style={{fontSize: '40px'}}>{item.emoji}</span>}
+        {/* ⚡ LAZY LOADING ADDED HERE */}
+        {item.image ? <img src={item.image} alt={item.name} loading="lazy" style={{ maxHeight: '90%', maxWidth: '90%', objectFit: 'contain' }} /> : <span style={{fontSize: '40px'}}>{item.emoji}</span>}
         
         {!isOutOfStock && !shopClosed && (
           <div style={{ position: 'absolute', bottom: '-14px', right: '4px' }} onClick={(e) => e.stopPropagation()}>
@@ -92,7 +94,26 @@ export function ModernProductCard({ item, isCarousel, shopClosed, onOpenDetails,
       </div>
     </div>
   );
-}
+};
+
+// 🛡️ THE REACT MEMO SHIELD
+// This stops all cards from re-rendering when you add just 1 item to the cart!
+const areCardsEqual = (prevProps, nextProps) => {
+  if (prevProps.item._id !== nextProps.item._id) return false;
+  if (prevProps.shopClosed !== nextProps.shopClosed) return false;
+
+  const variantIds = prevProps.item.variants && prevProps.item.variants.length > 1
+    ? prevProps.item.variants.map(v => v._id)
+    : [prevProps.item._id];
+
+  const prevCount = prevProps.cart.filter(c => variantIds.includes(c._id)).reduce((sum, c) => sum + (c.qty || 1), 0);
+  const nextCount = nextProps.cart.filter(c => variantIds.includes(c._id)).reduce((sum, c) => sum + (c.qty || 1), 0);
+
+  return prevCount === nextCount; 
+};
+
+// Export the protected component
+export const ModernProductCard = memo(ModernProductCardBase, areCardsEqual);
 
 // 🛤️ 3. THE MISSING PRODUCT ROW
 export function ProductRow({ title, subtitle, items, onViewAll, shopClosed, onOpenDetails, onQuickAdd, cart = [], onRemoveFromCart }) {
@@ -124,4 +145,4 @@ export function ProductRow({ title, subtitle, items, onViewAll, shopClosed, onOp
       </div>
     </div>
   );
-      }
+}
