@@ -7,34 +7,14 @@ export default function OrdersTab({ orders, updateOrderStatus }) {
   const activeOrders = orders.filter(o => !o.status?.includes('✅') && !o.status?.includes('❌'));
   const pastOrders = orders.filter(o => o.status?.includes('✅') || o.status?.includes('❌'));
 
-  // 🛡️ THE ULTIMATE FIX: Force lowercase to prevent exact-match bugs
-  const handleNextStep = (orderId, currentStatus) => {
-    // Convert to lowercase so "Delivery", "delivery", and "DELIVERY " all match perfectly
-    const statusText = (currentStatus || "").toLowerCase();
-    let nextStatus = 'Pending'; 
-
-    // Super forgiving checks
-    if (statusText.includes('pending')) {
-      nextStatus = 'Preparing 🍳';
-    } else if (statusText.includes('preparing')) {
-      nextStatus = 'Out for Delivery 🛵';
-    } else if (statusText.includes('delivery') || statusText.includes('out')) {
-      nextStatus = 'Delivered ✅';
-    } else {
-      nextStatus = 'Delivered ✅'; // Failsafe
-    }
-
-    // Log to console so we can debug if anything ever goes wrong
-    console.log(`Transitioning Order: [${currentStatus}] ➡️ [${nextStatus}]`);
-    
-    updateOrderStatus(orderId, nextStatus);
-  };
-
   const OrderCard = ({ order, isActive }) => {
     // Safely extract customer info
     const customerName = order.userId?.name || "Customer";
     const customerPhone = order.userId?.phone || "No phone";
     const customerAddress = order.userId?.address || "No address provided";
+
+    // Safely determine payment status
+    const isPaid = order.paymentStatus === 'Paid' || order.paymentStatus === 'Success';
 
     return (
       <div style={{ backgroundColor: 'white', padding: '20px', borderRadius: '16px', boxShadow: '0 4px 15px rgba(0,0,0,0.05)', border: isActive ? '2px solid #10b981' : '1px solid #e2e8f0', marginBottom: '15px' }}>
@@ -83,29 +63,52 @@ export default function OrdersTab({ orders, updateOrderStatus }) {
           )}
         </div>
 
-        {/* Total & Actions */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid #f1f5f9', paddingTop: '15px' }}>
-          <div style={{ fontSize: '1.2rem', fontWeight: '900', color: '#0f172a' }}>
+        {/* Total & Payment Status */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid #f1f5f9', paddingTop: '15px', paddingBottom: isActive ? '15px' : '0' }}>
+          <div style={{ fontSize: '1.3rem', fontWeight: '900', color: '#0f172a' }}>
             ₹{order.totalAmount}
           </div>
           
-          {isActive && (
-            <div style={{ display: 'flex', gap: '10px' }}>
-              <button 
-                onClick={() => updateOrderStatus(order._id, 'Cancelled ❌')}
-                style={{ padding: '8px 12px', backgroundColor: '#fee2e2', color: '#b91c1c', border: 'none', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer' }}
-              >
-                Cancel
-              </button>
-              <button 
-                onClick={() => handleNextStep(order._id, order.status)}
-                style={{ padding: '8px 16px', backgroundColor: '#0c831f', color: 'white', border: 'none', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer', boxShadow: '0 4px 10px rgba(12, 131, 31, 0.2)' }}
-              >
-                Update Status ➡️
-              </button>
-            </div>
-          )}
+          {/* 💳 PAYMENT BADGE */}
+          <div style={{ padding: '6px 12px', borderRadius: '8px', fontSize: '0.85rem', fontWeight: '800', backgroundColor: isPaid ? '#d1fae5' : '#ffedd5', color: isPaid ? '#059669' : '#c2410c', border: `1px solid ${isPaid ? '#a7f3d0' : '#fed7aa'}` }}>
+            {isPaid ? '💳 Paid Online' : '✋ To Collect'}
+          </div>
         </div>
+
+        {/* 🚀 EXPLICIT ACTION BUTTONS (Only for Active Orders) */}
+        {isActive && (
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', borderTop: '1px dashed #e2e8f0', paddingTop: '15px' }}>
+            
+            <button 
+              onClick={() => updateOrderStatus(order._id, 'Packing 📦')}
+              style={{ flex: '1 1 45%', padding: '10px', backgroundColor: '#f1f5f9', color: '#334155', border: '1px solid #cbd5e1', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer', fontSize: '0.9rem' }}
+            >
+              📦 Packing
+            </button>
+            
+            <button 
+              onClick={() => updateOrderStatus(order._id, 'Ready to Collect 🛍️')}
+              style={{ flex: '1 1 45%', padding: '10px', backgroundColor: '#e0f2fe', color: '#0369a1', border: '1px solid #bae6fd', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer', fontSize: '0.9rem' }}
+            >
+              🛍️ Ready
+            </button>
+            
+            <button 
+              onClick={() => updateOrderStatus(order._id, 'Delivered ✅')}
+              style={{ flex: '1 1 100%', padding: '12px', backgroundColor: '#0c831f', color: 'white', border: 'none', borderRadius: '8px', fontWeight: '800', cursor: 'pointer', fontSize: '1rem', boxShadow: '0 4px 10px rgba(12, 131, 31, 0.2)', marginTop: '4px' }}
+            >
+              ✅ Mark as Delivered
+            </button>
+
+            <button 
+              onClick={() => updateOrderStatus(order._id, 'Cancelled ❌')}
+              style={{ flex: '1 1 100%', padding: '10px', backgroundColor: 'transparent', color: '#ef4444', border: '1px dashed #fca5a5', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer', fontSize: '0.9rem', marginTop: '4px' }}
+            >
+              ❌ Cancel Order
+            </button>
+
+          </div>
+        )}
 
       </div>
     );
@@ -153,4 +156,4 @@ export default function OrdersTab({ orders, updateOrderStatus }) {
       )}
     </div>
   );
-}
+          }
