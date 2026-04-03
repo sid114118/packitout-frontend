@@ -25,7 +25,7 @@ export default function ProductModal({
     return sum + (price * (Number(item.qty) || 0));
   }, 0);
 
-  // 🤝 Cross-Selling Logic (Finds items in the same category)
+  // 🤝 Cross-Selling Logic
   const relatedItems = allItems.filter(i => 
     i._id !== product._id && 
     i.category && product.category && 
@@ -44,7 +44,6 @@ export default function ProductModal({
       {/* 📦 The Modal Bottom Sheet */}
       <div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 1001, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
         
-        {/* Floating Close Button */}
         <button 
           onClick={onClose} 
           style={{ marginBottom: '15px', backgroundColor: '#fff', color: '#111827', border: 'none', borderRadius: '50%', width: '40px', height: '40px', fontSize: '1.2rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 15px rgba(0,0,0,0.2)', fontWeight: 'bold' }}
@@ -56,7 +55,7 @@ export default function ProductModal({
           <style>{`@keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }`}</style>
           
           <div style={{ backgroundColor: '#fff', paddingBottom: '10px', borderBottomLeftRadius: '16px', borderBottomRightRadius: '16px', boxShadow: '0 2px 4px rgba(0,0,0,0.02)' }}>
-            {/* 🖼️ Product Image Section */}
+            
             <div style={{ backgroundColor: '#f8fafc', padding: '30px 20px', display: 'flex', justifyContent: 'center', position: 'relative', borderTopLeftRadius: '24px', borderTopRightRadius: '24px' }}>
               {product.isVeg !== undefined && (
                 <div style={{ position: 'absolute', top: '20px', right: '20px', width: '16px', height: '16px', border: `1.5px solid ${product.isVeg ? '#16a34a' : '#dc2626'}`, display: 'flex', justifyContent: 'center', alignItems: 'center', borderRadius: '4px', backgroundColor: 'white' }}>
@@ -81,7 +80,6 @@ export default function ProductModal({
                 {product.qnty}
               </p>
 
-              {/* 💵 Price & Cart Action Row */}
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <div>
                   <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px' }}>
@@ -106,7 +104,7 @@ export default function ProductModal({
                 </div>
               </div>
 
-              {/* 📋 UNIFIED PRODUCT DETAILS DROPDOWN */}
+              {/* 📋 UNIFIED PRODUCT DETAILS DROPDOWN (Now properly formatted!) */}
               <div style={{ marginTop: '24px', borderTop: '2px solid #f1f5f9', paddingTop: '15px' }}>
                 <button 
                   onClick={() => setIsDetailsExpanded(!isDetailsExpanded)}
@@ -120,14 +118,25 @@ export default function ProductModal({
                   <div style={{ padding: '15px 0', animation: 'fadeIn 0.3s ease-in-out' }}>
                     <style>{`@keyframes fadeIn { from { opacity: 0; transform: translateY(-5px); } to { opacity: 1; transform: translateY(0); } }`}</style>
                     
+                    {/* Description */}
                     {product.description && (
-                      <div style={{ marginBottom: '20px' }}><h4 style={{ margin: '0 0 6px 0', fontSize: '0.85rem', color: '#64748b', textTransform: 'uppercase' }}>Description</h4><p style={{ margin: 0, fontSize: '0.95rem', color: '#334155', lineHeight: '1.5' }}>{product.description}</p></div>
+                      <div style={{ marginBottom: '20px' }}>
+                        <h4 style={{ margin: '0 0 6px 0', fontSize: '0.85rem', color: '#64748b', textTransform: 'uppercase' }}>Description</h4>
+                        <p style={{ margin: 0, fontSize: '0.95rem', color: '#334155', lineHeight: '1.5' }}>{product.description}</p>
+                      </div>
                     )}
+                    
+                    {/* Ingredients */}
                     {product.ingredients && (
-                      <div style={{ marginBottom: '20px' }}><h4 style={{ margin: '0 0 6px 0', fontSize: '0.85rem', color: '#64748b', textTransform: 'uppercase' }}>Ingredients</h4><p style={{ margin: 0, fontSize: '0.95rem', color: '#334155', lineHeight: '1.5' }}>{product.ingredients}</p></div>
+                      <div style={{ marginBottom: '20px' }}>
+                        <h4 style={{ margin: '0 0 6px 0', fontSize: '0.85rem', color: '#64748b', textTransform: 'uppercase' }}>Ingredients</h4>
+                        <p style={{ margin: 0, fontSize: '0.95rem', color: '#334155', lineHeight: '1.5' }}>{product.ingredients}</p>
+                      </div>
                     )}
+
+                    {/* Nutrition */}
                     {(product.energy || product.protein || product.carbs || product.sugar || product.fat) && (
-                       <div style={{ marginBottom: '20px' }}>
+                      <div style={{ marginBottom: '20px' }}>
                         <h4 style={{ margin: '0 0 10px 0', fontSize: '0.85rem', color: '#64748b', textTransform: 'uppercase' }}>Nutritional Info</h4>
                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', backgroundColor: '#f8fafc', padding: '15px', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
                           {product.energy && <div style={{ fontSize: '0.9rem' }}><span style={{ color: '#64748b' }}>Energy:</span> <b style={{ color: '#0f172a' }}>{product.energy}</b></div>}
@@ -138,16 +147,27 @@ export default function ProductModal({
                         </div>
                       </div>
                     )}
+
+                    {/* Manufacturer */}
                     {(product.manufacturer || product.manufactureraddress) && (
-                      <div style={{ marginBottom: '10px' }}><h4 style={{ margin: '0 0 6px 0', fontSize: '0.85rem', color: '#64748b', textTransform: 'uppercase' }}>Manufacturer</h4>{product.manufacturer && <p style={{ margin: '0 0 4px 0', fontSize: '0.95rem', color: '#0f172a', fontWeight: '700' }}>{product.manufacturer}</p>}{product.manufactureraddress && <p style={{ margin: 0, fontSize: '0.85rem', color: '#64748b', lineHeight: '1.4' }}>{product.manufactureraddress}</p></div>
+                      <div style={{ marginBottom: '10px' }}>
+                        <h4 style={{ margin: '0 0 6px 0', fontSize: '0.85rem', color: '#64748b', textTransform: 'uppercase' }}>Manufacturer</h4>
+                        {product.manufacturer && (
+                          <p style={{ margin: '0 0 4px 0', fontSize: '0.95rem', color: '#0f172a', fontWeight: '700' }}>{product.manufacturer}</p>
+                        )}
+                        {product.manufactureraddress && (
+                          <p style={{ margin: 0, fontSize: '0.85rem', color: '#64748b', lineHeight: '1.4' }}>{product.manufactureraddress}</p>
+                        )}
+                      </div>
                     )}
+
                   </div>
                 )}
               </div>
             </div>
           </div>
 
-          {/* 🤝 CROSS SELLING: Frequently Bought Together */}
+          {/* 🤝 CROSS SELLING */}
           {relatedItems.length > 0 && (
             <div style={{ padding: '20px 0 20px 20px' }}>
               <h3 style={{ fontSize: '1.1rem', margin: '0 0 15px 0', color: '#111827', fontWeight: '800' }}>Similar Products</h3>
@@ -186,7 +206,7 @@ export default function ProductModal({
 
         </div>
 
-        {/* 🛒 VIEW CART FLOATING BAR (Sticky inside Modal) */}
+        {/* 🛒 VIEW CART FLOATING BAR */}
         {cart.length > 0 && (
           <div style={{ position: 'absolute', bottom: '15px', left: '12px', right: '12px', zIndex: 1005 }}>
             <div 
@@ -207,5 +227,4 @@ export default function ProductModal({
       </div>
     </>
   );
-                         }
-          
+                                  }
