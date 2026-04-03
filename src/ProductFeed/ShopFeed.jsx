@@ -8,7 +8,7 @@ import ShopCarousel from './ShopCarousel.jsx';
 export default function ShopFeed({ 
   user, onAddToCart, onRemoveFromCart, onViewCart, cart = [], 
   selectedCategory, onClearCategory, 
-  selectedBrand, onBrandSelect, onClearBrand, // 👈 1. NEW BRAND PROPS
+  selectedBrand, onBrandSelect, onClearBrand,
   isSearchOpen, onOpenSearch, onCloseSearch 
 }) {
   const [items, setItems] = useState([]);
@@ -125,7 +125,6 @@ export default function ShopFeed({
 
   if (loading) return <div style={{ padding: '40px', textAlign: 'center', color: '#6b7280' }}>Loading fresh products...</div>;
 
-  // 🏷️ 2. UNIFIED LIST LOGIC
   let displayItems = items;
   let listTitle = "";
   
@@ -158,14 +157,13 @@ export default function ShopFeed({
         />
       )}
 
-      {/* 🏷️ RENDERS THE LIST VIEW IF CATEGORY, BRAND, OR "VIEW ALL" IS ACTIVE */}
       {isListViewActive && !isSearchOpen && (
         <ProductListView
           title={listTitle}
           items={displayItems}
           onBack={() => { 
             if (selectedCategory) onClearCategory(); 
-            if (selectedBrand) onClearBrand();
+            if (selectedBrand && onClearBrand) onClearBrand();
             setViewAll(null); 
           }}
           shopClosed={shopClosed}
@@ -176,14 +174,13 @@ export default function ShopFeed({
           onViewCart={onViewCart}
           onSearchClick={() => {  
              if (selectedCategory) onClearCategory(); 
-             if (selectedBrand) onClearBrand();
+             if (selectedBrand && onClearBrand) onClearBrand();
              setViewAll(null); 
              onOpenSearch();
           }}
         />
       )}
 
-      {/* 🏠 ONLY SHOW HOME FEED IF NO LIST IS ACTIVE */}
       {!isSearchOpen && !isListViewActive && (
         <>
           <ProductRow title={timeBased.title} subtitle={timeBased.subtitle} items={timeBased.items} onViewAll={setViewAll} shopClosed={shopClosed} onOpenDetails={setSelectedProductDetails} onQuickAdd={handleQuickAdd} cart={cart} onRemoveFromCart={onRemoveFromCart} />
@@ -212,7 +209,7 @@ export default function ShopFeed({
         onViewCart={onViewCart}
         cart={cart} 
         allItems={items} 
-        onBrandClick={onBrandSelect} // 👈 3. WIRED THE MODAL TO THE FEED
+        onViewBrand={onBrandSelect} /* 👈 FIXED: Matches the prop in ProductModal exactly */
       />
     </div>
   );
