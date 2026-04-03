@@ -50,6 +50,10 @@ export default function App() {
   const [isShopAuthenticated, setIsShopAuthenticated] = useState(null);
   const [viewingShop, setViewingShop] = useState(null);
   const [selectedCategory, setSelectedCategory] = useState(null); 
+  
+  // 🏷️ NEW: Brand State
+  const [selectedBrand, setSelectedBrand] = useState(null); 
+
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isHeaderVisible, setIsHeaderVisible] = useState(true);
   const [lastScrollY, setLastScrollY] = useState(0);
@@ -99,6 +103,7 @@ export default function App() {
       else {
         setCurrentView("customer");
         setSelectedCategory(null);
+        setSelectedBrand(null); // 🛡️ Clears brand view on navigation change
         setIsSearchOpen(false);
       }
       setViewingShop(null);
@@ -108,7 +113,6 @@ export default function App() {
     return () => window.removeEventListener("hashchange", checkUrl);
   }, []);
 
-  // 🛡️ THE DIET CART: Strips circular references and heavy data
   const handleAddToCart = (product) => {
     if (!loggedInUser) {
       alert("Please log in first! 🛒");
@@ -117,7 +121,6 @@ export default function App() {
     }
     if (!product || !product._id) return;
 
-    // We leave 'variants' and 'ingredients' behind so JSON.stringify doesn't crash!
     const lightProduct = {
       _id: product._id,
       name: product.name,
@@ -216,7 +219,6 @@ export default function App() {
       );
     }
 
-    // 🛡️ SAFE MATH: If 'item' is broken/null, it ignores it instead of crashing!
     const cartTotalItems = cart.reduce((sum, item) => {
       if (!item) return sum;
       return sum + (Number(item.qty) || 0);
@@ -240,16 +242,26 @@ export default function App() {
           </div>
         </div>
 
-        {!selectedCategory && !isSearchOpen && <Categories onCategorySelect={setSelectedCategory} />}
+        {/* 🛡️ Hides Categories if viewing a Brand */}
+        {!selectedCategory && !selectedBrand && !isSearchOpen && <Categories onCategorySelect={setSelectedCategory} />}
         
         <main style={{ flex: 1, padding: '1rem 0' }}>
           <CrashCatcher>
             <ProductFeed 
-              user={loggedInUser} cart={cart} 
-              onAddToCart={handleAddToCart} onRemoveFromCart={handleRemoveFromCart} 
+              user={loggedInUser} 
+              cart={cart} 
+              onAddToCart={handleAddToCart} 
+              onRemoveFromCart={handleRemoveFromCart} 
               onViewCart={() => window.location.hash = "#cart"} 
-              selectedCategory={selectedCategory} onClearCategory={() => setSelectedCategory(null)} 
-              isSearchOpen={isSearchOpen} onOpenSearch={() => setIsSearchOpen(true)} onCloseSearch={() => setIsSearchOpen(false)}
+              selectedCategory={selectedCategory} 
+              onClearCategory={() => setSelectedCategory(null)} 
+              // 🏷️ PASS BRAND STATE DOWN
+              selectedBrand={selectedBrand}
+              onBrandSelect={setSelectedBrand}
+              onClearBrand={() => setSelectedBrand(null)}
+              isSearchOpen={isSearchOpen} 
+              onOpenSearch={() => setIsSearchOpen(true)} 
+              onCloseSearch={() => setIsSearchOpen(false)}
             />
           </CrashCatcher>
         </main>
@@ -275,4 +287,4 @@ export default function App() {
       {showBottomNav && <BottomNav currentView={currentView} />}
     </CrashCatcher>
   );
-      }
+}
