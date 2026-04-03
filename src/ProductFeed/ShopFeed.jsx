@@ -8,6 +8,7 @@ import ShopCarousel from './ShopCarousel.jsx';
 export default function ShopFeed({ 
   user, onAddToCart, onRemoveFromCart, onViewCart, cart = [], 
   selectedCategory, onClearCategory, 
+  selectedBrand, onBrandSelect, onClearBrand, // 👈 1. NEW BRAND PROPS
   isSearchOpen, onOpenSearch, onCloseSearch 
 }) {
   const [items, setItems] = useState([]);
@@ -64,7 +65,6 @@ export default function ShopFeed({
           if (formattedItem.itemGroupId && formattedItem.itemGroupId.trim() !== "") {
             const groupId = String(formattedItem.itemGroupId).trim().toUpperCase();
             
-            // 🛑 THE BUG WAS HERE: This clone breaks the infinite loop!
             const safeVariantChild = { ...formattedItem };
             
             if (!groupedMap.has(groupId)) {
@@ -125,14 +125,23 @@ export default function ShopFeed({
 
   if (loading) return <div style={{ padding: '40px', textAlign: 'center', color: '#6b7280' }}>Loading fresh products...</div>;
 
+  // 🏷️ 2. UNIFIED LIST LOGIC
   let displayItems = items;
+  let listTitle = "";
+  
   if (viewAll) {
     displayItems = viewAll.items;
+    listTitle = viewAll.title;
   } else if (selectedCategory) {
     displayItems = items.filter(i => (i.category || "").toLowerCase().includes(selectedCategory.toLowerCase()));
+    listTitle = selectedCategory;
+  } else if (selectedBrand) {
+    displayItems = items.filter(i => i.brand === selectedBrand);
+    listTitle = `Explore ${selectedBrand}`;
   }
 
   const shopClosed = shopInfo && !shopInfo.isOpen;
+  const isListViewActive = viewAll || selectedCategory || selectedBrand;
 
   return (
     <div style={{ padding: '0', maxWidth: '1000px', margin: '0 auto', overflowX: 'hidden', backgroundColor: '#f3f4f6' }}>
@@ -149,11 +158,16 @@ export default function ShopFeed({
         />
       )}
 
-      {(viewAll || selectedCategory) && !isSearchOpen && (
+      {/* 🏷️ RENDERS THE LIST VIEW IF CATEGORY, BRAND, OR "VIEW ALL" IS ACTIVE */}
+      {isListViewActive && !isSearchOpen && (
         <ProductListView
-          title={viewAll ? viewAll.title : selectedCategory}
+          title={listTitle}
           items={displayItems}
-          onBack={() => { if (selectedCategory) onClearCategory(); setViewAll(null); }}
+          onBack={() => { 
+            if (selectedCategory) onClearCategory(); 
+            if (selectedBrand) onClearBrand();
+            setViewAll(null); 
+          }}
           shopClosed={shopClosed}
           onOpenDetails={setSelectedProductDetails}
           onQuickAdd={handleQuickAdd}
@@ -162,13 +176,15 @@ export default function ShopFeed({
           onViewCart={onViewCart}
           onSearchClick={() => {  
              if (selectedCategory) onClearCategory(); 
+             if (selectedBrand) onClearBrand();
              setViewAll(null); 
              onOpenSearch();
           }}
         />
       )}
 
-      {!isSearchOpen && !viewAll && !selectedCategory && (
+      {/* 🏠 ONLY SHOW HOME FEED IF NO LIST IS ACTIVE */}
+      {!isSearchOpen && !isListViewActive && (
         <>
           <ProductRow title={timeBased.title} subtitle={timeBased.subtitle} items={timeBased.items} onViewAll={setViewAll} shopClosed={shopClosed} onOpenDetails={setSelectedProductDetails} onQuickAdd={handleQuickAdd} cart={cart} onRemoveFromCart={onRemoveFromCart} />
           <ProductRow title="Price Crash" subtitle="Extra Savings" items={shopDeals} onViewAll={setViewAll} shopClosed={shopClosed} onOpenDetails={setSelectedProductDetails} onQuickAdd={handleQuickAdd} cart={cart} onRemoveFromCart={onRemoveFromCart} />
@@ -196,6 +212,7 @@ export default function ShopFeed({
         onViewCart={onViewCart}
         cart={cart} 
         allItems={items} 
+        onBrandClick={onBrandSelect} // 👈 3. WIRED THE MODAL TO THE FEED
       />
     </div>
   );
