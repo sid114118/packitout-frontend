@@ -1,5 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
-import CrossSellSlider from './CrossSell.jsx';
+import React, { useState, useEffect } from 'react';
 import ReviewSection from './ReviewSection.jsx';
 
 // ── Highlight Row Component ──
@@ -37,12 +36,13 @@ const Accordion = ({ title, children, defaultOpen = false }) => {
   );
 };
 
-export default function ProductModal({ product, isOpen, onClose, onAddToCart, onRemoveFromCart, onViewCart, allItems = [], cart = [] }) {
+export default function ProductModal({ product, isOpen, onClose, onAddToCart, onRemoveFromCart, onViewCart, cart = [] }) {
   const [currentProduct, setCurrentProduct] = useState(null);
   const [selectedVariant, setSelectedVariant] = useState(null);
 
   const BOTTOM_NAV_HEIGHT = '56px';
 
+  // 🛡️ MOBILE BACK BUTTON FIX
   useEffect(() => {
     if (isOpen) {
       window.history.pushState({ modalOpen: true }, '');
@@ -59,26 +59,22 @@ export default function ProductModal({ product, isOpen, onClose, onAddToCart, on
     }
   }, [product]);
 
-  const relatedItems = useMemo(() => {
-    if (!selectedVariant || !selectedVariant.relatedProducts || !allItems.length) return [];
-    return allItems.filter(item => selectedVariant.relatedProducts.includes(item._id) && item.inStock);
-  }, [selectedVariant, allItems]);
-
+  // 🛡️ SAFE CART CALCULATIONS
+  const safeCart = Array.isArray(cart) ? cart.filter(item => item !== null) : [];
+  
   if (!isOpen || !currentProduct || !selectedVariant) return null;
 
-  const displayPrice = selectedVariant.sellingPrice || selectedVariant.mrp;
-  const isDiscounted = displayPrice < selectedVariant.mrp;
-  const cartItem = cart.find(item => item._id === selectedVariant._id);
+  const displayPrice = selectedVariant.sellingPrice || selectedVariant.mrp || 0;
+  const isDiscounted = displayPrice < (selectedVariant.mrp || 0);
+  
+  const cartItem = safeCart.find(item => item._id === selectedVariant._id);
   const cartCount = cartItem ? cartItem.qty : 0;
-  const cartTotalItems = cart.reduce((total, item) => total + (item.qty || 1), 0);
-  const cartTotalPrice = cart.reduce((total, item) => total + ((item.sellingPrice || item.mrp) * (item.qty || 1)), 0);
-
-  const handleRelatedProductClick = (item) => {
-    setCurrentProduct(item);
-    setSelectedVariant(item);
-    const el = document.getElementById('product-page-scroll');
-    if (el) el.scrollTo({ top: 0, behavior: 'smooth' });
-  };
+  
+  const cartTotalItems = safeCart.reduce((total, item) => total + (Number(item.qty) || 0), 0);
+  const cartTotalPrice = safeCart.reduce((total, item) => {
+    const price = Number(item.sellingPrice || item.mrp || 0);
+    return total + (price * (Number(item.qty) || 0));
+  }, 0);
 
   return (
     <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: BOTTOM_NAV_HEIGHT, backgroundColor: '#fff', zIndex: 10000, display: 'flex', flexDirection: 'column', animation: 'slideUpPage 0.25s cubic-bezier(0.32,0.72,0,1)' }}>
@@ -106,7 +102,7 @@ export default function ProductModal({ product, isOpen, onClose, onAddToCart, on
           <h1 style={{ margin: 0, fontSize: '1.4rem', fontWeight: '900', color: '#111827' }}>{selectedVariant.name}</h1>
           <p style={{ fontSize: '0.95rem', color: '#64748b', margin: '5px 0 20px 0', fontWeight: '600' }}>{selectedVariant.qnty}</p>
 
-          {/* 💵 NEW: THE "ADD TO CART" SECTION (Moved from bottom to here) */}
+          {/* 💵 ADD TO CART SECTION */}
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '15px 0', borderTop: '1px solid #f1f5f9' }}>
             <div>
               <div style={{ fontSize: '1.4rem', fontWeight: '900', color: '#111827' }}>₹{displayPrice}</div>
@@ -141,7 +137,7 @@ export default function ProductModal({ product, isOpen, onClose, onAddToCart, on
             </div>
           )}
 
-          {/* 📋 THE PRODUCT INFORMATION DROPDOWN */}
+          {/* 📋 PRODUCT INFORMATION DROPDOWN */}
           <Accordion title="Product Information" defaultOpen={true}>
             <div style={{ display: 'flex', flexDirection: 'column' }}>
               <HighlightRow label="Brand" value={selectedVariant.brand} />
@@ -172,14 +168,12 @@ export default function ProductModal({ product, isOpen, onClose, onAddToCart, on
               </div>
             )}
           </Accordion>
-
-          <CrossSellSlider title="Frequently Bought Together" items={relatedItems} onProductClick={handleRelatedProductClick} onAddToCart={onAddToCart} />
           
           <ReviewSection reviews={selectedVariant.reviews || []} readOnly={true} />
         </div>
       </div>
 
-      {/* 🛒 FLOATING VIEW CART BAR (Remains sticky above Bottom Nav) */}
+      {/* 🛒 FLOATING VIEW CART BAR */}
       {cartTotalItems > 0 && (
         <div onClick={() => { window.history.back(); setTimeout(onViewCart, 100); }} style={{ position: 'absolute', bottom: '15px', left: '12px', right: '12px', backgroundColor: '#0c831f', color: '#fff', padding: '12px 16px', borderRadius: '12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontWeight: '800', boxShadow: '0 8px 20px rgba(12, 131, 31, 0.3)', zIndex: 1000 }}>
           <span>{cartTotalItems} items | ₹{cartTotalPrice}</span>
@@ -188,4 +182,5 @@ export default function ProductModal({ product, isOpen, onClose, onAddToCart, on
       )}
     </div>
   );
-                }
+      }
+          
