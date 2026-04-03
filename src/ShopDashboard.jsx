@@ -73,15 +73,29 @@ export default function ShopDashboard({ user, onExit }) {
     } catch (err) { console.log(err); } 
   }; 
 
+  // 🚀 THIS IS THE FIX: IT WILL INSTANTLY UPDATE THE SCREEN OR SCREAM THE ERROR AT YOU
   const updateOrderStatus = async (orderId, newStatus) => { 
     try { 
+      // 1. Instantly change UI so it feels lightning fast
+      setOrders(prev => prev.map(o => o._id === orderId ? { ...o, status: newStatus } : o));
+
+      // 2. Tell the server
       const res = await fetch(`${BASE_URL}/orders/${orderId}`, { 
         method: "PATCH", 
         headers: { "Content-Type": "application/json" }, 
         body: JSON.stringify({ status: newStatus }) 
       }); 
-      if (res.ok) fetchOrders(); 
-    } catch (err) { console.log(err); } 
+
+      // 3. Catch server errors
+      if (!res.ok) {
+        const errorData = await res.json();
+        alert("BACKEND REJECTED IT: " + (errorData.error || "Unknown Error"));
+        fetchOrders(); // Reload actual database state
+      }
+    } catch (err) { 
+      console.log(err); 
+      alert("NETWORK ERROR: Cannot reach Hostinger server.");
+    } 
   }; 
 
   const handleInventoryUpdate = async (productId, sellingPrice, inStock = true) => { 
@@ -168,27 +182,14 @@ export default function ShopDashboard({ user, onExit }) {
         <button onClick={() => setActiveTab("orders")} style={tabStyle(activeTab === "orders")}>📦 Live Orders ({orders.length})</button>
         <button onClick={() => setActiveTab("parchis")} style={tabStyle(activeTab === "parchis")}>🧾 Parchis {parchiRequests.length > 0 && <span style={badgeStyle}>{parchiRequests.length}</span>}</button>
         <button onClick={() => setActiveTab("inventory")} style={tabStyle(activeTab === "inventory")}>📊 Manage Inventory</button>
-        
-        {/* 🌟 NEW TAB */}
         <button onClick={() => setActiveTab("reviews")} style={tabStyle(activeTab === "reviews")}>⭐ Reviews</button>
       </div>
 
       <div style={{ padding: '15px', maxWidth: '800px', margin: '0 auto' }}> 
-        
-        {/* 🔀 TAB ROUTING */}
         {activeTab === "orders" && <OrdersTab orders={orders} updateOrderStatus={updateOrderStatus} />}
         {activeTab === "parchis" && <ParchiTab parchiRequests={parchiRequests} selectedParchi={selectedParchi} setSelectedParchi={setSelectedParchi} parchiBill={parchiBill} setParchiBill={setParchiBill} handleAddToBill={handleAddToBill} handleSendBill={handleSendBill} shopData={shopData} />}
         {activeTab === "inventory" && <InventoryTab shopData={shopData} masterCatalog={masterCatalog} handleInventoryUpdate={handleInventoryUpdate} />}
-        
-        {/* 🌟 NEW TAB CONTENT */}
-        {activeTab === "reviews" && (
-          <ShopReviews 
-            shopId={shopData._id} 
-            shopRating={shopData.rating} 
-            totalReviews={shopData.totalReviews} 
-          />
-        )}
-
+        {activeTab === "reviews" && <ShopReviews shopId={shopData._id} shopRating={shopData.rating} totalReviews={shopData.totalReviews} />}
       </div>
     </div>
   );
@@ -196,4 +197,3 @@ export default function ShopDashboard({ user, onExit }) {
 
 const tabStyle = (isActive) => ({ backgroundColor: isActive ? 'rgba(255,255,255,0.1)' : 'transparent', color: isActive ? '#38bdf8' : '#cbd5e1', border: 'none', padding: '8px 15px', borderRadius: '6px', fontWeight: 'bold', cursor: 'pointer', transition: '0.2s', display: 'flex', alignItems: 'center', gap: '8px' });
 const badgeStyle = { backgroundColor: '#ef4444', color: 'white', padding: '2px 6px', borderRadius: '10px', fontSize: '0.7rem', fontWeight: 'bold' };
-        
