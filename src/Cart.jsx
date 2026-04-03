@@ -11,14 +11,27 @@ export default function Cart({ cart, setCart, user, onBack, onCheckoutSuccess })
   // 🪙 Coin Discount State
   const [useCoins, setUseCoins] = useState(false);
 
-  // 🧮 BILL CALCULATIONS (Fixed NaN Crash)
+  // 🧮 BILL CALCULATIONS
+  // 1. Calculate the Total Original Price (MRP)
+  const totalMRP = cart.reduce((sum, item) => {
+    if (!item) return sum;
+    const safeQty = item.qty || 1;
+    const originalPrice = (item.mrp && item.mrp > 0) ? item.mrp : (item.sellingPrice || 0);
+    return sum + (originalPrice * safeQty);
+  }, 0);
+
+  // 2. Calculate the Total Selling Price (What they pay before coins)
   const itemTotal = cart.reduce((sum, item) => {
-    if (!item) return sum; // 🛡️ Safety fallback if item is null
+    if (!item) return sum; 
     const safeQty = item.qty || 1; 
     const safePrice = item.sellingPrice !== undefined ? item.sellingPrice : (item.mrp || 0);
     return sum + (safePrice * safeQty);
   }, 0);
+
+  // 3. Calculate Savings
+  const totalProductDiscount = totalMRP - itemTotal;
   
+  // 4. Coin Logic
   const userCoinValueInRupees = (user?.coins || 0) / 10; 
   const maxDiscountAllowed = itemTotal * 0.10; 
   const maxUsableDiscount = Math.min(userCoinValueInRupees, maxDiscountAllowed);
@@ -26,7 +39,10 @@ export default function Cart({ cart, setCart, user, onBack, onCheckoutSuccess })
   let rawDiscount = useCoins ? maxUsableDiscount : 0; 
   const discount = Number(rawDiscount.toFixed(2)); 
   const coinsUsed = Math.round(discount * 10); 
+  
+  // 5. Final Bill
   const finalBill = Number((itemTotal - discount).toFixed(2));
+  const totalSavings = totalProductDiscount + discount;
 
   // --- 🛒 ADD/REMOVE ITEM LOGIC ---
   const updateQty = (productId, delta) => {
@@ -135,23 +151,38 @@ export default function Cart({ cart, setCart, user, onBack, onCheckoutSuccess })
           <div style={{ fontWeight: '800', fontSize: '1.05rem', marginBottom: '16px', color: '#111827' }}>Review Items</div>
           
           {cart.map((item, index) => {
-            if (!item) return null; // 🛡️ Skips any broken items that try to render
+            if (!item) return null; 
             
             const safeQty = item.qty || 1;
             const safePrice = item.sellingPrice !== undefined ? item.sellingPrice : (item.mrp || 0);
+            const originalPrice = (item.mrp && item.mrp > 0) ? item.mrp : safePrice;
+            const isDiscounted = originalPrice > safePrice;
             
             return (
-              // 🛡️ COMBINED KEY: This guarantees the screen will never crash from duplicate IDs
               <div key={`${item._id}-${index}`} style={{ display: 'flex', gap: '15px', alignItems: 'center', paddingBottom: '16px', marginBottom: '16px', borderBottom: index === cart.length - 1 ? 'none' : '1px solid #f1f5f9' }}>
                 
-                <div style={{ width: '60px', height: '60px', backgroundColor: '#f8fafc', borderRadius: '8px', display: 'flex', justifyContent: 'center', alignItems: 'center', border: '1px solid #f1f5f9' }}>
+                <div style={{ width: '60px', height: '60px', backgroundColor: '#f8fafc', borderRadius: '8px', display: 'flex', justifyContent: 'center', alignItems: 'center', border: '1px solid #f1f5f9', position: 'relative' }}>
+                  {isDiscounted && <span style={{ position: 'absolute', top: '-6px', left: '-6px', backgroundColor: '#0c831f', color: '#fff', fontSize: '0.55rem', fontWeight: '900', padding: '2px 4px', borderRadius: '4px', zIndex: 1 }}>OFFER</span>}
                   {item.image ? <img src={item.image} style={{ maxWidth: '48px', maxHeight: '48px', objectFit: 'contain' }} alt={item.name} /> : <span style={{ fontSize: '30px' }}>{item.emoji}</span>}
                 </div>
 
                 <div style={{ flex: 1 }}>
                   <div style={{ fontWeight: '700', color: '#111827', fontSize: '0.9rem', lineHeight: '1.25', marginBottom: '4px' }}>{item.name}</div>
                   <div style={{ fontSize: '0.75rem', color: '#6b7280', marginBottom: '6px', fontWeight: '500' }}>{item.qnty}</div>
-                  <div style={{ fontWeight: '800', color: '#111827', fontSize: '0.95rem' }}>₹{safePrice}</div>
+                  
+                  {/* 🟢 NEW: PRICE & SAVINGS DISPLAY */}
+                  <div style={{ display: 'flex', alignItems: 'baseline', gap: '6px' }}>
+                    <div style={{ fontWeight: '800', color: '#111827', fontSize: '0.95rem' }}>₹{safePrice}</div>
+                    {isDiscounted && (
+                      <div style={{ fontSize: '0.75rem', color: '#9ca3af', textDecoration: 'line-through', fontWeight: '500' }}>₹{originalPrice}</div>
+                    )}
+                  </div>
+                  {isDiscounted && (
+                    <div style={{ fontSize: '0.7rem', color: '#0c831f', fontWeight: '800', marginTop: '2px' }}>
+                      Save ₹{(originalPrice - safePrice) * safeQty}
+                    </div>
+                  )}
+
                 </div>
 
                 <div style={{ display: 'flex', alignItems: 'center', backgroundColor: '#0c831f', borderRadius: '8px', height: '32px', width: '80px', boxShadow: '0 2px 6px rgba(12, 131, 31, 0.2)' }}>
@@ -165,7 +196,7 @@ export default function Cart({ cart, setCart, user, onBack, onCheckoutSuccess })
           })}
         </div>
 
-        {/* 🪙 COIN DISCOUNT TOGGLE WITH CAP UI */}
+        {/* 🪙 COIN DISCOUNT TOGGLE */}
         {user?.coins > 0 && (
           <div style={{ backgroundColor: 'white', padding: '16px', borderRadius: '12px', marginBottom: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', border: '1px solid #fef08a', boxShadow: '0 2px 8px rgba(0,0,0,0.02)' }}>
             <div>
@@ -190,13 +221,20 @@ export default function Cart({ cart, setCart, user, onBack, onCheckoutSuccess })
         <div style={{ backgroundColor: 'white', borderRadius: '12px', padding: '16px', boxShadow: '0 2px 8px rgba(0,0,0,0.02)' }}>
           <div style={{ fontWeight: '800', fontSize: '1.05rem', marginBottom: '16px', color: '#111827' }}>Bill Details</div>
           
-          <div style={{ display: 'flex', justifyContent: 'space-between', color: '#4b5563', fontSize: '0.85rem', marginBottom: '10px', fontWeight: '500' }}>
-            <span>Item Total</span>
-            <span style={{ color: '#111827', fontWeight: '600' }}>₹{itemTotal.toFixed(2)}</span>
+          <div style={{ display: 'flex', justifyContent: 'space-between', color: '#64748b', fontSize: '0.85rem', marginBottom: '10px', fontWeight: '500' }}>
+            <span>Total MRP</span>
+            <span style={{ fontWeight: '600' }}>₹{totalMRP.toFixed(2)}</span>
           </div>
+
+          {totalProductDiscount > 0 && (
+            <div style={{ display: 'flex', justifyContent: 'space-between', color: '#0c831f', fontSize: '0.85rem', marginBottom: '10px', fontWeight: '600' }}>
+              <span>Item Discount</span>
+              <span>- ₹{totalProductDiscount.toFixed(2)}</span>
+            </div>
+          )}
           
           {useCoins && discount > 0 && (
-            <div style={{ display: 'flex', justifyContent: 'space-between', color: '#0c831f', fontWeight: '700', fontSize: '0.85rem', marginBottom: '10px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', color: '#0c831f', fontWeight: '600', fontSize: '0.85rem', marginBottom: '10px' }}>
               <span>Coin Discount (-{coinsUsed} Coins)</span>
               <span>- ₹{discount.toFixed(2)}</span>
             </div>
@@ -206,6 +244,13 @@ export default function Cart({ cart, setCart, user, onBack, onCheckoutSuccess })
             <span>To Pay</span>
             <span>₹{finalBill.toFixed(2)}</span>
           </div>
+
+          {/* 🎉 NEW: CELEBRATION BANNER */}
+          {totalSavings > 0 && (
+            <div style={{ marginTop: '16px', backgroundColor: '#f0fdf4', color: '#166534', padding: '10px', borderRadius: '8px', textAlign: 'center', fontSize: '0.85rem', fontWeight: '800', border: '1px solid #bbf7d0' }}>
+              🎉 You are saving ₹{totalSavings.toFixed(2)} on this order!
+            </div>
+          )}
         </div>
       </div>
 
@@ -222,4 +267,4 @@ export default function Cart({ cart, setCart, user, onBack, onCheckoutSuccess })
 
     </div>
   );
-}
+          }
