@@ -64,8 +64,12 @@ export default function ProductModal({ product, isOpen, onClose, onAddToCart, on
   
   if (!isOpen || !currentProduct || !selectedVariant) return null;
 
-  const displayPrice = selectedVariant.sellingPrice || selectedVariant.mrp || 0;
-  const isDiscounted = displayPrice < (selectedVariant.mrp || 0);
+  // 🧮 PRICE & SAVINGS MATH
+  const mrp = Number(selectedVariant.mrp || 0);
+  const displayPrice = Number(selectedVariant.sellingPrice || mrp || 0);
+  const isDiscounted = displayPrice < mrp;
+  const savings = isDiscounted ? (mrp - displayPrice) : 0;
+  const discountPercent = isDiscounted ? Math.round((savings / mrp) * 100) : 0;
   
   const cartItem = safeCart.find(item => item._id === selectedVariant._id);
   const cartCount = cartItem ? cartItem.qty : 0;
@@ -108,11 +112,25 @@ export default function ProductModal({ product, isOpen, onClose, onAddToCart, on
           <h1 style={{ margin: 0, fontSize: '1.2rem', fontWeight: '700', color: '#111827', lineHeight: '1.4' }}>{selectedVariant.name}</h1>
           <p style={{ fontSize: '0.85rem', color: '#64748b', margin: '4px 0 15px 0', fontWeight: '500' }}>{selectedVariant.qnty}</p>
 
-          {/* 💵 REFINED ACTION SECTION */}
+          {/* 💵 VALUE-FOCUSED ACTION SECTION */}
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 0', borderTop: '1px solid #f3f4f6' }}>
-            <div>
-              <div style={{ fontSize: '1.25rem', fontWeight: '700', color: '#111827' }}>₹{displayPrice}</div>
-              {isDiscounted && <div style={{ fontSize: '0.8rem', color: '#94a3b8' }}>MRP <span style={{ textDecoration: 'line-through' }}>₹{selectedVariant.mrp}</span></div>}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <span style={{ fontSize: '1.25rem', fontWeight: '700', color: '#111827' }}>₹{displayPrice}</span>
+                {isDiscounted && (
+                  <span style={{ fontSize: '0.8rem', color: '#94a3b8', textDecoration: 'line-through' }}>₹{mrp}</span>
+                )}
+                {isDiscounted && (
+                  <span style={{ backgroundColor: '#eff6ff', color: '#2563eb', fontSize: '0.65rem', fontWeight: '800', padding: '2px 6px', borderRadius: '4px', textTransform: 'uppercase' }}>
+                    {discountPercent}% OFF
+                  </span>
+                )}
+              </div>
+              {isDiscounted && (
+                <div style={{ fontSize: '0.75rem', color: '#16a34a', fontWeight: '700' }}>
+                  You save ₹{savings}
+                </div>
+              )}
             </div>
             
             {cartCount > 0 ? (
@@ -196,5 +214,5 @@ export default function ProductModal({ product, isOpen, onClose, onAddToCart, on
       )}
     </div>
   );
-                           }
-            
+                }
+      
