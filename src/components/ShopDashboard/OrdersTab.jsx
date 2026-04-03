@@ -7,18 +7,31 @@ export default function OrdersTab({ orders, updateOrderStatus }) {
   const activeOrders = orders.filter(o => !o.status?.includes('✅') && !o.status?.includes('❌'));
   const pastOrders = orders.filter(o => o.status?.includes('✅') || o.status?.includes('❌'));
 
-  // Helper function to figure out what the next status should be
+  // 🛡️ THE ULTIMATE FIX: Force lowercase to prevent exact-match bugs
   const handleNextStep = (orderId, currentStatus) => {
-    let nextStatus = 'Pending';
-    if (currentStatus === 'Pending') nextStatus = 'Preparing 🍳';
-    else if (currentStatus === 'Preparing 🍳') nextStatus = 'Out for Delivery 🛵';
-    else if (currentStatus === 'Out for Delivery 🛵') nextStatus = 'Delivered ✅';
+    // Convert to lowercase so "Delivery", "delivery", and "DELIVERY " all match perfectly
+    const statusText = (currentStatus || "").toLowerCase();
+    let nextStatus = 'Pending'; 
+
+    // Super forgiving checks
+    if (statusText.includes('pending')) {
+      nextStatus = 'Preparing 🍳';
+    } else if (statusText.includes('preparing')) {
+      nextStatus = 'Out for Delivery 🛵';
+    } else if (statusText.includes('delivery') || statusText.includes('out')) {
+      nextStatus = 'Delivered ✅';
+    } else {
+      nextStatus = 'Delivered ✅'; // Failsafe
+    }
+
+    // Log to console so we can debug if anything ever goes wrong
+    console.log(`Transitioning Order: [${currentStatus}] ➡️ [${nextStatus}]`);
     
     updateOrderStatus(orderId, nextStatus);
   };
 
   const OrderCard = ({ order, isActive }) => {
-    // Safely extract customer info (handles populated objects or fallbacks)
+    // Safely extract customer info
     const customerName = order.userId?.name || "Customer";
     const customerPhone = order.userId?.phone || "No phone";
     const customerAddress = order.userId?.address || "No address provided";
@@ -62,7 +75,7 @@ export default function OrdersTab({ orders, updateOrderStatus }) {
             <div style={{ fontSize: '0.85rem', color: '#94a3b8', fontStyle: 'italic' }}>Custom Parchi Order</div>
           )}
           
-          {/* Parchi Image Link (if it was a photo order) */}
+          {/* Parchi Image Link */}
           {order.imageUrl && (
             <a href={order.imageUrl} target="_blank" rel="noreferrer" style={{ display: 'inline-block', marginTop: '8px', fontSize: '0.85rem', color: '#3b82f6', fontWeight: '600', textDecoration: 'none' }}>
               🖼️ View Original Parchi Image
