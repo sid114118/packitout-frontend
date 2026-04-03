@@ -1,118 +1,207 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 
-export default function OrdersList({ activeOrders, pastOrders, pendingParchis, loading, setSelectedOrder }) {
-  // 👇 NEW: State to control if Past Orders are open or closed
-  const [showPastOrders, setShowPastOrders] = useState(false);
+// 🔗 IMPORTING YOUR WORKERS!
+import OrdersTab from './components/ShopDashboard/OrdersTab';
+import ParchiTab from './components/ShopDashboard/ParchiTab';
+import InventoryTab from './components/ShopDashboard/InventoryTab';
+import NotificationBell from './NotificationBell'; 
+// 🌟 IMPORT THE NEW REVIEWS COMPONENT
+import ShopReviews from './components/ShopDashboard/ShopReviews'; 
+
+export default function ShopDashboard({ user, onExit }) {
+  // --- STATE ---
+  const [activeTab, setActiveTab] = useState("orders"); 
+  const [orders, setOrders] = useState([]); 
+  const [masterCatalog, setMasterCatalog] = useState([]); 
+  const [shopData, setShopData] = useState(user); 
+
+  const [parchiRequests, setParchiRequests] = useState([]); 
+  const [selectedParchi, setSelectedParchi] = useState(null);
+  const [parchiBill, setParchiBill] = useState([]);
+
+  const BASE_URL = "https://darkslategrey-snail-415133.hostingersite.com";
+
+  // --- DATA FETCHING ---
+  useEffect(() => {
+    const fetchAllData = async () => {
+      await fetchOrders();
+      await fetchMasterCatalog();
+      await fetchParchis();
+    };
+    fetchAllData();
+
+    const interval = setInterval(() => {
+      fetchOrders();
+      fetchParchis();
+    }, 10000);
+    return () => clearInterval(interval);
+  }, [shopData._id]);
+
+  // 🛡️ THE FIX: Safely match the shop ID to make orders appear!
+  const fetchOrders = async () => { 
+    try { 
+      const res = await fetch(`${BASE_URL}/orders`); 
+      const allOrders = await res.json(); 
+      
+      const myShopOrders = allOrders.filter(o => {
+        const orderShopId = typeof o.shopId === 'object' ? o.shopId?._id : o.shopId;
+        return String(orderShopId) === String(shopData._id);
+      });
+      
+      setOrders(myShopOrders); 
+    } catch (err) { 
+      console.log("Failed to fetch shop orders:", err); 
+    } 
+  }; 
+
+  const fetchMasterCatalog = async () => { 
+    try { 
+      const res = await fetch(`${BASE_URL}/master-products`); 
+      setMasterCatalog(await res.json()); 
+    } catch (err) { console.log(err); } 
+  }; 
+
+  const fetchParchis = async () => {
+    try {
+      const res = await fetch(`${BASE_URL}/parchis/${shopData._id}`);
+      const data = await res.json();
+      if (Array.isArray(data)) setParchiRequests(data);
+    } catch (err) { console.log(err); }
+  };
+
+  // --- LOGIC ---
+  const toggleShopStatus = async () => { 
+    const newStatus = !shopData.isOpen; 
+    try { 
+      const res = await fetch(`${BASE_URL}/shops/${shopData._id}`, { 
+        method: "PATCH", 
+        headers: { "Content-Type": "application/json" }, 
+        body: JSON.stringify({ isOpen: newStatus }) 
+      }); 
+      setShopData(await res.json()); 
+    } catch (err) { console.log(err); } 
+  }; 
+
+  const updateOrderStatus = async (orderId, newStatus) => { 
+    try { 
+      const res = await fetch(`${BASE_URL}/orders/${orderId}`, { 
+        method: "PATCH", 
+        headers: { "Content-Type": "application/json" }, 
+        body: JSON.stringify({ status: newStatus }) 
+      }); 
+      if (res.ok) fetchOrders(); 
+    } catch (err) { console.log(err); } 
+  }; 
+
+  const handleInventoryUpdate = async (productId, sellingPrice, inStock = true) => { 
+    try { 
+      const res = await fetch(`${BASE_URL}/shops/${shopData._id}/inventory`, { 
+        method: "POST", 
+        headers: { "Content-Type": "application/json" }, 
+        body: JSON.stringify({ productId, sellingPrice: Number(sellingPrice), inStock }) 
+      }); 
+      if (res.ok) { 
+        setShopData(await res.json()); 
+        alert("✅ Store Updated!"); 
+      } else { 
+        const errorData = await res.json(); 
+        alert("❌ Error: " + (errorData.error || "Failed to update")); 
+      } 
+    } catch (err) { console.log(err); } 
+  }; 
+
+  const handleAddToBill = (item) => {
+    setParchiBill(prev => {
+      const exists = prev.find(i => i._id === item.product._id);
+      if (exists) return prev.map(i => i._id === item.product._id ? { ...i, qty: i.qty + 1 } : i);
+      return [...prev, { ...item.product, price: item.sellingPrice || item.product.mrp, qty: 1 }];
+    });
+  };
+
+  const handleSendBill = async () => {
+    const totalAmount = parchiBill.reduce((sum, i) => sum + (i.price * i.qty), 0);
+    
+    try {
+      const res = await fetch(`${BASE_URL}/orders`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          userId: selectedParchi.userId,    
+          shopId: shopData._id,             
+          items: parchiBill,                
+          totalAmount: totalAmount,         
+          status: "Pending",                
+          imageUrl: selectedParchi.imageUrl 
+        })
+      });
+
+      if (res.ok) {
+        setParchiRequests(prev => prev.filter(p => p._id !== selectedParchi._id));
+        setSelectedParchi(null);
+        setParchiBill([]);
+        fetchOrders();
+        alert(`✅ Digital Bill Sent to ${selectedParchi.customerName || 'Customer'}!`);
+      } else {
+        alert("❌ Failed to create the order. Please try again.");
+      }
+    } catch (err) {
+      console.log(err);
+      alert("❌ Something went wrong sending the bill.");
+    }
+  };
 
   return (
-    <div>
+    <div style={{ backgroundColor: '#f8fafc', minHeight: '100vh', paddingBottom: '70px', fontFamily: 'sans-serif' }}>
       
-      {/* 📸 WAITING ROOM FOR RAW PARCHIS */}
-      {pendingParchis && pendingParchis.length > 0 && (
-        <div style={{ marginBottom: '25px' }}>
-          <h3 style={{ color: '#334155', fontSize: '1.1rem', marginBottom: '10px' }}>Pending Uploads 📸</h3>
-          {pendingParchis.map((parchi, i) => (
-            <div 
-              key={i} 
-              onClick={() => setSelectedOrder({ ...parchi, status: "Waiting for Shopkeeper ⏳", totalAmount: "Calculating..." })} 
-              style={{ background: 'white', padding: '15px', borderRadius: '16px', boxShadow: '0 4px 15px rgba(0,0,0,0.03)', border: '2px dashed #cbd5e1', cursor: 'pointer', marginBottom: '15px', display: 'flex', gap: '15px', alignItems: 'center' }}
-            >
-              {/* Thumbnail of their uploaded photo */}
-              <div style={{ width: '60px', height: '60px', borderRadius: '10px', overflow: 'hidden', backgroundColor: '#f1f5f9', flexShrink: 0 }}>
-                <img src={parchi.imageUrl || parchi.parchiImage} alt="Uploaded" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-              </div>
-              
-              <div style={{ flex: 1 }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                  <h4 style={{ margin: '0 0 5px 0', color: '#0f172a', fontSize: '1.1rem' }}>Uploaded List</h4>
-                  <span style={{ fontSize: '0.75rem', color: '#b45309', backgroundColor: '#fef3c7', padding: '4px 8px', borderRadius: '6px', fontWeight: 'bold' }}>Reviewing...</span>
-                </div>
-                <p style={{ fontSize: '0.85rem', color: '#64748b', margin: 0 }}>The shopkeeper is generating your bill.</p>
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
+      {/* 🏪 TOP HEADER WITH NOTIFICATION BELL */}
+      <div style={{ backgroundColor: '#0f172a', color: 'white', padding: '15px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', position: 'sticky', top: 0, zIndex: 100, boxShadow: '0 2px 10px rgba(0,0,0,0.1)' }}> 
+        <div> 
+          <h2 style={{ margin: 0, fontSize: '1.2rem', color: '#10b981' }}>🏪 {shopData.name}</h2> 
+          <span style={{ fontSize: '0.8rem', color: '#94a3b8' }}>Partner Dashboard</span> 
+        </div> 
+        
+        <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}> 
+          <NotificationBell ownerType="shop" ownerId={shopData._id} />
 
-      {/* 🚀 LIVE ORDER TRACKER */}
-      {activeOrders.length > 0 && (
-        <div style={{ marginBottom: '25px' }}>
-          <h3 style={{ color: '#334155', fontSize: '1.1rem', marginBottom: '10px' }}>Live Orders ⏳</h3>
-          {activeOrders.map((order, i) => (
-            <div 
-              key={i} 
-              onClick={() => setSelectedOrder(order)} 
-              style={{ background: 'white', padding: '20px', borderRadius: '16px', boxShadow: '0 10px 25px rgba(0,0,0,0.05)', border: '2px solid #10b981', position: 'relative', overflow: 'hidden', cursor: 'pointer', marginBottom: '15px' }}
-            >
-              <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '4px', background: 'linear-gradient(90deg, #10b981, #34d399)' }}></div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '15px' }}>
-                <div>
-                  <span style={{ fontSize: '0.85rem', color: '#64748b', fontWeight: 'bold' }}>ORDER #{order._id.slice(-5).toUpperCase()}</span>
-                  <h4 style={{ margin: '5px 0 0 0', color: '#0f172a', fontSize: '1.2rem' }}>{order.shopId?.name || "Local Shop"}</h4>
-                  
-                  {/* 👇 NEW: SHOP CONTACT INFO FOR THE USER 👇 */}
-                  {order.shopId && (
-                    <div style={{ fontSize: '0.8rem', color: '#64748b', marginTop: '4px' }}>
-                      📞 <a href={`tel:${order.shopId.phone}`} onClick={(e) => e.stopPropagation()} style={{ color: '#3b82f6', textDecoration: 'none', fontWeight: 'bold' }}>{order.shopId.phone || 'Call Shop'}</a>
-                      <span style={{ margin: '0 5px' }}>•</span>
-                      📍 Pincode: {order.shopId.pincode}
-                    </div>
-                  )}
-                  {/* 👆 END SHOP INFO 👆 */}
+          <button onClick={toggleShopStatus} style={{ padding: '6px 12px', borderRadius: '20px', fontWeight: 'bold', border: 'none', cursor: 'pointer', backgroundColor: shopData.isOpen ? '#d1fae5' : '#fee2e2', color: shopData.isOpen ? '#059669' : '#b91c1c' }} > 
+            {shopData.isOpen ? '🟢 OPEN' : '🔴 CLOSED'} 
+          </button> 
+          <button onClick={onExit} style={{ background: '#ef4444', color: 'white', border: 'none', padding: '6px 12px', borderRadius: '6px', fontWeight: 'bold', cursor: 'pointer' }}>
+            Logout
+          </button> 
+        </div> 
+      </div> 
 
-                </div>
-                <div style={{ background: '#ecfdf5', color: '#059669', padding: '8px 12px', borderRadius: '8px', fontWeight: '900', fontSize: '0.9rem' }}>{order.status}</div>
-              </div>
-              <p style={{ fontSize: '0.9rem', color: '#475569', margin: 0, display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px dashed #e2e8f0', paddingTop: '12px' }}>
-                <span><strong>{order.items?.length || 0} items</strong> • Total: ₹{order.totalAmount || 0}</span>
-                <span style={{ color: '#10b981', fontWeight: 'bold', backgroundColor: '#d1fae5', padding: '4px 10px', borderRadius: '20px', fontSize: '0.8rem' }}>View Bill ➡️</span>
-              </p>
-            </div>
-          ))}
-        </div>
-      )}
-
-      {/* 📜 NEW: COLLAPSIBLE PAST ORDERS */}
-      <div 
-        onClick={() => setShowPastOrders(!showPastOrders)}
-        style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer', backgroundColor: 'white', padding: '15px 20px', borderRadius: '12px', boxShadow: '0 2px 5px rgba(0,0,0,0.02)', border: '1px solid #e2e8f0', marginBottom: '15px', transition: '0.2s' }}
-      >
-        <h3 style={{ color: '#334155', fontSize: '1.1rem', margin: 0 }}>📜 Past Orders History</h3>
-        <span style={{ fontSize: '1.2rem', transform: showPastOrders ? 'rotate(180deg)' : 'rotate(0deg)', transition: '0.3s' }}>
-          🔽
-        </span>
+      {/* 🗂️ TAB NAVIGATION */}
+      <div className="hide-scroll" style={{ display: 'flex', backgroundColor: '#1e293b', padding: '10px 20px', gap: '15px', overflowX: 'auto', whiteSpace: 'nowrap' }}>
+        <button onClick={() => setActiveTab("orders")} style={tabStyle(activeTab === "orders")}>📦 Live Orders ({orders.length})</button>
+        <button onClick={() => setActiveTab("parchis")} style={tabStyle(activeTab === "parchis")}>🧾 Parchis {parchiRequests.length > 0 && <span style={badgeStyle}>{parchiRequests.length}</span>}</button>
+        <button onClick={() => setActiveTab("inventory")} style={tabStyle(activeTab === "inventory")}>📊 Manage Inventory</button>
+        
+        {/* 🌟 NEW REVIEWS TAB */}
+        <button onClick={() => setActiveTab("reviews")} style={tabStyle(activeTab === "reviews")}>⭐ Reviews</button>
       </div>
 
-      {/* Only render this list if showPastOrders is TRUE */}
-      {showPastOrders && (
-        <div style={{ animation: 'fadeIn 0.3s ease-in-out' }}>
-          {loading ? ( <p style={{ color: '#64748b', textAlign: 'center', padding: '20px' }}>Loading history...</p> ) : pastOrders.length === 0 ? (
-            <div style={{ background: 'white', padding: '20px', borderRadius: '12px', textAlign: 'center', color: '#94a3b8', border: '1px dashed #cbd5e1' }}>No past orders found.</div>
-          ) : (
-            pastOrders.map((order, i) => (
-              <div 
-                key={i} 
-                onClick={() => setSelectedOrder(order)} 
-                style={{ background: 'white', padding: '15px', borderRadius: '12px', marginBottom: '10px', boxShadow: '0 2px 8px rgba(0,0,0,0.03)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer', border: '1px solid transparent', transition: '0.2s' }}
-              >
-                <div>
-                  <strong style={{ color: '#0f172a' }}>{order.shopId?.name || "Local Shop"}</strong>
-                  <div style={{ fontSize: '0.8rem', color: '#64748b', marginTop: '3px' }}>{new Date(order.createdAt).toLocaleDateString()} • ₹{order.totalAmount || 0}</div>
-                </div>
-                <div style={{ color: '#94a3b8', fontSize: '1.2rem' }}>📄</div>
-              </div>
-            ))
-          )}
-        </div>
-      )}
+      <div style={{ padding: '15px', maxWidth: '800px', margin: '0 auto' }}> 
+        
+        {/* 🔀 TAB ROUTING */}
+        {activeTab === "orders" && <OrdersTab orders={orders} updateOrderStatus={updateOrderStatus} />}
+        {activeTab === "parchis" && <ParchiTab parchiRequests={parchiRequests} selectedParchi={selectedParchi} setSelectedParchi={setSelectedParchi} parchiBill={parchiBill} setParchiBill={setParchiBill} handleAddToBill={handleAddToBill} handleSendBill={handleSendBill} shopData={shopData} />}
+        {activeTab === "inventory" && <InventoryTab shopData={shopData} masterCatalog={masterCatalog} handleInventoryUpdate={handleInventoryUpdate} />}
+        
+        {/* 🌟 NEW TAB CONTENT */}
+        {activeTab === "reviews" && (
+          <ShopReviews 
+            shopId={shopData._id} 
+            shopRating={shopData.rating} 
+            totalReviews={shopData.totalReviews} 
+          />
+        )}
 
-      {/* Tiny bit of CSS for the dropdown animation */}
-      <style>{`
-        @keyframes fadeIn {
-          from { opacity: 0; transform: translateY(-10px); }
-          to { opacity: 1; transform: translateY(0); }
-        }
-      `}</style>
+      </div>
     </div>
   );
 }
+
+const tabStyle = (isActive) => ({ backgroundColor: isActive ? 'rgba(255,255,255,0.1)' : 'transparent', color: isActive ? '#38bdf8' : '#cbd5e1', border: 'none', padding: '8px 15px', borderRadius: '6px', fontWeight: 'bold', cursor: 'pointer', transition: '0.2s', display: 'flex', alignItems: 'center', gap: '8px' });
+const badgeStyle = { backgroundColor: '#ef4444', color: 'white', padding: '2px 6px', borderRadius: '10px', fontSize: '0.7rem', fontWeight: 'bold' };
