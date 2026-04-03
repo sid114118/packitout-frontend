@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import OneSignal from 'react-onesignal'; // 🚀 ADDED ONESIGNAL IMPORT
+import OneSignal from 'react-onesignal'; 
 
 // 🔗 IMPORTING YOUR WORKERS
 import ProfileHeader from './components/UserDashboard/ProfileHeader';
@@ -10,7 +10,7 @@ import ReceiptModal from './components/UserDashboard/ReceiptModal';
 export default function UserDashboard({ user, onExit, onLogout }) {
   // --- STATE MANAGEMENT ---
   const [orders, setOrders] = useState([]);
-  const [pendingParchis, setPendingParchis] = useState([]); // 📸 NEW: Holds the raw uploads
+  const [pendingParchis, setPendingParchis] = useState([]); 
   const [loading, setLoading] = useState(true);
   const [selectedOrder, setSelectedOrder] = useState(null); 
   
@@ -31,29 +31,7 @@ export default function UserDashboard({ user, onExit, onLogout }) {
   const BASE_URL = "https://darkslategrey-snail-415133.hostingersite.com";
 
   // --- DATA FETCHING & INITIALIZATION ---
-  useEffect(() => {
-
-    // 👇 1. WAKE UP ONESIGNAL AND REGISTER DEVICE 👇
-    const initOneSignal = async () => {
-      try {
-        await OneSignal.init({
-          appId: "1da2e78d-0874-4965-a895-42c9237ee92b", // Your App ID
-          safari_web_id: "web.onesignal.auto.13d8bf97-93cf-4a09-b799-2a50baaf1ebd",
-          notifyButton: { enable: true }, // Shows the bell to subscribe
-          allowLocalhostAsSecureOrigin: true,
-        });
-        
-        // This is the magic line! Ties this phone to the MongoDB User ID
-        if (user && user._id) {
-          OneSignal.login(user._id); 
-        }
-      } catch (err) {
-        console.log("OneSignal Init Error:", err);
-      }
-    };
-    initOneSignal();
-
-    // 2. Fetch Processed Orders
+  const fetchOrders = () => {
     fetch(`${BASE_URL}/orders`)
       .then(res => res.json())
       .then(data => {
@@ -61,12 +39,30 @@ export default function UserDashboard({ user, onExit, onLogout }) {
         setLoading(false);
       })
       .catch(() => setLoading(false));
+  };
 
-    // 3. 📸 Fetch Pending Raw Parchis for this User
+  useEffect(() => {
+    // 1. Init OneSignal
+    const initOneSignal = async () => {
+      try {
+        await OneSignal.init({
+          appId: "1da2e78d-0874-4965-a895-42c9237ee92b",
+          safari_web_id: "web.onesignal.auto.13d8bf97-93cf-4a09-b799-2a50baaf1ebd",
+          notifyButton: { enable: true },
+          allowLocalhostAsSecureOrigin: true,
+        });
+        if (user && user._id) { OneSignal.login(user._id); }
+      } catch (err) { console.log("OneSignal Init Error:", err); }
+    };
+    initOneSignal();
+
+    // 2. Fetch Orders
+    fetchOrders();
+
+    // 3. Fetch Pending Parchis
     fetch(`${BASE_URL}/parchis/user/${user._id}`)
       .then(res => res.json())
       .then(data => {
-        // Filter out only the parchis uploaded by THIS customer
         const myParchis = data.filter(p => p.userId === user._id || p.userId?._id === user._id);
         setPendingParchis(myParchis);
       })
@@ -95,13 +91,38 @@ export default function UserDashboard({ user, onExit, onLogout }) {
         .then(data => setNearbyShops(data))
         .catch(err => console.log("Failed to fetch shops"));
     }
-  }, [user._id, user]);
-
-  // Derived State for Orders
-  const activeOrders = orders.filter(o => o.status !== "Delivered ✅" && o.status !== "Done 🎉");
-  const pastOrders = orders.filter(o => o.status === "Delivered ✅" || o.status === "Done 🎉");
+  }, [user._id]);
 
   // --- LOGIC FUNCTIONS ---
+  
+  // 🌟 NEW: HANDLE UNIFIED ORDER REVIEW SUBMISSION 🌟
+  const handleOrderReview = async (reviewPayload) => {
+    try {
+      const payloadWithUser = {
+        ...reviewPayload,
+        userId: user._id,
+        userName: user.name || "Customer"
+      };
+
+      const response = await fetch(`${BASE_URL}/reviews/order-review`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payloadWithUser)
+      });
+
+      if (response.ok) {
+        alert("Thank you for your valuable feedback! 🎉");
+        // Refresh orders to update the "isReviewed" status and hide the rate button
+        fetchOrders(); 
+      } else {
+        alert("Failed to save review. Please try again.");
+      }
+    } catch (err) {
+      console.error("Review error:", err);
+      alert("Network error. Please check your connection.");
+    }
+  };
+
   const handleSaveProfile = async (e) => {
     e.preventDefault();
     try {
@@ -128,6 +149,9 @@ export default function UserDashboard({ user, onExit, onLogout }) {
     }
   };
 
+  const activeOrders = orders.filter(o => o.status !== "Delivered ✅" && o.status !== "Done 🎉");
+  const pastOrders = orders.filter(o => o.status === "Delivered ✅" || o.status === "Done 🎉");
+
   return (
     <div style={{ backgroundColor: '#f0f4f8', minHeight: '100vh', fontFamily: 'sans-serif', paddingBottom: '40px' }}>
       
@@ -140,7 +164,6 @@ export default function UserDashboard({ user, onExit, onLogout }) {
 
       <div style={{ padding: '0 20px 20px 20px', maxWidth: '600px', margin: '0 auto' }}>
         
-        {/* 📸 Passed the new pendingParchis state to the OrdersList! */}
         <OrdersList 
           activeOrders={activeOrders} 
           pastOrders={pastOrders} 
@@ -161,7 +184,9 @@ export default function UserDashboard({ user, onExit, onLogout }) {
       </div>
 
       <ReceiptModal 
-        selectedOrder={selectedOrder} setSelectedOrder={setSelectedOrder} 
+        selectedOrder={selectedOrder} 
+        setSelectedOrder={setSelectedOrder} 
+        onSubmitReviews={handleOrderReview} // 👈 Passed to the modal
       />
 
     </div>
