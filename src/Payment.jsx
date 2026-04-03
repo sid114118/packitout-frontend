@@ -3,11 +3,22 @@ import React, { useState } from 'react';
 export default function Payment({ user, cart, targetShop, finalBill, useCoins, coinsUsed, onBack, onCheckoutSuccess }) {
   const [status, setStatus] = useState("");
   const [paymentMethod, setPaymentMethod] = useState("UPI"); 
+  
+  // 🛡️ Ensure finalBill is always a number so .toFixed() never crashes
+  const safeFinalBill = Number(finalBill || 0);
 
   const handleCheckout = async () => {
     setStatus(`⏳ Processing ${paymentMethod} Payment...`);
     
     try {
+      // 🛡️ Strip out null items and force numbers to prevent Backend crashes
+      const cleanCartItems = cart.filter(item => item !== null).map(item => ({
+        productId: item._id,
+        name: item.name,
+        qty: Number(item.qty || 1),
+        price: Number(item.sellingPrice !== undefined ? item.sellingPrice : (item.mrp || 0))
+      }));
+
       const response = await fetch("https://darkslategrey-snail-415133.hostingersite.com/orders", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -16,19 +27,14 @@ export default function Payment({ user, cart, targetShop, finalBill, useCoins, c
           shopId: targetShop._id,
           paymentMethod: paymentMethod, 
           paymentStatus: paymentMethod === "COD" ? "Unpaid" : "Paid", 
-          items: cart.map(item => ({
-            productId: item._id,
-            name: item.name,
-            qty: item.qty,
-            price: item.sellingPrice || item.mrp
-          })),
-          totalAmount: finalBill
+          items: cleanCartItems,
+          totalAmount: safeFinalBill
         })
       });
 
       if (response.ok) {
         if (useCoins && coinsUsed > 0) {
-          const newCoinBalance = Math.round(user.coins - coinsUsed); 
+          const newCoinBalance = Math.round(Number(user.coins || 0) - Number(coinsUsed)); 
           await fetch(`https://darkslategrey-snail-415133.hostingersite.com/users/${user._id}`, {
             method: "PATCH",
             headers: { "Content-Type": "application/json" },
@@ -52,7 +58,6 @@ export default function Payment({ user, cart, targetShop, finalBill, useCoins, c
   };
 
   return (
-    // 🌟 FIX: Increased paddingBottom to 180px
     <div style={{ backgroundColor: '#f3f4f6', minHeight: '100vh', fontFamily: 'sans-serif', paddingBottom: '180px', animation: 'fadeIn 0.2s ease-in' }}>
       
       {/* Payment Header */}
@@ -66,7 +71,7 @@ export default function Payment({ user, cart, targetShop, finalBill, useCoins, c
         {/* Bill Summary Strip */}
         <div style={{ backgroundColor: 'white', padding: '16px', borderRadius: '12px', marginBottom: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', boxShadow: '0 2px 8px rgba(0,0,0,0.02)' }}>
           <div style={{ color: '#64748b', fontWeight: '600', fontSize: '0.9rem' }}>Amount to Pay</div>
-          <div style={{ color: '#111827', fontWeight: '900', fontSize: '1.4rem' }}>₹{finalBill.toFixed(2)}</div>
+          <div style={{ color: '#111827', fontWeight: '900', fontSize: '1.4rem' }}>₹{safeFinalBill.toFixed(2)}</div>
         </div>
 
         <h3 style={{ fontSize: '1.05rem', fontWeight: '800', color: '#111827', marginBottom: '12px', paddingLeft: '4px' }}>Select Payment Method</h3>
@@ -110,17 +115,16 @@ export default function Payment({ user, cart, targetShop, finalBill, useCoins, c
         </div>
       )}
 
-      {/* 🌟 FIX: Moved bottom to 70px here as well! */}
       <div style={{ position: 'fixed', bottom: '70px', left: 0, right: 0, backgroundColor: 'white', padding: '12px 16px', borderTop: '1px solid #e5e7eb', boxShadow: '0 -4px 10px rgba(0,0,0,0.03)', zIndex: 90 }}>
         <button 
           onClick={handleCheckout} 
           disabled={status.includes("⏳")}
           style={{ width: '100%', maxWidth: '800px', margin: '0 auto', display: 'flex', justifyContent: 'center', alignItems: 'center', padding: '16px 20px', backgroundColor: '#0c831f', color: 'white', border: 'none', borderRadius: '12px', fontWeight: '900', fontSize: '1.1rem', cursor: 'pointer', boxShadow: '0 4px 12px rgba(12, 131, 31, 0.3)', opacity: status.includes("⏳") ? 0.7 : 1, transition: 'all 0.2s ease' }}
         >
-          {status.includes("⏳") ? "Processing..." : paymentMethod === "COD" ? `Place Order for ₹${finalBill.toFixed(2)}` : `Pay ₹${finalBill.toFixed(2)} Securely`}
+          {status.includes("⏳") ? "Processing..." : paymentMethod === "COD" ? `Place Order for ₹${safeFinalBill.toFixed(2)}` : `Pay ₹${safeFinalBill.toFixed(2)} Securely`}
         </button>
       </div>
 
     </div>
   );
-                   }
+}
