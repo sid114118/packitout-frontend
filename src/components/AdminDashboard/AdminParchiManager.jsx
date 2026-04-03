@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 
-export default function AdminParchiTab() {
+export default function ParchiManager() {
   const [parchis, setParchis] = useState([]);
   const [selectedParchi, setSelectedParchi] = useState(null);
   const [activeShop, setActiveShop] = useState(null); // Holds the specific shop's inventory
@@ -133,7 +133,7 @@ export default function AdminParchiTab() {
               <button 
                 onClick={() => handleOpenTerminal(req)}
                 disabled={isLoading}
-                style={{ width: '100%', backgroundColor: '#0ea5e9', color: 'white', border: 'none', padding: '12px', borderRadius: '10px', fontWeight: 'bold', cursor: isLoading ? 'not-allowed' : 'pointer', fontSize: '0.95rem' }}
+                style={{ width: '100%', backgroundColor: '#0ea5e9', color: 'white', border: 'none', padding: '12px', borderRadius: '10px', fontWeight: 'bold', cursor: isLoading ? 'not-allowed' : 'pointer', fontSize: '0.95rem', transition: '0.2s' }}
               >
                 {isLoading ? 'Loading Shop Data...' : 'Open Admin POS ⚡'}
               </button>
@@ -193,7 +193,9 @@ export default function AdminParchiTab() {
                     placeholder={`Search ${activeShop.name}'s inventory...`} 
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    style={{ width: '100%', padding: '14px 14px 14px 45px', borderRadius: '12px', border: '2px solid #e2e8f0', fontSize: '1.05rem', boxSizing: 'border-box', outline: 'none', backgroundColor: '#f8fafc' }}
+                    style={{ width: '100%', padding: '14px 14px 14px 45px', borderRadius: '12px', border: '2px solid #e2e8f0', fontSize: '1.05rem', boxSizing: 'border-box', outline: 'none', backgroundColor: '#f8fafc', transition: 'border-color 0.2s' }}
+                    onFocus={(e) => e.target.style.borderColor = '#0ea5e9'}
+                    onBlur={(e) => e.target.style.borderColor = '#e2e8f0'}
                   />
                 </div>
 
@@ -201,24 +203,36 @@ export default function AdminParchiTab() {
                   {searchQuery.trim() === "" ? (
                     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', color: '#94a3b8', backgroundColor: '#f8fafc', borderRadius: '12px', border: '1px dashed #cbd5e1' }}>
                       <span style={{ fontSize: '3rem', marginBottom: '10px' }}>⌨️</span>
-                      <span style={{ fontWeight: 'bold', color: '#64748b' }}>Search to add items</span>
+                      <span style={{ fontWeight: 'bold', color: '#64748b', fontSize: '1.1rem' }}>Search to add items</span>
                     </div>
                   ) : (
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: '10px', paddingBottom: '10px' }}>
-                      {activeShop.inventory
-                        ?.filter(i => i.product && i.product.name.toLowerCase().includes(searchQuery.toLowerCase()))
-                        .map(item => (
-                          <button 
-                            key={item.product._id} 
-                            onClick={() => { handleAddToBill(item); setSearchQuery(""); }}
-                            style={{ padding: '12px 10px', backgroundColor: 'white', border: '1px solid #cbd5e1', borderRadius: '10px', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '5px' }}
-                          >
-                            <span style={{ fontSize: '1.8rem' }}>{item.product.emoji || '📦'}</span>
-                            <span style={{ fontSize: '0.8rem', fontWeight: '700', color: '#1e293b', textAlign: 'center' }}>{item.product.name}</span>
-                            <span style={{ fontSize: '0.85rem', fontWeight: '900', color: '#10b981' }}>₹{item.sellingPrice || item.product.mrp}</span>
-                          </button>
-                      ))}
-                    </div>
+                    <>
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: '10px', paddingBottom: '10px' }}>
+                        {activeShop.inventory
+                          ?.filter(i => i.product && i.product.name.toLowerCase().includes(searchQuery.toLowerCase()))
+                          .map(item => (
+                            <button 
+                              key={item.product._id} 
+                              onClick={() => { handleAddToBill(item); setSearchQuery(""); }}
+                              style={{ padding: '12px 10px', backgroundColor: 'white', border: '1px solid #cbd5e1', borderRadius: '10px', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '5px', transition: 'all 0.1s', boxShadow: '0 2px 4px rgba(0,0,0,0.02)' }}
+                              onMouseDown={(e) => Object.assign(e.currentTarget.style, { transform: 'scale(0.96)', backgroundColor: '#f0f9ff', borderColor: '#0ea5e9' })}
+                              onMouseUp={(e) => Object.assign(e.currentTarget.style, { transform: 'scale(1)', backgroundColor: 'white', borderColor: '#cbd5e1' })}
+                              onMouseLeave={(e) => Object.assign(e.currentTarget.style, { transform: 'scale(1)', backgroundColor: 'white', borderColor: '#cbd5e1' })}
+                            >
+                              <span style={{ fontSize: '1.8rem' }}>{item.product.emoji || '📦'}</span>
+                              <span style={{ fontSize: '0.8rem', fontWeight: '700', color: '#1e293b', textAlign: 'center' }}>{item.product.name}</span>
+                              <span style={{ fontSize: '0.85rem', fontWeight: '900', color: '#10b981' }}>₹{item.sellingPrice || item.product.mrp}</span>
+                            </button>
+                        ))}
+                      </div>
+
+                      {activeShop.inventory?.filter(i => i.product && i.product.name.toLowerCase().includes(searchQuery.toLowerCase())).length === 0 && (
+                        <div style={{ padding: '40px 20px', color: '#94a3b8', fontSize: '1rem', textAlign: 'center', backgroundColor: '#f8fafc', borderRadius: '12px', border: '1px dashed #ef4444' }}>
+                          <div style={{ fontSize: '2rem', marginBottom: '10px' }}>🚫</div>
+                          No items found matching <strong>"{searchQuery}"</strong>
+                        </div>
+                      )}
+                    </>
                   )}
                 </div>
               </div>
@@ -229,11 +243,14 @@ export default function AdminParchiTab() {
                   <h4 style={{ margin: '0 0 15px 0', color: '#0f172a', borderBottom: '2px solid #e2e8f0', paddingBottom: '10px' }}>Current Bill</h4>
                   
                   {parchiBill.length === 0 ? (
-                    <div style={{ color: '#94a3b8', textAlign: 'center', marginTop: '40px' }}>🛒 Your cart is empty.</div>
+                    <div style={{ color: '#94a3b8', textAlign: 'center', marginTop: '40px' }}>
+                      <div style={{ fontSize: '2.5rem', marginBottom: '10px' }}>🛒</div>
+                      Your cart is empty.
+                    </div>
                   ) : (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                       {parchiBill.map((item, index) => (
-                        <div key={index} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', backgroundColor: 'white', padding: '12px 15px', borderRadius: '12px', border: '1px solid #f1f5f9' }}>
+                        <div key={index} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', backgroundColor: 'white', padding: '12px 15px', borderRadius: '12px', border: '1px solid #f1f5f9', boxShadow: '0 2px 5px rgba(0,0,0,0.02)' }}>
                           <div style={{ flex: 1 }}>
                             <div style={{ fontWeight: '700', color: '#1e293b' }}>{item.name}</div>
                             <div style={{ fontSize: '0.8rem', color: '#64748b' }}>₹{item.price} each</div>
@@ -243,7 +260,7 @@ export default function AdminParchiTab() {
                             <span style={{ fontWeight: '800', width: '20px', textAlign: 'center' }}>{item.qty}</span>
                             <button onClick={() => updateItemQty(item._id, 1)} style={cartBtnStyle}>+</button>
                           </div>
-                          <div style={{ width: '70px', textAlign: 'right', fontWeight: '900', marginRight: '15px' }}>₹{item.price * item.qty}</div>
+                          <div style={{ width: '70px', textAlign: 'right', fontWeight: '900', color: '#0f172a', marginRight: '15px' }}>₹{item.price * item.qty}</div>
                           <button onClick={() => removeItem(item._id)} style={{ background: '#fee2e2', color: '#ef4444', border: 'none', width: '32px', height: '32px', borderRadius: '8px', cursor: 'pointer' }}>🗑️</button>
                         </div>
                       ))}
@@ -252,15 +269,15 @@ export default function AdminParchiTab() {
                 </div>
 
                 {/* 💳 CHECKOUT FOOTER */}
-                <div style={{ padding: '20px', backgroundColor: 'white', borderTop: '1px solid #e2e8f0' }}>
+                <div style={{ padding: '20px', backgroundColor: 'white', borderTop: '1px solid #e2e8f0', boxShadow: '0 -10px 20px rgba(0,0,0,0.02)', zIndex: 10 }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: '15px' }}>
-                    <span style={{ fontSize: '1.1rem', fontWeight: 'bold', color: '#64748b' }}>Total Amount</span>
-                    <span style={{ fontSize: '2rem', fontWeight: '900', color: '#10b981' }}>₹{parchiBill.reduce((sum, i) => sum + (i.price * i.qty), 0)}</span>
+                    <span style={{ fontSize: '1.1rem', fontWeight: 'bold', color: '#64748b', textTransform: 'uppercase' }}>Total Amount</span>
+                    <span style={{ fontSize: '2rem', fontWeight: '900', color: '#10b981', lineHeight: '1' }}>₹{parchiBill.reduce((sum, i) => sum + (i.price * i.qty), 0)}</span>
                   </div>
                   <button 
                     onClick={handleSendBill}
                     disabled={parchiBill.length === 0}
-                    style={{ width: '100%', padding: '18px', backgroundColor: parchiBill.length > 0 ? '#0ea5e9' : '#cbd5e1', color: 'white', border: 'none', borderRadius: '12px', fontSize: '1.2rem', fontWeight: '900', cursor: parchiBill.length > 0 ? 'pointer' : 'not-allowed' }}
+                    style={{ width: '100%', padding: '18px', backgroundColor: parchiBill.length > 0 ? '#0ea5e9' : '#cbd5e1', color: 'white', border: 'none', borderRadius: '12px', fontSize: '1.2rem', fontWeight: '900', cursor: parchiBill.length > 0 ? 'pointer' : 'not-allowed', boxShadow: parchiBill.length > 0 ? '0 8px 20px rgba(14, 165, 233, 0.25)' : 'none', transition: 'all 0.2s' }}
                   >
                     {parchiBill.length > 0 ? "Push Order to Shop 🚀" : "Add items to push order"}
                   </button>
@@ -275,5 +292,4 @@ export default function AdminParchiTab() {
   );
 }
 
-const cartBtnStyle = { width: '30px', height: '30px', borderRadius: '8px', border: '1px solid #cbd5e1', backgroundColor: '#f8fafc', color: '#0f172a', fontWeight: 'bold', cursor: 'pointer' };
-                             
+const cartBtnStyle = { width: '30px', height: '30px', borderRadius: '8px', border: '1px solid #cbd5e1', backgroundColor: '#f8fafc', color: '#0f172a', fontWeight: 'bold', cursor: 'pointer', display: 'flex', justifyContent: 'center', alignItems: 'center', fontSize: '1.1rem' };
