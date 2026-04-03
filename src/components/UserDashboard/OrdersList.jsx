@@ -1,112 +1,149 @@
 import React, { useState } from 'react';
 
-export default function OrdersList({ activeOrders, pastOrders, pendingParchis, loading, setSelectedOrder }) {
+export default function OrdersTab({ orders, updateOrderStatus }) {
   const [showPastOrders, setShowPastOrders] = useState(false);
+
+  // Split orders into Active and Past
+  const activeOrders = orders.filter(o => !o.status?.includes('✅') && !o.status?.includes('❌'));
+  const pastOrders = orders.filter(o => o.status?.includes('✅') || o.status?.includes('❌'));
+
+  // 🛡️ THE FIX: Using .includes() makes it impossible for the status loop to break
+  const handleNextStep = (orderId, currentStatus) => {
+    let nextStatus = 'Pending';
+    const statusText = currentStatus || "";
+    
+    if (statusText.includes('Pending')) {
+      nextStatus = 'Preparing 🍳';
+    } else if (statusText.includes('Preparing')) {
+      nextStatus = 'Out for Delivery 🛵';
+    } else if (statusText.includes('Delivery')) {
+      nextStatus = 'Delivered ✅';
+    } else {
+      nextStatus = 'Delivered ✅'; // Failsafe
+    }
+    
+    updateOrderStatus(orderId, nextStatus);
+  };
+
+  const OrderCard = ({ order, isActive }) => {
+    const customerName = order.userId?.name || "Customer";
+    const customerPhone = order.userId?.phone || "No phone";
+    const customerAddress = order.userId?.address || "No address provided";
+
+    return (
+      <div style={{ backgroundColor: 'white', padding: '20px', borderRadius: '16px', boxShadow: '0 4px 15px rgba(0,0,0,0.05)', border: isActive ? '2px solid #10b981' : '1px solid #e2e8f0', marginBottom: '15px' }}>
+        
+        {/* Header */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', borderBottom: '1px solid #f1f5f9', paddingBottom: '12px', marginBottom: '12px' }}>
+          <div>
+            <div style={{ fontSize: '0.8rem', color: '#64748b', fontWeight: 'bold' }}>
+              ORDER #{order._id.slice(-5).toUpperCase()}
+            </div>
+            <div style={{ fontSize: '0.8rem', color: '#94a3b8', marginTop: '4px' }}>
+              {new Date(order.createdAt).toLocaleString()}
+            </div>
+          </div>
+          <div style={{ backgroundColor: isActive ? '#ecfdf5' : '#f1f5f9', color: isActive ? '#059669' : '#475569', padding: '6px 12px', borderRadius: '8px', fontWeight: 'bold', fontSize: '0.85rem' }}>
+            {order.status}
+          </div>
+        </div>
+
+        {/* Customer Details */}
+        <div style={{ marginBottom: '15px', backgroundColor: '#f8fafc', padding: '12px', borderRadius: '12px' }}>
+          <div style={{ fontWeight: '700', color: '#0f172a', marginBottom: '4px' }}>👤 {customerName}</div>
+          <div style={{ fontSize: '0.85rem', color: '#475569', marginBottom: '4px' }}>📞 <a href={`tel:${customerPhone}`} style={{ color: '#3b82f6', textDecoration: 'none' }}>{customerPhone}</a></div>
+          <div style={{ fontSize: '0.85rem', color: '#475569' }}>📍 {customerAddress}</div>
+        </div>
+
+        {/* Items List */}
+        <div style={{ marginBottom: '15px' }}>
+          <h4 style={{ margin: '0 0 8px 0', fontSize: '0.9rem', color: '#334155' }}>Items:</h4>
+          {order.items && order.items.length > 0 ? (
+            order.items.map((item, idx) => (
+              <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', color: '#475569', marginBottom: '4px' }}>
+                <span>{item.qty}x {item.name}</span>
+                <span style={{ fontWeight: '600' }}>₹{(item.price || item.sellingPrice || item.mrp || 0) * item.qty}</span>
+              </div>
+            ))
+          ) : (
+            <div style={{ fontSize: '0.85rem', color: '#94a3b8', fontStyle: 'italic' }}>Custom Parchi Order</div>
+          )}
+          
+          {order.imageUrl && (
+            <a href={order.imageUrl} target="_blank" rel="noreferrer" style={{ display: 'inline-block', marginTop: '8px', fontSize: '0.85rem', color: '#3b82f6', fontWeight: '600', textDecoration: 'none' }}>
+              🖼️ View Original Parchi Image
+            </a>
+          )}
+        </div>
+
+        {/* Total & Actions */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid #f1f5f9', paddingTop: '15px' }}>
+          <div style={{ fontSize: '1.2rem', fontWeight: '900', color: '#0f172a' }}>
+            ₹{order.totalAmount}
+          </div>
+          
+          {isActive && (
+            <div style={{ display: 'flex', gap: '10px' }}>
+              <button 
+                onClick={() => updateOrderStatus(order._id, 'Cancelled ❌')}
+                style={{ padding: '8px 12px', backgroundColor: '#fee2e2', color: '#b91c1c', border: 'none', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer' }}
+              >
+                Cancel
+              </button>
+              <button 
+                onClick={() => handleNextStep(order._id, order.status)}
+                style={{ padding: '8px 16px', backgroundColor: '#0c831f', color: 'white', border: 'none', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer', boxShadow: '0 4px 10px rgba(12, 131, 31, 0.2)' }}
+              >
+                Update Status ➡️
+              </button>
+            </div>
+          )}
+        </div>
+
+      </div>
+    );
+  };
 
   return (
     <div>
+      {/* 🚀 ACTIVE ORDERS */}
+      <h3 style={{ color: '#0f172a', fontSize: '1.2rem', marginBottom: '15px', display: 'flex', justifyContent: 'space-between' }}>
+        Live Orders <span>{activeOrders.length}</span>
+      </h3>
       
-      {/* 📸 WAITING ROOM FOR RAW PARCHIS */}
-      {pendingParchis && pendingParchis.length > 0 && (
-        <div style={{ marginBottom: '25px' }}>
-          <h3 style={{ color: '#334155', fontSize: '1.1rem', marginBottom: '10px' }}>Pending Uploads 📸</h3>
-          {pendingParchis.map((parchi, i) => (
-            <div 
-              key={i} 
-              onClick={() => setSelectedOrder({ ...parchi, status: "Waiting for Shopkeeper ⏳", totalAmount: "Calculating..." })} 
-              style={{ background: 'white', padding: '15px', borderRadius: '16px', boxShadow: '0 4px 15px rgba(0,0,0,0.03)', border: '2px dashed #cbd5e1', cursor: 'pointer', marginBottom: '15px', display: 'flex', gap: '15px', alignItems: 'center' }}
-            >
-              <div style={{ width: '60px', height: '60px', borderRadius: '10px', overflow: 'hidden', backgroundColor: '#f1f5f9', flexShrink: 0 }}>
-                <img src={parchi.imageUrl || parchi.parchiImage} alt="Uploaded" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-              </div>
-              
-              <div style={{ flex: 1 }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                  <h4 style={{ margin: '0 0 5px 0', color: '#0f172a', fontSize: '1.1rem' }}>Uploaded List</h4>
-                  <span style={{ fontSize: '0.75rem', color: '#b45309', backgroundColor: '#fef3c7', padding: '4px 8px', borderRadius: '6px', fontWeight: 'bold' }}>Reviewing...</span>
-                </div>
-                <p style={{ fontSize: '0.85rem', color: '#64748b', margin: 0 }}>The shopkeeper is generating your bill.</p>
-              </div>
-            </div>
-          ))}
+      {activeOrders.length === 0 ? (
+        <div style={{ textAlign: 'center', padding: '40px 20px', backgroundColor: 'white', borderRadius: '16px', border: '1px dashed #cbd5e1', color: '#94a3b8', marginBottom: '30px' }}>
+          <div style={{ fontSize: '2rem', marginBottom: '10px' }}>☕</div>
+          <div style={{ fontWeight: 'bold', color: '#475569' }}>No active orders</div>
+          <div style={{ fontSize: '0.85rem' }}>Waiting for customers to place an order...</div>
+        </div>
+      ) : (
+        <div style={{ marginBottom: '30px' }}>
+          {activeOrders.map(order => <OrderCard key={order._id} order={order} isActive={true} />)}
         </div>
       )}
 
-      {/* 🚀 LIVE ORDER TRACKER */}
-      {activeOrders?.length > 0 && (
-        <div style={{ marginBottom: '25px' }}>
-          <h3 style={{ color: '#334155', fontSize: '1.1rem', marginBottom: '10px' }}>Live Orders ⏳</h3>
-          {activeOrders.map((order, i) => (
-            <div 
-              key={i} 
-              onClick={() => setSelectedOrder(order)} 
-              style={{ background: 'white', padding: '20px', borderRadius: '16px', boxShadow: '0 10px 25px rgba(0,0,0,0.05)', border: '2px solid #10b981', position: 'relative', overflow: 'hidden', cursor: 'pointer', marginBottom: '15px' }}
-            >
-              <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '4px', background: 'linear-gradient(90deg, #10b981, #34d399)' }}></div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '15px' }}>
-                <div>
-                  <span style={{ fontSize: '0.85rem', color: '#64748b', fontWeight: 'bold' }}>ORDER #{order._id.slice(-5).toUpperCase()}</span>
-                  <h4 style={{ margin: '5px 0 0 0', color: '#0f172a', fontSize: '1.2rem' }}>{order.shopId?.name || "Local Shop"}</h4>
-                  
-                  {order.shopId && (
-                    <div style={{ fontSize: '0.8rem', color: '#64748b', marginTop: '4px' }}>
-                      📞 <a href={`tel:${order.shopId.phone}`} onClick={(e) => e.stopPropagation()} style={{ color: '#3b82f6', textDecoration: 'none', fontWeight: 'bold' }}>{order.shopId.phone || 'Call Shop'}</a>
-                      <span style={{ margin: '0 5px' }}>•</span>
-                      📍 Pincode: {order.shopId.pincode}
-                    </div>
-                  )}
-
-                </div>
-                <div style={{ background: '#ecfdf5', color: '#059669', padding: '8px 12px', borderRadius: '8px', fontWeight: '900', fontSize: '0.9rem' }}>{order.status}</div>
-              </div>
-              <p style={{ fontSize: '0.9rem', color: '#475569', margin: 0, display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px dashed #e2e8f0', paddingTop: '12px' }}>
-                <span><strong>{order.items?.length || 0} items</strong> • Total: ₹{order.totalAmount || 0}</span>
-                <span style={{ color: '#10b981', fontWeight: 'bold', backgroundColor: '#d1fae5', padding: '4px 10px', borderRadius: '20px', fontSize: '0.8rem' }}>View Bill ➡️</span>
-              </p>
-            </div>
-          ))}
-        </div>
-      )}
-
-      {/* 📜 COLLAPSIBLE PAST ORDERS */}
+      {/* 📜 PAST ORDERS (COLLAPSIBLE) */}
       <div 
         onClick={() => setShowPastOrders(!showPastOrders)}
-        style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer', backgroundColor: 'white', padding: '15px 20px', borderRadius: '12px', boxShadow: '0 2px 5px rgba(0,0,0,0.02)', border: '1px solid #e2e8f0', marginBottom: '15px', transition: '0.2s' }}
+        style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer', backgroundColor: 'white', padding: '15px 20px', borderRadius: '12px', boxShadow: '0 2px 5px rgba(0,0,0,0.02)', border: '1px solid #e2e8f0', marginBottom: '15px' }}
       >
-        <h3 style={{ color: '#334155', fontSize: '1.1rem', margin: 0 }}>📜 Past Orders History</h3>
-        <span style={{ fontSize: '1.2rem', transform: showPastOrders ? 'rotate(180deg)' : 'rotate(0deg)', transition: '0.3s' }}>
+        <h3 style={{ color: '#334155', fontSize: '1.1rem', margin: 0 }}>📜 Past Orders ({pastOrders.length})</h3>
+        <span style={{ fontSize: '1.2rem', transform: showPastOrders ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.3s' }}>
           🔽
         </span>
       </div>
 
       {showPastOrders && (
         <div style={{ animation: 'fadeIn 0.3s ease-in-out' }}>
-          {loading ? ( <p style={{ color: '#64748b', textAlign: 'center', padding: '20px' }}>Loading history...</p> ) : pastOrders.length === 0 ? (
-            <div style={{ background: 'white', padding: '20px', borderRadius: '12px', textAlign: 'center', color: '#94a3b8', border: '1px dashed #cbd5e1' }}>No past orders found.</div>
+          <style>{`@keyframes fadeIn { from { opacity: 0; transform: translateY(-5px); } to { opacity: 1; transform: translateY(0); } }`}</style>
+          {pastOrders.length === 0 ? (
+             <div style={{ textAlign: 'center', padding: '20px', color: '#94a3b8' }}>No completed orders yet.</div>
           ) : (
-            pastOrders.map((order, i) => (
-              <div 
-                key={i} 
-                onClick={() => setSelectedOrder(order)} 
-                style={{ background: 'white', padding: '15px', borderRadius: '12px', marginBottom: '10px', boxShadow: '0 2px 8px rgba(0,0,0,0.03)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer', border: '1px solid transparent', transition: '0.2s' }}
-              >
-                <div>
-                  <strong style={{ color: '#0f172a' }}>{order.shopId?.name || "Local Shop"}</strong>
-                  <div style={{ fontSize: '0.8rem', color: '#64748b', marginTop: '3px' }}>{new Date(order.createdAt).toLocaleDateString()} • ₹{order.totalAmount || 0}</div>
-                </div>
-                <div style={{ color: '#94a3b8', fontSize: '1.2rem' }}>📄</div>
-              </div>
-            ))
+            pastOrders.map(order => <OrderCard key={order._id} order={order} isActive={false} />)
           )}
         </div>
       )}
-
-      <style>{`
-        @keyframes fadeIn {
-          from { opacity: 0; transform: translateY(-10px); }
-          to { opacity: 1; transform: translateY(0); }
-        }
-      `}</style>
     </div>
   );
-                }
+}
