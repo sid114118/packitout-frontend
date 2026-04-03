@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import Header from './Header.jsx';
 import Categories from './Categories.jsx';
-
 import AdminDashboard from './AdminDashboard.jsx';
 import AdminLogin from './AdminLogin.jsx';
 import ShopDashboard from './ShopDashboard.jsx';
@@ -15,15 +14,9 @@ import BottomNav from './BottomNav.jsx';
 import Nearby from './Nearby.jsx';
 import ShopDetail from './ShopDetail.jsx';
 
-// 🚨 MOBILE DEBUGGER: Shows exactly what broke on your phone screen
 class CrashCatcher extends React.Component {
-  constructor(props) {
-    super(props);
-    this.state = { err: null, info: null };
-  }
-  componentDidCatch(error, info) {
-    this.setState({ err: error.toString(), info: info.componentStack });
-  }
+  constructor(props) { super(props); this.state = { err: null, info: null }; }
+  componentDidCatch(error, info) { this.setState({ err: error.toString(), info: info.componentStack }); }
   render() {
     if (this.state.err) {
       return (
@@ -61,7 +54,6 @@ export default function App() {
   const [isHeaderVisible, setIsHeaderVisible] = useState(true);
   const [lastScrollY, setLastScrollY] = useState(0);
   
-  // 🛡️ SAFE STORAGE LOADING
   const [loggedInUser, setLoggedInUser] = useState(() => {
     try {
       const saved = localStorage.getItem("packitout_user");
@@ -73,12 +65,16 @@ export default function App() {
     try {
       const savedCart = localStorage.getItem("packitout_cart");
       const parsed = savedCart ? JSON.parse(savedCart) : [];
-      return Array.isArray(parsed) ? parsed : [];
+      return Array.isArray(parsed) ? parsed.filter(i => i !== null) : [];
     } catch { return []; }
   });
 
   useEffect(() => {
-    localStorage.setItem("packitout_cart", JSON.stringify(cart));
+    try {
+      localStorage.setItem("packitout_cart", JSON.stringify(cart));
+    } catch (e) {
+      console.error("Cart Save Error", e);
+    }
   }, [cart]);
 
   useEffect(() => {
@@ -112,42 +108,50 @@ export default function App() {
     return () => window.removeEventListener("hashchange", checkUrl);
   }, []);
 
-  // 🛡️ Safe Add to Cart (Fixed for potential NaN)
+  // 🛡️ THE DIET CART: Strips circular references and heavy data
   const handleAddToCart = (product) => {
     if (!loggedInUser) {
       alert("Please log in first! 🛒");
       window.location.hash = "#account";
       return;
     }
-    if (!product || !product._id) {
-       alert("Data Error: Product has no ID");
-       return;
-    }
+    if (!product || !product._id) return;
+
+    // We leave 'variants' and 'ingredients' behind so JSON.stringify doesn't crash!
+    const lightProduct = {
+      _id: product._id,
+      name: product.name,
+      brand: product.brand,
+      image: product.image,
+      emoji: product.emoji,
+      qnty: product.qnty,
+      mrp: Number(product.mrp || 0),
+      sellingPrice: Number(product.sellingPrice || product.mrp || 0)
+    };
 
     setCart((prevCart) => {
-      const existingItem = prevCart.find(item => item._id === product._id);
+      const cleanCart = prevCart.filter(item => item !== null);
+      const existingItem = cleanCart.find(item => item._id === lightProduct._id);
       
-      // Force prices to be numbers to prevent math crashes
-      const safePrice = Number(product.sellingPrice || product.mrp || 0);
-
       if (existingItem) {
-        return prevCart.map(item => 
-          item._id === product._id ? { ...item, qty: (item.qty || 1) + 1 } : item
+        return cleanCart.map(item => 
+          item._id === lightProduct._id ? { ...item, qty: (item.qty || 1) + 1 } : item
         );
       }
-      return [...prevCart, { ...product, qty: 1, sellingPrice: safePrice }];
+      return [...cleanCart, { ...lightProduct, qty: 1 }];
     });
   };
 
   const handleRemoveFromCart = (product) => {
     if (!product || !product._id) return;
     setCart((prevCart) => {
-      const existingItem = prevCart.find(item => item._id === product._id);
-      if (!existingItem) return prevCart;
+      const cleanCart = prevCart.filter(item => item !== null);
+      const existingItem = cleanCart.find(item => item._id === product._id);
+      if (!existingItem) return cleanCart;
       if (existingItem.qty > 1) {
-        return prevCart.map(item => item._id === product._id ? { ...item, qty: item.qty - 1 } : item);
+        return cleanCart.map(item => item._id === product._id ? { ...item, qty: item.qty - 1 } : item);
       }
-      return prevCart.filter(item => item._id !== product._id);
+      return cleanCart.filter(item => item._id !== product._id);
     });
   };
 
@@ -186,19 +190,15 @@ export default function App() {
       if (!isAdminAuthenticated) return <AdminLogin onLogin={() => setIsAdminAuthenticated(true)} />;
       return <AdminDashboard onExit={() => { setIsAdminAuthenticated(false); window.location.hash = ""; }} />;
     }
-
     if (currentView === "shop") {
       if (!isShopAuthenticated) return <ShopLogin onLogin={(shopData) => setIsShopAuthenticated(shopData)} />;
       return <ShopDashboard user={isShopAuthenticated} onExit={() => { setIsShopAuthenticated(null); window.location.hash = ""; }} />;
     }
-
     if (currentView === "account") {
       if (!loggedInUser) return <UserAuth onLoginSuccess={handleUserLogin} />;
       return <UserDashboard user={loggedInUser} onExit={() => window.location.hash = ""} onLogout={handleUserLogout} />;
     }
-
     if (currentView === "success") return <OrderSuccess />;
-
     if (currentView === "cart") {
       return (
         <CrashCatcher>
@@ -206,7 +206,6 @@ export default function App() {
         </CrashCatcher>
       );
     }
-
     if (currentView === "nearby") {
       if (viewingShop) return <ShopDetail shop={viewingShop} onBack={() => setViewingShop(null)} onSetPrimary={handleSetPrimaryShop} />;
       return (
@@ -217,9 +216,14 @@ export default function App() {
       );
     }
 
-    // 🛡️ Bulletproof Math: Ensures no NaN value ever reaches the UI
-    const cartTotalItems = cart.reduce((sum, item) => sum + (Number(item.qty) || 0), 0);
+    // 🛡️ SAFE MATH: If 'item' is broken/null, it ignores it instead of crashing!
+    const cartTotalItems = cart.reduce((sum, item) => {
+      if (!item) return sum;
+      return sum + (Number(item.qty) || 0);
+    }, 0);
+    
     const cartTotalPrice = cart.reduce((sum, item) => {
+      if (!item) return sum;
       const price = Number(item.sellingPrice || item.mrp || 0);
       const qty = Number(item.qty || 0);
       return sum + (price * qty);
@@ -271,4 +275,4 @@ export default function App() {
       {showBottomNav && <BottomNav currentView={currentView} />}
     </CrashCatcher>
   );
-}
+      }
