@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 
 // 📋 1. FIXED VARIANT SELECTION SHEET
 export function VariantBottomSheet({ product, onClose, onAddToCart }) {
@@ -30,8 +30,7 @@ export function VariantBottomSheet({ product, onClose, onAddToCart }) {
                       </div>
                     </div>
                   </div>
-                  {/* ✅ FIXED: Removed mrp: vPrice overwrite to keep discount data intact */}
-                  <button onClick={() => { onAddToCart(variant); onClose(); }} style={{ backgroundColor: '#fff', color: '#0f9d58', border: '1px solid #0f9d58', borderRadius: '6px', padding: '6px 16px', fontSize: '0.85rem', fontWeight: 'bold' }}>ADD</button>
+                  <button onClick={() => { onAddToCart(variant); onClose(); }} style={{ backgroundColor: '#fff', color: '#0f9d58', border: '1px solid #0f9d58', borderRadius: '6px', padding: '6px 16px', fontSize: '0.85rem', fontWeight: 'bold', cursor: 'pointer' }}>ADD</button>
                 </div>
               );
             })}
@@ -52,7 +51,7 @@ export function ModernProductCard({ item, isCarousel, shopClosed, onOpenDetails,
   return (
     <div 
       onClick={() => onOpenDetails(item)} 
-      style={{ minWidth: isCarousel ? '140px' : 'auto', maxWidth: isCarousel ? '150px' : 'auto', flexShrink: 0, border: '1px solid #f3f4f6', borderRadius: '8px', padding: '8px', backgroundColor: '#fff', position: 'relative', opacity: isOutOfStock ? 0.6 : 1, filter: isOutOfStock ? 'grayscale(80%)' : 'none', cursor: 'pointer' }}
+      style={{ minWidth: isCarousel ? '140px' : 'auto', maxWidth: isCarousel ? '150px' : 'auto', flexShrink: 0, border: '1px solid #f3f4f6', borderRadius: '8px', padding: '8px', backgroundColor: '#fff', position: 'relative', opacity: isOutOfStock ? 0.6 : 1, filter: isOutOfStock ? 'grayscale(80%)' : 'none', cursor: 'pointer', boxShadow: '0 2px 4px rgba(0,0,0,0.02)', scrollSnapAlign: 'start' }}
     >
       <div style={{ position: 'relative', height: '110px', width: '100%', display: 'flex', justifyContent: 'center', alignItems: 'center', backgroundColor: '#f9fafb', borderRadius: '6px', marginBottom: '16px' }}>
         {item.isDiscounted && !isOutOfStock && <span style={{ position: 'absolute', top: 0, left: '-8px', backgroundColor: '#0f9d58', color: '#fff', fontSize: '0.7rem', fontWeight: 'bold', padding: '2px 6px', borderRadius: '0 8px 8px 0', zIndex: 1 }}>↓{item.discountPercent}%</span>}
@@ -61,22 +60,21 @@ export function ModernProductCard({ item, isCarousel, shopClosed, onOpenDetails,
         {!isOutOfStock && !shopClosed && (
           <div style={{ position: 'absolute', bottom: '-14px', right: '4px' }} onClick={(e) => e.stopPropagation()}>
             {cartCount > 0 ? (
-              <div style={{ display: 'flex', alignItems: 'center', backgroundColor: '#0c831f', borderRadius: '6px', height: '28px', width: '70px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', backgroundColor: '#0c831f', borderRadius: '6px', height: '28px', width: '70px', boxShadow: '0 2px 6px rgba(12, 131, 31, 0.3)' }}>
                 <button 
-                  /* ✅ FIXED: Logic for minus button */
                   onClick={() => isMultiVariant ? onQuickAdd(item) : onRemoveFromCart(item)} 
-                  style={{ flex: 1, height: '100%', border: 'none', background: 'transparent', color: '#fff', fontSize: '1.1rem', fontWeight: 'bold' }}
+                  style={{ flex: 1, height: '100%', border: 'none', background: 'transparent', color: '#fff', fontSize: '1.1rem', fontWeight: 'bold', cursor: 'pointer' }}
                 >−</button>
                 <span style={{ color: '#fff', fontSize: '0.85rem', fontWeight: 'bold', minWidth: '16px', textAlign: 'center' }}>{cartCount}</span>
                 <button 
                   onClick={() => onQuickAdd(item)} 
-                  style={{ flex: 1, height: '100%', border: 'none', background: 'transparent', color: '#fff', fontSize: '1.1rem', fontWeight: 'bold' }}
+                  style={{ flex: 1, height: '100%', border: 'none', background: 'transparent', color: '#fff', fontSize: '1.1rem', fontWeight: 'bold', cursor: 'pointer' }}
                 >+</button>
               </div>
             ) : (
               <button 
                 onClick={() => onQuickAdd(item)} 
-                style={{ backgroundColor: '#fff', color: '#0c831f', border: '1px solid #0c831f', borderRadius: '6px', padding: '4px 16px', fontSize: '0.85rem', fontWeight: 'bold' }}
+                style={{ backgroundColor: '#fff', color: '#0c831f', border: '1px solid #0c831f', borderRadius: '6px', padding: '4px 16px', fontSize: '0.85rem', fontWeight: 'bold', cursor: 'pointer', boxShadow: '0 2px 4px rgba(0,0,0,0.05)' }}
               >
                 ADD
               </button>
@@ -85,13 +83,45 @@ export function ModernProductCard({ item, isCarousel, shopClosed, onOpenDetails,
         )}
       </div>
       <div>
-        <p style={{ fontSize: '0.75rem', color: '#6b7280', margin: '0 0 4px 0' }}>{item.qnty || "1 pc"} {isMultiVariant && <span style={{color: '#d97706', fontWeight: 'bold'}}> ({item.variants.length} sizes)</span>}</p>
-        <h4 style={{ fontSize: '0.85rem', margin: '0 0 8px 0', color: '#111827', height: '2.4em', overflow: 'hidden' }}>{item.brand ? `${item.brand} ` : ''}{item.name}</h4>
+        <p style={{ fontSize: '0.75rem', color: '#6b7280', margin: '0 0 4px 0', minHeight: '14px' }}>{item.qnty || "1 pc"} {isMultiVariant && <span style={{color: '#d97706', fontWeight: 'bold'}}> ({item.variants.length} sizes)</span>}</p>
+        <h4 style={{ fontSize: '0.85rem', margin: '0 0 8px 0', color: '#111827', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden', textOverflow: 'ellipsis', height: '2.4em', lineHeight: '1.2em' }}>{item.brand ? `${item.brand} ` : ''}{item.name}</h4>
         <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-          <span style={{ backgroundColor: '#fef08a', padding: '2px 6px', borderRadius: '4px', fontWeight: 'bold', fontSize: '0.85rem' }}>₹{item.sellingPrice}</span>
+          <span style={{ backgroundColor: '#fef08a', padding: '2px 6px', borderRadius: '4px', fontWeight: 'bold', fontSize: '0.85rem', color: '#000' }}>₹{item.sellingPrice}</span>
           {item.isDiscounted && <span style={{ fontSize: '0.75rem', color: '#9ca3af', textDecoration: 'line-through' }}>₹{item.mrp}</span>}
         </div>
       </div>
     </div>
   );
 }
+
+// 🛤️ 3. THE MISSING PRODUCT ROW
+export function ProductRow({ title, subtitle, items, onViewAll, shopClosed, onOpenDetails, onQuickAdd, cart = [], onRemoveFromCart }) {
+  if (!items || items.length === 0) return null;
+  return (
+    <div style={{ marginBottom: '24px', backgroundColor: '#fff', padding: '15px 0' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px', padding: '0 15px' }}>
+        <div>
+          <h2 style={{ fontSize: '1.1rem', margin: 0, color: '#111827', fontWeight: 'bold' }}>{title}</h2>
+          {subtitle && <p style={{ fontSize: '0.75rem', margin: '2px 0 0 0', color: '#6b7280' }}>{subtitle}</p>}
+        </div>
+        {onViewAll && (
+          <button onClick={() => onViewAll({ title, items })} style={{ backgroundColor: '#111827', color: '#fff', border: 'none', borderRadius: '50%', width: '28px', height: '28px', display: 'flex', justifyContent: 'center', alignItems: 'center', fontSize: '1rem', cursor: 'pointer' }}>➔</button>
+        )}
+      </div>
+      <div className="hide-scroll" style={{ display: 'flex', overflowX: 'auto', gap: '12px', padding: '0 15px 10px 15px', scrollSnapType: 'x mandatory' }}>
+        {items.map((item, index) => (
+          <ModernProductCard 
+            key={`${item._id}-${index}`} 
+            item={item} 
+            isCarousel={true} 
+            shopClosed={shopClosed} 
+            onOpenDetails={onOpenDetails} 
+            onQuickAdd={onQuickAdd} 
+            cart={cart} 
+            onRemoveFromCart={onRemoveFromCart} 
+          />
+        ))}
+      </div>
+    </div>
+  );
+      }
