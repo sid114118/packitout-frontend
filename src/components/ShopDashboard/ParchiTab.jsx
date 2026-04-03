@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 
 export default function ParchiTab({
   parchiRequests,
@@ -10,6 +10,9 @@ export default function ParchiTab({
   handleSendBill,
   shopData
 }) {
+  // 🔍 NEW: State to hold the search text
+  const [searchQuery, setSearchQuery] = useState("");
+
   return (
     <div>
       {/* --- PENDING PARCHI LIST --- */}
@@ -50,7 +53,16 @@ export default function ParchiTab({
             
             <div style={{ padding: '15px 20px', backgroundColor: '#1e293b', color: 'white', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <h3 style={{ margin: 0 }}>Processing Parchi for {selectedParchi.customerName || "Customer"}</h3>
-              <button onClick={() => { setSelectedParchi(null); setParchiBill([]); }} style={{ background: 'none', border: 'none', color: 'white', fontSize: '1.5rem', cursor: 'pointer' }}>✖</button>
+              <button 
+                onClick={() => { 
+                  setSelectedParchi(null); 
+                  setParchiBill([]); 
+                  setSearchQuery(""); // Clear search when closing
+                }} 
+                style={{ background: 'none', border: 'none', color: 'white', fontSize: '1.5rem', cursor: 'pointer' }}
+              >
+                ✖
+              </button>
             </div>
 
             <div style={{ display: 'flex', flex: 1, overflow: 'hidden', flexDirection: window.innerWidth < 768 ? 'column' : 'row' }}>
@@ -64,18 +76,41 @@ export default function ParchiTab({
               {/* RIGHT SIDE: POS Register */}
               <div style={{ flex: 1, display: 'flex', flexDirection: 'column', backgroundColor: 'white' }}>
                 
-                <div style={{ padding: '15px', borderBottom: '1px solid #e2e8f0', backgroundColor: '#f1f5f9', overflowY: 'auto', maxHeight: '40%' }}>
+                <div style={{ padding: '15px', borderBottom: '1px solid #e2e8f0', backgroundColor: '#f1f5f9', overflowY: 'auto', maxHeight: '50%' }}>
                   <h4 style={{ margin: '0 0 10px 0', color: '#0f172a', fontSize: '0.9rem' }}>Tap items to add to bill:</h4>
+                  
+                  {/* 🔍 THE NEW SEARCH BAR */}
+                  <input 
+                    type="text" 
+                    placeholder="🔍 Search inventory..." 
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    style={{ width: '100%', padding: '10px 12px', marginBottom: '15px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '0.95rem', boxSizing: 'border-box', outline: 'none' }}
+                  />
+
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
-                    {shopData.inventory?.filter(i => i.product).map(item => (
-                      <button 
-                        key={item.product._id} 
-                        onClick={() => handleAddToBill(item)}
-                        style={{ padding: '8px 12px', backgroundColor: 'white', border: '1px solid #cbd5e1', borderRadius: '6px', cursor: 'pointer', fontSize: '0.8rem', fontWeight: 'bold', color: '#334155', display: 'flex', alignItems: 'center', gap: '5px' }}
-                      >
-                        {item.product.emoji} {item.product.name} (₹{item.sellingPrice || item.product.mrp})
-                      </button>
+                    {shopData.inventory
+                      ?.filter(i => i.product)
+                      // 🔍 FILTER LOGIC: Check if the product name includes the search text
+                      ?.filter(i => i.product.name.toLowerCase().includes(searchQuery.toLowerCase()))
+                      .map(item => (
+                        <button 
+                          key={item.product._id} 
+                          onClick={() => handleAddToBill(item)}
+                          style={{ padding: '8px 12px', backgroundColor: 'white', border: '1px solid #cbd5e1', borderRadius: '6px', cursor: 'pointer', fontSize: '0.8rem', fontWeight: 'bold', color: '#334155', display: 'flex', alignItems: 'center', gap: '5px', transition: 'background 0.2s' }}
+                          onMouseOver={(e) => e.target.style.backgroundColor = '#f8fafc'}
+                          onMouseOut={(e) => e.target.style.backgroundColor = 'white'}
+                        >
+                          {item.product.emoji} {item.product.name} (₹{item.sellingPrice || item.product.mrp})
+                        </button>
                     ))}
+                    
+                    {/* Fallback if search finds nothing */}
+                    {shopData.inventory?.filter(i => i.product && i.product.name.toLowerCase().includes(searchQuery.toLowerCase())).length === 0 && (
+                      <div style={{ padding: '10px', color: '#94a3b8', fontSize: '0.85rem', width: '100%', textAlign: 'center' }}>
+                        No items found matching "{searchQuery}"
+                      </div>
+                    )}
                   </div>
                 </div>
 
@@ -104,7 +139,10 @@ export default function ParchiTab({
                     <span>₹{parchiBill.reduce((sum, i) => sum + (i.price * i.qty), 0)}</span>
                   </div>
                   <button 
-                    onClick={handleSendBill}
+                    onClick={() => {
+                      handleSendBill();
+                      setSearchQuery(""); // Clear search after sending
+                    }}
                     disabled={parchiBill.length === 0}
                     style={{ width: '100%', padding: '15px', backgroundColor: parchiBill.length > 0 ? '#10b981' : '#cbd5e1', color: 'white', border: 'none', borderRadius: '8px', fontSize: '1.1rem', fontWeight: 'bold', cursor: parchiBill.length > 0 ? 'pointer' : 'not-allowed' }}
                   >
