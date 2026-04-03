@@ -13,7 +13,7 @@ export default function Cart({ cart, setCart, user, onBack, onCheckoutSuccess })
 
   // 🧮 BILL CALCULATIONS (Fixed NaN Crash)
   const itemTotal = cart.reduce((sum, item) => {
-    // 🛡️ Fallback: If no qty exists, assume 1. If no sellingPrice, use mrp.
+    if (!item) return sum; // 🛡️ Safety fallback if item is null
     const safeQty = item.qty || 1; 
     const safePrice = item.sellingPrice !== undefined ? item.sellingPrice : (item.mrp || 0);
     return sum + (safePrice * safeQty);
@@ -32,8 +32,8 @@ export default function Cart({ cart, setCart, user, onBack, onCheckoutSuccess })
   const updateQty = (productId, delta) => {
     setCart(prevCart => {
       return prevCart.map(item => {
-        if (item._id === productId) {
-          const currentQty = item.qty || 1; // 🛡️ Safety fallback here too
+        if (item && item._id === productId) {
+          const currentQty = item.qty || 1; 
           const newQty = currentQty + delta;
           return newQty > 0 ? { ...item, qty: newQty } : null; 
         }
@@ -61,7 +61,7 @@ export default function Cart({ cart, setCart, user, onBack, onCheckoutSuccess })
   }, [user]);
 
   // --- EMPTY CART UI ---
-  if (cart.length === 0) {
+  if (!cart || cart.length === 0) {
     return (
       <div style={{ padding: '20px', textAlign: 'center', backgroundColor: '#f3f4f6', minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
         <div style={{ fontSize: '4rem', marginBottom: '10px' }}>🛒</div>
@@ -135,12 +135,14 @@ export default function Cart({ cart, setCart, user, onBack, onCheckoutSuccess })
           <div style={{ fontWeight: '800', fontSize: '1.05rem', marginBottom: '16px', color: '#111827' }}>Review Items</div>
           
           {cart.map((item, index) => {
-            // 🛡️ Added safety fallbacks directly in the render logic to prevent missing value crashes
+            if (!item) return null; // 🛡️ Skips any broken items that try to render
+            
             const safeQty = item.qty || 1;
             const safePrice = item.sellingPrice !== undefined ? item.sellingPrice : (item.mrp || 0);
             
             return (
-              <div key={item._id} style={{ display: 'flex', gap: '15px', alignItems: 'center', paddingBottom: '16px', marginBottom: '16px', borderBottom: index === cart.length - 1 ? 'none' : '1px solid #f1f5f9' }}>
+              // 🛡️ COMBINED KEY: This guarantees the screen will never crash from duplicate IDs
+              <div key={`${item._id}-${index}`} style={{ display: 'flex', gap: '15px', alignItems: 'center', paddingBottom: '16px', marginBottom: '16px', borderBottom: index === cart.length - 1 ? 'none' : '1px solid #f1f5f9' }}>
                 
                 <div style={{ width: '60px', height: '60px', backgroundColor: '#f8fafc', borderRadius: '8px', display: 'flex', justifyContent: 'center', alignItems: 'center', border: '1px solid #f1f5f9' }}>
                   {item.image ? <img src={item.image} style={{ maxWidth: '48px', maxHeight: '48px', objectFit: 'contain' }} alt={item.name} /> : <span style={{ fontSize: '30px' }}>{item.emoji}</span>}
