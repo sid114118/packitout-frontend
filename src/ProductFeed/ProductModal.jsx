@@ -240,7 +240,8 @@ export default function ProductModal({ product, isOpen, onClose, onAddToCart, on
                 <ReviewSection reviews={productReviews} readOnly={true} />
              ) : (
                 <div style={{ padding: '20px', textAlign: 'center', backgroundColor: '#f8fafc', borderRadius: '12px', border: '1px dashed #e2e8f0' }}>
-                   <p style={{ margin: 0, fontSize: '0.85rem', color: '#94a3b8', fontWeight: '600' }}>No reviews yet. Be the first to rate it!</p>
+                   {/* 🛡️ UPDATED: Removed "Be the first to rate it" text */}
+                   <p style={{ margin: 0, fontSize: '0.85rem', color: '#94a3b8', fontWeight: '600' }}>No reviews yet for this product.</p>
                 </div>
              )}
           </div>
