@@ -22,13 +22,13 @@ export default function Categories({ onCategorySelect, searchQuery = "" }) {
     {
       sectionTitle: "Munchies & Refreshments",
       items: [
-        { name: "Chips & Namkeen", icon: "🥨", image: "https://res.cloudinary.com/dj48tkcsw/image/upload/v1775290388/1000253493-removebg-preview_muprzj.jpg", bgColor: "#fff7ed" },
-        { name: "Drinks & Juices", icon: "🥤", image: "https://res.cloudinary.com/dj48tkcsw/image/upload/v1775289479/1000253484-removebg-preview_fi96ah.jpg", bgColor: "#eff6ff" },     
-        { name: "Sweets & Chocolates", icon: "🍫", image: "https://res.cloudinary.com/dj48tkcsw/image/upload/v1775289948/sweets_gflecj.jpg", bgColor: "#fdf2f8" },
-        { name: "Ice Creams", icon: "🍦", image: "https://res.cloudinary.com/dj48tkcsw/image/upload/v1775289947/icecream_cnrclk.jpg", bgColor: "#f0f9ff" },          
-        { name: "Tea & Coffee", icon: "☕", image: "https://res.cloudinary.com/dj48tkcsw/image/upload/v1775289946/tea_cofee_ufuys9.jpg", bgColor: "#fefce8" },
-        { name: "Instant Food", icon: "🍜", image: "https://res.cloudinary.com/dj48tkcsw/image/upload/v1775289946/instantfood_uf1xfz.jpg", bgColor: "#fef2f2" },       
-        { name: "backery & biscuits", icon: "🍯", image: "https://res.cloudinary.com/dj48tkcsw/image/upload/v1775289945/backery_h6hhrw.jpg", bgColor: "#fffbeb" },
+        { name: "Chips & Namkeen", icon: "🥨", image: "https://res.cloudinary.com/dj48tkcsw/image/upload/v1775291160/namkeen_wqryy1.jpg", bgColor: "#fff7ed" },
+        { name: "Drinks & Juices", icon: "🥤", image: "https://res.cloudinary.com/dj48tkcsw/image/upload/v1775291160/colddrinks_mawune.jpg", bgColor: "#eff6ff" },     
+        { name: "Sweets & Chocolates", icon: "🍫", image: "https://res.cloudinary.com/dj48tkcsw/image/upload/v1775291159/chocolate_m3hdas.jpg", bgColor: "#fdf2f8" },
+        { name: "Ice Creams", icon: "🍦", image: "https://res.cloudinary.com/dj48tkcsw/image/upload/v1775291161/icecream_nqu7fv.jpg", bgColor: "#f0f9ff" },          
+        { name: "Tea & Coffee", icon: "☕", image: "https://res.cloudinary.com/dj48tkcsw/image/upload/v1775291160/tea_coffee_jdqypd.jpg", bgColor: "#fefce8" },
+        { name: "Instant Food", icon: "🍜", image: "https://res.cloudinary.com/dj48tkcsw/image/upload/v1775291159/noodles_ploez3.jpg", bgColor: "#fef2f2" },       
+        { name: "backery & biscuits", icon: "🍯", image: "https://res.cloudinary.com/dj48tkcsw/image/upload/v1775291510/1000253503-removebg-preview_pqscbp.jpg", bgColor: "#fffbeb" },
         { name: "Paan Corner", icon: "🍃", image: "", bgColor: "#f0fdf4" }
       ]
     },
