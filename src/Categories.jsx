@@ -24,11 +24,11 @@ export default function Categories({ onCategorySelect, searchQuery = "" }) {
       items: [
         { name: "Chips & Namkeen", icon: "🥨", image: "", bgColor: "#fff7ed" },
         { name: "Drinks & Juices", icon: "🥤", image: "https://res.cloudinary.com/dj48tkcsw/image/upload/v1775289479/1000253484-removebg-preview_fi96ah.jpg", bgColor: "#eff6ff" },     
-        { name: "Sweets & Chocolates", icon: "🍫", image: "", bgColor: "#fdf2f8" },
-        { name: "Ice Creams", icon: "🍦", image: "", bgColor: "#f0f9ff" },          
-        { name: "Tea & Coffee", icon: "☕", image: "", bgColor: "#fefce8" },
-        { name: "Instant Food", icon: "🍜", image: "", bgColor: "#fef2f2" },       
-        { name: "Sauces & Sprenads", icon: "🍯", image: "", bgColor: "#fffbeb" },
+        { name: "Sweets & Chocolates", icon: "🍫", image: "https://res.cloudinary.com/dj48tkcsw/image/upload/v1775289948/sweets_gflecj.jpg", bgColor: "#fdf2f8" },
+        { name: "Ice Creams", icon: "🍦", image: "https://res.cloudinary.com/dj48tkcsw/image/upload/v1775289947/icecream_cnrclk.jpg", bgColor: "#f0f9ff" },          
+        { name: "Tea & Coffee", icon: "☕", image: "https://res.cloudinary.com/dj48tkcsw/image/upload/v1775289946/tea_cofee_ufuys9.jpg", bgColor: "#fefce8" },
+        { name: "Instant Food", icon: "🍜", image: "https://res.cloudinary.com/dj48tkcsw/image/upload/v1775289946/instantfood_uf1xfz.jpg", bgColor: "#fef2f2" },       
+        { name: "backery & biscuits", icon: "🍯", image: "https://res.cloudinary.com/dj48tkcsw/image/upload/v1775289945/backery_h6hhrw.jpg", bgColor: "#fffbeb" },
         { name: "Paan Corner", icon: "🍃", image: "", bgColor: "#f0fdf4" }
       ]
     },
