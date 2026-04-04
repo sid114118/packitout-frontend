@@ -23,7 +23,7 @@ export default function Categories({ onCategorySelect, searchQuery = "" }) {
       sectionTitle: "Munchies & Refreshments",
       items: [
         { name: "Chips & Namkeen", icon: "🥨", image: "", bgColor: "#fff7ed" },
-        { name: "Drinks & Juices", icon: "🥤", image: "", bgColor: "#eff6ff" },     
+        { name: "Drinks & Juices", icon: "🥤", image: "https://res.cloudinary.com/dj48tkcsw/image/upload/v1775289479/1000253484-removebg-preview_fi96ah.jpg", bgColor: "#eff6ff" },     
         { name: "Sweets & Chocolates", icon: "🍫", image: "", bgColor: "#fdf2f8" },
         { name: "Ice Creams", icon: "🍦", image: "", bgColor: "#f0f9ff" },          
         { name: "Tea & Coffee", icon: "☕", image: "", bgColor: "#fefce8" },
