@@ -12,7 +12,7 @@ export default function Categories({ onCategorySelect, searchQuery = "" }) {
         { name: "Dairy, Bread & Eggs", icon: "🥛", image: "https://res.cloudinary.com/dj48tkcsw/image/upload/v1775282049/dairyandbread_tvt2pt.webp", bgColor: "#fefce8" }, 
         { name: "Fruits & Veg", icon: "🍎", image: "https://res.cloudinary.com/dj48tkcsw/image/upload/v1774945247/images_5_faefgf.jpg", bgColor: "#f0fdf4" },
         { name: "Atta & Rice ", icon: "🌾", image: "https://res.cloudinary.com/dj48tkcsw/image/upload/v1775282049/aata_rice_klxfpi.webp" },
-        { name: "Chicken, Meat & Fish", icon: "🍗", image: "", bgColor: "#fef2f2" },
+        { name: "Daal & Paneer", icon: "🍗", image: "https://res.cloudinary.com/dj48tkcsw/image/upload/v1775284956/1000253417-removebg-preview_njhxqy.jpg", bgColor: "#fef2f2" },
         { name: "Oil, Ghee & Salt", icon: "🍶", image: "https://res.cloudinary.com/dj48tkcsw/image/upload/v1775282049/Oil_ghee_twp67j.webp", bgColor:"f0fdf4" },
         { name: "Dry Fruits & Cereals", icon: "🥣", image: "https://res.cloudinary.com/dj48tkcsw/image/upload/v1775282050/dryfruits_izvf5g.webp", bgColor: "#f0f9ff" },
         { name: "Bakery & Biscuits", icon: "🥐", image: "", bgColor: "#fdf2f8" },
