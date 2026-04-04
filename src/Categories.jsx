@@ -9,12 +9,12 @@ export default function Categories({ onCategorySelect, searchQuery = "" }) {
     {
       sectionTitle: "Daily Fresh & Staples",
       items: [
-        { name: "Dairy, Bread & Eggs", icon: "🥛", image: "https://res.cloudinary.com/dj48tkcsw/image/upload/v1774944897/images_3_xsxbe0.jpg", bgColor: "#fefce8" }, 
+        { name: "Dairy, Bread & Eggs", icon: "🥛", image: "https://res.cloudinary.com/dj48tkcsw/image/upload/v1775282049/dairyandbread_tvt2pt.webp", bgColor: "#fefce8" }, 
         { name: "Fruits & Veg", icon: "🍎", image: "https://res.cloudinary.com/dj48tkcsw/image/upload/v1774945247/images_5_faefgf.jpg", bgColor: "#f0fdf4" },
-        { name: "Atta, Rice & Dal", icon: "🌾", image: "https://res.cloudinary.com/dj48tkcsw/image/upload/v1774945074/images_4_mbo5ob.jpg", bgColor: "#fff7ed" },
+        { name: "Atta & Rice ", icon: "🌾", image: "https://res.cloudinary.com/dj48tkcsw/image/upload/v1775282049/aata_rice_klxfpi.webp" },
         { name: "Chicken, Meat & Fish", icon: "🍗", image: "", bgColor: "#fef2f2" },
-        { name: "Oil, Ghee & Masala", icon: "🍶", image: "https://res.cloudinary.com/dj48tkcsw/image/upload/v1774945925/images_6_u1l8js.jpg", bgColor: "#fffbeb" },
-        { name: "Dry Fruits & Cereals", icon: "🥣", image: "", bgColor: "#f0f9ff" },
+        { name: "Oil, Ghee & Salt", icon: "🍶", image: "https://res.cloudinary.com/dj48tkcsw/image/upload/v1775282049/Oil_ghee_twp67j.webp", bgColor:"f0fdf4" },
+        { name: "Dry Fruits & Cereals", icon: "🥣", image: "https://res.cloudinary.com/dj48tkcsw/image/upload/v1775282050/dryfruits_izvf5g.webp", bgColor: "#f0f9ff" },
         { name: "Bakery & Biscuits", icon: "🥐", image: "", bgColor: "#fdf2f8" },
         { name: "Kitchen Appliances", icon: "🍳", image: "", bgColor: "#f1f5f9" } 
       ]
