@@ -35,10 +35,10 @@ export default function Categories({ onCategorySelect, searchQuery = "" }) {
     {
       sectionTitle: "Home, Health & Utilities",
       items: [
-        { name: "Bath & Body", icon: "🧼", image: "", bgColor: "#f0f9ff" },
-        { name: "Cleaners & Repellents", icon: "🧽", image: "", bgColor: "#fefce8" }, 
-        { name: "Hair Care", icon: "🧴", image: "", bgColor: "#fdf2f8" },
-        { name: "Health & Pharma", icon: "💊", image: "", bgColor: "#f0fdf4" }     
+        { name: "Bath & Body", icon: "🧼", image: "https://res.cloudinary.com/dj48tkcsw/image/upload/v1775292737/bodywash_iacvvh.jpg", bgColor: "#f0f9ff" },
+        { name: "Cleaners & Repellents", icon: "🧽", image: "https://res.cloudinary.com/dj48tkcsw/image/upload/v1775292738/housecleaners_dvrjvm.jpg", bgColor: "#fefce8" }, 
+        { name: "Body care", icon: "🧴", image: "https://res.cloudinary.com/dj48tkcsw/image/upload/v1775292739/bodycare_iie0ql.jpg", bgColor: "#fdf2f8" },
+        { name: "Health & Pharma", icon: "💊", image: "https://res.cloudinary.com/dj48tkcsw/image/upload/v1775292739/health_asi8e6.jpg", bgColor: "#f0fdf4" }     
       ]
     }
   ];
