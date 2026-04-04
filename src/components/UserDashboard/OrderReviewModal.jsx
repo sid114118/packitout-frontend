@@ -4,7 +4,6 @@ import { createPortal } from 'react-dom';
 export default function OrderReviewModal({ isOpen, onClose, order, onSubmitReviews }) {
   const [shopRating, setShopRating] = useState(0);
   const [shopReviewText, setShopReviewText] = useState('');
-  // Stores item ratings as a dictionary: { "itemId123": 5, "itemId456": 4 }
   const [itemRatings, setItemRatings] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -50,13 +49,7 @@ export default function OrderReviewModal({ isOpen, onClose, order, onSubmitRevie
 
   return createPortal(
     <>
-      {/* Dark Overlay */}
-      <div 
-        onClick={onClose} 
-        style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.6)', zIndex: 10000, backdropFilter: 'blur(3px)', animation: 'fadeIn 0.2s ease' }} 
-      />
-      
-      {/* Bottom Sheet */}
+      <div onClick={onClose} style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.6)', zIndex: 10000, backdropFilter: 'blur(3px)', animation: 'fadeIn 0.2s ease' }} />
       <div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 10001, display: 'flex', flexDirection: 'column', alignItems: 'center', animation: 'slideUpPage 0.3s cubic-bezier(0.32,0.72,0,1)' }}>
         <style>{`
           @keyframes slideUpPage { from { transform: translateY(100%); } to { transform: translateY(0); } }
@@ -65,9 +58,7 @@ export default function OrderReviewModal({ isOpen, onClose, order, onSubmitRevie
           .hide-scroll { -ms-overflow-style: none; scrollbar-width: none; }
         `}</style>
         
-        <button onClick={onClose} style={{ marginBottom: '15px', backgroundColor: '#333', color: '#fff', border: 'none', borderRadius: '50%', width: '40px', height: '40px', fontSize: '1.2rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 10px rgba(0,0,0,0.2)' }}>
-          ✕
-        </button>
+        <button onClick={onClose} style={{ marginBottom: '15px', backgroundColor: '#333', color: '#fff', border: 'none', borderRadius: '50%', width: '40px', height: '40px', fontSize: '1.2rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 10px rgba(0,0,0,0.2)' }}>✕</button>
         
         <div style={{ backgroundColor: '#f8fafc', width: '100%', borderTopLeftRadius: '24px', borderTopRightRadius: '24px', padding: '24px 20px', paddingBottom: '40px', maxHeight: '85vh', overflowY: 'auto' }} className="hide-scroll">
           
@@ -83,23 +74,12 @@ export default function OrderReviewModal({ isOpen, onClose, order, onSubmitRevie
             
             <div style={{ display: 'flex', justifyContent: 'center', gap: '8px', marginBottom: '15px' }}>
               {[1, 2, 3, 4, 5].map((star) => (
-                <button 
-                  key={star} 
-                  onClick={() => setShopRating(star)}
-                  style={{ background: 'none', border: 'none', fontSize: '2.5rem', color: star <= shopRating ? '#facc15' : '#e2e8f0', cursor: 'pointer', transition: 'transform 0.1s, color 0.2s', padding: 0, transform: star <= shopRating ? 'scale(1.1)' : 'scale(1)' }}
-                >
-                  ★
-                </button>
+                <button key={star} onClick={() => setShopRating(star)} style={{ background: 'none', border: 'none', fontSize: '2.5rem', color: star <= shopRating ? '#facc15' : '#e2e8f0', cursor: 'pointer', transition: 'transform 0.1s, color 0.2s', padding: 0, transform: star <= shopRating ? 'scale(1.1)' : 'scale(1)' }}>★</button>
               ))}
             </div>
 
             {shopRating > 0 && shopRating < 4 && (
-              <textarea 
-                value={shopReviewText}
-                onChange={(e) => setShopReviewText(e.target.value)}
-                placeholder="What went wrong? (Optional)"
-                style={{ width: '100%', height: '80px', padding: '12px', borderRadius: '12px', border: '1px solid #e2e8f0', backgroundColor: '#f8fafc', fontSize: '0.9rem', color: '#1e293b', resize: 'none', fontFamily: 'inherit', boxSizing: 'border-box', animation: 'fadeIn 0.2s ease' }}
-              />
+              <textarea value={shopReviewText} onChange={(e) => setShopReviewText(e.target.value)} placeholder="What went wrong? (Optional)" style={{ width: '100%', height: '80px', padding: '12px', borderRadius: '12px', border: '1px solid #e2e8f0', backgroundColor: '#f8fafc', fontSize: '0.9rem', color: '#1e293b', resize: 'none', fontFamily: 'inherit', boxSizing: 'border-box', animation: 'fadeIn 0.2s ease' }} />
             )}
           </div>
 
@@ -119,21 +99,12 @@ export default function OrderReviewModal({ isOpen, onClose, order, onSubmitRevie
                         <div style={{ width: '35px', height: '35px', backgroundColor: '#f1f5f9', borderRadius: '8px', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
                            {item.image ? <img src={item.image} alt="" style={{ maxWidth: '80%', maxHeight: '80%', objectFit: 'contain' }} /> : <span>📦</span>}
                         </div>
-                        <div style={{ fontSize: '0.85rem', fontWeight: '600', color: '#334155', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
-                          {item.name}
-                        </div>
+                        <div style={{ fontSize: '0.85rem', fontWeight: '600', color: '#334155', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{item.name}</div>
                       </div>
                       
-                      {/* Mini Star Rater */}
                       <div style={{ display: 'flex', gap: '2px' }}>
                         {[1, 2, 3, 4, 5].map((star) => (
-                          <button 
-                            key={star} 
-                            onClick={() => handleItemRating(itemId, star)}
-                            style={{ background: 'none', border: 'none', fontSize: '1.4rem', color: star <= currentRating ? '#facc15' : '#e2e8f0', cursor: 'pointer', padding: '0 2px' }}
-                          >
-                            ★
-                          </button>
+                          <button key={star} onClick={() => handleItemRating(itemId, star)} style={{ background: 'none', border: 'none', fontSize: '1.4rem', color: star <= currentRating ? '#facc15' : '#e2e8f0', cursor: 'pointer', padding: '0 2px' }}>★</button>
                         ))}
                       </div>
                     </div>
@@ -143,12 +114,7 @@ export default function OrderReviewModal({ isOpen, onClose, order, onSubmitRevie
             </div>
           )}
 
-          {/* 🚀 SUBMIT BUTTON */}
-          <button 
-            onClick={handleSubmit} 
-            disabled={isSubmitting}
-            style={{ width: '100%', padding: '16px', backgroundColor: '#0c831f', color: '#fff', border: 'none', borderRadius: '14px', fontSize: '1.05rem', fontWeight: '800', cursor: isSubmitting ? 'not-allowed' : 'pointer', opacity: isSubmitting ? 0.7 : 1, boxShadow: '0 4px 15px rgba(12, 131, 31, 0.25)', transition: 'transform 0.1s' }}
-          >
+          <button onClick={handleSubmit} disabled={isSubmitting} style={{ width: '100%', padding: '16px', backgroundColor: '#0c831f', color: '#fff', border: 'none', borderRadius: '14px', fontSize: '1.05rem', fontWeight: '800', cursor: isSubmitting ? 'not-allowed' : 'pointer', opacity: isSubmitting ? 0.7 : 1, boxShadow: '0 4px 15px rgba(12, 131, 31, 0.25)', transition: 'transform 0.1s' }}>
             {isSubmitting ? 'Submitting Feedback...' : 'Submit Feedback'}
           </button>
 
@@ -157,5 +123,4 @@ export default function OrderReviewModal({ isOpen, onClose, order, onSubmitRevie
     </>,
     document.body
   );
-                    }
-            
+}
