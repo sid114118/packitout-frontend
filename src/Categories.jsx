@@ -1,10 +1,10 @@
-import React, { useState } from 'react';
+import React from 'react';
 import UploadParchi from './UploadParchi.jsx'; 
 
-export default function Categories({ onCategorySelect }) {
-  const [searchQuery, setSearchQuery] = useState("");
+// 🌟 Now accepts 'searchQuery' as a prop from your main Header!
+export default function Categories({ onCategorySelect, searchQuery = "" }) {
 
-  // 📸 Your real data, now with beautiful pastel fallback backgrounds!
+  // 📸 Your real data with pastel fallback backgrounds
   const menuData = [
     {
       sectionTitle: "Daily Fresh & Staples",
@@ -43,7 +43,7 @@ export default function Categories({ onCategorySelect }) {
     }
   ];
 
-  // Filter categories based on search
+  // Instantly filter categories based on whatever is typed in your Header
   const filteredMenuData = menuData.map(section => ({
     ...section,
     items: section.items.filter(item => item.name.toLowerCase().includes(searchQuery.toLowerCase()))
@@ -52,20 +52,6 @@ export default function Categories({ onCategorySelect }) {
   return (
     <div style={{ backgroundColor: '#f4f6f8', minHeight: '100vh', paddingBottom: '80px', fontFamily: 'sans-serif' }}>
       
-      {/* 🔍 STICKY SEARCH BAR */}
-      <div style={{ position: 'sticky', top: 0, zIndex: 10, backgroundColor: 'white', padding: '15px 20px', boxShadow: '0 2px 10px rgba(0,0,0,0.05)' }}>
-        <div style={{ position: 'relative' }}>
-          <span style={{ position: 'absolute', left: '15px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }}>🔍</span>
-          <input 
-            type="text" 
-            placeholder="Search items..." 
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            style={{ width: '100%', padding: '12px 15px 12px 40px', borderRadius: '12px', border: '1px solid #e2e8f0', backgroundColor: '#f8fafc', fontSize: '1rem', boxSizing: 'border-box', outline: 'none' }}
-          />
-        </div>
-      </div>
-
       <div style={{ padding: '15px' }}>
         
         {/* 🌟 THE CLEAN UPLOAD COMPONENT */}
@@ -97,14 +83,14 @@ export default function Categories({ onCategorySelect }) {
                     {/* 🎨 IMAGE OR PASTEL EMOJI BOX */}
                     <div style={{
                       width: '100%',
-                      aspectRatio: '1 / 1', // Keeps it perfectly square and responsive
+                      aspectRatio: '1 / 1', // Perfect square
                       backgroundColor: item.image ? 'transparent' : item.bgColor,
                       borderRadius: '16px', // Premium soft corners
                       display: 'flex',
                       justifyContent: 'center',
                       alignItems: 'center',
                       boxShadow: item.image ? '0 4px 10px rgba(0,0,0,0.08)' : 'inset 0 0 10px rgba(0,0,0,0.02)',
-                      overflow: 'hidden', // Forces images to stay inside the rounded corners
+                      overflow: 'hidden', 
                       marginBottom: '8px'
                     }}>
                       {item.image ? (
@@ -126,7 +112,7 @@ export default function Categories({ onCategorySelect }) {
                       textAlign: 'center',
                       lineHeight: '1.2',
                       display: '-webkit-box',
-                      WebkitLineClamp: 2, // Wraps to max 2 lines
+                      WebkitLineClamp: 2, 
                       WebkitBoxOrient: 'vertical',
                       overflow: 'hidden',
                       width: '95%'
