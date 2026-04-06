@@ -217,6 +217,48 @@ export default function ProductModal({ product, isOpen, onClose, onAddToCart, on
               <HighlightRow label="Unit" value={selectedVariant.qnty} />
               <HighlightRow label="Description" value={selectedVariant.description} />
               <HighlightRow label="Ingredients" value={selectedVariant.ingredients} />
+              
+              {/* 🥗 MODERN NUTRITIONAL GRID UI */}
+              {(() => {
+                const nutrients = [
+                  { label: 'Energy', value: selectedVariant.energy },
+                  { label: 'Protein', value: selectedVariant.protein },
+                  { label: 'Carbs', value: selectedVariant.carbs },
+                  { label: 'Sugar', value: selectedVariant.sugar },
+                  { label: 'Fat', value: selectedVariant.fat }
+                ].filter(n => n.value && String(n.value).trim() !== "nan" && String(n.value).trim() !== "");
+
+                if (nutrients.length === 0) return null;
+                
+                return (
+                  <div style={{ padding: '15px 0', borderBottom: '1px solid #f3f4f6' }}>
+                    <div style={{ color: '#111827', fontSize: '0.85rem', fontWeight: '700', marginBottom: '12px' }}>
+                      Nutritional Values
+                    </div>
+                    <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                      {nutrients.map((n, idx) => (
+                        <div key={idx} style={{ 
+                          flex: '1 1 calc(33.333% - 8px)', 
+                          minWidth: '80px', 
+                          backgroundColor: '#f8fafc', 
+                          border: '1px solid #e2e8f0', 
+                          borderRadius: '8px', 
+                          padding: '10px 8px', 
+                          textAlign: 'center' 
+                        }}>
+                          <div style={{ fontSize: '0.65rem', color: '#64748b', textTransform: 'uppercase', fontWeight: '800', letterSpacing: '0.5px' }}>
+                            {n.label}
+                          </div>
+                          <div style={{ fontSize: '0.85rem', color: '#0f172a', fontWeight: '800', marginTop: '4px' }}>
+                            {n.value}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })()}
+
               <HighlightRow label="Dietary" value={selectedVariant.isVeg ? 'Veg' : 'Non-Veg'} />
               <HighlightRow label="Manufacturer" value={selectedVariant.manufacturer} />
               <HighlightRow label="Address" value={selectedVariant.manufactureraddress} />
@@ -257,4 +299,4 @@ export default function ProductModal({ product, isOpen, onClose, onAddToCart, on
       )}
     </div>
   );
-                }
+}
