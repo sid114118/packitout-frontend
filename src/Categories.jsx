@@ -55,7 +55,7 @@ export default function Categories({ onCategorySelect, searchQuery = "" }) {
   })).filter(section => section.items.length > 0);
 
   return (
-    <div style={{ backgroundColor: '#f4f6f8', minHeight: '100vh', paddingBottom: '80px', fontFamily: 'sans-serif' }}>
+    <div style={{ backgroundColor: '#f4f6f8', paddingBottom: '10px', fontFamily: 'sans-serif' }}>
       
       <div style={{ padding: '10px 15px' }}>
         
