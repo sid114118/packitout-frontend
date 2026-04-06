@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 
-export default function OrdersList({ activeOrders, pastOrders, pendingParchis, loading, setSelectedOrder }) {
+// 🌟 FIX: Added onOpenReview right here! 👇
+export default function OrdersList({ activeOrders, pastOrders, pendingParchis, loading, setSelectedOrder, onOpenReview }) {
   const [showPastOrders, setShowPastOrders] = useState(false);
 
   return (
@@ -94,7 +95,23 @@ export default function OrdersList({ activeOrders, pastOrders, pendingParchis, l
                   <strong style={{ color: '#0f172a' }}>{order.shopId?.name || "Local Shop"}</strong>
                   <div style={{ fontSize: '0.8rem', color: '#64748b', marginTop: '3px' }}>{new Date(order.createdAt).toLocaleDateString()} • ₹{order.totalAmount || 0}</div>
                 </div>
-                <div style={{ color: '#94a3b8', fontSize: '1.2rem' }}>📄</div>
+                
+                <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+                  {/* 🌟 REVIEW BUTTON */}
+                  {order.status?.includes('✅') && !order.isReviewed && (
+                    <button 
+                      onClick={(e) => {
+                        e.stopPropagation(); 
+                        if(onOpenReview) onOpenReview(order); // Now this will work!
+                      }}
+                      style={{ padding: '6px 12px', backgroundColor: '#fffbeb', color: '#d97706', border: '1px solid #fcd34d', borderRadius: '8px', fontWeight: 'bold', fontSize: '0.8rem', cursor: 'pointer' }}
+                    >
+                      ⭐ Rate Order
+                    </button>
+                  )}
+                  <div style={{ color: '#94a3b8', fontSize: '1.2rem' }}>📄</div>
+                </div>
+
               </div>
             ))
           )}
