@@ -1,9 +1,12 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import ProductModal from './ProductModal.jsx';
 import ProductListView from './ProductListView.jsx'; 
 import SearchPage from '../SearchPage.jsx'; 
 import { VariantBottomSheet, ModernProductCard, ProductRow } from './FeedComponents.jsx';
 import ShopCarousel from './ShopCarousel.jsx';
+
+// 🌟 IMPORT OUR NEW BRAIN!
+import useShopFeedData from './useShopFeedData'; // Adjust path based on where you saved it
 
 export default function ShopFeed({ 
   user, onAddToCart, onRemoveFromCart, onViewCart, cart = [], 
@@ -11,98 +14,19 @@ export default function ShopFeed({
   selectedBrand, onBrandSelect, onClearBrand,
   isSearchOpen, onOpenSearch, onCloseSearch 
 }) {
-  const [items, setItems] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [shopInfo, setShopInfo] = useState(null);
-  const [nearbyShops, setNearbyShops] = useState([]);
   
+  // 🌟 CALL THE BRAIN - It gives us all the arrays perfectly formatted!
+  const { 
+    loading, items, shopInfo, nearbyShops, 
+    shopDeals, shopBestSellers, under99, timeBased, newArrivals, buyItAgain 
+  } = useShopFeedData(user);
+  
+  // UI States (Modals & Views)
   const [selectedProductDetails, setSelectedProductDetails] = useState(null); 
   const [selectedVariantProduct, setSelectedVariantProduct] = useState(null);
   const [viewAll, setViewAll] = useState(null); 
 
-  const [shopDeals, setShopDeals] = useState([]);
-  const [shopBestSellers, setShopBestSellers] = useState([]);
-  const [under99, setUnder99] = useState([]);
-  const [timeBased, setTimeBased] = useState({ title: "", subtitle: "", items: [] });
-  const [newArrivals, setNewArrivals] = useState([]);
-  const [buyItAgain, setBuyItAgain] = useState([]);
-
   const BASE_URL = "https://darkslategrey-snail-415133.hostingersite.com";
-
-  useEffect(() => {
-    const fetchShopProducts = async () => {
-      setLoading(true);
-      try {
-        const shopId = typeof user.primaryShop === 'object' ? user.primaryShop._id : user.primaryShop;
-        const res = await fetch(`${BASE_URL}/shops/${shopId}/menu?t=${new Date().getTime()}`);
-        const shopData = await res.json();
-        setShopInfo({ name: shopData.name, isOpen: shopData.isOpen });
-        
-        if (user && user.pincode) {
-          const shopsRes = await fetch(`${BASE_URL}/shops/all/${user.pincode}`);
-          const shopsData = await shopsRes.json();
-          setNearbyShops(shopsData.filter(s => s._id !== shopId)); 
-        }
-
-        const groupedMap = new Map();
-        const availableItems = [];
-
-        shopData.inventory?.filter(item => item && item.product).forEach(item => {
-          const mrp = Number(item.product.mrp || 0);
-          const sellingPrice = (item.sellingPrice !== undefined && item.sellingPrice !== null) ? Number(item.sellingPrice) : mrp;
-          const isDiscounted = mrp > 0 && sellingPrice < mrp;
-          const discountPercent = (isDiscounted && mrp > 0) ? Math.round(((mrp - sellingPrice) / mrp) * 100) : 0;
-
-          const formattedItem = {
-            ...item.product, 
-            sellingPrice, 
-            mrp, 
-            inStock: item.inStock,
-            isDiscounted,
-            discountPercent,
-          };
-
-          if (formattedItem.itemGroupId && formattedItem.itemGroupId.trim() !== "") {
-            const groupId = String(formattedItem.itemGroupId).trim().toUpperCase();
-            
-            const safeVariantChild = { ...formattedItem };
-            
-            if (!groupedMap.has(groupId)) {
-              formattedItem.variants = [safeVariantChild]; 
-              groupedMap.set(groupId, formattedItem);
-              availableItems.push(formattedItem);
-            } else {
-              groupedMap.get(groupId).variants.push(safeVariantChild);
-            }
-          } else {
-            availableItems.push(formattedItem);
-          }
-        });
-        
-        setItems(availableItems);
-        
-        setShopDeals(availableItems.filter(i => i.isDiscounted && i.inStock).sort((a, b) => b.discountPercent - a.discountPercent).slice(0, 12));
-        setShopBestSellers(availableItems.filter(i => i.inStock).slice(0, 12));
-        setUnder99(availableItems.filter(i => i.sellingPrice > 0 && i.sellingPrice < 100 && i.inStock).slice(0, 12));
-        setNewArrivals([...availableItems].reverse().filter(i => i.inStock).slice(0, 12));
-        setBuyItAgain(availableItems.filter(i => i.inStock).sort(() => 0.5 - Math.random()).slice(0, 12));
-
-        const hour = new Date().getHours();
-        let timeTitle = ""; let timeSubtitle = ""; let keywords = [];
-        if (hour >= 5 && hour < 11) { timeTitle = "🌤️ Breakfast & Dairy"; timeSubtitle = "Start your morning right"; keywords = ["dairy", "bread", "milk", "eggs", "breakfast"]; } 
-        else if (hour >= 11 && hour < 16) { timeTitle = "⚡ Mid-Day Energy Boost"; timeSubtitle = "Keep the momentum going"; keywords = ["snacks", "drinks", "beverages", "chips"]; } 
-        else if (hour >= 16 && hour < 22) { timeTitle = "🌙 Evening Cravings"; timeSubtitle = "Perfect time for a snack"; keywords = ["ice cream", "maggi", "noodles", "chocolate"]; } 
-        else { timeTitle = "🦉 Late Night Essentials"; timeSubtitle = "We are still awake for you"; keywords = ["snacks", "beverages", "noodles", "condoms"]; }
-
-        const matchedItems = availableItems.filter(i => i.inStock && keywords.some(kw => (i.category || "").toLowerCase().includes(kw) || (i.name || "").toLowerCase().includes(kw)));
-        setTimeBased({ title: timeTitle, subtitle: timeSubtitle, items: matchedItems.length > 0 ? matchedItems.slice(0, 12) : availableItems.filter(i => i.inStock).slice(0, 12) });
-
-      } catch (err) { console.error("Feed Load Error:", err); }
-      setLoading(false);
-    };
-
-    fetchShopProducts();
-  }, [user]);
 
   const handleSwitchShop = async (newShop) => {
     if (!window.confirm(`Switch to ${newShop.name}? This will clear your current cart.`)) return;
@@ -116,11 +40,8 @@ export default function ShopFeed({
   };
 
   const handleQuickAdd = (item) => {
-    if (item.variants && item.variants.length > 1) {
-      setSelectedVariantProduct(item);
-    } else {
-      onAddToCart(item);
-    }
+    if (item.variants && item.variants.length > 1) setSelectedVariantProduct(item);
+    else onAddToCart(item);
   };
 
   if (loading) return <div style={{ padding: '40px', textAlign: 'center', color: '#6b7280' }}>Loading fresh products...</div>;
@@ -128,16 +49,9 @@ export default function ShopFeed({
   let displayItems = items;
   let listTitle = "";
   
-  if (viewAll) {
-    displayItems = viewAll.items;
-    listTitle = viewAll.title;
-  } else if (selectedCategory) {
-    displayItems = items.filter(i => (i.category || "").toLowerCase().includes(selectedCategory.toLowerCase()));
-    listTitle = selectedCategory;
-  } else if (selectedBrand) {
-    displayItems = items.filter(i => i.brand === selectedBrand);
-    listTitle = `Explore ${selectedBrand}`;
-  }
+  if (viewAll) { displayItems = viewAll.items; listTitle = viewAll.title; } 
+  else if (selectedCategory) { displayItems = items.filter(i => (i.category || "").toLowerCase().includes(selectedCategory.toLowerCase())); listTitle = selectedCategory; } 
+  else if (selectedBrand) { displayItems = items.filter(i => i.brand === selectedBrand); listTitle = `Explore ${selectedBrand}`; }
 
   const shopClosed = shopInfo && !shopInfo.isOpen;
   const isListViewActive = viewAll || selectedCategory || selectedBrand;
@@ -146,38 +60,15 @@ export default function ShopFeed({
     <div style={{ padding: '0', maxWidth: '1000px', margin: '0 auto', overflowX: 'hidden', backgroundColor: '#f3f4f6' }}>
       
       {isSearchOpen && (
-        <SearchPage 
-          items={items}
-          onClose={onCloseSearch}
-          onOpenDetails={setSelectedProductDetails}
-          onQuickAdd={handleQuickAdd}
-          cart={cart}
-          onRemoveFromCart={onRemoveFromCart}
-          onViewCart={onViewCart}
-        />
+        <SearchPage items={items} onClose={onCloseSearch} onOpenDetails={setSelectedProductDetails} onQuickAdd={handleQuickAdd} cart={cart} onRemoveFromCart={onRemoveFromCart} onViewCart={onViewCart} />
       )}
 
       {isListViewActive && !isSearchOpen && (
         <ProductListView
-          title={listTitle}
-          items={displayItems}
-          onBack={() => { 
-            if (selectedCategory) onClearCategory(); 
-            if (selectedBrand && onClearBrand) onClearBrand();
-            setViewAll(null); 
-          }}
-          shopClosed={shopClosed}
-          onOpenDetails={setSelectedProductDetails}
-          onQuickAdd={handleQuickAdd}
-          cart={cart}
-          onRemoveFromCart={onRemoveFromCart}
-          onViewCart={onViewCart}
-          onSearchClick={() => {  
-             if (selectedCategory) onClearCategory(); 
-             if (selectedBrand && onClearBrand) onClearBrand();
-             setViewAll(null); 
-             onOpenSearch();
-          }}
+          title={listTitle} items={displayItems}
+          onBack={() => { if (selectedCategory) onClearCategory(); if (selectedBrand && onClearBrand) onClearBrand(); setViewAll(null); }}
+          shopClosed={shopClosed} onOpenDetails={setSelectedProductDetails} onQuickAdd={handleQuickAdd} cart={cart} onRemoveFromCart={onRemoveFromCart} onViewCart={onViewCart}
+          onSearchClick={() => { if (selectedCategory) onClearCategory(); if (selectedBrand && onClearBrand) onClearBrand(); setViewAll(null); onOpenSearch(); }}
         />
       )}
 
@@ -191,31 +82,12 @@ export default function ShopFeed({
           <ProductRow title="Freshly Restocked" subtitle="Back on shelves" items={newArrivals} onViewAll={setViewAll} shopClosed={shopClosed} onOpenDetails={setSelectedProductDetails} onQuickAdd={handleQuickAdd} cart={cart} onRemoveFromCart={onRemoveFromCart} />
 
           <ShopCarousel shops={nearbyShops} onSwitchShop={handleSwitchShop} />
-          
-          <div style={{ textAlign: 'center', padding: '10px 0 40px 0', color: '#94a3b8', fontSize: '0.8rem', fontWeight: '600' }}>
-            🚀 End of list
-          </div>
+          <div style={{ textAlign: 'center', padding: '10px 0 40px 0', color: '#94a3b8', fontSize: '0.8rem', fontWeight: '600' }}>🚀 End of list</div>
         </>
       )}
 
       <VariantBottomSheet product={selectedVariantProduct} onClose={() => setSelectedVariantProduct(null)} onAddToCart={onAddToCart} />
-      
-      <ProductModal 
-        product={selectedProductDetails} 
-        isOpen={selectedProductDetails !== null} 
-        onClose={() => setSelectedProductDetails(null)} 
-        onAddToCart={onAddToCart} 
-        onRemoveFromCart={onRemoveFromCart}
-        onViewCart={onViewCart}
-        cart={cart} 
-        allItems={items} 
-        onViewBrand={(brand) => {
-          // 🛡️ THE FIX: Wipe all other states so Brand View takes control!
-          if (onClearCategory) onClearCategory(); 
-          setViewAll(null);                       
-          if (onBrandSelect) onBrandSelect(brand);
-        }}
-      />
+      <ProductModal product={selectedProductDetails} isOpen={selectedProductDetails !== null} onClose={() => setSelectedProductDetails(null)} onAddToCart={onAddToCart} onRemoveFromCart={onRemoveFromCart} onViewCart={onViewCart} cart={cart} allItems={items} onViewBrand={(brand) => { if (onClearCategory) onClearCategory(); setViewAll(null); if (onBrandSelect) onBrandSelect(brand); }} />
     </div>
   );
-    }
+}
