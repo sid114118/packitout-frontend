@@ -6,6 +6,8 @@ import ProfileHeader from './components/UserDashboard/ProfileHeader';
 import OrdersList from './components/UserDashboard/OrdersList';
 import AddressBook from './components/UserDashboard/AddressBook';
 import ReceiptModal from './components/UserDashboard/ReceiptModal';
+// 🌟 IMPORT THE NEW REVIEW MODAL!
+import OrderReviewModal from './components/UserDashboard/OrderReviewModal'; 
 
 export default function UserDashboard({ user, onExit, onLogout }) {
   // --- STATE MANAGEMENT ---
@@ -13,6 +15,10 @@ export default function UserDashboard({ user, onExit, onLogout }) {
   const [pendingParchis, setPendingParchis] = useState([]); 
   const [loading, setLoading] = useState(true);
   const [selectedOrder, setSelectedOrder] = useState(null); 
+  
+  // 🌟 NEW: STATE FOR THE REVIEW MODAL
+  const [orderToReview, setOrderToReview] = useState(null);
+  const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
   
   const [coinBalance, setCoinBalance] = useState(user?.coins || 0);
   const [myReferralCode, setMyReferralCode] = useState(user?.referralCode || ""); 
@@ -95,7 +101,7 @@ export default function UserDashboard({ user, onExit, onLogout }) {
 
   // --- LOGIC FUNCTIONS ---
   
-  // 🌟 NEW: HANDLE UNIFIED ORDER REVIEW SUBMISSION 🌟
+  // 🌟 NEW: HANDLE UNIFIED ORDER REVIEW SUBMISSION
   const handleOrderReview = async (reviewPayload) => {
     try {
       const payloadWithUser = {
@@ -112,8 +118,8 @@ export default function UserDashboard({ user, onExit, onLogout }) {
 
       if (response.ok) {
         alert("Thank you for your valuable feedback! 🎉");
-        // Refresh orders to update the "isReviewed" status and hide the rate button
-        fetchOrders(); 
+        setIsReviewModalOpen(false); // Close the modal
+        fetchOrders(); // Refresh orders so the "Rate Order" button disappears
       } else {
         alert("Failed to save review. Please try again.");
       }
@@ -170,6 +176,11 @@ export default function UserDashboard({ user, onExit, onLogout }) {
           pendingParchis={pendingParchis}
           loading={loading} 
           setSelectedOrder={setSelectedOrder} 
+          // 🌟 NEW: THIS OPENS THE REVIEW MODAL!
+          onOpenReview={(order) => {
+            setOrderToReview(order);
+            setIsReviewModalOpen(true);
+          }}
         />
 
         <AddressBook 
@@ -183,10 +194,21 @@ export default function UserDashboard({ user, onExit, onLogout }) {
 
       </div>
 
+      {/* 🧾 THE NORMAL RECEIPT MODAL */}
       <ReceiptModal 
         selectedOrder={selectedOrder} 
         setSelectedOrder={setSelectedOrder} 
-        onSubmitReviews={handleOrderReview} // 👈 Passed to the modal
+      />
+
+      {/* ⭐ THE NEW REVIEW MODAL */}
+      <OrderReviewModal 
+        isOpen={isReviewModalOpen}
+        onClose={() => {
+          setIsReviewModalOpen(false);
+          setOrderToReview(null);
+        }}
+        order={orderToReview}
+        onSubmitReviews={handleOrderReview}
       />
 
     </div>
