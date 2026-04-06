@@ -1,23 +1,11 @@
 import React, { useState } from 'react';
-
-import React from 'react';
-// 1. Import your new tool
-import useScrollToTop from './useScrollToTop'; 
-
-export default function Cart({ cartItems, onCheckout }) {
-  
-  // 2. Run it! (That's it. One line.)
-  useScrollToTop();
-
-  return (
-    <div>
-      {/* ... your cart UI ... */}
-    </div>
-  );
-}
-
+import useScrollToTop from './useScrollToTop'; // 👈 1. Import your tool
 
 export default function Payment({ user, cart, targetShop, finalBill, useCoins, coinsUsed, onBack, onCheckoutSuccess }) {
+  
+  // 🚀 2. Run it right at the top of your component!
+  useScrollToTop();
+
   const [status, setStatus] = useState("");
   const [paymentMethod, setPaymentMethod] = useState("UPI"); 
   
