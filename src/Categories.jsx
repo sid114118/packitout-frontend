@@ -57,7 +57,7 @@ export default function Categories({ onCategorySelect, searchQuery = "" }) {
   return (
     <div style={{ backgroundColor: '#f4f6f8', minHeight: '100vh', paddingBottom: '80px', fontFamily: 'sans-serif' }}>
       
-      <div style={{ padding: '15px' }}>
+      <div style={{ padding: '10px 15px' }}>
         
         {/* 🌟 THE CLEAN UPLOAD COMPONENT */}
         <div style={{ marginBottom: '20px' }}>
@@ -71,13 +71,13 @@ export default function Categories({ onCategorySelect, searchQuery = "" }) {
           </div>
         ) : (
           filteredMenuData.map((section, sectionIndex) => (
-            <div key={sectionIndex} style={{ backgroundColor: 'white', padding: '20px 15px', marginBottom: '15px', borderRadius: '16px', boxShadow: '0 2px 8px rgba(0,0,0,0.02)' }}>
+            <div key={sectionIndex} style={{ backgroundColor: 'white', padding: '15px', marginBottom: '15px', borderRadius: '16px', boxShadow: '0 2px 8px rgba(0,0,0,0.02)' }}>
               
-              <h3 style={{ margin: '0 0 15px 5px', fontSize: '1.25rem', fontWeight: '800', color: '#0f172a', fontFamily: 'serif' }}>
+              <h3 style={{ margin: '0 0 15px 5px', fontSize: '1.15rem', fontWeight: '800', color: '#0f172a', fontFamily: 'serif' }}>
                 {section.sectionTitle}
               </h3>
 
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '15px 10px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '15px 8px' }}>
                 {section.items.map((item, itemIndex) => (
                   <div 
                     key={itemIndex} 
@@ -85,16 +85,17 @@ export default function Categories({ onCategorySelect, searchQuery = "" }) {
                     style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', cursor: 'pointer' }}
                   >
                     
-                    {/* 🎨 IMAGE OR PASTEL EMOJI BOX */}
+                    {/* 🎨 IMAGE OR PASTEL EMOJI BOX (Now capped at a premium size!) */}
                     <div style={{
                       width: '100%',
-                      aspectRatio: '1 / 1', // Perfect square
+                      maxWidth: '75px', // 👈 THE MAGIC FIX: Stops it from getting too huge!
+                      aspectRatio: '1 / 1', 
                       backgroundColor: item.image ? 'transparent' : item.bgColor,
-                      borderRadius: '16px', // Premium soft corners
+                      borderRadius: '16px', 
                       display: 'flex',
                       justifyContent: 'center',
                       alignItems: 'center',
-                      boxShadow: item.image ? '0 4px 10px rgba(0,0,0,0.08)' : 'inset 0 0 10px rgba(0,0,0,0.02)',
+                      boxShadow: item.image ? '0 4px 10px rgba(0,0,0,0.06)' : 'inset 0 0 10px rgba(0,0,0,0.02)',
                       overflow: 'hidden', 
                       marginBottom: '8px'
                     }}>
@@ -105,22 +106,23 @@ export default function Categories({ onCategorySelect, searchQuery = "" }) {
                           style={{ width: '100%', height: '100%', objectFit: 'cover' }} 
                         />
                       ) : (
-                        <span style={{ fontSize: '2.5rem' }}>{item.icon}</span>
+                        <span style={{ fontSize: '2.2rem' }}>{item.icon}</span>
                       )}
                     </div>
 
                     {/* 📝 TEXT LABEL */}
                     <span style={{
-                      fontSize: '0.75rem',
+                      fontSize: '0.7rem',
                       fontWeight: '700',
-                      color: '#334155',
+                      color: '#475569',
                       textAlign: 'center',
                       lineHeight: '1.2',
                       display: '-webkit-box',
                       WebkitLineClamp: 2, 
                       WebkitBoxOrient: 'vertical',
                       overflow: 'hidden',
-                      width: '95%'
+                      width: '100%',
+                      maxWidth: '80px' // Keeps the text neatly tucked under the image
                     }}>
                       {item.name}
                     </span>
