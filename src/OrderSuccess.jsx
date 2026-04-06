@@ -1,7 +1,10 @@
 import React, { useEffect } from 'react';
+import useScrollToTop from './useScrollToTop';
 
 export default function OrderSuccess() {
   
+  useScrollToTop();
+
   // Auto-redirect to home after 10 seconds if the user doesn't click anything
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -11,7 +14,20 @@ export default function OrderSuccess() {
   }, []);
 
   return (
-    <div style={{ minHeight: '100vh', backgroundColor: '#0c831f', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '20px', color: 'white', fontFamily: 'sans-serif', textAlign: 'center' }}>
+    <div style={{ 
+        height: '100dvh',         // 👈 THE FIX: Perfect dynamic mobile height
+        boxSizing: 'border-box',  // 👈 THE FIX: Stops padding from making it too tall
+        overflow: 'hidden',       // 👈 THE FIX: Disables all scrolling completely
+        backgroundColor: '#0c831f', 
+        display: 'flex', 
+        flexDirection: 'column', 
+        alignItems: 'center', 
+        justifyContent: 'center', 
+        padding: '20px', 
+        color: 'white', 
+        fontFamily: 'sans-serif', 
+        textAlign: 'center' 
+    }}>
         
         {/* 🌟 CSS Animation for the pop-in effect */}
         <style>
