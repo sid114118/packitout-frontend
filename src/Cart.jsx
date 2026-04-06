@@ -1,7 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import Payment from './Payment.jsx'; 
+import useScrollToTop from './useScrollToTop'; // 👈 Added import
 
 export default function Cart({ cart, setCart, user, onBack, onCheckoutSuccess }) {
+  useScrollToTop(); // 👈 Added scroll fix
+
   const [targetShop, setTargetShop] = useState(null); 
   const [loadingShops, setLoadingShops] = useState(true);
   
@@ -267,4 +270,4 @@ export default function Cart({ cart, setCart, user, onBack, onCheckoutSuccess })
 
     </div>
   );
-          }
+}
