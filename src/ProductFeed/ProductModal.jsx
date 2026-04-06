@@ -217,7 +217,9 @@ export default function ProductModal({ product, isOpen, onClose, onAddToCart, on
               <HighlightRow label="Unit" value={selectedVariant.qnty} />
               <HighlightRow label="Description" value={selectedVariant.description} />
               <HighlightRow label="Ingredients" value={selectedVariant.ingredients} />
-              
+              <HighlightRow label="Dietary" value={selectedVariant.isVeg ? 'Veg' : 'Non-Veg'} />
+              <HighlightRow label="Manufacturer" value={selectedVariant.manufacturer} />
+              <HighlightRow label="Address" value={selectedVariant.manufactureraddress} />
               {/* 🥗 MODERN NUTRITIONAL GRID UI */}
               {(() => {
                 const nutrients = [
@@ -259,9 +261,7 @@ export default function ProductModal({ product, isOpen, onClose, onAddToCart, on
                 );
               })()}
 
-              <HighlightRow label="Dietary" value={selectedVariant.isVeg ? 'Veg' : 'Non-Veg'} />
-              <HighlightRow label="Manufacturer" value={selectedVariant.manufacturer} />
-              <HighlightRow label="Address" value={selectedVariant.manufactureraddress} />
+              
             </div>
           </Accordion>
 
