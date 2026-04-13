@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 
 // 🟢 FIX: Pointing inside the ProductFeed folder!
@@ -14,8 +14,17 @@ export default function SearchPage({
   onViewCart 
 }) {
   const [query, setQuery] = useState("");
+  const [debouncedQuery, setDebouncedQuery] = useState(""); // 🚀 THE SPEED FIX
   const inputRef = useRef(null);
   const BOTTOM_NAV_HEIGHT = '56px';
+
+  // 🚀 DEBOUNCE ENGINE: Waits 300ms after the user stops typing before searching
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedQuery(query);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [query]);
 
   // Lock background scroll and Auto-Focus the input
   useEffect(() => {
@@ -26,15 +35,20 @@ export default function SearchPage({
     return () => { document.body.style.overflow = ''; };
   }, []);
 
-  // 🛡️ SAFE FILTERING LOGIC
-  const displayItems = query.trim().length === 0 ? [] : items.filter(item => {
-    if (!item) return false; // Skips corrupted data
-    const q = query.toLowerCase();
-    const nameMatch = (item.name || "").toLowerCase().includes(q);
-    const brandMatch = (item.brand || "").toLowerCase().includes(q);
-    const tagMatch = item.searchTags && Array.isArray(item.searchTags) && item.searchTags.some(tag => tag.toLowerCase().includes(q));
-    return nameMatch || brandMatch || tagMatch;
-  });
+  // 🛡️ SAFE FILTERING LOGIC (Now using debouncedQuery so it doesn't freeze!)
+  // Wrapped in useMemo so it ONLY runs when the debounced query actually changes
+  const displayItems = useMemo(() => {
+    if (debouncedQuery.trim().length === 0) return [];
+    
+    return items.filter(item => {
+      if (!item) return false; 
+      const q = debouncedQuery.toLowerCase();
+      const nameMatch = (item.name || "").toLowerCase().includes(q);
+      const brandMatch = (item.brand || "").toLowerCase().includes(q);
+      const tagMatch = item.searchTags && Array.isArray(item.searchTags) && item.searchTags.some(tag => tag.toLowerCase().includes(q));
+      return nameMatch || brandMatch || tagMatch;
+    });
+  }, [debouncedQuery, items]);
 
   // 🛡️ SAFE CART MATH
   const safeCart = Array.isArray(cart) ? cart.filter(c => c !== null) : [];
@@ -76,7 +90,7 @@ export default function SearchPage({
             <div style={{ fontSize: '3rem', marginBottom: '10px' }}>⌨️</div>
             <p style={{ fontWeight: '600', fontSize: '1.1rem' }}>Type to start searching...</p>
           </div>
-        ) : displayItems.length === 0 ? (
+        ) : displayItems.length === 0 && debouncedQuery.length > 0 ? (
           <div style={{ textAlign: 'center', padding: '40px 20px', color: '#64748b' }}>
             <div style={{ fontSize: '3rem', marginBottom: '10px' }}>🔍</div>
             <p style={{ fontWeight: 'bold' }}>No products found for "{query}"</p>
@@ -115,4 +129,4 @@ export default function SearchPage({
     </div>,
     document.body
   );
-}
+} // 👈 Added the missing bracket here!
