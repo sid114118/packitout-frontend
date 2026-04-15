@@ -130,3 +130,4 @@ export default function SearchPage({
     document.body
   );
 } // 👈 Added the missing bracket here!
+                                                                                  
