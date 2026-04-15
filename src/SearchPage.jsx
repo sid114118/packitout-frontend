@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { createPortal } from 'react-dom';
 
 // 🟢 MAKE SURE THIS PATH IS CORRECT FOR YOUR APP!
@@ -15,6 +15,7 @@ export default function SearchPage({
 }) {
   const [query, setQuery] = useState("");
   const [debouncedQuery, setDebouncedQuery] = useState(""); 
+  const inputRef = useRef(null); // 👈 We brought the Ref back to control the keyboard!
   const BOTTOM_NAV_HEIGHT = '56px';
 
   // 🚀 DEBOUNCE ENGINE: Waits 300ms before running the heavy search
@@ -25,13 +26,22 @@ export default function SearchPage({
     return () => clearTimeout(timer);
   }, [query]);
 
-  // Lock background scroll (Removed the buggy setTimeout focus trick!)
+  // Lock background scroll & safely trigger keyboard on load
   useEffect(() => {
     document.body.style.overflow = 'hidden';
-    return () => { document.body.style.overflow = ''; };
+    
+    // Gentle delay to let the animation finish before popping the keyboard
+    const focusTimer = setTimeout(() => {
+      if (inputRef.current) inputRef.current.focus();
+    }, 100);
+
+    return () => { 
+      document.body.style.overflow = ''; 
+      clearTimeout(focusTimer);
+    };
   }, []);
 
-  // 🛡️ SAFE FILTERING LOGIC (Using useMemo so it only calculates when needed)
+  // 🛡️ SAFE FILTERING LOGIC
   const displayItems = useMemo(() => {
     if (debouncedQuery.trim().length === 0) return [];
     
@@ -53,7 +63,6 @@ export default function SearchPage({
     return total + (price * (Number(item.qty) || 1));
   }, 0);
 
-  // 🚥 UI STATE HELPERS
   const isTyping = query.trim().length > 0 && query !== debouncedQuery;
 
   return createPortal(
@@ -70,17 +79,34 @@ export default function SearchPage({
           
           {/* 🟢 THE FIXED INPUT BAR */}
           <input
-            autoFocus // 👈 Safely auto-focuses without freezing mobile keyboards
+            ref={inputRef}
             type="text"
             placeholder='Search "Maggi", "Milk"...'
             value={query}
-            onChange={(e) => setQuery(e.target.value)} // Directly links typing to the state
-            style={{ border: 'none', outline: 'none', width: '100%', fontSize: '1.05rem', fontWeight: '500', backgroundColor: 'transparent', color: '#111827' }}
+            onChange={(e) => setQuery(e.target.value)}
+            onClick={() => inputRef.current?.focus()} // 👈 Forces keyboard to open on tap
+            style={{ 
+              border: 'none', 
+              outline: 'none', 
+              width: '100%', 
+              fontSize: '1.05rem', 
+              fontWeight: '500', 
+              backgroundColor: 'transparent', 
+              color: '#111827',
+              // 🛡️ THE MAGIC FIX FOR MOBILE TYPING BUGS:
+              userSelect: 'auto',
+              WebkitUserSelect: 'auto',
+              touchAction: 'manipulation'
+            }}
           />
           
           {query && (
             <button 
-              onClick={() => { setQuery(""); setDebouncedQuery(""); }} // Instantly resets both!
+              onClick={() => { 
+                setQuery(""); 
+                setDebouncedQuery(""); 
+                inputRef.current?.focus(); // Keeps keyboard open when clearing text
+              }} 
               style={{ background: 'none', border: 'none', fontSize: '1.2rem', color: '#94a3b8', cursor: 'pointer', padding: 0 }}
             >
               ✖
@@ -140,5 +166,5 @@ export default function SearchPage({
     </div>,
     document.body
   );
-              }
-                       
+            }
+          
