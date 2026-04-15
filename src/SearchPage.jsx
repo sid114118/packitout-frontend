@@ -70,7 +70,7 @@ export default function SearchPage({
       <style>{`@keyframes fadeIn { from { opacity: 0; transform: translateY(15px); } to { opacity: 1; transform: translateY(0); } }`}</style>
       
       {/* 🌟 SEARCH HEADER 🌟 */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '15px', position: 'sticky', top: 0, backgroundColor: '#fff', zIndex: 10, borderBottom: '1px solid #f1f5f9', boxShadow: '0 2px 4px rgba(0,0,0,0.02)' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '15px', position: 'sticky', top: 0, backgroundColor: '#fff', zIndex: 99999, borderBottom: '1px solid #f1f5f9', boxShadow: '0 2px 4px rgba(0,0,0,0.02)' }}>
         <button onClick={onClose} style={{ background: 'none', border: 'none', fontSize: '1.5rem', cursor: 'pointer', padding: '0 5px', color: '#334155', display: 'flex', alignItems: 'center' }}>
           ←
         </button>
