@@ -1,7 +1,7 @@
-import React, { useState, useEffect, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 
-// 🟢 FIX: Pointing inside the ProductFeed folder!
+// 🟢 MAKE SURE THIS PATH IS CORRECT FOR YOUR APP!
 import { ModernProductCard } from './ProductFeed/FeedComponents.jsx';
 
 export default function SearchPage({ 
@@ -14,11 +14,10 @@ export default function SearchPage({
   onViewCart 
 }) {
   const [query, setQuery] = useState("");
-  const [debouncedQuery, setDebouncedQuery] = useState(""); // 🚀 THE SPEED FIX
-  const inputRef = useRef(null);
+  const [debouncedQuery, setDebouncedQuery] = useState(""); 
   const BOTTOM_NAV_HEIGHT = '56px';
 
-  // 🚀 DEBOUNCE ENGINE: Waits 300ms after the user stops typing before searching
+  // 🚀 DEBOUNCE ENGINE: Waits 300ms before running the heavy search
   useEffect(() => {
     const timer = setTimeout(() => {
       setDebouncedQuery(query);
@@ -26,17 +25,13 @@ export default function SearchPage({
     return () => clearTimeout(timer);
   }, [query]);
 
-  // Lock background scroll and Auto-Focus the input
+  // Lock background scroll (Removed the buggy setTimeout focus trick!)
   useEffect(() => {
     document.body.style.overflow = 'hidden';
-    if (inputRef.current) {
-      setTimeout(() => inputRef.current.focus(), 50); // Pops keyboard instantly
-    }
     return () => { document.body.style.overflow = ''; };
   }, []);
 
-  // 🛡️ SAFE FILTERING LOGIC (Now using debouncedQuery so it doesn't freeze!)
-  // Wrapped in useMemo so it ONLY runs when the debounced query actually changes
+  // 🛡️ SAFE FILTERING LOGIC (Using useMemo so it only calculates when needed)
   const displayItems = useMemo(() => {
     if (debouncedQuery.trim().length === 0) return [];
     
@@ -58,6 +53,9 @@ export default function SearchPage({
     return total + (price * (Number(item.qty) || 1));
   }, 0);
 
+  // 🚥 UI STATE HELPERS
+  const isTyping = query.trim().length > 0 && query !== debouncedQuery;
+
   return createPortal(
     <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: BOTTOM_NAV_HEIGHT, backgroundColor: '#fff', zIndex: 1000, overflowY: 'auto', animation: 'fadeIn 0.2s ease', paddingBottom: cartTotalItems > 0 ? '120px' : '40px' }}>
       <style>{`@keyframes fadeIn { from { opacity: 0; transform: translateY(15px); } to { opacity: 1; transform: translateY(0); } }`}</style>
@@ -69,16 +67,24 @@ export default function SearchPage({
         </button>
         <div style={{ flex: 1, display: 'flex', alignItems: 'center', backgroundColor: '#f1f5f9', borderRadius: '12px', padding: '8px 12px' }}>
           <span style={{ marginRight: '8px', fontSize: '1.1rem' }}>🔍</span>
+          
+          {/* 🟢 THE FIXED INPUT BAR */}
           <input
-            ref={inputRef}
+            autoFocus // 👈 Safely auto-focuses without freezing mobile keyboards
             type="text"
             placeholder='Search "Maggi", "Milk"...'
             value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            style={{ border: 'none', outline: 'none', width: '100%', fontSize: '1rem', backgroundColor: 'transparent', color: '#0f172a' }}
+            onChange={(e) => setQuery(e.target.value)} // Directly links typing to the state
+            style={{ border: 'none', outline: 'none', width: '100%', fontSize: '1.05rem', fontWeight: '500', backgroundColor: 'transparent', color: '#111827' }}
           />
+          
           {query && (
-            <button onClick={() => setQuery("")} style={{ background: 'none', border: 'none', fontSize: '1.2rem', color: '#94a3b8', cursor: 'pointer', padding: 0 }}>✖</button>
+            <button 
+              onClick={() => { setQuery(""); setDebouncedQuery(""); }} // Instantly resets both!
+              style={{ background: 'none', border: 'none', fontSize: '1.2rem', color: '#94a3b8', cursor: 'pointer', padding: 0 }}
+            >
+              ✖
+            </button>
           )}
         </div>
       </div>
@@ -90,7 +96,12 @@ export default function SearchPage({
             <div style={{ fontSize: '3rem', marginBottom: '10px' }}>⌨️</div>
             <p style={{ fontWeight: '600', fontSize: '1.1rem' }}>Type to start searching...</p>
           </div>
-        ) : displayItems.length === 0 && debouncedQuery.length > 0 ? (
+        ) : isTyping ? (
+          <div style={{ textAlign: 'center', padding: '40px 20px', color: '#64748b' }}>
+            <p style={{ fontWeight: 'bold', fontSize: '1.1rem', animation: 'pulse 1.5s infinite' }}>Searching 3,000+ items...</p>
+            <style>{`@keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }`}</style>
+          </div>
+        ) : displayItems.length === 0 ? (
           <div style={{ textAlign: 'center', padding: '40px 20px', color: '#64748b' }}>
             <div style={{ fontSize: '3rem', marginBottom: '10px' }}>🔍</div>
             <p style={{ fontWeight: 'bold' }}>No products found for "{query}"</p>
@@ -129,5 +140,5 @@ export default function SearchPage({
     </div>,
     document.body
   );
-} // 👈 Added the missing bracket here!
-                                                                                  
+              }
+                       
