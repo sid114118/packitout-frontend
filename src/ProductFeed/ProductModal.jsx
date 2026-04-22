@@ -37,7 +37,8 @@ const Accordion = ({ title, children, defaultOpen = false }) => {
   );
 };
 
-export default function ProductModal({ product, isOpen, onClose, onAddToCart, onRemoveFromCart, onViewCart, allItems = [], cart = [], onViewBrand }) {
+// 🟢 ADDED onOpenDetails to the props here!
+export default function ProductModal({ product, isOpen, onClose, onAddToCart, onRemoveFromCart, onViewCart, allItems = [], cart = [], onViewBrand, onOpenDetails }) {
   const [currentProduct, setCurrentProduct] = useState(null);
   const [selectedVariant, setSelectedVariant] = useState(null);
   const [productReviews, setProductReviews] = useState([]);
@@ -56,11 +57,14 @@ export default function ProductModal({ product, isOpen, onClose, onAddToCart, on
     }
   }, [isOpen, onClose]);
 
-  // SET INITIAL PRODUCT
+  // SET INITIAL PRODUCT & SCROLL TO TOP ON CHANGE
   useEffect(() => {
     if (product) {
       setCurrentProduct(product);
       setSelectedVariant(product);
+      // 🚀 Smoothly jump back to the top when a Cross-Sell item is clicked
+      const el = document.getElementById('product-page-scroll');
+      if (el) el.scrollTo({ top: 0, behavior: 'smooth' });
     }
   }, [product]);
 
@@ -265,12 +269,14 @@ export default function ProductModal({ product, isOpen, onClose, onAddToCart, on
             </div>
           </Accordion>
 
+          {/* 🟢 ADDED onProductClick mapped to onOpenDetails */}
           <CrossSellSlider 
             allItems={allItems} 
             currentProduct={selectedVariant} 
             onAddToCart={onAddToCart} 
             onRemoveFromCart={onRemoveFromCart}
             cart={safeCart}
+            onProductClick={onOpenDetails} 
           />
           
           {/* 💬 REVIEWS SECTION */}
@@ -299,4 +305,4 @@ export default function ProductModal({ product, isOpen, onClose, onAddToCart, on
       )}
     </div>
   );
-}
+              }
