@@ -37,7 +37,6 @@ const Accordion = ({ title, children, defaultOpen = false }) => {
   );
 };
 
-// 🟢 ADDED onOpenDetails to the props here!
 export default function ProductModal({ product, isOpen, onClose, onAddToCart, onRemoveFromCart, onViewCart, allItems = [], cart = [], onViewBrand, onOpenDetails }) {
   const [currentProduct, setCurrentProduct] = useState(null);
   const [selectedVariant, setSelectedVariant] = useState(null);
@@ -47,7 +46,7 @@ export default function ProductModal({ product, isOpen, onClose, onAddToCart, on
   const BASE_URL = "https://darkslategrey-snail-415133.hostingersite.com";
   const BOTTOM_NAV_HEIGHT = '56px';
 
-  // 🛡️ MOBILE BACK BUTTON & POPSTATE
+  // 🛡️ MOBILE BACK BUTTON
   useEffect(() => {
     if (isOpen) {
       window.history.pushState({ modalOpen: true }, '');
@@ -57,18 +56,17 @@ export default function ProductModal({ product, isOpen, onClose, onAddToCart, on
     }
   }, [isOpen, onClose]);
 
-  // SET INITIAL PRODUCT & SCROLL TO TOP ON CHANGE
+  // SET INITIAL PRODUCT
   useEffect(() => {
     if (product) {
       setCurrentProduct(product);
       setSelectedVariant(product);
-      // 🚀 Smoothly jump back to the top when a Cross-Sell item is clicked
       const el = document.getElementById('product-page-scroll');
-      if (el) el.scrollTo({ top: 0, behavior: 'smooth' });
+      if (el) el.scrollTo({ top: 0, behavior: 'instant' });
     }
   }, [product]);
 
-  // 📝 FETCH DYNAMIC REVIEWS FOR THIS PRODUCT
+  // 📝 FETCH DYNAMIC REVIEWS
   useEffect(() => {
     if (isOpen && selectedVariant?._id) {
       setLoadingReviews(true);
@@ -82,8 +80,23 @@ export default function ProductModal({ product, isOpen, onClose, onAddToCart, on
     }
   }, [isOpen, selectedVariant?._id]);
 
+  // 🚀 THE BULLETPROOF CLICK FIX FOR CROSS-SELL SLIDER
+  const handleRelatedProductClick = (clickedProduct) => {
+    // 1. Instantly swap the modal's data to the new product
+    setCurrentProduct(clickedProduct);
+    setSelectedVariant(clickedProduct);
+    
+    // 2. Smoothly scroll back to the top of the modal
+    const el = document.getElementById('product-page-scroll');
+    if (el) el.scrollTo({ top: 0, behavior: 'smooth' });
+
+    // 3. Inform the parent component so the state stays perfectly synced
+    if (onOpenDetails) {
+      onOpenDetails(clickedProduct);
+    }
+  };
+
   const safeCart = Array.isArray(cart) ? cart.filter(item => item !== null) : [];
-  
   if (!isOpen || !currentProduct || !selectedVariant) return null;
 
   const mrp = Number(selectedVariant.mrp || 0);
@@ -134,7 +147,6 @@ export default function ProductModal({ product, isOpen, onClose, onAddToCart, on
           
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginTop: '6px' }}>
              <p style={{ fontSize: '0.85rem', color: '#64748b', margin: 0, fontWeight: '500' }}>{selectedVariant.qnty}</p>
-             {/* Dynamic Rating Badge */}
              {productReviews.length > 0 && (
                 <div style={{ display: 'flex', alignItems: 'center', gap: '3px', backgroundColor: '#f0fdf4', padding: '2px 6px', borderRadius: '6px', fontSize: '0.75rem', fontWeight: '800', color: '#166534', border: '1px solid #dcfce7' }}>
                    ⭐ {(productReviews.reduce((a, b) => a + b.rating, 0) / productReviews.length).toFixed(1)}
@@ -224,7 +236,7 @@ export default function ProductModal({ product, isOpen, onClose, onAddToCart, on
               <HighlightRow label="Dietary" value={selectedVariant.isVeg ? 'Veg' : 'Non-Veg'} />
               <HighlightRow label="Manufacturer" value={selectedVariant.manufacturer} />
               <HighlightRow label="Address" value={selectedVariant.manufactureraddress} />
-              {/* 🥗 MODERN NUTRITIONAL GRID UI */}
+              
               {(() => {
                 const nutrients = [
                   { label: 'Energy', value: selectedVariant.energy },
@@ -264,22 +276,19 @@ export default function ProductModal({ product, isOpen, onClose, onAddToCart, on
                   </div>
                 );
               })()}
-
-              
             </div>
           </Accordion>
 
-          {/* 🟢 ADDED onProductClick mapped to onOpenDetails */}
+          {/* 🟢 THE FIX IS APPLIED HERE: Using our new custom click function! */}
           <CrossSellSlider 
             allItems={allItems} 
             currentProduct={selectedVariant} 
             onAddToCart={onAddToCart} 
             onRemoveFromCart={onRemoveFromCart}
             cart={safeCart}
-            onProductClick={onOpenDetails} 
+            onProductClick={handleRelatedProductClick} 
           />
           
-          {/* 💬 REVIEWS SECTION */}
           <div style={{ marginTop: '20px' }}>
              <h3 style={{ fontSize: '1rem', fontWeight: '800', color: '#111827', marginBottom: '15px' }}>Ratings & Reviews</h3>
              {loadingReviews ? (
@@ -288,7 +297,6 @@ export default function ProductModal({ product, isOpen, onClose, onAddToCart, on
                 <ReviewSection reviews={productReviews} readOnly={true} />
              ) : (
                 <div style={{ padding: '20px', textAlign: 'center', backgroundColor: '#f8fafc', borderRadius: '12px', border: '1px dashed #e2e8f0' }}>
-                   {/* 🛡️ UPDATED: Removed "Be the first to rate it" text */}
                    <p style={{ margin: 0, fontSize: '0.85rem', color: '#94a3b8', fontWeight: '600' }}>No reviews yet for this product.</p>
                 </div>
              )}
@@ -296,7 +304,6 @@ export default function ProductModal({ product, isOpen, onClose, onAddToCart, on
         </div>
       </div>
 
-      {/* Floating View Cart Bar */}
       {cartTotalItems > 0 && (
         <div onClick={() => { window.history.back(); setTimeout(onViewCart, 100); }} style={{ position: 'absolute', bottom: '15px', left: '12px', right: '12px', backgroundColor: '#0c831f', color: '#fff', padding: '12px 16px', borderRadius: '12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontWeight: '700', fontSize: '0.9rem', boxShadow: '0 8px 20px rgba(12, 131, 31, 0.3)', zIndex: 1000 }}>
           <span>{cartTotalItems} items | ₹{cartTotalPrice}</span>
@@ -305,4 +312,4 @@ export default function ProductModal({ product, isOpen, onClose, onAddToCart, on
       )}
     </div>
   );
-              }
+               }
