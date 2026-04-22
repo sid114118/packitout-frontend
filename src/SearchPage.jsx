@@ -15,10 +15,22 @@ export default function SearchPage({
 }) {
   const [query, setQuery] = useState("");
   const [debouncedQuery, setDebouncedQuery] = useState(""); 
-  const inputRef = useRef(null); // 👈 We brought the Ref back to control the keyboard!
+  
+  // 🌟 NEW: Recent Searches State
+  const [recentSearches, setRecentSearches] = useState([]);
+  
+  const inputRef = useRef(null); 
   const BOTTOM_NAV_HEIGHT = '56px';
 
-  // 🚀 DEBOUNCE ENGINE: Waits 300ms before running the heavy search
+  // 🌟 NEW: Load Recent Searches on mount
+  useEffect(() => {
+    const savedSearches = localStorage.getItem('packitout_recent_searches');
+    if (savedSearches) {
+      setRecentSearches(JSON.parse(savedSearches));
+    }
+  }, []);
+
+  // 🚀 DEBOUNCE ENGINE
   useEffect(() => {
     const timer = setTimeout(() => {
       setDebouncedQuery(query);
@@ -26,11 +38,23 @@ export default function SearchPage({
     return () => clearTimeout(timer);
   }, [query]);
 
+  // 🌟 NEW: Save successful searches to Recent Searches
+  useEffect(() => {
+    if (debouncedQuery.trim().length > 2) { // Only save if they typed at least 3 letters
+      setRecentSearches(prev => {
+        const term = debouncedQuery.trim();
+        // Remove duplicates and keep only top 5
+        const updated = [term, ...prev.filter(q => q.toLowerCase() !== term.toLowerCase())].slice(0, 5);
+        localStorage.setItem('packitout_recent_searches', JSON.stringify(updated));
+        return updated;
+      });
+    }
+  }, [debouncedQuery]);
+
   // Lock background scroll & safely trigger keyboard on load
   useEffect(() => {
     document.body.style.overflow = 'hidden';
     
-    // Gentle delay to let the animation finish before popping the keyboard
     const focusTimer = setTimeout(() => {
       if (inputRef.current) inputRef.current.focus();
     }, 100);
@@ -65,17 +89,32 @@ export default function SearchPage({
 
   const isTyping = query.trim().length > 0 && query !== debouncedQuery;
 
+  // Helper functions for recent searches
+  const handleClearRecent = () => {
+    setRecentSearches([]);
+    localStorage.removeItem('packitout_recent_searches');
+  };
+
+  const handleRecentClick = (term) => {
+    setQuery(term);
+    setDebouncedQuery(term);
+    inputRef.current?.focus();
+  };
+
   return createPortal(
     <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: BOTTOM_NAV_HEIGHT, backgroundColor: '#fff', zIndex: 999999, overflowY: 'auto', animation: 'fadeIn 0.2s ease', paddingBottom: cartTotalItems > 0 ? '120px' : '40px' }}>
       <style>{`@keyframes fadeIn { from { opacity: 0; transform: translateY(15px); } to { opacity: 1; transform: translateY(0); } }`}</style>
       
-      {/* 🌟 SEARCH HEADER 🌟 */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '15px', position: 'sticky', top: 0, backgroundColor: '#fff', zIndex: 2000, borderBottom: '1px solid #f1f5f9', boxShadow: '0 2px 4px rgba(0,0,0,0.02)' }}>
-        <button onClick={onClose} style={{ background: 'none', border: 'none', fontSize: '1.5rem', cursor: 'pointer', padding: '0 5px', color: '#334155', display: 'flex', alignItems: 'center' }}>
-          ←
-        </button>
-        <div style={{ flex: 1, display: 'flex', alignItems: 'center', backgroundColor: '#f1f5f9', borderRadius: '12px', padding: '8px 12px' }}>
-          <span style={{ marginRight: '8px', fontSize: '1.1rem' }}>🔍</span>
+      {/* 🌟 UPDATED SEARCH HEADER 🌟 */}
+      <div style={{ padding: '15px', position: 'sticky', top: 0, backgroundColor: '#fff', zIndex: 2000, borderBottom: '1px solid #f1f5f9', boxShadow: '0 2px 4px rgba(0,0,0,0.02)' }}>
+        
+        {/* Everything inside the grey background now! */}
+        <div style={{ display: 'flex', alignItems: 'center', backgroundColor: '#f1f5f9', borderRadius: '12px', padding: '8px 12px' }}>
+          
+          {/* Back button moved INSIDE the bar, icon removed */}
+          <button onClick={onClose} style={{ background: 'none', border: 'none', fontSize: '1.4rem', cursor: 'pointer', padding: '0 10px 0 0', color: '#475569', display: 'flex', alignItems: 'center' }}>
+            ←
+          </button>
           
           {/* 🟢 THE FIXED INPUT BAR */}
           <input
@@ -84,7 +123,7 @@ export default function SearchPage({
             placeholder='Search "Maggi", "Milk"...'
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            onClick={() => inputRef.current?.focus()} // 👈 Forces keyboard to open on tap
+            onClick={() => inputRef.current?.focus()} 
             style={{ 
               border: 'none', 
               outline: 'none', 
@@ -93,7 +132,6 @@ export default function SearchPage({
               fontWeight: '500', 
               backgroundColor: 'transparent', 
               color: '#111827',
-              // 🛡️ THE MAGIC FIX FOR MOBILE TYPING BUGS:
               userSelect: 'auto',
               WebkitUserSelect: 'auto',
               touchAction: 'manipulation'
@@ -105,7 +143,7 @@ export default function SearchPage({
               onClick={() => { 
                 setQuery(""); 
                 setDebouncedQuery(""); 
-                inputRef.current?.focus(); // Keeps keyboard open when clearing text
+                inputRef.current?.focus(); 
               }} 
               style={{ background: 'none', border: 'none', fontSize: '1.2rem', color: '#94a3b8', cursor: 'pointer', padding: 0 }}
             >
@@ -115,13 +153,36 @@ export default function SearchPage({
         </div>
       </div>
 
-      {/* 🌟 SEARCH RESULTS 🌟 */}
+      {/* 🌟 SEARCH RESULTS & RECENT 🌟 */}
       <div style={{ padding: '15px' }}>
         {query.trim().length === 0 ? (
-          <div style={{ textAlign: 'center', padding: '60px 20px', color: '#94a3b8' }}>
-            <div style={{ fontSize: '3rem', marginBottom: '10px' }}>⌨️</div>
-            <p style={{ fontWeight: '600', fontSize: '1.1rem' }}>Type to start searching...</p>
-          </div>
+          
+          // 🌟 NEW: SHOW RECENT SEARCHES OR EMPTY STATE
+          recentSearches.length > 0 ? (
+            <div style={{ padding: '5px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+                <h3 style={{ margin: 0, fontSize: '1.05rem', color: '#111827', fontWeight: '800' }}>Recent Searches</h3>
+                <button onClick={handleClearRecent} style={{ background: 'none', border: 'none', color: '#ef4444', fontSize: '0.85rem', fontWeight: '700', cursor: 'pointer' }}>Clear</button>
+              </div>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px' }}>
+                {recentSearches.map((term, i) => (
+                  <div 
+                    key={i} 
+                    onClick={() => handleRecentClick(term)} 
+                    style={{ padding: '8px 16px', backgroundColor: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '20px', fontSize: '0.95rem', color: '#334155', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', fontWeight: '500' }}
+                  >
+                    <span style={{color: '#94a3b8', fontSize: '0.85rem'}}>🕒</span> {term}
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : (
+            <div style={{ textAlign: 'center', padding: '60px 20px', color: '#94a3b8' }}>
+              <div style={{ fontSize: '3rem', marginBottom: '10px' }}>⌨️</div>
+              <p style={{ fontWeight: '600', fontSize: '1.1rem' }}>Type to start searching...</p>
+            </div>
+          )
+
         ) : isTyping ? (
           <div style={{ textAlign: 'center', padding: '40px 20px', color: '#64748b' }}>
             <p style={{ fontWeight: 'bold', fontSize: '1.1rem', animation: 'pulse 1.5s infinite' }}>Searching 3,000+ items...</p>
@@ -166,5 +227,4 @@ export default function SearchPage({
     </div>,
     document.body
   );
-            }
-          
+                       }
