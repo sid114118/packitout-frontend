@@ -13,7 +13,7 @@ import OrderSuccess from './OrderSuccess.jsx';
 import BottomNav from './BottomNav.jsx';
 import Nearby from './Nearby.jsx';
 import ShopDetail from './ShopDetail.jsx';
-
+import Footer from './Footer.jsx';
 class CrashCatcher extends React.Component {
   constructor(props) { super(props); this.state = { err: null, info: null }; }
   componentDidCatch(error, info) { this.setState({ err: error.toString(), info: info.componentStack }); }
