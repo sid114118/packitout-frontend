@@ -1,6 +1,6 @@
 import React, { memo } from 'react';
 
-// 📋 1. FIXED VARIANT SELECTION SHEET (Kept functional, updated fonts)
+// 📋 1. FIXED VARIANT SELECTION SHEET 
 export function VariantBottomSheet({ product, onClose, onAddToCart }) {
   if (!product) return null;
   return (
@@ -41,7 +41,7 @@ export function VariantBottomSheet({ product, onClose, onAddToCart }) {
   );
 }
 
-// 💎 2. HIGH-PERFORMANCE MODERN PRODUCT CARD (Fully Redesigned)
+// 💎 2. HIGH-PERFORMANCE MODERN PRODUCT CARD (Zepto/Instamart Standard Layout)
 const ModernProductCardBase = ({ item, isCarousel, shopClosed, onOpenDetails, onQuickAdd, cart = [], onRemoveFromCart }) => {
   const isOutOfStock = !item.inStock;
   
@@ -58,11 +58,10 @@ const ModernProductCardBase = ({ item, isCarousel, shopClosed, onOpenDetails, on
     <div 
       onClick={() => onOpenDetails(item)} 
       style={{ 
-        minWidth: isCarousel ? '135px' : 'auto', 
-        maxWidth: isCarousel ? '145px' : 'auto', 
+        minWidth: isCarousel ? '145px' : 'auto', 
+        maxWidth: isCarousel ? '155px' : 'auto', 
         flexShrink: 0, 
-        // 🌟 FIX 2: Removed harsh border, added soft premium shadow and rounded corners
-        border: 'none', 
+        border: '1px solid #f1f5f9', // Very soft border
         borderRadius: '16px', 
         padding: '10px', 
         backgroundColor: '#fff', 
@@ -70,51 +69,69 @@ const ModernProductCardBase = ({ item, isCarousel, shopClosed, onOpenDetails, on
         opacity: isOutOfStock ? 0.6 : 1, 
         filter: isOutOfStock ? 'grayscale(80%)' : 'none', 
         cursor: 'pointer', 
-        boxShadow: '0 4px 15px rgba(0,0,0,0.04)', 
+        boxShadow: '0 4px 12px rgba(0,0,0,0.03)', 
         scrollSnapAlign: 'start',
-        // 🌟 FIX 1: Enforced clean sans-serif font
         fontFamily: 'system-ui, -apple-system, sans-serif',
         display: 'flex',
         flexDirection: 'column',
-        justifyContent: 'space-between'
       }}
     >
+      {/* 🖼️ 1. CLEAN IMAGE SECTION (No floating buttons blocking it!) */}
       <div style={{ position: 'relative', height: '110px', width: '100%', display: 'flex', justifyContent: 'center', alignItems: 'center', backgroundColor: '#f8fafc', borderRadius: '12px', marginBottom: '12px' }}>
-        {item.isDiscounted && !isOutOfStock && <span style={{ position: 'absolute', top: '0', left: '0', backgroundColor: '#ef4444', color: '#fff', fontSize: '0.65rem', fontWeight: '800', padding: '3px 6px', borderRadius: '12px 0 8px 0', zIndex: 1, textTransform: 'uppercase' }}>{item.discountPercent}% OFF</span>}
-        
-        {item.image ? <img src={item.image} alt={safeName} loading="lazy" style={{ maxHeight: '85%', maxWidth: '85%', objectFit: 'contain', mixBlendMode: 'multiply' }} /> : <span style={{fontSize: '40px'}}>{item.emoji}</span>}
-        
-        {!isOutOfStock && !shopClosed && (
-          <div style={{ position: 'absolute', bottom: '-14px', right: '50%', transform: 'translateX(50%)' }} onClick={(e) => e.stopPropagation()}>
-            {cartCount > 0 ? (
-              <div style={{ display: 'flex', alignItems: 'center', backgroundColor: '#ef4444', borderRadius: '8px', height: '32px', width: '76px', boxShadow: '0 4px 10px rgba(239, 68, 68, 0.3)' }}>
-                <button onClick={() => onRemoveFromCart(item)} style={{ flex: 1, height: '100%', border: 'none', background: 'transparent', color: '#fff', fontSize: '1.2rem', fontWeight: 'bold', cursor: 'pointer' }}>−</button>
-                <span style={{ color: '#fff', fontSize: '0.9rem', fontWeight: '800', minWidth: '16px', textAlign: 'center' }}>{cartCount}</span>
-                <button onClick={() => onQuickAdd(item)} style={{ flex: 1, height: '100%', border: 'none', background: 'transparent', color: '#fff', fontSize: '1.2rem', fontWeight: 'bold', cursor: 'pointer' }}>+</button>
-              </div>
-            ) : (
-              // 🌟 FIX 4: Updated ADD button to be solid, pill-shaped, and aligned with your red theme
-              <button 
-                onClick={() => onQuickAdd(item)} 
-                style={{ backgroundColor: '#fff', color: '#ef4444', border: '1px solid #fca5a5', borderRadius: '8px', padding: '6px 20px', fontSize: '0.85rem', fontWeight: '800', cursor: 'pointer', boxShadow: '0 4px 6px rgba(0,0,0,0.05)', textTransform: 'uppercase', letterSpacing: '0.5px' }}
-              >
-                ADD
-              </button>
-            )}
-          </div>
+        {item.isDiscounted && !isOutOfStock && (
+          <span style={{ position: 'absolute', top: '0', left: '0', backgroundColor: '#ef4444', color: '#fff', fontSize: '0.65rem', fontWeight: '800', padding: '4px 8px', borderRadius: '12px 0 8px 0', zIndex: 1, textTransform: 'uppercase' }}>
+            {item.discountPercent}% OFF
+          </span>
         )}
+        {item.image ? <img src={item.image} alt={safeName} loading="lazy" style={{ maxHeight: '85%', maxWidth: '85%', objectFit: 'contain', mixBlendMode: 'multiply' }} /> : <span style={{fontSize: '40px'}}>{item.emoji}</span>}
       </div>
       
-      <div style={{ paddingTop: '8px' }}>
-        <p style={{ fontSize: '0.75rem', color: '#64748b', margin: '0 0 4px 0', fontWeight: '600' }}>
-          {item.qnty || "1 pc"}
-        </p>
-        <h4 style={{ fontSize: '0.85rem', margin: '0 0 8px 0', color: '#0f172a', fontWeight: '700', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden', textOverflow: 'ellipsis', height: '2.4em', lineHeight: '1.3em' }}>
-          {displayTitle}
-        </h4>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-          <span style={{ fontWeight: '800', fontSize: '0.95rem', color: '#0f172a' }}>₹{item.sellingPrice || item.mrp}</span>
-          {item.isDiscounted && <span style={{ fontSize: '0.75rem', color: '#94a3b8', textDecoration: 'line-through', fontWeight: '500' }}>₹{item.mrp}</span>}
+      {/* 📝 2. TEXT SECTION (Pushes the bottom row down evenly) */}
+      <div style={{ display: 'flex', flexDirection: 'column', flexGrow: 1, justifyContent: 'space-between' }}>
+        <div>
+          <p style={{ fontSize: '0.75rem', color: '#64748b', margin: '0 0 4px 0', fontWeight: '600' }}>
+            {item.qnty || "1 pc"}
+          </p>
+          <h4 style={{ fontSize: '0.85rem', margin: '0 0 12px 0', color: '#0f172a', fontWeight: '700', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden', textOverflow: 'ellipsis', height: '2.5em', lineHeight: '1.25em' }}>
+            {displayTitle}
+          </h4>
+        </div>
+
+        {/* 💵 3. THE SPLIT BOTTOM ROW (Price Left | ADD Right) */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 'auto' }}>
+          
+          {/* Price Block */}
+          <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+            {item.isDiscounted && (
+              <span style={{ fontSize: '0.7rem', color: '#94a3b8', textDecoration: 'line-through', fontWeight: '500', marginBottom: '-2px' }}>
+                ₹{item.mrp}
+              </span>
+            )}
+            <span style={{ fontWeight: '800', fontSize: '1.05rem', color: '#0f172a' }}>
+              ₹{item.sellingPrice || item.mrp}
+            </span>
+          </div>
+
+          {/* Action Button */}
+          <div onClick={(e) => e.stopPropagation()}>
+            {!isOutOfStock && !shopClosed && (
+              cartCount > 0 ? (
+                <div style={{ display: 'flex', alignItems: 'center', backgroundColor: '#ef4444', borderRadius: '8px', height: '32px', width: '70px', boxShadow: '0 4px 10px rgba(239, 68, 68, 0.25)' }}>
+                  <button onClick={() => onRemoveFromCart(item)} style={{ flex: 1, height: '100%', border: 'none', background: 'transparent', color: '#fff', fontSize: '1.2rem', fontWeight: 'bold', cursor: 'pointer' }}>−</button>
+                  <span style={{ color: '#fff', fontSize: '0.85rem', fontWeight: '800', minWidth: '16px', textAlign: 'center' }}>{cartCount}</span>
+                  <button onClick={() => onQuickAdd(item)} style={{ flex: 1, height: '100%', border: 'none', background: 'transparent', color: '#fff', fontSize: '1.2rem', fontWeight: 'bold', cursor: 'pointer' }}>+</button>
+                </div>
+              ) : (
+                <button 
+                  onClick={() => onQuickAdd(item)} 
+                  style={{ backgroundColor: '#fff', color: '#ef4444', border: '1px solid #fca5a5', borderRadius: '8px', padding: '6px 16px', fontSize: '0.8rem', fontWeight: '800', cursor: 'pointer', boxShadow: '0 2px 4px rgba(0,0,0,0.04)', textTransform: 'uppercase' }}
+                >
+                  ADD
+                </button>
+              )
+            )}
+          </div>
+
         </div>
       </div>
     </div>
@@ -153,10 +170,8 @@ export function ProductRow({ title, subtitle, items, onViewAll, shopClosed, onOp
   });
 
   return (
-    // 🌟 FIX: Removed white background from row container to match global feed background, adding padding to edge
     <div style={{ marginBottom: '16px', paddingTop: '15px', fontFamily: 'system-ui, -apple-system, sans-serif' }}>
       
-      {/* 🌟 CSS FIX: Injecting a style tag to completely kill webkit scrollbars for the carousels */}
       <style>{`
         .premium-hide-scroll::-webkit-scrollbar { display: none !important; }
         .premium-hide-scroll { -ms-overflow-style: none !important; scrollbar-width: none !important; padding-bottom: 20px !important; margin-bottom: -20px !important; }
@@ -188,4 +203,4 @@ export function ProductRow({ title, subtitle, items, onViewAll, shopClosed, onOp
       </div>
     </div>
   );
-}
+        }
