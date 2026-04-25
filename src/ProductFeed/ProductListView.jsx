@@ -35,6 +35,18 @@ export default function ProductListView({
     return () => { document.body.style.overflow = ''; };
   }, []);
 
+  // 🚀 FLATTEN THE VARIANTS FOR THE LIST VIEW
+  const flattenedItems = items.flatMap(item => {
+    if (item.variants && item.variants.length > 0) {
+      return item.variants.map(variant => ({
+        ...item, 
+        ...variant, 
+        variants: item.variants // Keep the array attached so Modal still works
+      }));
+    }
+    return item;
+  });
+
   return createPortal(
     <div 
       style={{ 
@@ -58,7 +70,6 @@ export default function ProductListView({
         
         {/* Left Side: Back Button & Title */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
-          {/* 🛡️ UPDATED: Uses history.back() to pop the state safely */}
           <button 
             onClick={() => window.history.back()} 
             style={{ backgroundColor: '#f1f5f9', border: '1px solid #cbd5e1', padding: '8px 16px', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold', color: '#334155' }}
@@ -78,11 +89,11 @@ export default function ProductListView({
 
       </div>
       
-      {/* Product Grid */}
+      {/* Product Grid - NOW MAPPING OVER FLATTENED ITEMS */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: '12px' }}>
-        {items.map(item => (
+        {flattenedItems.map((item, index) => (
           <ModernProductCard 
-            key={item._id} 
+            key={`${item._id}-${index}`} 
             item={item} 
             isCarousel={false} 
             shopClosed={shopClosed} 
