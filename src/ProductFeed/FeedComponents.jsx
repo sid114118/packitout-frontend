@@ -41,7 +41,7 @@ export function VariantBottomSheet({ product, onClose, onAddToCart }) {
   );
 }
 
-// 💎 2. HIGH-PERFORMANCE MODERN PRODUCT CARD (Base Component)
+// 💎 2. HIGH-PERFORMANCE MODERN PRODUCT CARD
 const ModernProductCardBase = ({ item, isCarousel, shopClosed, onOpenDetails, onQuickAdd, cart = [], onRemoveFromCart }) => {
   const isOutOfStock = !item.inStock;
   
@@ -144,16 +144,29 @@ export function ProductRow({ title, subtitle, items, onViewAll, shopClosed, onOp
     return item;
   });
 
-  // 2. 🧠 FOR THE CAROUSEL: Only show ONE representative size per product (the first one)
-  const carouselItems = items.map(item => {
-    if (item.variants && item.variants.length > 0) {
-      return {
+  // 2. 🧠 FOR THE CAROUSEL: THE DEDUPLICATOR (Clever Shopkeeper Logic)
+  const seenGroups = new Set();
+  const carouselItems = [];
+
+  items.forEach(item => {
+    // Look for the group ID, if it doesn't exist, just use the product name
+    const identifier = item.itemGroupId && String(item.itemGroupId).trim() !== "nan" 
+      ? item.itemGroupId 
+      : item.name;
+
+    // If we haven't seen this group yet, add it to the carousel!
+    if (!seenGroups.has(identifier)) {
+      seenGroups.add(identifier);
+      
+      // Make sure we format the first size correctly
+      const displayItem = (item.variants && item.variants.length > 0) ? {
         ...item,
-        ...item.variants[0], // Use the first size's price/image as the "Display Model"
-        variants: item.variants // Keep the array attached so the Bottom Sheet still works!
-      };
+        ...item.variants[0], 
+        variants: item.variants 
+      } : item;
+
+      carouselItems.push(displayItem);
     }
-    return item;
   });
 
   return (
@@ -163,7 +176,6 @@ export function ProductRow({ title, subtitle, items, onViewAll, shopClosed, onOp
           <h2 style={{ fontSize: '1.1rem', margin: 0, color: '#111827', fontWeight: 'bold' }}>{title}</h2>
           {subtitle && <p style={{ fontSize: '0.75rem', margin: '2px 0 0 0', color: '#6b7280' }}>{subtitle}</p>}
         </div>
-        {/* 🟢 Safely removed the comment to fix the syntax error */}
         {onViewAll && (
           <button onClick={() => onViewAll({ title, items: flattenedItems })} style={{ backgroundColor: '#111827', color: '#fff', border: 'none', borderRadius: '50%', width: '28px', height: '28px', display: 'flex', justifyContent: 'center', alignItems: 'center', fontSize: '1rem', cursor: 'pointer' }}>➔</button>
         )}
@@ -185,4 +197,4 @@ export function ProductRow({ title, subtitle, items, onViewAll, shopClosed, onOp
       </div>
     </div>
   );
-                                                                                      }
+}
