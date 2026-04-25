@@ -44,12 +44,19 @@ export function VariantBottomSheet({ product, onClose, onAddToCart }) {
 // 💎 2. HIGH-PERFORMANCE MODERN PRODUCT CARD (Base Component)
 const ModernProductCardBase = ({ item, isCarousel, shopClosed, onOpenDetails, onQuickAdd, cart = [], onRemoveFromCart }) => {
   const isOutOfStock = !item.inStock;
+  
   const isMultiVariant = item.variants && item.variants.length > 1;
   const variantIds = isMultiVariant ? item.variants.map(v => v._id) : [item._id];
   
-  // 🛡️ SAFE MATH: Prevent .filter crash
   const safeCart = Array.isArray(cart) ? cart.filter(c => c !== null) : [];
   const cartCount = safeCart.filter(c => variantIds.includes(c._id)).reduce((sum, c) => sum + (c.qty || 1), 0);
+
+  // 🧠 SMART TITLE LOGIC: Prevents "Amul Amul Milk"
+  const safeBrand = (item.brand && item.brand !== "nan") ? item.brand : "";
+  const safeName = item.name || "";
+  const displayTitle = (safeBrand && !safeName.toLowerCase().includes(safeBrand.toLowerCase())) 
+    ? `${safeBrand} ${safeName}` 
+    : safeName;
 
   return (
     <div 
@@ -58,7 +65,7 @@ const ModernProductCardBase = ({ item, isCarousel, shopClosed, onOpenDetails, on
     >
       <div style={{ position: 'relative', height: '110px', width: '100%', display: 'flex', justifyContent: 'center', alignItems: 'center', backgroundColor: '#f9fafb', borderRadius: '6px', marginBottom: '16px' }}>
         {item.isDiscounted && !isOutOfStock && <span style={{ position: 'absolute', top: 0, left: '-8px', backgroundColor: '#0f9d58', color: '#fff', fontSize: '0.7rem', fontWeight: 'bold', padding: '2px 6px', borderRadius: '0 8px 8px 0', zIndex: 1 }}>↓{item.discountPercent}%</span>}
-        {item.image ? <img src={item.image} alt={item.name} loading="lazy" style={{ maxHeight: '90%', maxWidth: '90%', objectFit: 'contain' }} /> : <span style={{fontSize: '40px'}}>{item.emoji}</span>}
+        {item.image ? <img src={item.image} alt={safeName} loading="lazy" style={{ maxHeight: '90%', maxWidth: '90%', objectFit: 'contain' }} /> : <span style={{fontSize: '40px'}}>{item.emoji}</span>}
         
         {!isOutOfStock && !shopClosed && (
           <div style={{ position: 'absolute', bottom: '-14px', right: '4px' }} onClick={(e) => e.stopPropagation()}>
@@ -86,10 +93,15 @@ const ModernProductCardBase = ({ item, isCarousel, shopClosed, onOpenDetails, on
         )}
       </div>
       <div>
-        <p style={{ fontSize: '0.75rem', color: '#6b7280', margin: '0 0 4px 0', minHeight: '14px' }}>{item.qnty || "1 pc"} {isMultiVariant && <span style={{color: '#d97706', fontWeight: 'bold'}}> ({item.variants.length} sizes)</span>}</p>
-        <h4 style={{ fontSize: '0.85rem', margin: '0 0 8px 0', color: '#111827', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden', textOverflow: 'ellipsis', height: '2.4em', lineHeight: '1.2em' }}>{item.brand ? `${item.brand} ` : ''}{item.name}</h4>
+        <p style={{ fontSize: '0.75rem', color: '#6b7280', margin: '0 0 4px 0', minHeight: '14px' }}>
+          {item.qnty || "1 pc"} {isMultiVariant && <span style={{color: '#d97706', fontWeight: 'bold'}}> ({item.variants.length} sizes)</span>}
+        </p>
+        {/* 🟢 SMART TITLE RENDERED HERE */}
+        <h4 style={{ fontSize: '0.85rem', margin: '0 0 8px 0', color: '#111827', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden', textOverflow: 'ellipsis', height: '2.4em', lineHeight: '1.2em' }}>
+          {displayTitle}
+        </h4>
         <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-          <span style={{ backgroundColor: '#fef08a', padding: '2px 6px', borderRadius: '4px', fontWeight: 'bold', fontSize: '0.85rem', color: '#000' }}>₹{item.sellingPrice}</span>
+          <span style={{ backgroundColor: '#fef08a', padding: '2px 6px', borderRadius: '4px', fontWeight: 'bold', fontSize: '0.85rem', color: '#000' }}>₹{item.sellingPrice || item.mrp}</span>
           {item.isDiscounted && <span style={{ fontSize: '0.75rem', color: '#9ca3af', textDecoration: 'line-through' }}>₹{item.mrp}</span>}
         </div>
       </div>
@@ -106,7 +118,6 @@ const areCardsEqual = (prevProps, nextProps) => {
     ? prevProps.item.variants.map(v => v._id)
     : [prevProps.item._id];
 
-  // 🛡️ SAFE MATH: Prevent crashes if cart array is missing during a re-render
   const safePrevCart = Array.isArray(prevProps.cart) ? prevProps.cart : [];
   const safeNextCart = Array.isArray(nextProps.cart) ? nextProps.cart : [];
 
@@ -121,6 +132,19 @@ export const ModernProductCard = memo(ModernProductCardBase, areCardsEqual);
 // 🛤️ 3. THE MISSING PRODUCT ROW
 export function ProductRow({ title, subtitle, items, onViewAll, shopClosed, onOpenDetails, onQuickAdd, cart = [], onRemoveFromCart }) {
   if (!items || items.length === 0) return null;
+
+  // 🚀 FLATTEN THE VARIANTS
+  const flattenedItems = items.flatMap(item => {
+    if (item.variants && item.variants.length > 0) {
+      return item.variants.map(variant => ({
+        ...item,      
+        ...variant,   
+        variants: item.variants 
+      }));
+    }
+    return item;
+  });
+
   return (
     <div style={{ marginBottom: '24px', backgroundColor: '#fff', padding: '15px 0' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px', padding: '0 15px' }}>
@@ -129,11 +153,11 @@ export function ProductRow({ title, subtitle, items, onViewAll, shopClosed, onOp
           {subtitle && <p style={{ fontSize: '0.75rem', margin: '2px 0 0 0', color: '#6b7280' }}>{subtitle}</p>}
         </div>
         {onViewAll && (
-          <button onClick={() => onViewAll({ title, items })} style={{ backgroundColor: '#111827', color: '#fff', border: 'none', borderRadius: '50%', width: '28px', height: '28px', display: 'flex', justifyContent: 'center', alignItems: 'center', fontSize: '1rem', cursor: 'pointer' }}>➔</button>
+          <button onClick={() => onViewAll({ title, items: flattenedItems })} style={{ backgroundColor: '#111827', color: '#fff', border: 'none', borderRadius: '50%', width: '28px', height: '28px', display: 'flex', justifyContent: 'center', alignItems: 'center', fontSize: '1rem', cursor: 'pointer' }}>➔</button>
         )}
       </div>
       <div className="hide-scroll" style={{ display: 'flex', overflowX: 'auto', gap: '12px', padding: '0 15px 10px 15px', scrollSnapType: 'x mandatory' }}>
-        {items.map((item, index) => (
+        {flattenedItems.map((item, index) => (
           <ModernProductCard 
             key={`${item._id}-${index}`} 
             item={item} 
@@ -148,4 +172,4 @@ export function ProductRow({ title, subtitle, items, onViewAll, shopClosed, onOp
       </div>
     </div>
   );
-}
+      }
