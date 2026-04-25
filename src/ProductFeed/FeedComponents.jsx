@@ -96,7 +96,6 @@ const ModernProductCardBase = ({ item, isCarousel, shopClosed, onOpenDetails, on
         <p style={{ fontSize: '0.75rem', color: '#6b7280', margin: '0 0 4px 0', minHeight: '14px' }}>
           {item.qnty || "1 pc"} {isMultiVariant && <span style={{color: '#d97706', fontWeight: 'bold'}}> ({item.variants.length} sizes)</span>}
         </p>
-        {/* 🟢 SMART TITLE RENDERED HERE */}
         <h4 style={{ fontSize: '0.85rem', margin: '0 0 8px 0', color: '#111827', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden', textOverflow: 'ellipsis', height: '2.4em', lineHeight: '1.2em' }}>
           {displayTitle}
         </h4>
@@ -129,11 +128,11 @@ const areCardsEqual = (prevProps, nextProps) => {
 
 export const ModernProductCard = memo(ModernProductCardBase, areCardsEqual);
 
-// 🛤️ 3. THE MISSING PRODUCT ROW
+// 🛤️ 3. THE SMART PRODUCT ROW
 export function ProductRow({ title, subtitle, items, onViewAll, shopClosed, onOpenDetails, onQuickAdd, cart = [], onRemoveFromCart }) {
   if (!items || items.length === 0) return null;
 
-  // 🚀 FLATTEN THE VARIANTS
+  // 1. FOR THE 'VIEW ALL' PAGE: Flatten so the grid looks massive when they click the arrow!
   const flattenedItems = items.flatMap(item => {
     if (item.variants && item.variants.length > 0) {
       return item.variants.map(variant => ({
@@ -141,6 +140,18 @@ export function ProductRow({ title, subtitle, items, onViewAll, shopClosed, onOp
         ...variant,   
         variants: item.variants 
       }));
+    }
+    return item;
+  });
+
+  // 2. 🧠 FOR THE CAROUSEL: Only show ONE representative size per product (the first one)
+  const carouselItems = items.map(item => {
+    if (item.variants && item.variants.length > 0) {
+      return {
+        ...item,
+        ...item.variants[0], // Use the first size's price/image as the "Display Model"
+        variants: item.variants // Keep the array attached so the Bottom Sheet still works!
+      };
     }
     return item;
   });
@@ -153,11 +164,14 @@ export function ProductRow({ title, subtitle, items, onViewAll, shopClosed, onOp
           {subtitle && <p style={{ fontSize: '0.75rem', margin: '2px 0 0 0', color: '#6b7280' }}>{subtitle}</p>}
         </div>
         {onViewAll && (
+          {/* 🟢 Passes FLATTENED items to the View All list */}
           <button onClick={() => onViewAll({ title, items: flattenedItems })} style={{ backgroundColor: '#111827', color: '#fff', border: 'none', borderRadius: '50%', width: '28px', height: '28px', display: 'flex', justifyContent: 'center', alignItems: 'center', fontSize: '1rem', cursor: 'pointer' }}>➔</button>
         )}
       </div>
+      
+      {/* 🟢 Maps over CAROUSEL items here to save space! */}
       <div className="hide-scroll" style={{ display: 'flex', overflowX: 'auto', gap: '12px', padding: '0 15px 10px 15px', scrollSnapType: 'x mandatory' }}>
-        {flattenedItems.map((item, index) => (
+        {carouselItems.map((item, index) => (
           <ModernProductCard 
             key={`${item._id}-${index}`} 
             item={item} 
@@ -172,4 +186,4 @@ export function ProductRow({ title, subtitle, items, onViewAll, shopClosed, onOp
       </div>
     </div>
   );
-      }
+}
