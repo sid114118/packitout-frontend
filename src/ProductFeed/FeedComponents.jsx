@@ -163,13 +163,12 @@ export function ProductRow({ title, subtitle, items, onViewAll, shopClosed, onOp
           <h2 style={{ fontSize: '1.1rem', margin: 0, color: '#111827', fontWeight: 'bold' }}>{title}</h2>
           {subtitle && <p style={{ fontSize: '0.75rem', margin: '2px 0 0 0', color: '#6b7280' }}>{subtitle}</p>}
         </div>
+        {/* 🟢 Safely removed the comment to fix the syntax error */}
         {onViewAll && (
-          {/* 🟢 Passes FLATTENED items to the View All list */}
           <button onClick={() => onViewAll({ title, items: flattenedItems })} style={{ backgroundColor: '#111827', color: '#fff', border: 'none', borderRadius: '50%', width: '28px', height: '28px', display: 'flex', justifyContent: 'center', alignItems: 'center', fontSize: '1rem', cursor: 'pointer' }}>➔</button>
         )}
       </div>
       
-      {/* 🟢 Maps over CAROUSEL items here to save space! */}
       <div className="hide-scroll" style={{ display: 'flex', overflowX: 'auto', gap: '12px', padding: '0 15px 10px 15px', scrollSnapType: 'x mandatory' }}>
         {carouselItems.map((item, index) => (
           <ModernProductCard 
@@ -186,4 +185,4 @@ export function ProductRow({ title, subtitle, items, onViewAll, shopClosed, onOp
       </div>
     </div>
   );
-}
+                                                                                      }
