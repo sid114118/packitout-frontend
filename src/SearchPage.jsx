@@ -40,10 +40,9 @@ export default function SearchPage({
 
   // 🌟 NEW: Save successful searches to Recent Searches
   useEffect(() => {
-    if (debouncedQuery.trim().length > 2) { // Only save if they typed at least 3 letters
+    if (debouncedQuery.trim().length > 2) { 
       setRecentSearches(prev => {
         const term = debouncedQuery.trim();
-        // Remove duplicates and keep only top 5
         const updated = [term, ...prev.filter(q => q.toLowerCase() !== term.toLowerCase())].slice(0, 5);
         localStorage.setItem('packitout_recent_searches', JSON.stringify(updated));
         return updated;
@@ -65,11 +64,24 @@ export default function SearchPage({
     };
   }, []);
 
-  // 🛡️ SAFE FILTERING LOGIC
+  // 🛡️ SAFE FILTERING & 🚀 FLATTENING LOGIC
   const displayItems = useMemo(() => {
     if (debouncedQuery.trim().length === 0) return [];
     
-    return items.filter(item => {
+    // 1. FLATTEN: Break grouped items into individual cards first!
+    const flattenedItems = items.flatMap(item => {
+      if (item.variants && item.variants.length > 0) {
+        return item.variants.map(variant => ({
+          ...item,      
+          ...variant,   
+          variants: item.variants // Keep array so Modal still works!
+        }));
+      }
+      return item;
+    });
+
+    // 2. FILTER: Now search through every single size individually
+    return flattenedItems.filter(item => {
       if (!item) return false; 
       const q = debouncedQuery.toLowerCase();
       const nameMatch = (item.name || "").toLowerCase().includes(q);
@@ -107,16 +119,11 @@ export default function SearchPage({
       
       {/* 🌟 UPDATED SEARCH HEADER 🌟 */}
       <div style={{ padding: '15px', position: 'sticky', top: 0, backgroundColor: '#fff', zIndex: 2000, borderBottom: '1px solid #f1f5f9', boxShadow: '0 2px 4px rgba(0,0,0,0.02)' }}>
-        
-        {/* Everything inside the grey background now! */}
         <div style={{ display: 'flex', alignItems: 'center', backgroundColor: '#f1f5f9', borderRadius: '12px', padding: '8px 12px' }}>
-          
-          {/* Back button moved INSIDE the bar, icon removed */}
           <button onClick={onClose} style={{ background: 'none', border: 'none', fontSize: '1.4rem', cursor: 'pointer', padding: '0 10px 0 0', color: '#475569', display: 'flex', alignItems: 'center' }}>
             ←
           </button>
           
-          {/* 🟢 THE FIXED INPUT BAR */}
           <input
             ref={inputRef}
             type="text"
@@ -157,7 +164,6 @@ export default function SearchPage({
       <div style={{ padding: '15px' }}>
         {query.trim().length === 0 ? (
           
-          // 🌟 NEW: SHOW RECENT SEARCHES OR EMPTY STATE
           recentSearches.length > 0 ? (
             <div style={{ padding: '5px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
@@ -227,4 +233,4 @@ export default function SearchPage({
     </div>,
     document.body
   );
-                       }
+}
