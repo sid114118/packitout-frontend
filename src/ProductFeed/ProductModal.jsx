@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import ReviewSection from './ReviewSection.jsx';
 import CrossSellSlider from './CrossSell.jsx'; 
 
@@ -46,15 +46,28 @@ export default function ProductModal({ product, isOpen, onClose, onAddToCart, on
   const BASE_URL = "https://darkslategrey-snail-415133.hostingersite.com";
   const BOTTOM_NAV_HEIGHT = '56px';
 
-  // 🛡️ MOBILE BACK BUTTON
+  // 🚀 THE FIX: Use a Ref to hold the close function so it never triggers re-renders
+  const onCloseRef = useRef(onClose);
+  useEffect(() => {
+    onCloseRef.current = onClose;
+  }, [onClose]);
+
+  // 🛡️ MOBILE BACK BUTTON (SMART INTERCEPT)
   useEffect(() => {
     if (isOpen) {
-      window.history.pushState({ modalOpen: true }, '');
-      const handlePopState = () => onClose();
+      // 1. Check if we already pushed the state (Stops Strict Mode from double-pushing!)
+      if (window.history.state?.name !== 'productModal') {
+        window.history.pushState({ name: 'productModal' }, '');
+      }
+
+      const handlePopState = () => {
+        onCloseRef.current(); // Closes the modal cleanly
+      };
+      
       window.addEventListener('popstate', handlePopState);
       return () => window.removeEventListener('popstate', handlePopState);
     }
-  }, [isOpen, onClose]);
+  }, [isOpen]);
 
   // SET INITIAL PRODUCT
   useEffect(() => {
@@ -82,15 +95,12 @@ export default function ProductModal({ product, isOpen, onClose, onAddToCart, on
 
   // 🚀 THE BULLETPROOF CLICK FIX FOR CROSS-SELL SLIDER
   const handleRelatedProductClick = (clickedProduct) => {
-    // 1. Instantly swap the modal's data to the new product
     setCurrentProduct(clickedProduct);
     setSelectedVariant(clickedProduct);
     
-    // 2. Smoothly scroll back to the top of the modal
     const el = document.getElementById('product-page-scroll');
     if (el) el.scrollTo({ top: 0, behavior: 'smooth' });
 
-    // 3. Inform the parent component so the state stays perfectly synced
     if (onOpenDetails) {
       onOpenDetails(clickedProduct);
     }
@@ -208,7 +218,7 @@ export default function ProductModal({ product, isOpen, onClose, onAddToCart, on
             <div 
               onClick={() => {
                 if(onViewBrand) {
-                  onClose(); 
+                  window.history.back(); // 🚀 Clears the history state safely!
                   setTimeout(() => onViewBrand(selectedVariant.brand), 100); 
                 }
               }}
@@ -279,7 +289,6 @@ export default function ProductModal({ product, isOpen, onClose, onAddToCart, on
             </div>
           </Accordion>
 
-          {/* 🟢 THE FIX IS APPLIED HERE: Using our new custom click function! */}
           <CrossSellSlider 
             allItems={allItems} 
             currentProduct={selectedVariant} 
@@ -312,4 +321,4 @@ export default function ProductModal({ product, isOpen, onClose, onAddToCart, on
       )}
     </div>
   );
-               }
+                         }
