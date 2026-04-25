@@ -21,10 +21,22 @@ export default function ProductListView({
   const cartTotalItems = safeCart.reduce((total, item) => total + (item.qty || 1), 0);
   const cartTotalPrice = safeCart.reduce((total, item) => total + ((item.sellingPrice || item.mrp || 0) * (item.qty || 1)), 0);
 
-  // 🛡️ MOBILE BACK BUTTON FIX
+  // 🛡️ MOBILE BACK BUTTON FIX (SMART COLLISION AVOIDANCE)
   useEffect(() => {
-    window.history.pushState({ listViewOpen: true }, '');
-    const handlePopState = () => onBack();
+    // 1. Prevent double-pushing the list view state
+    if (window.history.state?.name !== 'listView') {
+      window.history.pushState({ name: 'listView' }, '');
+    }
+
+    const handlePopState = (e) => {
+      // 2. THE MAGIC FIX: If we just closed a Modal, the phone lands back on 'listView'. 
+      // If we see our own nametag, DO NOT close the list!
+      if (e.state?.name === 'listView') {
+        return; 
+      }
+      onBack(); // Otherwise, close the list normally
+    };
+
     window.addEventListener('popstate', handlePopState);
     return () => window.removeEventListener('popstate', handlePopState);
   }, [onBack]);
