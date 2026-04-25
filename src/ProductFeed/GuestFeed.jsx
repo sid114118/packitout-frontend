@@ -195,12 +195,9 @@ export default function GuestFeed({
         product={selectedProductDetails} 
         isOpen={selectedProductDetails !== null} 
         onClose={() => setSelectedProductDetails(null)} 
-        
-        {/* 🚀 THE FIX: We removed setSelectedProductDetails(null) so the modal STAYS OPEN when adding items! */}
         onAddToCart={(item) => {
           onAddToCart({ ...item, mrp: item.sellingPrice });
         }}
-        
         onRemoveFromCart={onRemoveFromCart}
         onViewCart={onViewCart}
         cart={cart} 
@@ -208,4 +205,4 @@ export default function GuestFeed({
       />
     </div>
   );
-}
+    }
