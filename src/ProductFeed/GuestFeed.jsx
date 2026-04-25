@@ -53,17 +53,21 @@ export default function GuestFeed({
             variants: [] 
           };
 
-          const groupId = p.itemGroupId ? String(p.itemGroupId).trim().toUpperCase() : null;
+          // 🛡️ THE FIX: Safely check for group IDs and ignore "nan"
+          const rawId = p.itemGroupId ? String(p.itemGroupId).trim().toLowerCase() : "";
+          const groupId = (rawId === "" || rawId === "nan") ? null : rawId;
 
-          if (groupId && groupId !== "") {
+          if (groupId) {
             if (!groupedMap.has(groupId)) {
-              formattedItem.variants.push(formattedItem); 
+              formattedItem.variants = [formattedItem]; 
               groupedMap.set(groupId, formattedItem);
               finalItems.push(formattedItem);
             } else {
               groupedMap.get(groupId).variants.push(formattedItem);
             }
           } else {
+            // No valid group ID? Just push it normally!
+            formattedItem.variants = [formattedItem];
             finalItems.push(formattedItem);
           }
         });
@@ -77,6 +81,7 @@ export default function GuestFeed({
         setNewArrivals([...finalItems].reverse().slice(0, 8)); 
         setBuyItAgain(finalItems.slice(0, 8));
 
+        // 🕒 CLEVER SHOPKEEPER LOGIC: Time of Day Merchandising
         const hour = new Date().getHours();
         let timeTitle = ""; let timeSubtitle = ""; let keywords = [];
 
@@ -162,7 +167,7 @@ export default function GuestFeed({
           onSearchClick={() => {  
              if (selectedCategory) onClearCategory(); 
              setViewAll(null); 
-             onOpenSearch(); // 👈 Pops open the Search Page!
+             onOpenSearch(); 
           }}
         />
       )}
@@ -190,10 +195,12 @@ export default function GuestFeed({
         product={selectedProductDetails} 
         isOpen={selectedProductDetails !== null} 
         onClose={() => setSelectedProductDetails(null)} 
+        
+        {/* 🚀 THE FIX: We removed setSelectedProductDetails(null) so the modal STAYS OPEN when adding items! */}
         onAddToCart={(item) => {
           onAddToCart({ ...item, mrp: item.sellingPrice });
-          setSelectedProductDetails(null); 
         }}
+        
         onRemoveFromCart={onRemoveFromCart}
         onViewCart={onViewCart}
         cart={cart} 
