@@ -55,7 +55,6 @@ export default function Categories({ onCategorySelect, searchQuery = "" }) {
       
       <div style={{ padding: '10px 15px' }}>
         
-        {/* 🌟 UPLOAD PARCHI (Kept clean) */}
         <div style={{ marginBottom: '25px' }}>
           <UploadParchi />
         </div>
@@ -69,7 +68,6 @@ export default function Categories({ onCategorySelect, searchQuery = "" }) {
           filteredMenuData.map((section, sectionIndex) => (
             <div key={sectionIndex} style={{ marginBottom: '30px' }}>
               
-              {/* 🌟 INTEGRATED HEADER: Switched from serif to bold Sans-Serif */}
               <h3 style={{ 
                 margin: '0 0 16px 4px', 
                 fontSize: '1.1rem', 
@@ -80,7 +78,6 @@ export default function Categories({ onCategorySelect, searchQuery = "" }) {
                 {section.sectionTitle}
               </h3>
 
-              {/* 🌟 GRID: Sitting directly on the background (no white box) */}
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '16px 10px' }}>
                 {section.items.map((item, itemIndex) => (
                   <div 
@@ -89,32 +86,29 @@ export default function Categories({ onCategorySelect, searchQuery = "" }) {
                     style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', cursor: 'pointer' }}
                   >
                     
-                    {/* 🎨 PREMIUM SQUIRCLE ICON */}
                     <div style={{
                       width: '100%',
                       maxWidth: '72px', 
                       aspectRatio: '1 / 1', 
-                      backgroundColor: item.image ? '#fff' : item.bgColor,
-                      borderRadius: '20px', // 👈 Soft modern squircle shape
+                      // 🚀 Allow fallback color if no image exists
+                      backgroundColor: item.bgColor,
+                      borderRadius: '20px', 
                       display: 'flex',
                       justifyContent: 'center',
                       alignItems: 'center',
-                      // Soft shadow instead of border
                       boxShadow: '0 4px 12px rgba(0,0,0,0.03)',
                       overflow: 'hidden', 
                       marginBottom: '10px',
-                      border: '1px solid rgba(0,0,0,0.02)' // Invisible border for definition
+                      border: '1px solid rgba(0,0,0,0.02)'
                     }}>
                       {item.image ? (
                         <img 
                           src={item.image} 
                           alt={item.name} 
                           style={{ 
-                            width: '85%', 
-                            height: '85%', 
-                            objectFit: 'contain',
-                            // Makes the product look like it's part of the box
-                            mixBlendMode: item.image.includes('removebg') ? 'multiply' : 'normal' 
+                            width: '100%', // 🚀 FIX: Fills the entire box
+                            height: '100%', // 🚀 FIX: Fills the entire box
+                            objectFit: 'cover', // 🚀 FIX: Automatically crops the image to the curved edges!
                           }} 
                         />
                       ) : (
@@ -122,7 +116,6 @@ export default function Categories({ onCategorySelect, searchQuery = "" }) {
                       )}
                     </div>
 
-                    {/* 📝 MODERN TEXT LABEL */}
                     <span style={{
                       fontSize: '0.72rem',
                       fontWeight: '700',
