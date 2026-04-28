@@ -6,7 +6,7 @@ export function VariantBottomSheet({ product, onClose, onAddToCart }) {
   return (
     <>
       {/* 🚀 FIX: Boosted zIndex to 99999 to guarantee it sits above the Search Page */}
-      <div onClick={onClose} style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.6)', zIndex: 99999, backdropFilter: 'blur(2px)' }} />
+      <div onClick={onClose} style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.6)', zIndex: 999999, backdropFilter: 'blur(2px)' }} />
       <div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 100000, display: 'flex', flexDirection: 'column', alignItems: 'center', fontFamily: 'system-ui, -apple-system, sans-serif' }}>
         <button onClick={onClose} style={{ marginBottom: '15px', backgroundColor: '#333', color: '#fff', border: 'none', borderRadius: '50%', width: '40px', height: '40px', fontSize: '1.2rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 10px rgba(0,0,0,0.2)' }}>✕</button>
         <div style={{ backgroundColor: '#fff', width: '100%', borderTopLeftRadius: '24px', borderTopRightRadius: '24px', padding: '20px', paddingBottom: '30px', maxHeight: '75vh', overflowY: 'auto' }}>
