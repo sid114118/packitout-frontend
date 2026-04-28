@@ -1,273 +1,206 @@
-import React, { useState, useEffect } from 'react';
-import Payment from './Payment.jsx'; 
-import useScrollToTop from './useScrollToTop'; // 👈 Added import
+import React, { memo } from 'react';
 
-export default function Cart({ cart, setCart, user, onBack, onCheckoutSuccess }) {
-  useScrollToTop(); // 👈 Added scroll fix
-
-  const [targetShop, setTargetShop] = useState(null); 
-  const [loadingShops, setLoadingShops] = useState(true);
-  
-  // 💳 Show Payment Screen State
-  const [showPayment, setShowPayment] = useState(false);
-
-  // 🪙 Coin Discount State
-  const [useCoins, setUseCoins] = useState(false);
-
-  // 🧮 BILL CALCULATIONS
-  // 1. Calculate the Total Original Price (MRP)
-  const totalMRP = cart.reduce((sum, item) => {
-    if (!item) return sum;
-    const safeQty = item.qty || 1;
-    const originalPrice = (item.mrp && item.mrp > 0) ? item.mrp : (item.sellingPrice || 0);
-    return sum + (originalPrice * safeQty);
-  }, 0);
-
-  // 2. Calculate the Total Selling Price (What they pay before coins)
-  const itemTotal = cart.reduce((sum, item) => {
-    if (!item) return sum; 
-    const safeQty = item.qty || 1; 
-    const safePrice = item.sellingPrice !== undefined ? item.sellingPrice : (item.mrp || 0);
-    return sum + (safePrice * safeQty);
-  }, 0);
-
-  // 3. Calculate Savings
-  const totalProductDiscount = totalMRP - itemTotal;
-  
-  // 4. Coin Logic
-  const userCoinValueInRupees = (user?.coins || 0) / 10; 
-  const maxDiscountAllowed = itemTotal * 0.10; 
-  const maxUsableDiscount = Math.min(userCoinValueInRupees, maxDiscountAllowed);
-
-  let rawDiscount = useCoins ? maxUsableDiscount : 0; 
-  const discount = Number(rawDiscount.toFixed(2)); 
-  const coinsUsed = Math.round(discount * 10); 
-  
-  // 5. Final Bill
-  const finalBill = Number((itemTotal - discount).toFixed(2));
-  const totalSavings = totalProductDiscount + discount;
-
-  // --- 🛒 ADD/REMOVE ITEM LOGIC ---
-  const updateQty = (productId, delta) => {
-    setCart(prevCart => {
-      return prevCart.map(item => {
-        if (item && item._id === productId) {
-          const currentQty = item.qty || 1; 
-          const newQty = currentQty + delta;
-          return newQty > 0 ? { ...item, qty: newQty } : null; 
-        }
-        return item;
-      }).filter(item => item !== null); 
-    });
-  };
-
-  // 🕵️ Fetch Primary Shop
-  useEffect(() => {
-    if (user?.pincode) {
-      setLoadingShops(true);
-      fetch(`https://darkslategrey-snail-415133.hostingersite.com/shops/all/${user.pincode}`)
-        .then(res => res.json())
-        .then(data => {
-          if (data.length > 0) {
-            const primaryId = user.primaryShop?._id || user.primaryShop;
-            const myPrimary = data.find(s => s._id === primaryId);
-            setTargetShop(myPrimary || data[0]); 
-          }
-          setLoadingShops(false);
-        })
-        .catch(() => setLoadingShops(false));
-    }
-  }, [user]);
-
-  // --- EMPTY CART UI ---
-  if (!cart || cart.length === 0) {
-    return (
-      <div style={{ padding: '20px', textAlign: 'center', backgroundColor: '#f3f4f6', minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
-        <div style={{ fontSize: '4rem', marginBottom: '10px' }}>🛒</div>
-        <h2 style={{ color: '#0f172a', marginBottom: '10px', fontWeight: '800' }}>Your cart is empty</h2>
-        <p style={{ color: '#64748b', marginBottom: '24px' }}>Looks like you haven't added anything yet.</p>
-        <button onClick={onBack} style={{ padding: '14px 32px', backgroundColor: '#0c831f', color: 'white', border: 'none', borderRadius: '10px', fontWeight: '800', fontSize: '1rem', cursor: 'pointer', boxShadow: '0 4px 10px rgba(12, 131, 31, 0.2)' }}>
-          Browse Products
-        </button>
-      </div>
-    );
-  }
-
-  // 💳 ================= RENDER PAYMENT SCREEN ================= 💳
-  if (showPayment) {
-    return (
-      <Payment 
-        user={user}
-        cart={cart}
-        targetShop={targetShop}
-        finalBill={finalBill}
-        useCoins={useCoins}
-        coinsUsed={coinsUsed}
-        onBack={() => setShowPayment(false)} 
-        onCheckoutSuccess={onCheckoutSuccess}
-      />
-    );
-  }
-
-  // 🛒 ================= CART SCREEN ================= 🛒
+// 📋 1. FIXED VARIANT SELECTION SHEET (Z-Index boosted to overlay Search Page!)
+export function VariantBottomSheet({ product, onClose, onAddToCart }) {
+  if (!product) return null;
   return (
-    <div style={{ backgroundColor: '#f3f4f6', minHeight: '100vh', fontFamily: 'sans-serif', paddingBottom: '180px' }}>
-      
-      {/* Header */}
-      <div style={{ position: 'sticky', top: 0, backgroundColor: 'white', padding: '16px 20px', display: 'flex', alignItems: 'center', gap: '15px', borderBottom: '1px solid #e5e7eb', zIndex: 100 }}>
-        <button onClick={onBack} style={{ background: 'none', border: 'none', fontSize: '1.4rem', cursor: 'pointer', color: '#111827', display: 'flex', alignItems: 'center' }}>←</button>
-        <h2 style={{ margin: 0, fontSize: '1.2rem', color: '#111827', fontWeight: '800' }}>Checkout</h2>
-      </div>
-
-      <div style={{ padding: '16px', maxWidth: '800px', margin: '0 auto' }}>
-        
-        {/* 🏪 LOCKED SHOP SELECTION */}
-        <div style={{ backgroundColor: 'white', padding: '16px', borderRadius: '12px', marginBottom: '16px', boxShadow: '0 2px 8px rgba(0,0,0,0.02)' }}>
-          <div style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: '800', marginBottom: '12px', letterSpacing: '0.5px' }}>
-            📍 PICK-UP POINT ({user?.pincode})
-          </div>
-          
-          {loadingShops ? (
-            <div style={{ padding: '16px', background: '#f8fafc', borderRadius: '10px', color: '#64748b', textAlign: 'center', fontWeight: '600' }}>🔍 Confirming shop details...</div>
-          ) : targetShop ? (
-            <div style={{ backgroundColor: '#f4fbf6', border: '1.5px solid #22c55e', padding: '14px 16px', borderRadius: '10px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#111827', fontSize: '1.05rem', fontWeight: '800' }}>
-                  {targetShop.name}
-                  <span style={{ backgroundColor: '#fef08a', color: '#a16207', fontSize: '0.65rem', padding: '2px 6px', borderRadius: '4px', fontWeight: '800' }}>⭐ Primary</span>
-                </div>
-                <div style={{ fontSize: '0.8rem', color: '#6b7280', marginTop: '4px', fontWeight: '500' }}>Ready in 10-15 mins</div>
-              </div>
-              <div style={{ backgroundColor: '#22c55e', color: 'white', width: '26px', height: '26px', display: 'flex', justifyContent: 'center', alignItems: 'center', borderRadius: '6px', fontSize: '1rem', fontWeight: '900', boxShadow: '0 2px 4px rgba(34, 197, 94, 0.3)' }}>
-                ✓
-              </div>
-            </div>
-          ) : (
-            <div style={{ padding: '16px', background: '#fef2f2', color: '#b91c1c', borderRadius: '10px', fontSize: '0.9rem', fontWeight: '600' }}>
-              ❌ No shops found in your pincode. Please update your profile.
-            </div>
-          )}
-        </div>
-
-        {/* 🛒 ITEM SUMMARY */}
-        <div style={{ backgroundColor: 'white', borderRadius: '12px', padding: '16px', marginBottom: '16px', boxShadow: '0 2px 8px rgba(0,0,0,0.02)' }}>
-          <div style={{ fontWeight: '800', fontSize: '1.05rem', marginBottom: '16px', color: '#111827' }}>Review Items</div>
-          
-          {cart.map((item, index) => {
-            if (!item) return null; 
-            
-            const safeQty = item.qty || 1;
-            const safePrice = item.sellingPrice !== undefined ? item.sellingPrice : (item.mrp || 0);
-            const originalPrice = (item.mrp && item.mrp > 0) ? item.mrp : safePrice;
-            const isDiscounted = originalPrice > safePrice;
-            
-            return (
-              <div key={`${item._id}-${index}`} style={{ display: 'flex', gap: '15px', alignItems: 'center', paddingBottom: '16px', marginBottom: '16px', borderBottom: index === cart.length - 1 ? 'none' : '1px solid #f1f5f9' }}>
-                
-                <div style={{ width: '60px', height: '60px', backgroundColor: '#f8fafc', borderRadius: '8px', display: 'flex', justifyContent: 'center', alignItems: 'center', border: '1px solid #f1f5f9', position: 'relative' }}>
-                  {isDiscounted && <span style={{ position: 'absolute', top: '-6px', left: '-6px', backgroundColor: '#0c831f', color: '#fff', fontSize: '0.55rem', fontWeight: '900', padding: '2px 4px', borderRadius: '4px', zIndex: 1 }}>OFFER</span>}
-                  {item.image ? <img src={item.image} style={{ maxWidth: '48px', maxHeight: '48px', objectFit: 'contain' }} alt={item.name} /> : <span style={{ fontSize: '30px' }}>{item.emoji}</span>}
-                </div>
-
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontWeight: '700', color: '#111827', fontSize: '0.9rem', lineHeight: '1.25', marginBottom: '4px' }}>{item.name}</div>
-                  <div style={{ fontSize: '0.75rem', color: '#6b7280', marginBottom: '6px', fontWeight: '500' }}>{item.qnty}</div>
-                  
-                  {/* 🟢 NEW: PRICE & SAVINGS DISPLAY */}
-                  <div style={{ display: 'flex', alignItems: 'baseline', gap: '6px' }}>
-                    <div style={{ fontWeight: '800', color: '#111827', fontSize: '0.95rem' }}>₹{safePrice}</div>
-                    {isDiscounted && (
-                      <div style={{ fontSize: '0.75rem', color: '#9ca3af', textDecoration: 'line-through', fontWeight: '500' }}>₹{originalPrice}</div>
-                    )}
-                  </div>
-                  {isDiscounted && (
-                    <div style={{ fontSize: '0.7rem', color: '#0c831f', fontWeight: '800', marginTop: '2px' }}>
-                      Save ₹{(originalPrice - safePrice) * safeQty}
+    <>
+      {/* 🚀 FIX: Boosted zIndex to 99999 to guarantee it sits above the Search Page */}
+      <div onClick={onClose} style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.6)', zIndex: 99999, backdropFilter: 'blur(2px)' }} />
+      <div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 100000, display: 'flex', flexDirection: 'column', alignItems: 'center', fontFamily: 'system-ui, -apple-system, sans-serif' }}>
+        <button onClick={onClose} style={{ marginBottom: '15px', backgroundColor: '#333', color: '#fff', border: 'none', borderRadius: '50%', width: '40px', height: '40px', fontSize: '1.2rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 10px rgba(0,0,0,0.2)' }}>✕</button>
+        <div style={{ backgroundColor: '#fff', width: '100%', borderTopLeftRadius: '24px', borderTopRightRadius: '24px', padding: '20px', paddingBottom: '30px', maxHeight: '75vh', overflowY: 'auto' }}>
+          <h3 style={{ margin: '0 0 15px 0', fontSize: '1.1rem', color: '#111827', fontWeight: '800' }}>{product.name}</h3>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+            {product.variants.map((variant, idx) => {
+              const vPrice = variant.sellingPrice || variant.mrp;
+              const vDiscounted = vPrice < variant.mrp;
+              const vDiscountPercent = vDiscounted ? Math.round(((variant.mrp - vPrice) / variant.mrp) * 100) : 0;
+              return (
+                <div key={idx} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', backgroundColor: '#f8fafc', padding: '12px', borderRadius: '16px', border: '1px solid #f1f5f9' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
+                    <div style={{ position: 'relative', width: '50px', height: '50px', backgroundColor: '#fff', borderRadius: '12px', display: 'flex', justifyContent: 'center', alignItems: 'center', boxShadow: '0 2px 4px rgba(0,0,0,0.02)' }}>
+                      {vDiscounted && <span style={{ position: 'absolute', top: '-5px', left: '-5px', backgroundColor: '#ef4444', color: '#fff', fontSize: '0.6rem', fontWeight: 'bold', padding: '2px 6px', borderRadius: '6px' }}>{vDiscountPercent}% OFF</span>}
+                      {variant.image ? <img src={variant.image} alt="" loading="lazy" style={{ maxWidth: '40px', maxHeight: '40px', objectFit: 'contain' }} /> : <span style={{ fontSize: '24px' }}>{variant.emoji}</span>}
                     </div>
-                  )}
-
+                    <div>
+                      <div style={{ fontSize: '0.85rem', color: '#64748b', fontWeight: '600' }}>{variant.qnty}</div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '2px' }}>
+                        <span style={{ fontWeight: '800', fontSize: '1rem', color: '#0f172a' }}>₹{vPrice}</span>
+                        {vDiscounted && <span style={{ fontSize: '0.75rem', color: '#94a3b8', textDecoration: 'line-through', fontWeight: '500' }}>₹{variant.mrp}</span>}
+                      </div>
+                    </div>
+                  </div>
+                  <button onClick={() => { onAddToCart(variant); onClose(); }} style={{ backgroundColor: '#eff6ff', color: '#2563eb', border: 'none', borderRadius: '8px', padding: '8px 16px', fontSize: '0.85rem', fontWeight: '800', cursor: 'pointer' }}>ADD</button>
                 </div>
-
-                <div style={{ display: 'flex', alignItems: 'center', backgroundColor: '#0c831f', borderRadius: '8px', height: '32px', width: '80px', boxShadow: '0 2px 6px rgba(12, 131, 31, 0.2)' }}>
-                  <button onClick={() => updateQty(item._id, -1)} style={{ flex: 1, height: '100%', border: 'none', background: 'transparent', color: '#fff', fontSize: '1.2rem', fontWeight: 'bold', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>−</button>
-                  <span style={{ color: '#fff', fontSize: '0.95rem', fontWeight: '800', minWidth: '20px', textAlign: 'center' }}>{safeQty}</span>
-                  <button onClick={() => updateQty(item._id, 1)} style={{ flex: 1, height: '100%', border: 'none', background: 'transparent', color: '#fff', fontSize: '1.2rem', fontWeight: 'bold', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>+</button>
-                </div>
-
-              </div>
-            );
-          })}
-        </div>
-
-        {/* 🪙 COIN DISCOUNT TOGGLE */}
-        {user?.coins > 0 && (
-          <div style={{ backgroundColor: 'white', padding: '16px', borderRadius: '12px', marginBottom: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', border: '1px solid #fef08a', boxShadow: '0 2px 8px rgba(0,0,0,0.02)' }}>
-            <div>
-              <strong style={{ color: '#a16207', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.95rem', fontWeight: '800' }}>🪙 PackIt Coins</strong>
-              <div style={{ fontSize: '0.75rem', color: '#ca8a04', marginTop: '4px', fontWeight: '600' }}>
-                Balance: {Math.round(user.coins)} • Max usable: ₹{maxUsableDiscount.toFixed(2)}
-              </div>
-            </div>
-            <label style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer' }}>
-              <span style={{ fontWeight: '800', color: '#a16207', fontSize: '0.85rem' }}>Apply</span>
-              <input 
-                type="checkbox" 
-                checked={useCoins} 
-                onChange={(e) => setUseCoins(e.target.checked)}
-                style={{ width: '22px', height: '22px', accentColor: '#eab308', cursor: 'pointer' }}
-              />
-            </label>
+              );
+            })}
           </div>
+        </div>
+      </div>
+    </>
+  );
+}
+
+// 💎 2. HIGH-PERFORMANCE MODERN PRODUCT CARD
+const ModernProductCardBase = ({ item, isCarousel, shopClosed, onOpenDetails, onQuickAdd, cart = [], onRemoveFromCart }) => {
+  const isOutOfStock = !item.inStock;
+  
+  // 🚀 CHECKS IF THIS IS A MULTI-SIZE PRODUCT
+  const isMultiVariant = item.variants && item.variants.length > 1;
+  
+  const safeCart = Array.isArray(cart) ? cart.filter(c => c !== null) : [];
+  const cartCount = safeCart.filter(c => c._id === item._id).reduce((sum, c) => sum + (c.qty || 1), 0);
+
+  const safeBrand = (item.brand && item.brand !== "nan") ? item.brand : "";
+  const safeName = item.name || "";
+  const displayTitle = (safeBrand && !safeName.toLowerCase().includes(safeBrand.toLowerCase())) 
+    ? `${safeBrand} ${safeName}` 
+    : safeName;
+
+  return (
+    <div 
+      onClick={() => onOpenDetails(item)} 
+      style={{ 
+        minWidth: isCarousel ? '145px' : 'auto', 
+        maxWidth: isCarousel ? '155px' : 'auto', 
+        flexShrink: 0, 
+        border: '1px solid #f1f5f9',
+        borderRadius: '16px', 
+        padding: '10px', 
+        backgroundColor: '#fff', 
+        position: 'relative', 
+        opacity: isOutOfStock ? 0.6 : 1, 
+        filter: isOutOfStock ? 'grayscale(80%)' : 'none', 
+        cursor: 'pointer', 
+        boxShadow: '0 4px 12px rgba(0,0,0,0.03)', 
+        scrollSnapAlign: 'start',
+        fontFamily: 'system-ui, -apple-system, sans-serif',
+        display: 'flex',
+        flexDirection: 'column',
+      }}
+    >
+      <div style={{ position: 'relative', height: '110px', width: '100%', display: 'flex', justifyContent: 'center', alignItems: 'center', backgroundColor: '#f8fafc', borderRadius: '12px', marginBottom: '12px' }}>
+        {item.isDiscounted && !isOutOfStock && (
+          <span style={{ position: 'absolute', top: '0', left: '0', backgroundColor: '#ef4444', color: '#fff', fontSize: '0.65rem', fontWeight: '800', padding: '4px 8px', borderRadius: '12px 0 8px 0', zIndex: 1, textTransform: 'uppercase' }}>
+            {item.discountPercent}% OFF
+          </span>
         )}
+        {item.image ? <img src={item.image} alt={safeName} loading="lazy" style={{ maxHeight: '85%', maxWidth: '85%', objectFit: 'contain', mixBlendMode: 'multiply' }} /> : <span style={{fontSize: '40px'}}>{item.emoji}</span>}
+      </div>
+      
+      <div style={{ display: 'flex', flexDirection: 'column', flexGrow: 1, justifyContent: 'space-between' }}>
+        <div>
+          <p style={{ fontSize: '0.75rem', color: '#64748b', margin: '0 0 4px 0', fontWeight: '600' }}>
+            {item.qnty || "1 pc"}
+          </p>
+          <h4 style={{ fontSize: '0.85rem', margin: '0 0 12px 0', color: '#0f172a', fontWeight: '700', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden', textOverflow: 'ellipsis', height: '2.5em', lineHeight: '1.25em' }}>
+            {displayTitle}
+          </h4>
+        </div>
 
-        {/* 💵 FINAL BILL BREAKDOWN */}
-        <div style={{ backgroundColor: 'white', borderRadius: '12px', padding: '16px', boxShadow: '0 2px 8px rgba(0,0,0,0.02)' }}>
-          <div style={{ fontWeight: '800', fontSize: '1.05rem', marginBottom: '16px', color: '#111827' }}>Bill Details</div>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 'auto' }}>
           
-          <div style={{ display: 'flex', justifyContent: 'space-between', color: '#64748b', fontSize: '0.85rem', marginBottom: '10px', fontWeight: '500' }}>
-            <span>Total MRP</span>
-            <span style={{ fontWeight: '600' }}>₹{totalMRP.toFixed(2)}</span>
+          <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+            {item.isDiscounted && (
+              <span style={{ fontSize: '0.7rem', color: '#94a3b8', textDecoration: 'line-through', fontWeight: '500', marginBottom: '-2px' }}>
+                ₹{item.mrp}
+              </span>
+            )}
+            <span style={{ fontWeight: '800', fontSize: '1.05rem', color: '#0f172a' }}>
+              ₹{item.sellingPrice || item.mrp}
+            </span>
           </div>
 
-          {totalProductDiscount > 0 && (
-            <div style={{ display: 'flex', justifyContent: 'space-between', color: '#0c831f', fontSize: '0.85rem', marginBottom: '10px', fontWeight: '600' }}>
-              <span>Item Discount</span>
-              <span>- ₹{totalProductDiscount.toFixed(2)}</span>
-            </div>
-          )}
-          
-          {useCoins && discount > 0 && (
-            <div style={{ display: 'flex', justifyContent: 'space-between', color: '#0c831f', fontWeight: '600', fontSize: '0.85rem', marginBottom: '10px' }}>
-              <span>Coin Discount (-{coinsUsed} Coins)</span>
-              <span>- ₹{discount.toFixed(2)}</span>
-            </div>
-          )}
-          
-          <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '14px', paddingTop: '14px', borderTop: '1px dashed #cbd5e1', fontWeight: '900', color: '#111827', fontSize: '1.1rem' }}>
-            <span>To Pay</span>
-            <span>₹{finalBill.toFixed(2)}</span>
+          <div onClick={(e) => e.stopPropagation()}>
+            {!isOutOfStock && !shopClosed && (
+              cartCount > 0 ? (
+                <div style={{ display: 'flex', alignItems: 'center', backgroundColor: '#ef4444', borderRadius: '8px', height: '32px', width: '70px', boxShadow: '0 4px 10px rgba(239, 68, 68, 0.25)' }}>
+                  <button onClick={() => onRemoveFromCart(item)} style={{ flex: 1, height: '100%', border: 'none', background: 'transparent', color: '#fff', fontSize: '1.2rem', fontWeight: 'bold', cursor: 'pointer' }}>−</button>
+                  <span style={{ color: '#fff', fontSize: '0.85rem', fontWeight: '800', minWidth: '16px', textAlign: 'center' }}>{cartCount}</span>
+                  <button onClick={() => onQuickAdd(item)} style={{ flex: 1, height: '100%', border: 'none', background: 'transparent', color: '#fff', fontSize: '1.2rem', fontWeight: 'bold', cursor: 'pointer' }}>+</button>
+                </div>
+              ) : (
+                <button 
+                  onClick={() => onQuickAdd(item)} 
+                  style={{ backgroundColor: '#fff', color: '#ef4444', border: '1px solid #fca5a5', borderRadius: '8px', padding: '6px 12px', fontSize: '0.75rem', fontWeight: '800', cursor: 'pointer', boxShadow: '0 2px 4px rgba(0,0,0,0.04)', textTransform: 'uppercase' }}
+                >
+                  {/* 🚀 FIX: Changes "ADD" to "SELECT" if the item has a group/variants! */}
+                  {isMultiVariant ? "SELECT" : "ADD"}
+                </button>
+              )
+            )}
           </div>
 
-          {/* 🎉 NEW: CELEBRATION BANNER */}
-          {totalSavings > 0 && (
-            <div style={{ marginTop: '16px', backgroundColor: '#f0fdf4', color: '#166534', padding: '10px', borderRadius: '8px', textAlign: 'center', fontSize: '0.85rem', fontWeight: '800', border: '1px solid #bbf7d0' }}>
-              🎉 You are saving ₹{totalSavings.toFixed(2)} on this order!
-            </div>
-          )}
         </div>
       </div>
+    </div>
+  );
+};
 
-      <div style={{ position: 'fixed', bottom: '70px', left: 0, right: 0, backgroundColor: 'white', padding: '12px 16px', borderTop: '1px solid #e5e7eb', boxShadow: '0 -4px 10px rgba(0,0,0,0.03)', zIndex: 90 }}>
-        <button 
-          onClick={() => setShowPayment(true)} 
-          disabled={!targetShop}
-          style={{ width: '100%', maxWidth: '800px', margin: '0 auto', display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px 20px', backgroundColor: targetShop ? '#0c831f' : '#cbd5e1', color: 'white', border: 'none', borderRadius: '12px', fontWeight: '900', fontSize: '1.1rem', cursor: targetShop ? 'pointer' : 'not-allowed', boxShadow: targetShop ? '0 4px 12px rgba(12, 131, 31, 0.3)' : 'none', transition: 'all 0.2s ease' }}
-        >
-          <span>Select Payment</span>
-          <span>₹{finalBill.toFixed(2)} ➔</span>
-        </button>
+// 🛡️ THE REACT MEMO SHIELD
+const areCardsEqual = (prevProps, nextProps) => {
+  if (prevProps.item._id !== nextProps.item._id) return false;
+  if (prevProps.shopClosed !== nextProps.shopClosed) return false;
+
+  const safePrevCart = Array.isArray(prevProps.cart) ? prevProps.cart : [];
+  const safeNextCart = Array.isArray(nextProps.cart) ? nextProps.cart : [];
+
+  const prevCount = safePrevCart.filter(c => c && c._id === prevProps.item._id).reduce((sum, c) => sum + (c.qty || 1), 0);
+  const nextCount = safeNextCart.filter(c => c && c._id === nextProps.item._id).reduce((sum, c) => sum + (c.qty || 1), 0);
+
+  return prevCount === nextCount; 
+};
+
+export const ModernProductCard = memo(ModernProductCardBase, areCardsEqual);
+
+// 🛤️ 3. THE SMART PRODUCT ROW
+export function ProductRow({ title, subtitle, items, onViewAll, shopClosed, onOpenDetails, onQuickAdd, cart = [], onRemoveFromCart }) {
+  if (!items || items.length === 0) return null;
+
+  const flattenedItems = items.flatMap(item => {
+    if (item.variants && item.variants.length > 0) {
+      return item.variants.map(variant => ({
+        ...item,      
+        ...variant,   
+        variants: item.variants 
+      }));
+    }
+    return item;
+  });
+
+  return (
+    <div style={{ marginBottom: '16px', paddingTop: '15px', fontFamily: 'system-ui, -apple-system, sans-serif' }}>
+      
+      <style>{`
+        .premium-hide-scroll::-webkit-scrollbar { display: none !important; }
+        .premium-hide-scroll { -ms-overflow-style: none !important; scrollbar-width: none !important; padding-bottom: 20px !important; margin-bottom: -20px !important; }
+      `}</style>
+
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', padding: '0 16px' }}>
+        <div>
+          <h2 style={{ fontSize: '1.15rem', margin: 0, color: '#0f172a', fontWeight: '800', letterSpacing: '-0.3px' }}>{title}</h2>
+          {subtitle && <p style={{ fontSize: '0.8rem', margin: '4px 0 0 0', color: '#64748b', fontWeight: '500' }}>{subtitle}</p>}
+        </div>
+        {onViewAll && (
+          <button onClick={() => onViewAll({ title, items: flattenedItems })} style={{ background: 'none', color: '#ef4444', border: 'none', fontSize: '0.9rem', fontWeight: '700', cursor: 'pointer', padding: 0 }}>See All ›</button>
+        )}
       </div>
-
+      
+      <div className="premium-hide-scroll" style={{ display: 'flex', overflowX: 'auto', gap: '16px', padding: '0 16px 10px 16px', scrollSnapType: 'x mandatory' }}>
+        {flattenedItems.map((item, index) => (
+          <ModernProductCard 
+            key={`${item._id}-${index}`} 
+            item={item} 
+            isCarousel={true} 
+            shopClosed={shopClosed} 
+            onOpenDetails={onOpenDetails} 
+            onQuickAdd={onQuickAdd} 
+            cart={cart} 
+            onRemoveFromCart={onRemoveFromCart} 
+          />
+        ))}
+      </div>
     </div>
   );
 }
