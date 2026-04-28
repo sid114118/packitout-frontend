@@ -1,14 +1,25 @@
 import React, { memo } from 'react';
+import { createPortal } from 'react-dom'; // 🚀 THE MAGIC FIX IMPORT
 
-// 📋 1. FIXED VARIANT SELECTION SHEET (Z-Index boosted to overlay Search Page!)
+// 📋 1. FIXED VARIANT SELECTION SHEET (Now floats above EVERYTHING)
 export function VariantBottomSheet({ product, onClose, onAddToCart }) {
   if (!product) return null;
-  return (
+
+  // 🚀 createPortal breaks this out of the feed and forces it on top of the Search Page!
+  return createPortal(
     <>
-      {/* 🚀 FIX: Boosted zIndex to 99999 to guarantee it sits above the Search Page */}
-      <div onClick={onClose} style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.6)', zIndex: 999999, backdropFilter: 'blur(2px)' }} />
-      <div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 100000, display: 'flex', flexDirection: 'column', alignItems: 'center', fontFamily: 'system-ui, -apple-system, sans-serif' }}>
+      {/* 🚀 Z-INDEX CRANKED TO 9999998 */}
+      <div onClick={onClose} style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.6)', zIndex: 9999998, backdropFilter: 'blur(2px)' }} />
+      
+      {/* 🚀 Z-INDEX CRANKED TO 9999999 WITH SLIDE-UP ANIMATION */}
+      <div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 9999999, display: 'flex', flexDirection: 'column', alignItems: 'center', fontFamily: 'system-ui, -apple-system, sans-serif', animation: 'sheetSlideUp 0.25s cubic-bezier(0.32,0.72,0,1)' }}>
+        
+        <style>{`
+          @keyframes sheetSlideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+        `}</style>
+
         <button onClick={onClose} style={{ marginBottom: '15px', backgroundColor: '#333', color: '#fff', border: 'none', borderRadius: '50%', width: '40px', height: '40px', fontSize: '1.2rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 10px rgba(0,0,0,0.2)' }}>✕</button>
+        
         <div style={{ backgroundColor: '#fff', width: '100%', borderTopLeftRadius: '24px', borderTopRightRadius: '24px', padding: '20px', paddingBottom: '30px', maxHeight: '75vh', overflowY: 'auto' }}>
           <h3 style={{ margin: '0 0 15px 0', fontSize: '1.1rem', color: '#111827', fontWeight: '800' }}>{product.name}</h3>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
@@ -38,7 +49,8 @@ export function VariantBottomSheet({ product, onClose, onAddToCart }) {
           </div>
         </div>
       </div>
-    </>
+    </>,
+    document.body // 🚀 Attaches it directly to the body!
   );
 }
 
@@ -125,7 +137,7 @@ const ModernProductCardBase = ({ item, isCarousel, shopClosed, onOpenDetails, on
                   onClick={() => onQuickAdd(item)} 
                   style={{ backgroundColor: '#fff', color: '#ef4444', border: '1px solid #fca5a5', borderRadius: '8px', padding: '6px 12px', fontSize: '0.75rem', fontWeight: '800', cursor: 'pointer', boxShadow: '0 2px 4px rgba(0,0,0,0.04)', textTransform: 'uppercase' }}
                 >
-                  {/* 🚀 FIX: Changes "ADD" to "SELECT" if the item has a group/variants! */}
+                  {/* SELECT button displays cleanly! */}
                   {isMultiVariant ? "SELECT" : "ADD"}
                 </button>
               )
