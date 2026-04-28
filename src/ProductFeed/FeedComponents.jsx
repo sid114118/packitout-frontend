@@ -1,48 +1,69 @@
 import React, { memo } from 'react';
-import { createPortal } from 'react-dom'; // 🚀 THE MAGIC FIX IMPORT
+import { createPortal } from 'react-dom'; 
 
-// 📋 1. FIXED VARIANT SELECTION SHEET (Now floats above EVERYTHING)
+// 📋 1. FIXED VARIANT SELECTION SHEET (Premium Native Redesign)
 export function VariantBottomSheet({ product, onClose, onAddToCart }) {
   if (!product) return null;
 
-  // 🚀 createPortal breaks this out of the feed and forces it on top of the Search Page!
   return createPortal(
     <>
-      {/* 🚀 Z-INDEX CRANKED TO 9999998 */}
-      <div onClick={onClose} style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.6)', zIndex: 9999998, backdropFilter: 'blur(2px)' }} />
+      <div onClick={onClose} style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 9999998, backdropFilter: 'blur(4px)' }} />
       
-      {/* 🚀 Z-INDEX CRANKED TO 9999999 WITH SLIDE-UP ANIMATION */}
-      <div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 9999999, display: 'flex', flexDirection: 'column', alignItems: 'center', fontFamily: 'system-ui, -apple-system, sans-serif', animation: 'sheetSlideUp 0.25s cubic-bezier(0.32,0.72,0,1)' }}>
+      <div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 9999999, display: 'flex', flexDirection: 'column', fontFamily: 'system-ui, -apple-system, sans-serif', animation: 'sheetSlideUp 0.3s cubic-bezier(0.25, 1, 0.5, 1)' }}>
         
         <style>{`
           @keyframes sheetSlideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
         `}</style>
 
-        <button onClick={onClose} style={{ marginBottom: '15px', backgroundColor: '#333', color: '#fff', border: 'none', borderRadius: '50%', width: '40px', height: '40px', fontSize: '1.2rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 10px rgba(0,0,0,0.2)' }}>✕</button>
-        
-        <div style={{ backgroundColor: '#fff', width: '100%', borderTopLeftRadius: '24px', borderTopRightRadius: '24px', padding: '20px', paddingBottom: '30px', maxHeight: '75vh', overflowY: 'auto' }}>
-          <h3 style={{ margin: '0 0 15px 0', fontSize: '1.1rem', color: '#111827', fontWeight: '800' }}>{product.name}</h3>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+        {/* 🌟 NATIVE BOTTOM SHEET CONTAINER */}
+        <div style={{ backgroundColor: '#fff', width: '100%', borderTopLeftRadius: '24px', borderTopRightRadius: '24px', padding: '0 0 25px 0', maxHeight: '85vh', display: 'flex', flexDirection: 'column', boxShadow: '0 -4px 20px rgba(0,0,0,0.1)' }}>
+          
+          {/* 🌟 IOS/ANDROID DRAG HANDLE */}
+          <div style={{ width: '100%', display: 'flex', justifyContent: 'center', paddingTop: '12px', paddingBottom: '8px' }}>
+            <div style={{ width: '40px', height: '5px', backgroundColor: '#e2e8f0', borderRadius: '10px' }} />
+          </div>
+
+          {/* 🌟 CLEAN HEADER */}
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0 20px 15px 20px', borderBottom: '1px solid #f1f5f9' }}>
+            <h3 style={{ margin: 0, fontSize: '1.15rem', color: '#0f172a', fontWeight: '800', lineHeight: '1.3', paddingRight: '15px' }}>{product.name}</h3>
+            <button onClick={onClose} style={{ backgroundColor: '#f8fafc', color: '#64748b', border: 'none', borderRadius: '50%', width: '32px', height: '32px', fontSize: '1.2rem', fontWeight: 'bold', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>✕</button>
+          </div>
+
+          {/* 🌟 VARIANT LIST */}
+          <div className="premium-hide-scroll" style={{ overflowY: 'auto', padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
             {product.variants.map((variant, idx) => {
               const vPrice = variant.sellingPrice || variant.mrp;
               const vDiscounted = vPrice < variant.mrp;
               const vDiscountPercent = vDiscounted ? Math.round(((variant.mrp - vPrice) / variant.mrp) * 100) : 0;
+              
               return (
-                <div key={idx} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', backgroundColor: '#f8fafc', padding: '12px', borderRadius: '16px', border: '1px solid #f1f5f9' }}>
+                <div key={idx} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', backgroundColor: '#fff', padding: '12px', borderRadius: '16px', border: '1px solid #e2e8f0', boxShadow: '0 4px 10px rgba(0,0,0,0.02)' }}>
+                  
                   <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
-                    <div style={{ position: 'relative', width: '50px', height: '50px', backgroundColor: '#fff', borderRadius: '12px', display: 'flex', justifyContent: 'center', alignItems: 'center', boxShadow: '0 2px 4px rgba(0,0,0,0.02)' }}>
-                      {vDiscounted && <span style={{ position: 'absolute', top: '-5px', left: '-5px', backgroundColor: '#ef4444', color: '#fff', fontSize: '0.6rem', fontWeight: 'bold', padding: '2px 6px', borderRadius: '6px' }}>{vDiscountPercent}% OFF</span>}
-                      {variant.image ? <img src={variant.image} alt="" loading="lazy" style={{ maxWidth: '40px', maxHeight: '40px', objectFit: 'contain' }} /> : <span style={{ fontSize: '24px' }}>{variant.emoji}</span>}
+                    {/* Image Stage */}
+                    <div style={{ position: 'relative', width: '56px', height: '56px', backgroundColor: '#f8fafc', borderRadius: '12px', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+                      {vDiscounted && <span style={{ position: 'absolute', top: '-6px', left: '-6px', backgroundColor: '#ef4444', color: '#fff', fontSize: '0.6rem', fontWeight: '800', padding: '3px 6px', borderRadius: '6px' }}>{vDiscountPercent}% OFF</span>}
+                      {variant.image ? <img src={variant.image} alt="" loading="lazy" style={{ maxWidth: '44px', maxHeight: '44px', objectFit: 'contain', mixBlendMode: 'multiply' }} /> : <span style={{ fontSize: '24px' }}>{variant.emoji}</span>}
                     </div>
-                    <div>
-                      <div style={{ fontSize: '0.85rem', color: '#64748b', fontWeight: '600' }}>{variant.qnty}</div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '2px' }}>
-                        <span style={{ fontWeight: '800', fontSize: '1rem', color: '#0f172a' }}>₹{vPrice}</span>
-                        {vDiscounted && <span style={{ fontSize: '0.75rem', color: '#94a3b8', textDecoration: 'line-through', fontWeight: '500' }}>₹{variant.mrp}</span>}
+                    
+                    {/* Size & Price */}
+                    <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+                      <div style={{ fontSize: '0.85rem', color: '#64748b', fontWeight: '700', marginBottom: '2px' }}>{variant.qnty}</div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <span style={{ fontWeight: '800', fontSize: '1.05rem', color: '#0f172a' }}>₹{vPrice}</span>
+                        {vDiscounted && <span style={{ fontSize: '0.75rem', color: '#94a3b8', textDecoration: 'line-through', fontWeight: '600' }}>₹{variant.mrp}</span>}
                       </div>
                     </div>
                   </div>
-                  <button onClick={() => { onAddToCart(variant); onClose(); }} style={{ backgroundColor: '#eff6ff', color: '#2563eb', border: 'none', borderRadius: '8px', padding: '8px 16px', fontSize: '0.85rem', fontWeight: '800', cursor: 'pointer' }}>ADD</button>
+
+                  {/* 🌟 RED THEME ADD BUTTON */}
+                  <button 
+                    onClick={() => { onAddToCart(variant); onClose(); }} 
+                    style={{ backgroundColor: '#fff', color: '#ef4444', border: '1px solid #fca5a5', borderRadius: '8px', padding: '6px 16px', fontSize: '0.85rem', fontWeight: '800', cursor: 'pointer', boxShadow: '0 2px 4px rgba(0,0,0,0.03)', textTransform: 'uppercase' }}
+                  >
+                    ADD
+                  </button>
+                  
                 </div>
               );
             })}
@@ -50,17 +71,14 @@ export function VariantBottomSheet({ product, onClose, onAddToCart }) {
         </div>
       </div>
     </>,
-    document.body // 🚀 Attaches it directly to the body!
+    document.body
   );
 }
 
 // 💎 2. HIGH-PERFORMANCE MODERN PRODUCT CARD
 const ModernProductCardBase = ({ item, isCarousel, shopClosed, onOpenDetails, onQuickAdd, cart = [], onRemoveFromCart }) => {
   const isOutOfStock = !item.inStock;
-  
-  // 🚀 CHECKS IF THIS IS A MULTI-SIZE PRODUCT
   const isMultiVariant = item.variants && item.variants.length > 1;
-  
   const safeCart = Array.isArray(cart) ? cart.filter(c => c !== null) : [];
   const cartCount = safeCart.filter(c => c._id === item._id).reduce((sum, c) => sum + (c.qty || 1), 0);
 
@@ -112,7 +130,6 @@ const ModernProductCardBase = ({ item, isCarousel, shopClosed, onOpenDetails, on
         </div>
 
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 'auto' }}>
-          
           <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
             {item.isDiscounted && (
               <span style={{ fontSize: '0.7rem', color: '#94a3b8', textDecoration: 'line-through', fontWeight: '500', marginBottom: '-2px' }}>
@@ -137,13 +154,11 @@ const ModernProductCardBase = ({ item, isCarousel, shopClosed, onOpenDetails, on
                   onClick={() => onQuickAdd(item)} 
                   style={{ backgroundColor: '#fff', color: '#ef4444', border: '1px solid #fca5a5', borderRadius: '8px', padding: '6px 12px', fontSize: '0.75rem', fontWeight: '800', cursor: 'pointer', boxShadow: '0 2px 4px rgba(0,0,0,0.04)', textTransform: 'uppercase' }}
                 >
-                  {/* SELECT button displays cleanly! */}
                   {isMultiVariant ? "SELECT" : "ADD"}
                 </button>
               )
             )}
           </div>
-
         </div>
       </div>
     </div>
@@ -215,4 +230,5 @@ export function ProductRow({ title, subtitle, items, onViewAll, shopClosed, onOp
       </div>
     </div>
   );
-}
+  }
+                  
