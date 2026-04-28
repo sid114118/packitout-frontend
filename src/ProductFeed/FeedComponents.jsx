@@ -1,12 +1,13 @@
 import React, { memo } from 'react';
 
-// 📋 1. FIXED VARIANT SELECTION SHEET 
+// 📋 1. FIXED VARIANT SELECTION SHEET (Z-Index boosted to overlay Search Page!)
 export function VariantBottomSheet({ product, onClose, onAddToCart }) {
   if (!product) return null;
   return (
     <>
-      <div onClick={onClose} style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.6)', zIndex: 1000, backdropFilter: 'blur(2px)' }} />
-      <div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 1001, display: 'flex', flexDirection: 'column', alignItems: 'center', fontFamily: 'system-ui, -apple-system, sans-serif' }}>
+      {/* 🚀 FIX: Boosted zIndex to 99999 to guarantee it sits above the Search Page */}
+      <div onClick={onClose} style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.6)', zIndex: 99999, backdropFilter: 'blur(2px)' }} />
+      <div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 100000, display: 'flex', flexDirection: 'column', alignItems: 'center', fontFamily: 'system-ui, -apple-system, sans-serif' }}>
         <button onClick={onClose} style={{ marginBottom: '15px', backgroundColor: '#333', color: '#fff', border: 'none', borderRadius: '50%', width: '40px', height: '40px', fontSize: '1.2rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 10px rgba(0,0,0,0.2)' }}>✕</button>
         <div style={{ backgroundColor: '#fff', width: '100%', borderTopLeftRadius: '24px', borderTopRightRadius: '24px', padding: '20px', paddingBottom: '30px', maxHeight: '75vh', overflowY: 'auto' }}>
           <h3 style={{ margin: '0 0 15px 0', fontSize: '1.1rem', color: '#111827', fontWeight: '800' }}>{product.name}</h3>
@@ -41,9 +42,12 @@ export function VariantBottomSheet({ product, onClose, onAddToCart }) {
   );
 }
 
-// 💎 2. HIGH-PERFORMANCE MODERN PRODUCT CARD (Zepto/Instamart Standard Layout)
+// 💎 2. HIGH-PERFORMANCE MODERN PRODUCT CARD
 const ModernProductCardBase = ({ item, isCarousel, shopClosed, onOpenDetails, onQuickAdd, cart = [], onRemoveFromCart }) => {
   const isOutOfStock = !item.inStock;
+  
+  // 🚀 CHECKS IF THIS IS A MULTI-SIZE PRODUCT
+  const isMultiVariant = item.variants && item.variants.length > 1;
   
   const safeCart = Array.isArray(cart) ? cart.filter(c => c !== null) : [];
   const cartCount = safeCart.filter(c => c._id === item._id).reduce((sum, c) => sum + (c.qty || 1), 0);
@@ -61,7 +65,7 @@ const ModernProductCardBase = ({ item, isCarousel, shopClosed, onOpenDetails, on
         minWidth: isCarousel ? '145px' : 'auto', 
         maxWidth: isCarousel ? '155px' : 'auto', 
         flexShrink: 0, 
-        border: '1px solid #f1f5f9', // Very soft border
+        border: '1px solid #f1f5f9',
         borderRadius: '16px', 
         padding: '10px', 
         backgroundColor: '#fff', 
@@ -76,7 +80,6 @@ const ModernProductCardBase = ({ item, isCarousel, shopClosed, onOpenDetails, on
         flexDirection: 'column',
       }}
     >
-      {/* 🖼️ 1. CLEAN IMAGE SECTION (No floating buttons blocking it!) */}
       <div style={{ position: 'relative', height: '110px', width: '100%', display: 'flex', justifyContent: 'center', alignItems: 'center', backgroundColor: '#f8fafc', borderRadius: '12px', marginBottom: '12px' }}>
         {item.isDiscounted && !isOutOfStock && (
           <span style={{ position: 'absolute', top: '0', left: '0', backgroundColor: '#ef4444', color: '#fff', fontSize: '0.65rem', fontWeight: '800', padding: '4px 8px', borderRadius: '12px 0 8px 0', zIndex: 1, textTransform: 'uppercase' }}>
@@ -86,7 +89,6 @@ const ModernProductCardBase = ({ item, isCarousel, shopClosed, onOpenDetails, on
         {item.image ? <img src={item.image} alt={safeName} loading="lazy" style={{ maxHeight: '85%', maxWidth: '85%', objectFit: 'contain', mixBlendMode: 'multiply' }} /> : <span style={{fontSize: '40px'}}>{item.emoji}</span>}
       </div>
       
-      {/* 📝 2. TEXT SECTION (Pushes the bottom row down evenly) */}
       <div style={{ display: 'flex', flexDirection: 'column', flexGrow: 1, justifyContent: 'space-between' }}>
         <div>
           <p style={{ fontSize: '0.75rem', color: '#64748b', margin: '0 0 4px 0', fontWeight: '600' }}>
@@ -97,10 +99,8 @@ const ModernProductCardBase = ({ item, isCarousel, shopClosed, onOpenDetails, on
           </h4>
         </div>
 
-        {/* 💵 3. THE SPLIT BOTTOM ROW (Price Left | ADD Right) */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 'auto' }}>
           
-          {/* Price Block */}
           <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
             {item.isDiscounted && (
               <span style={{ fontSize: '0.7rem', color: '#94a3b8', textDecoration: 'line-through', fontWeight: '500', marginBottom: '-2px' }}>
@@ -112,7 +112,6 @@ const ModernProductCardBase = ({ item, isCarousel, shopClosed, onOpenDetails, on
             </span>
           </div>
 
-          {/* Action Button */}
           <div onClick={(e) => e.stopPropagation()}>
             {!isOutOfStock && !shopClosed && (
               cartCount > 0 ? (
@@ -124,9 +123,10 @@ const ModernProductCardBase = ({ item, isCarousel, shopClosed, onOpenDetails, on
               ) : (
                 <button 
                   onClick={() => onQuickAdd(item)} 
-                  style={{ backgroundColor: '#fff', color: '#ef4444', border: '1px solid #fca5a5', borderRadius: '8px', padding: '6px 16px', fontSize: '0.8rem', fontWeight: '800', cursor: 'pointer', boxShadow: '0 2px 4px rgba(0,0,0,0.04)', textTransform: 'uppercase' }}
+                  style={{ backgroundColor: '#fff', color: '#ef4444', border: '1px solid #fca5a5', borderRadius: '8px', padding: '6px 12px', fontSize: '0.75rem', fontWeight: '800', cursor: 'pointer', boxShadow: '0 2px 4px rgba(0,0,0,0.04)', textTransform: 'uppercase' }}
                 >
-                  ADD
+                  {/* 🚀 FIX: Changes "ADD" to "SELECT" if the item has a group/variants! */}
+                  {isMultiVariant ? "SELECT" : "ADD"}
                 </button>
               )
             )}
@@ -203,4 +203,4 @@ export function ProductRow({ title, subtitle, items, onViewAll, shopClosed, onOp
       </div>
     </div>
   );
-        }
+}
