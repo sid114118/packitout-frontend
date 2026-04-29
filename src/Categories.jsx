@@ -8,7 +8,7 @@ export default function Categories({ onCategorySelect, searchQuery = "" }) {
       sectionTitle: "Daily Fresh & Staples",
       items: [
         { name: "Breakfast Cereals", icon: "🍅", image: "", bgColor: "#fefce8" },
-        { name: "Dairy, Bread & Eggs", icon: "🥛", image: "https://res.cloudinary.com/dj48tkcsw/image/upload/v1775282049/dairyandbread_tvt2pt.webp", bgColor: "#f0f9ff" }, 
+        { name: "Dairy, Bread & Eggs", icon: "🥛", image: "https://res.cloudinary.com/dj48tkcsw/image/upload/v1777423759/1000262144-removebg-preview_fel2fg.jpg", bgColor: "#f0f9ff" }, 
         { name: "Atta & Rice", icon: "🌾", image: "https://res.cloudinary.com/dj48tkcsw/image/upload/v1775282049/aata_rice_klxfpi.webp", bgColor: "#fefce8" },
         { name: "Dals & Pulses", icon: "🥣", image: "https://res.cloudinary.com/dj48tkcsw/image/upload/v1775285310/1000253417-removebg-preview_1_yurvuu.jpg", bgColor: "#fef2f2" }, 
         { name: "Oil, Ghee & Salt", icon: "🍶", image: "https://res.cloudinary.com/dj48tkcsw/image/upload/v1775282049/Oil_ghee_twp67j.webp", bgColor:"#f0fdf4" },
