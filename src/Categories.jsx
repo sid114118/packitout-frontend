@@ -98,7 +98,7 @@ export default function Categories({ onCategorySelect, searchQuery = "" }) {
                       alignItems: 'center',
                       boxShadow: '0 4px 12px rgba(0,0,0,0.03)',
                       overflow: 'hidden', 
-                      marginBottom: '2px',
+                      marginBottom: '-2px',
                       border: '1px solid rgba(0,0,0,0.02)'
                     }}>
                       {item.image ? (
