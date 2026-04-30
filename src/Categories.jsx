@@ -9,12 +9,12 @@ export default function Categories({ onCategorySelect, searchQuery = "" }) {
       items: [
         { name: "Breakfast Cereals", icon: "🍅", image: "", bgColor: "#fefce8" },
         { name: "Dairy, Bread & Eggs", icon: "🥛", image: "https://res.cloudinary.com/dj48tkcsw/image/upload/v1777423759/1000262144-removebg-preview_fel2fg.jpg", bgColor: "#f0f9ff" }, 
-        { name: "Atta & Rice", icon: "🌾", image: "https://res.cloudinary.com/dj48tkcsw/image/upload/v1775282049/aata_rice_klxfpi.webp", bgColor: "#fefce8" },
-        { name: "Dals & Pulses", icon: "🥣", image: "https://res.cloudinary.com/dj48tkcsw/image/upload/v1775285310/1000253417-removebg-preview_1_yurvuu.jpg", bgColor: "#fef2f2" }, 
-        { name: "Oil, Ghee & Salt", icon: "🍶", image: "https://res.cloudinary.com/dj48tkcsw/image/upload/v1775282049/Oil_ghee_twp67j.webp", bgColor:"#f0fdf4" },
-        { name: "Dry Fruits & Cereals", icon: "🥜", image: "https://res.cloudinary.com/dj48tkcsw/image/upload/v1775282050/dryfruits_izvf5g.webp", bgColor: "#f0f9ff" },
-        { name: "Spices & Condiments", icon: "🌶️", image: "https://res.cloudinary.com/dj48tkcsw/image/upload/v1775282049/masala_tydple.webp", bgColor: "#fdf2f8" }, 
-        { name: "Sauces & Spreads", icon: "🍯", image: "https://res.cloudinary.com/dj48tkcsw/image/upload/v1775285893/1000253431-removebg-preview_b2zxmt.jpg", bgColor: "#f0fdf4" } 
+        { name: "Atta & Rice", icon: "🌾", image: "https://res.cloudinary.com/dj48tkcsw/image/upload/v1777538936/1000262762-removebg-preview_rwxmll.webp", bgColor: "#fefce8" },
+        { name: "Dals & Pulses", icon: "🥣", image: "https://res.cloudinary.com/dj48tkcsw/image/upload/v1777538935/1000262801-removebg-preview_1_jksucv.jpg", bgColor: "#fef2f2" }, 
+        { name: "Oil, Ghee & Salt", icon: "🍶", image: "https://res.cloudinary.com/dj48tkcsw/image/upload/v1777538941/1000262800-removebg-preview_x9dpiy.jpg", bgColor:"#f0fdf4" },
+        { name: "Dry Fruits & Cereals", icon: "🥜", image: "https://res.cloudinary.com/dj48tkcsw/image/upload/v1777539613/1000262799-removebg-preview_kvf45w.jpg", bgColor: "#f0f9ff" },
+        { name: "Spices & Condiments", icon: "🌶️", image: "https://res.cloudinary.com/dj48tkcsw/image/upload/v1777538939/1000262801-removebg-preview_julon8.jpg", bgColor: "#fdf2f8" }, 
+        { name: "Sauces & Spreads", icon: "🍯", image: "https://res.cloudinary.com/dj48tkcsw/image/upload/v1777538934/1000262796-removebg-preview_f77xzz.jpg", bgColor: "#f0fdf4" } 
       ]
     },
     {
