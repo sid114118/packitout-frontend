@@ -135,8 +135,8 @@ export default function ProductModal({ product, isOpen, onClose, onAddToCart, on
 
       <div id="product-page-scroll" className="pm-hide-scroll" style={{ flex: 1, overflowY: 'auto', paddingBottom: '140px' }}>
         
-        {/* 🌟 PREMIUM IMAGE STAGE */}
-        <div style={{ width: '100%', height: '320px', display: 'flex', justifyContent: 'center', alignItems: 'center', backgroundColor: '#f8fafc', borderBottomLeftRadius: '32px', borderBottomRightRadius: '32px', marginBottom: '20px', position: 'relative' }}>
+        {/* 🌟 PREMIUM IMAGE STAGE (FIXED HEIGHT) */}
+        <div style={{ width: '100%', height: '240px', display: 'flex', justifyContent: 'center', alignItems: 'center', backgroundColor: '#f8fafc', borderBottomLeftRadius: '24px', borderBottomRightRadius: '24px', marginBottom: '20px', position: 'relative' }}>
           {isDiscounted && (
             <div style={{ position: 'absolute', top: '15px', left: '15px', backgroundColor: '#ef4444', color: '#fff', padding: '6px 12px', borderRadius: '12px', fontWeight: '800', fontSize: '0.8rem', letterSpacing: '0.5px' }}>
               {discountPercent}% OFF
@@ -312,5 +312,4 @@ export default function ProductModal({ product, isOpen, onClose, onAddToCart, on
       )}
     </div>
   );
-          }
-                             
+                               }
