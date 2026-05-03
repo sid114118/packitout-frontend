@@ -17,7 +17,7 @@ export default function SearchPage({
   const [debouncedQuery, setDebouncedQuery] = useState(""); 
   const [recentSearches, setRecentSearches] = useState([]);
   
-  // 🚀 LAZY LOADING STATE: Only load 16 items at a time!
+  // 🚀 LAZY LOADING STATE
   const [visibleCount, setVisibleCount] = useState(16);
   
   const inputRef = useRef(null); 
@@ -30,7 +30,7 @@ export default function SearchPage({
     }
   }, []);
 
-  // 🚀 DEBOUNCE ENGINE
+  // 🚀 DEBOUNCE ENGINE (waits 300ms after you stop typing to search)
   useEffect(() => {
     const timer = setTimeout(() => {
       setDebouncedQuery(query);
@@ -38,7 +38,6 @@ export default function SearchPage({
     return () => clearTimeout(timer);
   }, [query]);
 
-  // 🚀 RESET VISIBLE COUNT when search changes
   useEffect(() => {
     setVisibleCount(16);
   }, [debouncedQuery]);
@@ -96,6 +95,7 @@ export default function SearchPage({
     return total + (price * (Number(item.qty) || 1));
   }, 0);
 
+  // If query is different from debouncedQuery, the user is actively typing!
   const isTyping = query.trim().length > 0 && query !== debouncedQuery;
 
   const handleClearRecent = () => {
@@ -109,7 +109,6 @@ export default function SearchPage({
     inputRef.current?.focus();
   };
 
-  // ⚡ INFINITE SCROLL HANDLER ⚡
   const handleScroll = (e) => {
     const { scrollTop, clientHeight, scrollHeight } = e.target;
     if (scrollHeight - scrollTop <= clientHeight * 1.5) {
@@ -119,10 +118,18 @@ export default function SearchPage({
 
   return createPortal(
     <div 
-      onScroll={handleScroll} // ⚡ Scroll listener attached to root search div!
-      style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: BOTTOM_NAV_HEIGHT, backgroundColor: '#fff', zIndex: 999999, overflowY: 'auto', animation: 'fadeIn 0.2s ease', paddingBottom: cartTotalItems > 0 ? '120px' : '40px' }}
+      onScroll={handleScroll}
+      style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: BOTTOM_NAV_HEIGHT, backgroundColor: '#fff', zIndex: 999999, overflowY: 'auto', animation: 'fadeIn 0.2s ease', paddingBottom: cartTotalItems > 0 ? '120px' : '40px', fontFamily: 'system-ui, -apple-system, sans-serif' }}
     >
-      <style>{`@keyframes fadeIn { from { opacity: 0; transform: translateY(15px); } to { opacity: 1; transform: translateY(0); } }`}</style>
+      {/* 🌟 ANIMATIONS FOR SHIMMER CARDS AND FADE IN */}
+      <style>{`
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(15px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes skeletonPulse {
+          0% { backgroundColor: #f1f5f9; }
+          50% { backgroundColor: #e2e8f0; }
+          100% { backgroundColor: #f1f5f9; }
+        }
+      `}</style>
       
       {/* 🌟 SEARCH HEADER */}
       <div style={{ padding: '15px', position: 'sticky', top: 0, backgroundColor: '#fff', zIndex: 2000, borderBottom: '1px solid #f1f5f9', boxShadow: '0 2px 4px rgba(0,0,0,0.02)' }}>
@@ -167,10 +174,27 @@ export default function SearchPage({
             </div>
           )
         ) : isTyping ? (
-          <div style={{ textAlign: 'center', padding: '40px 20px', color: '#64748b' }}>
-            <p style={{ fontWeight: 'bold', fontSize: '1.1rem', animation: 'pulse 1.5s infinite' }}>Searching 3,000+ items...</p>
-            <style>{`@keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }`}</style>
+
+          /* 🌟 BLINKIT STYLE SKELETON LOADER (SHIMMER CARDS) 🌟 */
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: '12px' }}>
+            {[1, 2, 3, 4, 5, 6].map((n) => (
+              <div key={n} style={{ border: '1px solid #f1f5f9', borderRadius: '16px', padding: '10px', backgroundColor: '#fff', display: 'flex', flexDirection: 'column', height: '230px', boxShadow: '0 4px 12px rgba(0,0,0,0.02)' }}>
+                {/* Image Placeholder */}
+                <div style={{ height: '110px', width: '100%', borderRadius: '12px', marginBottom: '12px', animation: 'skeletonPulse 1.5s infinite ease-in-out' }} />
+                {/* Qty Placeholder */}
+                <div style={{ height: '10px', width: '30%', borderRadius: '4px', marginBottom: '8px', animation: 'skeletonPulse 1.5s infinite ease-in-out' }} />
+                {/* Title Placeholder */}
+                <div style={{ height: '14px', width: '85%', borderRadius: '4px', marginBottom: '6px', animation: 'skeletonPulse 1.5s infinite ease-in-out' }} />
+                <div style={{ height: '14px', width: '60%', borderRadius: '4px', marginBottom: 'auto', animation: 'skeletonPulse 1.5s infinite ease-in-out' }} />
+                {/* Bottom Row Placeholder (Price + Button) */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '12px' }}>
+                  <div style={{ height: '18px', width: '50px', borderRadius: '4px', animation: 'skeletonPulse 1.5s infinite ease-in-out' }} />
+                  <div style={{ height: '28px', width: '60px', borderRadius: '8px', animation: 'skeletonPulse 1.5s infinite ease-in-out' }} />
+                </div>
+              </div>
+            ))}
           </div>
+
         ) : displayItems.length === 0 ? (
           <div style={{ textAlign: 'center', padding: '40px 20px', color: '#64748b' }}>
             <div style={{ fontSize: '3rem', marginBottom: '10px' }}>🔍</div>
@@ -178,8 +202,6 @@ export default function SearchPage({
           </div>
         ) : (
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: '12px' }}>
-            
-            {/* ⚡ ONLY MAP THE SLICED ITEMS! */}
             {displayItems.slice(0, visibleCount).map((item, index) => (
               <ModernProductCard 
                 key={`${item._id}-${index}`} 
@@ -192,7 +214,6 @@ export default function SearchPage({
                 onRemoveFromCart={onRemoveFromCart} 
               />
             ))}
-            
           </div>
         )}
       </div>
@@ -213,5 +234,4 @@ export default function SearchPage({
     </div>,
     document.body
   );
-      }
-              
+                }
