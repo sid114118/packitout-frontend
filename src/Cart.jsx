@@ -249,7 +249,7 @@ export default function Cart({ cart, setCart, user, onBack, onCheckoutSuccess })
       </div>
 
       {/* Modern Floating Checkout Button */}
-      <div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, backgroundColor: 'rgba(255, 255, 255, 0.9)', backdropFilter: 'blur(10px)', padding: '16px', borderTop: '1px solid rgba(0,0,0,0.05)', zIndex: 90 }}>
+      <div style={{ position: 'fixed', bottom: '65px', left: 0, right: 0, backgroundColor: 'rgba(255, 255, 255, 0.9)', backdropFilter: 'blur(10px)', padding: '16px', borderTop: '1px solid rgba(0,0,0,0.05)', zIndex: 999 }}>
         <button 
           onClick={() => setShowPayment(true)} 
           disabled={!targetShop}
@@ -262,5 +262,4 @@ export default function Cart({ cart, setCart, user, onBack, onCheckoutSuccess })
 
     </div>
   );
-              }
-            
+                       }
