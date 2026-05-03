@@ -6,7 +6,6 @@ import ProfileHeader from './components/UserDashboard/ProfileHeader';
 import OrdersList from './components/UserDashboard/OrdersList';
 import AddressBook from './components/UserDashboard/AddressBook';
 import ReceiptModal from './components/UserDashboard/ReceiptModal';
-// 🌟 IMPORT THE NEW REVIEW MODAL!
 import OrderReviewModal from './components/UserDashboard/OrderReviewModal'; 
 
 export default function UserDashboard({ user, onExit, onLogout }) {
@@ -16,7 +15,6 @@ export default function UserDashboard({ user, onExit, onLogout }) {
   const [loading, setLoading] = useState(true);
   const [selectedOrder, setSelectedOrder] = useState(null); 
   
-  // 🌟 NEW: STATE FOR THE REVIEW MODAL
   const [orderToReview, setOrderToReview] = useState(null);
   const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
   
@@ -41,7 +39,11 @@ export default function UserDashboard({ user, onExit, onLogout }) {
     fetch(`${BASE_URL}/orders`)
       .then(res => res.json())
       .then(data => {
-        setOrders(data.filter(order => order.userId?._id === user._id));
+        // Sort by newest first
+        const myOrders = data
+          .filter(order => order.userId?._id === user._id || order.userId === user._id)
+          .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+        setOrders(myOrders);
         setLoading(false);
       })
       .catch(() => setLoading(false));
@@ -100,8 +102,30 @@ export default function UserDashboard({ user, onExit, onLogout }) {
   }, [user._id]);
 
   // --- LOGIC FUNCTIONS ---
+
+  // ❌ NEW: HANDLE ORDER CANCELLATION
+  const handleCancelOrder = async (orderId) => {
+    if (!window.confirm("Are you sure you want to cancel this order? 🛍️")) return;
+
+    try {
+      const res = await fetch(`${BASE_URL}/orders/${orderId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: "Cancelled ❌" })
+      });
+
+      if (res.ok) {
+        alert("Order cancelled successfully.");
+        fetchOrders(); // Refresh UI
+      } else {
+        alert("Could not cancel order. It may have already been accepted.");
+      }
+    } catch (err) {
+      console.error("Cancel Error:", err);
+      alert("Network error. Please try again.");
+    }
+  };
   
-  // 🌟 NEW: HANDLE UNIFIED ORDER REVIEW SUBMISSION
   const handleOrderReview = async (reviewPayload) => {
     try {
       const payloadWithUser = {
@@ -118,13 +142,12 @@ export default function UserDashboard({ user, onExit, onLogout }) {
 
       if (response.ok) {
         alert("Thank you for your valuable feedback! 🎉");
-        setIsReviewModalOpen(false); // Close the modal
-        fetchOrders(); // Refresh orders so the "Rate Order" button disappears
+        setIsReviewModalOpen(false);
+        fetchOrders(); 
       } else {
-        alert("Failed to save review. Please try again.");
+        alert("Failed to save review.");
       }
     } catch (err) {
-      console.error("Review error:", err);
       alert("Network error. Please check your connection.");
     }
   };
@@ -155,11 +178,11 @@ export default function UserDashboard({ user, onExit, onLogout }) {
     }
   };
 
-  const activeOrders = orders.filter(o => o.status !== "Delivered ✅" && o.status !== "Done 🎉");
-  const pastOrders = orders.filter(o => o.status === "Delivered ✅" || o.status === "Done 🎉");
+  const activeOrders = orders.filter(o => o.status !== "Delivered ✅" && o.status !== "Done 🎉" && !o.status.includes("Cancelled"));
+  const pastOrders = orders.filter(o => o.status === "Delivered ✅" || o.status === "Done 🎉" || o.status.includes("Cancelled"));
 
   return (
-    <div style={{ backgroundColor: '#f0f4f8', minHeight: '100vh', fontFamily: 'sans-serif', paddingBottom: '40px' }}>
+    <div style={{ backgroundColor: '#f8fafc', minHeight: '100vh', fontFamily: 'system-ui, -apple-system, sans-serif', paddingBottom: '60px' }}>
       
       <ProfileHeader 
         user={user} onExit={onExit} coinBalance={coinBalance} myReferralCode={myReferralCode}
@@ -176,11 +199,11 @@ export default function UserDashboard({ user, onExit, onLogout }) {
           pendingParchis={pendingParchis}
           loading={loading} 
           setSelectedOrder={setSelectedOrder} 
-          // 🌟 NEW: THIS OPENS THE REVIEW MODAL!
           onOpenReview={(order) => {
             setOrderToReview(order);
             setIsReviewModalOpen(true);
           }}
+          onCancelOrder={handleCancelOrder} // ⚡ PROUDLY PASSING CANCEL LOGIC
         />
 
         <AddressBook 
@@ -188,19 +211,19 @@ export default function UserDashboard({ user, onExit, onLogout }) {
           newAddress={newAddress} setNewAddress={setNewAddress} handleSaveAddress={handleSaveAddress}
         />
 
-        <button onClick={onLogout} style={{ width: '100%', padding: '15px', marginTop: '10px', background: '#fee2e2', color: '#b91c1c', border: 'none', borderRadius: '12px', fontWeight: 'bold', fontSize: '1rem', cursor: 'pointer' }}>
+        <button onClick={onLogout} style={{ width: '100%', padding: '16px', marginTop: '15px', background: '#fff1f2', color: '#e11d48', border: '1px solid #fecdd3', borderRadius: '16px', fontWeight: '800', fontSize: '1rem', cursor: 'pointer', transition: 'all 0.2s' }}>
           Log Out
         </button>
 
       </div>
 
-      {/* 🧾 THE NORMAL RECEIPT MODAL */}
+      {/* 🧾 THE THERMAL RECEIPT MODAL */}
       <ReceiptModal 
         selectedOrder={selectedOrder} 
         setSelectedOrder={setSelectedOrder} 
       />
 
-      {/* ⭐ THE NEW REVIEW MODAL */}
+      {/* ⭐ THE REVIEW MODAL */}
       <OrderReviewModal 
         isOpen={isReviewModalOpen}
         onClose={() => {
