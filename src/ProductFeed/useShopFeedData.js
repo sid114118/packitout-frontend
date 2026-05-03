@@ -3,17 +3,30 @@ import { useState, useEffect } from 'react';
 const BASE_URL = "https://darkslategrey-snail-415133.hostingersite.com";
 
 export default function useShopFeedData(user) {
-  const [items, setItems] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [shopInfo, setShopInfo] = useState(null);
-  const [nearbyShops, setNearbyShops] = useState([]);
   
-  const [shopDeals, setShopDeals] = useState([]);
-  const [shopBestSellers, setShopBestSellers] = useState([]);
-  const [under99, setUnder99] = useState([]);
-  const [timeBased, setTimeBased] = useState({ title: "", subtitle: "", items: [] });
-  const [newArrivals, setNewArrivals] = useState([]);
-  const [buyItAgain, setBuyItAgain] = useState([]);
+  // ⚡ ZERO-FRAME CACHE: Read memory BEFORE React even draws the first pixel!
+  const initialCache = (() => {
+    if (!user || !user.primaryShop) return null;
+    const shopId = typeof user.primaryShop === 'object' ? user.primaryShop._id : user.primaryShop;
+    try {
+      const cached = localStorage.getItem(`packitout_feed_cache_${shopId}`);
+      return cached ? JSON.parse(cached) : null;
+    } catch (e) { return null; }
+  })();
+
+  // 🚀 Start loading as FALSE if we have cache! This kills the "Loading fresh products" screen forever.
+  const [loading, setLoading] = useState(initialCache ? false : true);
+  
+  // 🚀 Load all items instantly from memory on frame 1
+  const [items, setItems] = useState(initialCache?.items || []);
+  const [shopInfo, setShopInfo] = useState(initialCache?.shopInfo || null);
+  const [nearbyShops, setNearbyShops] = useState(initialCache?.nearbyShops || []);
+  const [shopDeals, setShopDeals] = useState(initialCache?.shopDeals || []);
+  const [shopBestSellers, setShopBestSellers] = useState(initialCache?.shopBestSellers || []);
+  const [under99, setUnder99] = useState(initialCache?.under99 || []);
+  const [timeBased, setTimeBased] = useState(initialCache?.timeBased || { title: "", subtitle: "", items: [] });
+  const [newArrivals, setNewArrivals] = useState(initialCache?.newArrivals || []);
+  const [buyItAgain, setBuyItAgain] = useState(initialCache?.buyItAgain || []);
 
   useEffect(() => {
     if (!user || !user.primaryShop) {
@@ -25,32 +38,7 @@ export default function useShopFeedData(user) {
     const cacheKey = `packitout_feed_cache_${shopId}`;
 
     // ==========================================
-    // 👻 1. THE GHOST LOAD (INSTANT CACHE)
-    // ==========================================
-    const cachedData = localStorage.getItem(cacheKey);
-    if (cachedData) {
-      try {
-        const parsed = JSON.parse(cachedData);
-        setItems(parsed.items || []);
-        setShopInfo(parsed.shopInfo || null);
-        setNearbyShops(parsed.nearbyShops || []);
-        setShopDeals(parsed.shopDeals || []);
-        setShopBestSellers(parsed.shopBestSellers || []);
-        setUnder99(parsed.under99 || []);
-        setTimeBased(parsed.timeBased || { title: "", subtitle: "", items: [] });
-        setNewArrivals(parsed.newArrivals || []);
-        setBuyItAgain(parsed.buyItAgain || []);
-        
-        setLoading(false); // ⚡ Instantly turn off the loading screen!
-      } catch (e) {
-        console.error("Cache read error", e);
-      }
-    } else {
-      setLoading(true); // Only show spinner if it's their very first time opening the app
-    }
-
-    // ==========================================
-    // 🤫 2. THE SILENT BACKGROUND FETCH
+    // 🤫 THE SILENT BACKGROUND FETCH
     // ==========================================
     const fetchShopProducts = async () => {
       try {
@@ -163,4 +151,4 @@ export default function useShopFeedData(user) {
 
   // Return all the calculated data back to the component!
   return { loading, items, shopInfo, nearbyShops, shopDeals, shopBestSellers, under99, timeBased, newArrivals, buyItAgain };
-}
+    }
