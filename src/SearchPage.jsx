@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { createPortal } from 'react-dom';
 
 // 🟢 MAKE SURE THIS PATH IS CORRECT FOR YOUR APP!
-import { ModernProductCard } from './FeedComponents.jsx';
+import { ModernProductCard } from './ProductFeed/FeedComponents.jsx';
 
 export default function SearchPage({ 
   items = [], 
