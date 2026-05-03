@@ -51,7 +51,8 @@ export default function Categories({ onCategorySelect, searchQuery = "" }) {
   })).filter(section => section.items.length > 0);
 
   return (
-    <div style={{ backgroundColor: '#f4f6f8', paddingBottom: '20px', fontFamily: 'system-ui, -apple-system, sans-serif' }}>
+    // 🚀 FIX 1: Removed the 20px bottom padding here so it pulls the Feed closer
+    <div style={{ backgroundColor: '#f4f6f8', paddingBottom: '0px', fontFamily: 'system-ui, -apple-system, sans-serif' }}>
       
       <div style={{ padding: '10px 15px' }}>
         
@@ -66,7 +67,8 @@ export default function Categories({ onCategorySelect, searchQuery = "" }) {
           </div>
         ) : (
           filteredMenuData.map((section, sectionIndex) => (
-            <div key={sectionIndex} style={{ marginBottom: '30px' }}>
+            // 🚀 FIX 2: Only adds a large bottom margin if it is NOT the last category block
+            <div key={sectionIndex} style={{ marginBottom: sectionIndex === filteredMenuData.length - 1 ? '5px' : '30px' }}>
               
               <h3 style={{ 
                 margin: '0 0 16px 4px', 
@@ -90,7 +92,6 @@ export default function Categories({ onCategorySelect, searchQuery = "" }) {
                       width: '100%',
                       maxWidth: '72px', 
                       aspectRatio: '1 / 1', 
-                      // 🚀 Allow fallback color if no image exists
                       backgroundColor: item.bgColor,
                       borderRadius: '20px', 
                       display: 'flex',
@@ -98,7 +99,8 @@ export default function Categories({ onCategorySelect, searchQuery = "" }) {
                       alignItems: 'center',
                       boxShadow: '0 4px 12px rgba(0,0,0,0.03)',
                       overflow: 'hidden', 
-                      marginBottom: '-2px',
+                      // 🚀 FIX 3: Restored the proper gap between the image and the text label
+                      marginBottom: '8px',
                       border: '1px solid rgba(0,0,0,0.02)'
                     }}>
                       {item.image ? (
@@ -106,9 +108,9 @@ export default function Categories({ onCategorySelect, searchQuery = "" }) {
                           src={item.image} 
                           alt={item.name} 
                           style={{ 
-                            width: '100%', // 🚀 FIX: Fills the entire box
-                            height: '100%', // 🚀 FIX: Fills the entire box
-                            objectFit: 'cover', // 🚀 FIX: Automatically crops the image to the curved edges!
+                            width: '100%', 
+                            height: '100%', 
+                            objectFit: 'cover', 
                           }} 
                         />
                       ) : (
