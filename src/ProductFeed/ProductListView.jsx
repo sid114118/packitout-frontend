@@ -63,7 +63,6 @@ export default function ProductListView({
   const subcategories = useMemo(() => {
     const subs = new Set();
     flattenedItems.forEach(item => {
-      // Checks if subCategory exists in your database and isn't empty/nan
       if (item.subCategory && String(item.subCategory).trim() !== "" && String(item.subCategory).trim().toLowerCase() !== "nan") {
         subs.add(item.subCategory);
       }
@@ -128,39 +127,95 @@ export default function ProductListView({
       {/* 🌟 SPLIT-SCREEN CONTENT AREA 🌟 */}
       <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
         
-        {/* ⬅️ THE LEFT SIDEBAR */}
+        {/* ⬅️ THE LEFT SIDEBAR (With Smart AI-Style Sorting!) */}
         {hasSubcategories && (
           <div className="sidebar-scroll" style={{ width: '85px', backgroundColor: '#f8fafc', borderRight: '1px solid #e2e8f0', overflowY: 'auto', flexShrink: 0 }}>
             {subcategories.map((sub, index) => {
               const isActive = selectedSub === sub;
+              
+              // 🧠 THE SMART ALGORITHM: Find the BEST product to represent this category
+              const getBestThumbnail = () => {
+                let itemsInSub = sub === "All" 
+                  ? flattenedItems 
+                  : flattenedItems.filter(item => item.subCategory === sub);
+
+                // Filter 1: Must have an image and be in stock
+                let premiumItems = itemsInSub.filter(item => item.image && item.inStock);
+
+                if (premiumItems.length > 0) {
+                  // Sort: Highest Discount wins. If tied, Highest MRP (premium item) wins.
+                  premiumItems.sort((a, b) => {
+                    const discountA = a.discountPercent || 0;
+                    const discountB = b.discountPercent || 0;
+                    if (discountB !== discountA) {
+                      return discountB - discountA; 
+                    }
+                    return (b.mrp || 0) - (a.mrp || 0);
+                  });
+                  return premiumItems[0];
+                }
+
+                // Fallback: If no perfect item, just grab the first one
+                return itemsInSub[0];
+              };
+
+              const bestItemInSub = getBestThumbnail();
+              const thumbImage = bestItemInSub?.image;
+              const thumbEmoji = bestItemInSub?.emoji || "🛒";
+
               return (
                 <div 
                   key={index}
                   onClick={() => {
                     setSelectedSub(sub);
-                    // Smoothly scroll the right grid back to the top when switching categories
                     const grid = document.getElementById('product-grid-scroll');
                     if (grid) grid.scrollTo({ top: 0, behavior: 'smooth' });
                   }}
                   style={{
-                    padding: '16px 8px',
+                    padding: '12px 6px',
                     textAlign: 'center',
                     cursor: 'pointer',
                     backgroundColor: isActive ? '#fff' : 'transparent',
                     borderLeft: isActive ? '4px solid #ef4444' : '4px solid transparent',
                     borderBottom: '1px solid #f1f5f9',
-                    transition: 'all 0.2s ease'
+                    transition: 'all 0.2s ease',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    gap: '6px'
                   }}
                 >
+                  {/* 🌟 CIRCULAR THUMBNAIL ICON */}
+                  <div style={{
+                    width: '44px',
+                    height: '44px',
+                    backgroundColor: isActive ? '#fef2f2' : '#f1f5f9',
+                    borderRadius: '50%',
+                    display: 'flex',
+                    justifyContent: 'center',
+                    alignItems: 'center',
+                    overflow: 'hidden',
+                    border: isActive ? '1px solid #fca5a5' : '1px solid transparent',
+                    transition: 'all 0.2s ease'
+                  }}>
+                    {thumbImage ? (
+                      <img src={thumbImage} alt="" style={{ width: '70%', height: '70%', objectFit: 'contain', mixBlendMode: 'multiply' }} />
+                    ) : (
+                      <span style={{ fontSize: '1.2rem' }}>{thumbEmoji}</span>
+                    )}
+                  </div>
+
+                  {/* TEXT */}
                   <span style={{ 
-                    fontSize: '0.75rem', 
+                    fontSize: '0.7rem', 
                     fontWeight: isActive ? '800' : '600', 
                     color: isActive ? '#ef4444' : '#64748b',
                     display: '-webkit-box', 
-                    WebkitLineClamp: 3, 
+                    WebkitLineClamp: 2, 
                     WebkitBoxOrient: 'vertical', 
                     overflow: 'hidden',
-                    lineHeight: '1.3'
+                    lineHeight: '1.2',
+                    width: '100%'
                   }}>
                     {sub}
                   </span>
@@ -201,7 +256,6 @@ export default function ProductListView({
       {cartTotalItems > 0 && (
         <div
           onClick={() => { window.history.back(); setTimeout(() => { if (onViewCart) onViewCart(); }, 100); }} 
-          // 🚀 MAGIC TWEAK: If the sidebar is open, the cart bar shifts to the right so it doesn't overlap!
           style={{ position: 'fixed', bottom: `calc(${BOTTOM_NAV_HEIGHT} + 15px)`, left: hasSubcategories ? '100px' : '15px', right: '15px', zIndex: 101, backgroundColor: '#16a34a', color: '#fff', padding: '12px 16px', borderRadius: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer', boxShadow: '0 8px 24px rgba(22, 163, 74, 0.3)', animation: 'fadeIn 0.2s ease' }}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
@@ -221,4 +275,5 @@ export default function ProductListView({
     </div>,
     document.body
   );
-}
+                }
+          
