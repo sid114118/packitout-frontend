@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import { ModernProductCard } from './FeedComponents.jsx';
 
@@ -15,6 +15,7 @@ export default function ProductListView({
   onSearchClick   
 }) {
   const BOTTOM_NAV_HEIGHT = '56px';
+  const [selectedSub, setSelectedSub] = useState("All");
 
   // Cart Calculations for the floating bar
   const safeCart = Array.isArray(cart) ? cart : [];
@@ -23,18 +24,15 @@ export default function ProductListView({
 
   // 🛡️ MOBILE BACK BUTTON FIX (SMART COLLISION AVOIDANCE)
   useEffect(() => {
-    // 1. Prevent double-pushing the list view state
     if (window.history.state?.name !== 'listView') {
       window.history.pushState({ name: 'listView' }, '');
     }
 
     const handlePopState = (e) => {
-      // 2. THE MAGIC FIX: If we just closed a Modal, the phone lands back on 'listView'. 
-      // If we see our own nametag, DO NOT close the list!
       if (e.state?.name === 'listView') {
         return; 
       }
-      onBack(); // Otherwise, close the list normally
+      onBack(); 
     };
 
     window.addEventListener('popstate', handlePopState);
@@ -48,16 +46,38 @@ export default function ProductListView({
   }, []);
 
   // 🚀 FLATTEN THE VARIANTS FOR THE LIST VIEW
-  const flattenedItems = items.flatMap(item => {
-    if (item.variants && item.variants.length > 0) {
-      return item.variants.map(variant => ({
-        ...item, 
-        ...variant, 
-        variants: item.variants // Keep the array attached so Modal still works
-      }));
-    }
-    return item;
-  });
+  const flattenedItems = useMemo(() => {
+    return items.flatMap(item => {
+      if (item.variants && item.variants.length > 0) {
+        return item.variants.map(variant => ({
+          ...item, 
+          ...variant, 
+          variants: item.variants
+        }));
+      }
+      return item;
+    });
+  }, [items]);
+
+  // 🧠 SMART EXTRACTOR: Finds all unique subcategories automatically
+  const subcategories = useMemo(() => {
+    const subs = new Set();
+    flattenedItems.forEach(item => {
+      // Checks if subCategory exists in your database and isn't empty/nan
+      if (item.subCategory && String(item.subCategory).trim() !== "" && String(item.subCategory).trim().toLowerCase() !== "nan") {
+        subs.add(item.subCategory);
+      }
+    });
+    return ["All", ...Array.from(subs)];
+  }, [flattenedItems]);
+
+  const hasSubcategories = subcategories.length > 1;
+
+  // 🎯 FILTER LOGIC
+  const filteredItems = useMemo(() => {
+    if (selectedSub === "All") return flattenedItems;
+    return flattenedItems.filter(item => item.subCategory === selectedSub);
+  }, [flattenedItems, selectedSub]);
 
   return createPortal(
     <div 
@@ -67,75 +87,133 @@ export default function ProductListView({
         left: 0, 
         right: 0, 
         bottom: BOTTOM_NAV_HEIGHT, 
-        backgroundColor: '#fff', 
+        backgroundColor: '#f4f6f8', 
         zIndex: 2000, 
-        overflowY: 'auto', 
-        padding: '15px', 
-        animation: 'fadeIn 0.2s ease', 
-        paddingBottom: cartTotalItems > 0 ? '120px' : '40px' 
+        display: 'flex',
+        flexDirection: 'column',
+        animation: 'fadeIn 0.2s ease',
+        fontFamily: 'system-ui, -apple-system, sans-serif'
       }}
     >
-      <style>{`@keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }`}</style>
+      <style>{`
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .sidebar-scroll::-webkit-scrollbar { display: none; }
+        .sidebar-scroll { -ms-overflow-style: none; scrollbar-width: none; }
+      `}</style>
       
-      {/* 🌟 STICKY HEADER 🌟 */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px', position: 'sticky', top: '-15px', backgroundColor: '#fff', padding: '15px 0', zIndex: 91, borderBottom: '1px solid #f1f5f9' }}>
+      {/* 🌟 PREMIUM HEADER 🌟 */}
+      <div style={{ flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'space-between', backgroundColor: '#fff', padding: '12px 16px', zIndex: 91, borderBottom: '1px solid rgba(0,0,0,0.05)' }}>
         
-        {/* Left Side: Back Button & Title */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
           <button 
             onClick={() => window.history.back()} 
-            style={{ backgroundColor: '#f1f5f9', border: '1px solid #cbd5e1', padding: '8px 16px', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold', color: '#334155' }}
+            style={{ background: 'none', border: 'none', fontSize: '1.4rem', cursor: 'pointer', color: '#0f172a', padding: 0 }}
           >
-            ⬅ Back
+            ←
           </button>
-          <h2 style={{ margin: 0, color: '#0f172a', fontSize: '1.2rem' }}>{title}</h2>
+          <h2 style={{ margin: 0, color: '#0f172a', fontSize: '1.15rem', fontWeight: '800', letterSpacing: '-0.3px' }}>{title}</h2>
         </div>
 
-        {/* Right Side: Search Icon (Triggers onSearchClick) */}
-        <button 
-          onClick={onSearchClick} 
-          style={{ background: 'none', border: 'none', fontSize: '1.4rem', cursor: 'pointer', padding: '8px', color: '#334155', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-        >
-          🔍
-        </button>
+        {onSearchClick && (
+          <button 
+            onClick={onSearchClick} 
+            style={{ background: 'none', border: 'none', fontSize: '1.2rem', cursor: 'pointer', color: '#0f172a' }}
+          >
+            🔍
+          </button>
+        )}
 
       </div>
-      
-      {/* Product Grid - NOW MAPPING OVER FLATTENED ITEMS */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: '12px' }}>
-        {flattenedItems.map((item, index) => (
-          <ModernProductCard 
-            key={`${item._id}-${index}`} 
-            item={item} 
-            isCarousel={false} 
-            shopClosed={shopClosed} 
-            onOpenDetails={onOpenDetails} 
-            onQuickAdd={onQuickAdd} 
-            cart={cart} 
-            onRemoveFromCart={onRemoveFromCart} 
-          />
-        ))}
+
+      {/* 🌟 SPLIT-SCREEN CONTENT AREA 🌟 */}
+      <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
+        
+        {/* ⬅️ THE LEFT SIDEBAR */}
+        {hasSubcategories && (
+          <div className="sidebar-scroll" style={{ width: '85px', backgroundColor: '#f8fafc', borderRight: '1px solid #e2e8f0', overflowY: 'auto', flexShrink: 0 }}>
+            {subcategories.map((sub, index) => {
+              const isActive = selectedSub === sub;
+              return (
+                <div 
+                  key={index}
+                  onClick={() => {
+                    setSelectedSub(sub);
+                    // Smoothly scroll the right grid back to the top when switching categories
+                    const grid = document.getElementById('product-grid-scroll');
+                    if (grid) grid.scrollTo({ top: 0, behavior: 'smooth' });
+                  }}
+                  style={{
+                    padding: '16px 8px',
+                    textAlign: 'center',
+                    cursor: 'pointer',
+                    backgroundColor: isActive ? '#fff' : 'transparent',
+                    borderLeft: isActive ? '4px solid #ef4444' : '4px solid transparent',
+                    borderBottom: '1px solid #f1f5f9',
+                    transition: 'all 0.2s ease'
+                  }}
+                >
+                  <span style={{ 
+                    fontSize: '0.75rem', 
+                    fontWeight: isActive ? '800' : '600', 
+                    color: isActive ? '#ef4444' : '#64748b',
+                    display: '-webkit-box', 
+                    WebkitLineClamp: 3, 
+                    WebkitBoxOrient: 'vertical', 
+                    overflow: 'hidden',
+                    lineHeight: '1.3'
+                  }}>
+                    {sub}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+        {/* ➡️ THE RIGHT PRODUCT GRID */}
+        <div id="product-grid-scroll" className="sidebar-scroll" style={{ flex: 1, overflowY: 'auto', padding: '12px' }}>
+          
+          {filteredItems.length === 0 ? (
+            <div style={{ textAlign: 'center', padding: '40px 20px', color: '#94a3b8' }}>
+              <div style={{ fontSize: '2.5rem', marginBottom: '10px' }}>🔍</div>
+              <div style={{ fontWeight: '700' }}>No items found</div>
+            </div>
+          ) : (
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '12px', paddingBottom: cartTotalItems > 0 ? '80px' : '20px' }}>
+              {filteredItems.map((item, index) => (
+                <ModernProductCard 
+                  key={`${item._id}-${index}`} 
+                  item={item} 
+                  isCarousel={false} // Expands to fill the grid!
+                  shopClosed={shopClosed} 
+                  onOpenDetails={onOpenDetails} 
+                  onQuickAdd={onQuickAdd} 
+                  cart={cart} 
+                  onRemoveFromCart={onRemoveFromCart} 
+                />
+              ))}
+            </div>
+          )}
+        </div>
       </div>
 
-      {/* 🌟 FLOATING VIEW CART BAR 🌟 */}
+      {/* 🌟 PREMIUM FLOATING VIEW CART BAR 🌟 */}
       {cartTotalItems > 0 && (
         <div
           onClick={() => { window.history.back(); setTimeout(() => { if (onViewCart) onViewCart(); }, 100); }} 
-          style={{ position: 'fixed', bottom: `calc(${BOTTOM_NAV_HEIGHT} + 15px)`, left: '12px', right: '12px', zIndex: 101, backgroundColor: '#0c831f', color: '#fff', padding: '10px 14px', borderRadius: '10px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer', boxShadow: '0 4px 15px rgba(0,0,0,0.1)', animation: 'fadeIn 0.2s ease' }}
+          // 🚀 MAGIC TWEAK: If the sidebar is open, the cart bar shifts to the right so it doesn't overlap!
+          style={{ position: 'fixed', bottom: `calc(${BOTTOM_NAV_HEIGHT} + 15px)`, left: hasSubcategories ? '100px' : '15px', right: '15px', zIndex: 101, backgroundColor: '#16a34a', color: '#fff', padding: '12px 16px', borderRadius: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer', boxShadow: '0 8px 24px rgba(22, 163, 74, 0.3)', animation: 'fadeIn 0.2s ease' }}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <div style={{ backgroundColor: 'rgba(255,255,255,0.2)', width: '38px', height: '38px', borderRadius: '8px', display: 'flex', justifyContent: 'center', alignItems: 'center', fontSize: '1.2rem' }}>
-              🛒
-            </div>
-            <div style={{ textAlign: 'left', lineHeight: '1.3' }}>
-              <div style={{ fontWeight: '600', fontSize: '0.75rem', opacity: 0.95 }}>
-                {cartTotalItems} item{cartTotalItems > 1 ? 's' : ''}
+            <div style={{ textAlign: 'left', lineHeight: '1.2' }}>
+              <div style={{ fontWeight: '700', fontSize: '0.8rem', opacity: 0.9 }}>
+                {cartTotalItems} ITEM{cartTotalItems > 1 ? 'S' : ''}
               </div>
-              <div style={{ fontWeight: '800', fontSize: '1rem' }}>₹ {cartTotalPrice}</div>
+              <div style={{ fontWeight: '900', fontSize: '1.1rem' }}>₹{cartTotalPrice}</div>
             </div>
           </div>
-          <div style={{ fontWeight: '800', fontSize: '0.95rem', display: 'flex', alignItems: 'center', gap: '4px' }}>
-            View Cart <span style={{ fontSize: '1.2rem' }}>▶</span>
+          <div style={{ fontWeight: '800', fontSize: '0.95rem', display: 'flex', alignItems: 'center', gap: '6px' }}>
+            View Cart <span style={{ fontSize: '1.2rem' }}>›</span>
           </div>
         </div>
       )}
