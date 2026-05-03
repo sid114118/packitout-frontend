@@ -1,4 +1,6 @@
 import React, { useState, useEffect } from 'react';
+import OneSignal from 'react-onesignal'; // 🚀 IMPORTED ONESIGNAL HERE
+
 import Header from './Header.jsx';
 import Categories from './Categories.jsx';
 import AdminDashboard from './AdminDashboard.jsx';
@@ -14,6 +16,7 @@ import BottomNav from './BottomNav.jsx';
 import Nearby from './Nearby.jsx';
 import ShopDetail from './ShopDetail.jsx';
 import Footer from './Footer.jsx';
+
 class CrashCatcher extends React.Component {
   constructor(props) { super(props); this.state = { err: null, info: null }; }
   componentDidCatch(error, info) { this.setState({ err: error.toString(), info: info.componentStack }); }
@@ -72,6 +75,22 @@ export default function App() {
       return Array.isArray(parsed) ? parsed.filter(i => i !== null) : [];
     } catch { return []; }
   });
+
+  // 🚀 ONESIGNAL INITIALIZATION 🚀
+  useEffect(() => {
+    const runOneSignal = async () => {
+      try {
+        await OneSignal.init({
+          appId: "1da2e78d-0874-4965-a895-42c9237ee92b", // Your exact App ID
+          allowLocalhostAsSecureOrigin: true,
+        });
+        OneSignal.Slidedown.promptPush(); // Prompts user to allow notifications
+      } catch (error) {
+        console.error("OneSignal Initialization Error:", error);
+      }
+    };
+    runOneSignal();
+  }, []);
 
   useEffect(() => {
     try {
@@ -161,6 +180,14 @@ export default function App() {
   const handleUserLogin = (userData) => {
     localStorage.setItem("packitout_user", JSON.stringify(userData));
     setLoggedInUser(userData);
+    
+    // 🚀 LINK USER ID TO ONESIGNAL ON LOGIN
+    try {
+      OneSignal.login(userData._id.toString());
+    } catch (err) {
+      console.log("OneSignal Login Error", err);
+    }
+
     window.location.hash = "";
   };
 
@@ -168,6 +195,14 @@ export default function App() {
     localStorage.removeItem("packitout_user");
     setLoggedInUser(null);
     setCart([]); 
+
+    // 🚀 LOGOUT FROM ONESIGNAL
+    try {
+      OneSignal.logout();
+    } catch (err) {
+      console.log("OneSignal Logout Error", err);
+    }
+
     window.location.hash = "";
   };
 
@@ -279,7 +314,7 @@ export default function App() {
     );
   };
 
-  const showBottomNav = ["customer", "nearby", "account", "cart", "success"].includes(currentView);
+  const showBottomNav = ["customer", "Customer", "nearby", "account", "cart", "success"].includes(currentView);
 
   return (
     <CrashCatcher>
@@ -287,4 +322,5 @@ export default function App() {
       {showBottomNav && <BottomNav currentView={currentView} />}
     </CrashCatcher>
   );
-}
+               }
+      
