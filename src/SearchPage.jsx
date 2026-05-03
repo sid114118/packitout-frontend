@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { createPortal } from 'react-dom';
 
 // 🟢 MAKE SURE THIS PATH IS CORRECT FOR YOUR APP!
-import { ModernProductCard } from './ProductFeed/FeedComponents.jsx';
+import { ModernProductCard } from './FeedComponents.jsx';
 
 export default function SearchPage({ 
   items = [], 
@@ -15,14 +15,14 @@ export default function SearchPage({
 }) {
   const [query, setQuery] = useState("");
   const [debouncedQuery, setDebouncedQuery] = useState(""); 
-  
-  // 🌟 NEW: Recent Searches State
   const [recentSearches, setRecentSearches] = useState([]);
+  
+  // 🚀 LAZY LOADING STATE: Only load 16 items at a time!
+  const [visibleCount, setVisibleCount] = useState(16);
   
   const inputRef = useRef(null); 
   const BOTTOM_NAV_HEIGHT = '56px';
 
-  // 🌟 NEW: Load Recent Searches on mount
   useEffect(() => {
     const savedSearches = localStorage.getItem('packitout_recent_searches');
     if (savedSearches) {
@@ -38,7 +38,11 @@ export default function SearchPage({
     return () => clearTimeout(timer);
   }, [query]);
 
-  // 🌟 NEW: Save successful searches to Recent Searches
+  // 🚀 RESET VISIBLE COUNT when search changes
+  useEffect(() => {
+    setVisibleCount(16);
+  }, [debouncedQuery]);
+
   useEffect(() => {
     if (debouncedQuery.trim().length > 2) { 
       setRecentSearches(prev => {
@@ -50,37 +54,31 @@ export default function SearchPage({
     }
   }, [debouncedQuery]);
 
-  // Lock background scroll & safely trigger keyboard on load
   useEffect(() => {
     document.body.style.overflow = 'hidden';
-    
     const focusTimer = setTimeout(() => {
       if (inputRef.current) inputRef.current.focus();
     }, 100);
-
     return () => { 
       document.body.style.overflow = ''; 
       clearTimeout(focusTimer);
     };
   }, []);
 
-  // 🛡️ SAFE FILTERING & 🚀 FLATTENING LOGIC
   const displayItems = useMemo(() => {
     if (debouncedQuery.trim().length === 0) return [];
     
-    // 1. FLATTEN: Break grouped items into individual cards first!
     const flattenedItems = items.flatMap(item => {
       if (item.variants && item.variants.length > 0) {
         return item.variants.map(variant => ({
           ...item,      
           ...variant,   
-          variants: item.variants // Keep array so Modal still works!
+          variants: item.variants
         }));
       }
       return item;
     });
 
-    // 2. FILTER: Now search through every single size individually
     return flattenedItems.filter(item => {
       if (!item) return false; 
       const q = debouncedQuery.toLowerCase();
@@ -91,7 +89,6 @@ export default function SearchPage({
     });
   }, [debouncedQuery, items]);
 
-  // 🛡️ SAFE CART MATH
   const safeCart = Array.isArray(cart) ? cart.filter(c => c !== null) : [];
   const cartTotalItems = safeCart.reduce((total, item) => total + (Number(item.qty) || 1), 0);
   const cartTotalPrice = safeCart.reduce((total, item) => {
@@ -101,7 +98,6 @@ export default function SearchPage({
 
   const isTyping = query.trim().length > 0 && query !== debouncedQuery;
 
-  // Helper functions for recent searches
   const handleClearRecent = () => {
     setRecentSearches([]);
     localStorage.removeItem('packitout_recent_searches');
@@ -113,17 +109,25 @@ export default function SearchPage({
     inputRef.current?.focus();
   };
 
+  // ⚡ INFINITE SCROLL HANDLER ⚡
+  const handleScroll = (e) => {
+    const { scrollTop, clientHeight, scrollHeight } = e.target;
+    if (scrollHeight - scrollTop <= clientHeight * 1.5) {
+      setVisibleCount(prev => prev + 16);
+    }
+  };
+
   return createPortal(
-    <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: BOTTOM_NAV_HEIGHT, backgroundColor: '#fff', zIndex: 999999, overflowY: 'auto', animation: 'fadeIn 0.2s ease', paddingBottom: cartTotalItems > 0 ? '120px' : '40px' }}>
+    <div 
+      onScroll={handleScroll} // ⚡ Scroll listener attached to root search div!
+      style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: BOTTOM_NAV_HEIGHT, backgroundColor: '#fff', zIndex: 999999, overflowY: 'auto', animation: 'fadeIn 0.2s ease', paddingBottom: cartTotalItems > 0 ? '120px' : '40px' }}
+    >
       <style>{`@keyframes fadeIn { from { opacity: 0; transform: translateY(15px); } to { opacity: 1; transform: translateY(0); } }`}</style>
       
-      {/* 🌟 UPDATED SEARCH HEADER 🌟 */}
+      {/* 🌟 SEARCH HEADER */}
       <div style={{ padding: '15px', position: 'sticky', top: 0, backgroundColor: '#fff', zIndex: 2000, borderBottom: '1px solid #f1f5f9', boxShadow: '0 2px 4px rgba(0,0,0,0.02)' }}>
         <div style={{ display: 'flex', alignItems: 'center', backgroundColor: '#f1f5f9', borderRadius: '12px', padding: '8px 12px' }}>
-          <button onClick={onClose} style={{ background: 'none', border: 'none', fontSize: '1.4rem', cursor: 'pointer', padding: '0 10px 0 0', color: '#475569', display: 'flex', alignItems: 'center' }}>
-            ←
-          </button>
-          
+          <button onClick={onClose} style={{ background: 'none', border: 'none', fontSize: '1.4rem', cursor: 'pointer', padding: '0 10px 0 0', color: '#475569', display: 'flex', alignItems: 'center' }}>←</button>
           <input
             ref={inputRef}
             type="text"
@@ -131,39 +135,17 @@ export default function SearchPage({
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             onClick={() => inputRef.current?.focus()} 
-            style={{ 
-              border: 'none', 
-              outline: 'none', 
-              width: '100%', 
-              fontSize: '1.05rem', 
-              fontWeight: '500', 
-              backgroundColor: 'transparent', 
-              color: '#111827',
-              userSelect: 'auto',
-              WebkitUserSelect: 'auto',
-              touchAction: 'manipulation'
-            }}
+            style={{ border: 'none', outline: 'none', width: '100%', fontSize: '1.05rem', fontWeight: '500', backgroundColor: 'transparent', color: '#111827', userSelect: 'auto', WebkitUserSelect: 'auto', touchAction: 'manipulation' }}
           />
-          
           {query && (
-            <button 
-              onClick={() => { 
-                setQuery(""); 
-                setDebouncedQuery(""); 
-                inputRef.current?.focus(); 
-              }} 
-              style={{ background: 'none', border: 'none', fontSize: '1.2rem', color: '#94a3b8', cursor: 'pointer', padding: 0 }}
-            >
-              ✖
-            </button>
+            <button onClick={() => { setQuery(""); setDebouncedQuery(""); inputRef.current?.focus(); }} style={{ background: 'none', border: 'none', fontSize: '1.2rem', color: '#94a3b8', cursor: 'pointer', padding: 0 }}>✖</button>
           )}
         </div>
       </div>
 
-      {/* 🌟 SEARCH RESULTS & RECENT 🌟 */}
+      {/* 🌟 SEARCH RESULTS */}
       <div style={{ padding: '15px' }}>
         {query.trim().length === 0 ? (
-          
           recentSearches.length > 0 ? (
             <div style={{ padding: '5px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
@@ -172,11 +154,7 @@ export default function SearchPage({
               </div>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px' }}>
                 {recentSearches.map((term, i) => (
-                  <div 
-                    key={i} 
-                    onClick={() => handleRecentClick(term)} 
-                    style={{ padding: '8px 16px', backgroundColor: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '20px', fontSize: '0.95rem', color: '#334155', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', fontWeight: '500' }}
-                  >
+                  <div key={i} onClick={() => handleRecentClick(term)} style={{ padding: '8px 16px', backgroundColor: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '20px', fontSize: '0.95rem', color: '#334155', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', fontWeight: '500' }}>
                     <span style={{color: '#94a3b8', fontSize: '0.85rem'}}>🕒</span> {term}
                   </div>
                 ))}
@@ -188,7 +166,6 @@ export default function SearchPage({
               <p style={{ fontWeight: '600', fontSize: '1.1rem' }}>Type to start searching...</p>
             </div>
           )
-
         ) : isTyping ? (
           <div style={{ textAlign: 'center', padding: '40px 20px', color: '#64748b' }}>
             <p style={{ fontWeight: 'bold', fontSize: '1.1rem', animation: 'pulse 1.5s infinite' }}>Searching 3,000+ items...</p>
@@ -201,7 +178,9 @@ export default function SearchPage({
           </div>
         ) : (
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: '12px' }}>
-            {displayItems.map((item, index) => (
+            
+            {/* ⚡ ONLY MAP THE SLICED ITEMS! */}
+            {displayItems.slice(0, visibleCount).map((item, index) => (
               <ModernProductCard 
                 key={`${item._id}-${index}`} 
                 item={item} 
@@ -213,11 +192,12 @@ export default function SearchPage({
                 onRemoveFromCart={onRemoveFromCart} 
               />
             ))}
+            
           </div>
         )}
       </div>
 
-      {/* 🌟 FLOATING CART 🌟 */}
+      {/* 🌟 FLOATING CART */}
       {cartTotalItems > 0 && (
         <div onClick={() => { onClose(); if (onViewCart) onViewCart(); }} style={{ position: 'fixed', bottom: `calc(${BOTTOM_NAV_HEIGHT} + 15px)`, left: '12px', right: '12px', zIndex: 101, backgroundColor: '#0c831f', color: '#fff', padding: '10px 14px', borderRadius: '10px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer', boxShadow: '0 4px 15px rgba(0,0,0,0.1)' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
@@ -233,4 +213,5 @@ export default function SearchPage({
     </div>,
     document.body
   );
-}
+      }
+              
