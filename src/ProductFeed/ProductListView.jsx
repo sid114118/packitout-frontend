@@ -17,12 +17,15 @@ export default function ProductListView({
   const BOTTOM_NAV_HEIGHT = '56px';
   const [selectedSub, setSelectedSub] = useState("All");
 
+  // 🚀 LAZY LOADING STATE: Only load 16 items at a time!
+  const [visibleCount, setVisibleCount] = useState(16);
+
   // Cart Calculations for the floating bar
   const safeCart = Array.isArray(cart) ? cart : [];
   const cartTotalItems = safeCart.reduce((total, item) => total + (item.qty || 1), 0);
   const cartTotalPrice = safeCart.reduce((total, item) => total + ((item.sellingPrice || item.mrp || 0) * (item.qty || 1)), 0);
 
-  // 🛡️ MOBILE BACK BUTTON FIX (SMART COLLISION AVOIDANCE)
+  // 🛡️ MOBILE BACK BUTTON FIX
   useEffect(() => {
     if (window.history.state?.name !== 'listView') {
       window.history.pushState({ name: 'listView' }, '');
@@ -45,6 +48,11 @@ export default function ProductListView({
     return () => { document.body.style.overflow = ''; };
   }, []);
 
+  // 🚀 RESET VISIBLE COUNT when changing subcategories
+  useEffect(() => {
+    setVisibleCount(16);
+  }, [selectedSub]);
+
   // 🚀 FLATTEN THE VARIANTS FOR THE LIST VIEW
   const flattenedItems = useMemo(() => {
     return items.flatMap(item => {
@@ -59,7 +67,7 @@ export default function ProductListView({
     });
   }, [items]);
 
-  // 🧠 SMART EXTRACTOR: Finds all unique subcategories automatically
+  // 🧠 SMART EXTRACTOR
   const subcategories = useMemo(() => {
     const subs = new Set();
     flattenedItems.forEach(item => {
@@ -77,6 +85,15 @@ export default function ProductListView({
     if (selectedSub === "All") return flattenedItems;
     return flattenedItems.filter(item => item.subCategory === selectedSub);
   }, [flattenedItems, selectedSub]);
+
+  // ⚡ INFINITE SCROLL HANDLER ⚡
+  const handleScroll = (e) => {
+    const { scrollTop, clientHeight, scrollHeight } = e.target;
+    // If user is within 1.5 screen lengths of the bottom, load 16 more!
+    if (scrollHeight - scrollTop <= clientHeight * 1.5) {
+      setVisibleCount(prev => prev + 16);
+    }
+  };
 
   return createPortal(
     <div 
@@ -102,60 +119,36 @@ export default function ProductListView({
       
       {/* 🌟 PREMIUM HEADER 🌟 */}
       <div style={{ flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'space-between', backgroundColor: '#fff', padding: '12px 16px', zIndex: 91, borderBottom: '1px solid rgba(0,0,0,0.05)' }}>
-        
         <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
-          <button 
-            onClick={() => window.history.back()} 
-            style={{ background: 'none', border: 'none', fontSize: '1.4rem', cursor: 'pointer', color: '#0f172a', padding: 0 }}
-          >
-            ←
-          </button>
+          <button onClick={() => window.history.back()} style={{ background: 'none', border: 'none', fontSize: '1.4rem', cursor: 'pointer', color: '#0f172a', padding: 0 }}>←</button>
           <h2 style={{ margin: 0, color: '#0f172a', fontSize: '1.15rem', fontWeight: '800', letterSpacing: '-0.3px' }}>{title}</h2>
         </div>
-
         {onSearchClick && (
-          <button 
-            onClick={onSearchClick} 
-            style={{ background: 'none', border: 'none', fontSize: '1.2rem', cursor: 'pointer', color: '#0f172a' }}
-          >
-            🔍
-          </button>
+          <button onClick={onSearchClick} style={{ background: 'none', border: 'none', fontSize: '1.2rem', cursor: 'pointer', color: '#0f172a' }}>🔍</button>
         )}
-
       </div>
 
       {/* 🌟 SPLIT-SCREEN CONTENT AREA 🌟 */}
       <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
         
-        {/* ⬅️ THE LEFT SIDEBAR (With Smart AI-Style Sorting!) */}
+        {/* ⬅️ THE LEFT SIDEBAR */}
         {hasSubcategories && (
           <div className="sidebar-scroll" style={{ width: '85px', backgroundColor: '#f8fafc', borderRight: '1px solid #e2e8f0', overflowY: 'auto', flexShrink: 0 }}>
             {subcategories.map((sub, index) => {
               const isActive = selectedSub === sub;
               
-              // 🧠 THE SMART ALGORITHM: Find the BEST product to represent this category
               const getBestThumbnail = () => {
-                let itemsInSub = sub === "All" 
-                  ? flattenedItems 
-                  : flattenedItems.filter(item => item.subCategory === sub);
-
-                // Filter 1: Must have an image and be in stock
+                let itemsInSub = sub === "All" ? flattenedItems : flattenedItems.filter(item => item.subCategory === sub);
                 let premiumItems = itemsInSub.filter(item => item.image && item.inStock);
-
                 if (premiumItems.length > 0) {
-                  // Sort: Highest Discount wins. If tied, Highest MRP (premium item) wins.
                   premiumItems.sort((a, b) => {
                     const discountA = a.discountPercent || 0;
                     const discountB = b.discountPercent || 0;
-                    if (discountB !== discountA) {
-                      return discountB - discountA; 
-                    }
+                    if (discountB !== discountA) return discountB - discountA; 
                     return (b.mrp || 0) - (a.mrp || 0);
                   });
                   return premiumItems[0];
                 }
-
-                // Fallback: If no perfect item, just grab the first one
                 return itemsInSub[0];
               };
 
@@ -171,63 +164,29 @@ export default function ProductListView({
                     const grid = document.getElementById('product-grid-scroll');
                     if (grid) grid.scrollTo({ top: 0, behavior: 'smooth' });
                   }}
-                  style={{
-                    padding: '12px 6px',
-                    textAlign: 'center',
-                    cursor: 'pointer',
-                    backgroundColor: isActive ? '#fff' : 'transparent',
-                    borderLeft: isActive ? '4px solid #ef4444' : '4px solid transparent',
-                    borderBottom: '1px solid #f1f5f9',
-                    transition: 'all 0.2s ease',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                    gap: '6px'
-                  }}
+                  style={{ padding: '12px 6px', textAlign: 'center', cursor: 'pointer', backgroundColor: isActive ? '#fff' : 'transparent', borderLeft: isActive ? '4px solid #ef4444' : '4px solid transparent', borderBottom: '1px solid #f1f5f9', transition: 'all 0.2s ease', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px' }}
                 >
-                  {/* 🌟 CIRCULAR THUMBNAIL ICON */}
-                  <div style={{
-                    width: '44px',
-                    height: '44px',
-                    backgroundColor: isActive ? '#fef2f2' : '#f1f5f9',
-                    borderRadius: '50%',
-                    display: 'flex',
-                    justifyContent: 'center',
-                    alignItems: 'center',
-                    overflow: 'hidden',
-                    border: isActive ? '1px solid #fca5a5' : '1px solid transparent',
-                    transition: 'all 0.2s ease'
-                  }}>
+                  <div style={{ width: '44px', height: '44px', backgroundColor: isActive ? '#fef2f2' : '#f1f5f9', borderRadius: '50%', display: 'flex', justifyContent: 'center', alignItems: 'center', overflow: 'hidden', border: isActive ? '1px solid #fca5a5' : '1px solid transparent', transition: 'all 0.2s ease' }}>
                     {thumbImage ? (
                       <img src={thumbImage} alt="" style={{ width: '70%', height: '70%', objectFit: 'contain', mixBlendMode: 'multiply' }} />
                     ) : (
                       <span style={{ fontSize: '1.2rem' }}>{thumbEmoji}</span>
                     )}
                   </div>
-
-                  {/* TEXT */}
-                  <span style={{ 
-                    fontSize: '0.7rem', 
-                    fontWeight: isActive ? '800' : '600', 
-                    color: isActive ? '#ef4444' : '#64748b',
-                    display: '-webkit-box', 
-                    WebkitLineClamp: 2, 
-                    WebkitBoxOrient: 'vertical', 
-                    overflow: 'hidden',
-                    lineHeight: '1.2',
-                    width: '100%'
-                  }}>
-                    {sub}
-                  </span>
+                  <span style={{ fontSize: '0.7rem', fontWeight: isActive ? '800' : '600', color: isActive ? '#ef4444' : '#64748b', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden', lineHeight: '1.2', width: '100%' }}>{sub}</span>
                 </div>
               );
             })}
           </div>
         )}
 
-        {/* ➡️ THE RIGHT PRODUCT GRID */}
-        <div id="product-grid-scroll" className="sidebar-scroll" style={{ flex: 1, overflowY: 'auto', padding: '12px' }}>
-          
+        {/* ➡️ THE RIGHT PRODUCT GRID (NOW WITH LAZY LOADING!) */}
+        <div 
+          id="product-grid-scroll" 
+          className="sidebar-scroll" 
+          style={{ flex: 1, overflowY: 'auto', padding: '12px' }}
+          onScroll={handleScroll} // ⚡ Scroll listener attached!
+        >
           {filteredItems.length === 0 ? (
             <div style={{ textAlign: 'center', padding: '40px 20px', color: '#94a3b8' }}>
               <div style={{ fontSize: '2.5rem', marginBottom: '10px' }}>🔍</div>
@@ -235,11 +194,13 @@ export default function ProductListView({
             </div>
           ) : (
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '12px', paddingBottom: cartTotalItems > 0 ? '80px' : '20px' }}>
-              {filteredItems.map((item, index) => (
+              
+              {/* ⚡ ONLY MAP THE SLICED ITEMS! */}
+              {filteredItems.slice(0, visibleCount).map((item, index) => (
                 <ModernProductCard 
                   key={`${item._id}-${index}`} 
                   item={item} 
-                  isCarousel={false} // Expands to fill the grid!
+                  isCarousel={false} 
                   shopClosed={shopClosed} 
                   onOpenDetails={onOpenDetails} 
                   onQuickAdd={onQuickAdd} 
@@ -247,6 +208,7 @@ export default function ProductListView({
                   onRemoveFromCart={onRemoveFromCart} 
                 />
               ))}
+              
             </div>
           )}
         </div>
@@ -260,20 +222,14 @@ export default function ProductListView({
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
             <div style={{ textAlign: 'left', lineHeight: '1.2' }}>
-              <div style={{ fontWeight: '700', fontSize: '0.8rem', opacity: 0.9 }}>
-                {cartTotalItems} ITEM{cartTotalItems > 1 ? 'S' : ''}
-              </div>
+              <div style={{ fontWeight: '700', fontSize: '0.8rem', opacity: 0.9 }}>{cartTotalItems} ITEM{cartTotalItems > 1 ? 'S' : ''}</div>
               <div style={{ fontWeight: '900', fontSize: '1.1rem' }}>₹{cartTotalPrice}</div>
             </div>
           </div>
-          <div style={{ fontWeight: '800', fontSize: '0.95rem', display: 'flex', alignItems: 'center', gap: '6px' }}>
-            View Cart <span style={{ fontSize: '1.2rem' }}>›</span>
-          </div>
+          <div style={{ fontWeight: '800', fontSize: '0.95rem', display: 'flex', alignItems: 'center', gap: '6px' }}>View Cart <span style={{ fontSize: '1.2rem' }}>›</span></div>
         </div>
       )}
-
     </div>,
     document.body
   );
-                }
-          
+}
