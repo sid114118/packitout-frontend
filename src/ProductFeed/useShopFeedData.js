@@ -16,18 +16,56 @@ export default function useShopFeedData(user) {
   const [buyItAgain, setBuyItAgain] = useState([]);
 
   useEffect(() => {
-    const fetchShopProducts = async () => {
-      setLoading(true);
+    if (!user || !user.primaryShop) {
+      setLoading(false);
+      return;
+    }
+
+    const shopId = typeof user.primaryShop === 'object' ? user.primaryShop._id : user.primaryShop;
+    const cacheKey = `packitout_feed_cache_${shopId}`;
+
+    // ==========================================
+    // 👻 1. THE GHOST LOAD (INSTANT CACHE)
+    // ==========================================
+    const cachedData = localStorage.getItem(cacheKey);
+    if (cachedData) {
       try {
-        const shopId = typeof user.primaryShop === 'object' ? user.primaryShop._id : user.primaryShop;
+        const parsed = JSON.parse(cachedData);
+        setItems(parsed.items || []);
+        setShopInfo(parsed.shopInfo || null);
+        setNearbyShops(parsed.nearbyShops || []);
+        setShopDeals(parsed.shopDeals || []);
+        setShopBestSellers(parsed.shopBestSellers || []);
+        setUnder99(parsed.under99 || []);
+        setTimeBased(parsed.timeBased || { title: "", subtitle: "", items: [] });
+        setNewArrivals(parsed.newArrivals || []);
+        setBuyItAgain(parsed.buyItAgain || []);
+        
+        setLoading(false); // ⚡ Instantly turn off the loading screen!
+      } catch (e) {
+        console.error("Cache read error", e);
+      }
+    } else {
+      setLoading(true); // Only show spinner if it's their very first time opening the app
+    }
+
+    // ==========================================
+    // 🤫 2. THE SILENT BACKGROUND FETCH
+    // ==========================================
+    const fetchShopProducts = async () => {
+      try {
         const res = await fetch(`${BASE_URL}/shops/${shopId}/menu?t=${new Date().getTime()}`);
         const shopData = await res.json();
-        setShopInfo({ name: shopData.name, isOpen: shopData.isOpen });
         
+        const newShopInfo = { name: shopData.name, isOpen: shopData.isOpen };
+        setShopInfo(newShopInfo);
+        
+        let newNearbyShops = [];
         if (user && user.pincode) {
           const shopsRes = await fetch(`${BASE_URL}/shops/all/${user.pincode}`);
           const shopsData = await shopsRes.json();
-          setNearbyShops(shopsData.filter(s => s._id !== shopId)); 
+          newNearbyShops = shopsData.filter(s => s._id !== shopId);
+          setNearbyShops(newNearbyShops); 
         }
 
         const groupedMap = new Map();
@@ -57,10 +95,15 @@ export default function useShopFeedData(user) {
         
         setItems(availableItems);
         
-        setShopDeals(availableItems.filter(i => i.isDiscounted && i.inStock).sort((a, b) => b.discountPercent - a.discountPercent).slice(0, 12));
-        setShopBestSellers(availableItems.filter(i => i.inStock).slice(0, 12));
-        setUnder99(availableItems.filter(i => i.sellingPrice > 0 && i.sellingPrice < 100 && i.inStock).slice(0, 12));
-        setNewArrivals([...availableItems].reverse().filter(i => i.inStock).slice(0, 12));
+        const newShopDeals = availableItems.filter(i => i.isDiscounted && i.inStock).sort((a, b) => b.discountPercent - a.discountPercent).slice(0, 12);
+        const newBestSellers = availableItems.filter(i => i.inStock).slice(0, 12);
+        const newUnder99 = availableItems.filter(i => i.sellingPrice > 0 && i.sellingPrice < 100 && i.inStock).slice(0, 12);
+        const newArrivalsList = [...availableItems].reverse().filter(i => i.inStock).slice(0, 12);
+        
+        setShopDeals(newShopDeals);
+        setShopBestSellers(newBestSellers);
+        setUnder99(newUnder99);
+        setNewArrivals(newArrivalsList);
         
         // --- SMART "BUY IT AGAIN" ---
         let pastBoughtIds = new Set();
@@ -77,7 +120,8 @@ export default function useShopFeedData(user) {
         } catch (err) { console.log("Could not load past orders"); }
 
         const realBuyItAgain = availableItems.filter(i => i.inStock && pastBoughtIds.has(i._id.toString()));
-        setBuyItAgain(realBuyItAgain.length > 0 ? realBuyItAgain.slice(0, 12) : availableItems.filter(i => i.inStock).sort(() => 0.5 - Math.random()).slice(0, 12));
+        const finalBuyItAgain = realBuyItAgain.length > 0 ? realBuyItAgain.slice(0, 12) : availableItems.filter(i => i.inStock).sort(() => 0.5 - Math.random()).slice(0, 12);
+        setBuyItAgain(finalBuyItAgain);
 
         // --- TIME BASED LOGIC ---
         const hour = new Date().getHours();
@@ -88,10 +132,30 @@ export default function useShopFeedData(user) {
         else { timeTitle = "🦉 Late Night Essentials"; timeSubtitle = "We are still awake for you"; keywords = ["snacks", "beverages", "noodles", "condoms"]; }
 
         const matchedItems = availableItems.filter(i => i.inStock && keywords.some(kw => (i.category || "").toLowerCase().includes(kw) || (i.name || "").toLowerCase().includes(kw)));
-        setTimeBased({ title: timeTitle, subtitle: timeSubtitle, items: matchedItems.length > 0 ? matchedItems.slice(0, 12) : availableItems.filter(i => i.inStock).slice(0, 12) });
+        const finalTimeBased = { title: timeTitle, subtitle: timeSubtitle, items: matchedItems.length > 0 ? matchedItems.slice(0, 12) : availableItems.filter(i => i.inStock).slice(0, 12) };
+        setTimeBased(finalTimeBased);
 
-      } catch (err) { console.error("Feed Load Error:", err); }
-      setLoading(false);
+        // ==========================================
+        // 💾 3. SAVE FRESH DATA TO CACHE
+        // ==========================================
+        const freshCache = {
+          items: availableItems,
+          shopInfo: newShopInfo,
+          nearbyShops: newNearbyShops,
+          shopDeals: newShopDeals,
+          shopBestSellers: newBestSellers,
+          under99: newUnder99,
+          newArrivals: newArrivalsList,
+          buyItAgain: finalBuyItAgain,
+          timeBased: finalTimeBased
+        };
+        localStorage.setItem(cacheKey, JSON.stringify(freshCache));
+
+      } catch (err) { 
+        console.error("Feed Load Error:", err); 
+      } finally {
+        setLoading(false);
+      }
     };
 
     fetchShopProducts();
