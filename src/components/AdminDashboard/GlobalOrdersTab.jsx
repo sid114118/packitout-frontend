@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
+import { useToast } from '../../ui/DialogProvider.jsx';
 
 export default function GlobalOrdersTab({ orders }) {
+  const toast = useToast();
   const [pingingOrderId, setPingingOrderId] = useState(null);
   const BASE_URL = "https://darkslategrey-snail-415133.hostingersite.com";
 
@@ -8,10 +10,13 @@ export default function GlobalOrdersTab({ orders }) {
   const handlePingShop = async (shopId, orderId) => {
     // Failsafe: Handle populated shop objects vs raw string IDs
     const targetShopId = typeof shopId === 'object' ? shopId?._id : shopId;
-    if (!targetShopId) return alert("Error: Shop ID is missing from this order.");
+    if (!targetShopId) {
+      toast("Shop ID is missing from this order.", 'error');
+      return;
+    }
 
     setPingingOrderId(orderId); // Show loading state on button
-    
+
     try {
       const res = await fetch(`${BASE_URL}/admin/ping-shop`, {
         method: "POST",
@@ -20,13 +25,13 @@ export default function GlobalOrdersTab({ orders }) {
       });
 
       if (res.ok) {
-        alert("🔔 URGENT PING SENT! The shop's phone is buzzing now.");
+        toast("🔔 Urgent ping sent! Shop's phone is buzzing now.");
       } else {
-        alert("❌ Failed to send ping. Check server connection.");
+        toast("Failed to send ping. Check server connection.", 'error');
       }
     } catch (err) {
       console.error(err);
-      alert("❌ Network error.");
+      toast("Network error.", 'error');
     }
     setPingingOrderId(null); // Reset loading state
   };

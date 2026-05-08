@@ -1,6 +1,9 @@
 import React, { useState } from 'react';
+import { useToast, usePrompt } from '../../ui/DialogProvider.jsx';
 
-export default function UsersTab({ users }) {
+export default function UsersTab({ users, onUsersChanged }) {
+  const toast = useToast();
+  const askForValue = usePrompt();
   // 🛡️ STATE MOVED INSIDE: Now it manages its own form and will never crash!
   const [userForm, setUserForm] = useState({ name: "", phone: "", pincode: "", password: "" });
   const BASE_URL = "https://darkslategrey-snail-415133.hostingersite.com";
@@ -15,23 +18,29 @@ export default function UsersTab({ users }) {
         body: JSON.stringify(userForm)
       });
       if (res.ok) {
-        alert("✅ User Registered Successfully!");
+        toast("User registered!");
         setUserForm({ name: "", phone: "", pincode: "", password: "" });
-        window.location.reload(); // Quick refresh to show the new user in the table
+        if (onUsersChanged) onUsersChanged();
       } else {
-        alert("❌ Failed to register. This phone number might already exist.");
+        toast("Failed to register. This phone number might already exist.", 'error');
       }
     } catch (err) {
       console.error(err);
-      alert("❌ Network Error.");
+      toast("Network error.", 'error');
     }
   };
 
   // --- 🪙 QUICK UPDATE COINS ---
   const handleEditUserCoins = async (userId, currentCoins) => {
-    const newCoins = prompt(`Update coins for this user:`, currentCoins);
-    
-    // Only proceed if they typed a valid number and didn't hit cancel
+    const newCoins = await askForValue({
+      title: 'Update Coins',
+      message: 'Set the new coin balance for this user.',
+      defaultValue: String(currentCoins ?? ''),
+      placeholder: 'e.g. 100',
+      inputMode: 'numeric',
+      confirmText: 'Update',
+    });
+
     if (newCoins !== null && newCoins.trim() !== "" && !isNaN(newCoins)) {
       try {
         const res = await fetch(`${BASE_URL}/users/${userId}`, {
@@ -40,10 +49,11 @@ export default function UsersTab({ users }) {
           body: JSON.stringify({ coins: Number(newCoins) })
         });
         if (res.ok) {
-          window.location.reload(); // Refresh the table to show the new balance
+          toast("Coins updated!");
+          if (onUsersChanged) onUsersChanged();
         }
       } catch (err) {
-        alert("❌ Error updating coins.");
+        toast("Error updating coins.", 'error');
       }
     }
   };

@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
+import { useToast } from './ui/DialogProvider.jsx';
 
-export default function Header({ user }) {
+export default function Header({ user, onUserUpdate }) {
+  const toast = useToast();
   const [isChanging, setIsChanging] = useState(false);
   const [pincode, setPincode] = useState("");
   const [shops, setShops] = useState([]);
@@ -32,7 +34,7 @@ export default function Header({ user }) {
 
   const handleSaveShop = async () => {
     if (!user) {
-      alert("Please log in to save your preferred shop!");
+      toast("Please log in to save your preferred shop!", 'info');
       window.location.hash = "#account";
       return;
     }
@@ -45,15 +47,18 @@ export default function Header({ user }) {
         body: JSON.stringify({ pincode: pincode, primaryShop: selectedShopId })
       });
       const updatedUser = await res.json();
-      
-      localStorage.setItem("packitout_user", JSON.stringify(updatedUser));
+
+      if (onUserUpdate) onUserUpdate(updatedUser, { clearCart: true });
+      else localStorage.setItem("packitout_user", JSON.stringify(updatedUser));
+
       setActiveShopName(updatedUser.primaryShop?.name || "");
       setIsChanging(false);
-      setShops([]); 
+      setShops([]);
       setHasSearched(false);
-      window.location.reload(); 
+      toast("Shop updated! 🏪");
     } catch (err) {
       console.log("Error saving shop", err);
+      toast("Could not save shop. Try again.", 'error');
     }
   };
 

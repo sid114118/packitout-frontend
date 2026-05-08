@@ -1,5 +1,6 @@
 import React from 'react';
 import NotificationBell from '../../NotificationBell'; // 🔔 Make sure this path points to your new Bell component!
+import { useToast } from '../../ui/DialogProvider.jsx';
 
 export default function ProfileHeader({
   user,
@@ -14,6 +15,7 @@ export default function ProfileHeader({
   nearbyShops,
   primaryShop
 }) {
+  const toast = useToast();
   return (
     <>
       {/* 🔴 UNIFIED RED/CORAL PREMIUM HEADER */}
@@ -63,9 +65,9 @@ export default function ProfileHeader({
               onClick={() => {
                 if(myReferralCode) {
                   navigator.clipboard.writeText(myReferralCode);
-                  alert("Referral Code Copied!");
+                  toast("Referral code copied!");
                 }
-              }} 
+              }}
               style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '1.2rem' }}
             >📋</button>
           </div>

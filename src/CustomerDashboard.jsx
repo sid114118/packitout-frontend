@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
+import { useToast } from './ui/DialogProvider.jsx';
 
 export default function CustomerDashboard({ user, onExit }) {
+  const toast = useToast();
   const [shopMenu, setShopMenu] = useState(null);
   const [cart, setCart] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -52,10 +54,10 @@ export default function CustomerDashboard({ user, onExit }) {
         body: JSON.stringify(orderData)
       });
       if (res.ok) {
-        alert("✅ Order placed successfully! The shopkeeper has been notified.");
-        setCart([]); 
+        toast("Order placed! The shopkeeper has been notified.");
+        setCart([]);
       }
-    } catch (err) { alert("Error placing order. Please try again."); }
+    } catch (err) { toast("Error placing order. Please try again.", 'error'); }
   };
 
   if (loading) return <div style={{ padding: '50px', textAlign: 'center' }}>Loading your local store...</div>;

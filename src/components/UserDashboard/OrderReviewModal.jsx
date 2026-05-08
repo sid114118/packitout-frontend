@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { createPortal } from 'react-dom';
+import { useToast } from '../../ui/DialogProvider.jsx';
 
 // 🛡️ THE FIX: This safely extracts the pure string ID no matter how the data is shaped!
 const getProductId = (item) => {
@@ -11,6 +12,7 @@ const getProductId = (item) => {
 };
 
 export default function OrderReviewModal({ isOpen, onClose, order, onSubmitReviews }) {
+  const toast = useToast();
   const [shopRating, setShopRating] = useState(0);
   const [shopReviewText, setShopReviewText] = useState('');
   const [itemRatings, setItemRatings] = useState({});
@@ -26,7 +28,7 @@ export default function OrderReviewModal({ isOpen, onClose, order, onSubmitRevie
     const hasProductRating = Object.values(itemRatings).some(rating => rating > 0);
     
     if (shopRating === 0 && !hasProductRating) {
-      alert("Please rate the shop or at least one item first! ⭐");
+      toast("Please rate the shop or at least one item first! ⭐", 'warn');
       return;
     }
     
@@ -53,7 +55,7 @@ export default function OrderReviewModal({ isOpen, onClose, order, onSubmitRevie
     if (onSubmitReviews) {
       await onSubmitReviews(reviewPayload);
     } else {
-      setTimeout(() => alert("Thank you for your valuable feedback! 🎉"), 400);
+      setTimeout(() => toast("Thanks for your feedback! 🎉"), 400);
     }
 
     setIsSubmitting(false);

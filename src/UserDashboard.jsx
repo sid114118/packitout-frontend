@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import OneSignal from 'react-onesignal'; 
+import OneSignal from 'react-onesignal';
+import { useToast, useConfirm } from './ui/DialogProvider.jsx';
 
 import ProfileHeader from './components/UserDashboard/ProfileHeader';
 import OrdersList from './components/UserDashboard/OrdersList';
@@ -8,6 +9,8 @@ import ReceiptModal from './components/UserDashboard/ReceiptModal';
 import OrderReviewModal from './components/UserDashboard/OrderReviewModal'; 
 
 export default function UserDashboard({ user, onExit, onLogout }) {
+  const triggerToast = useToast();
+  const askConfirm = useConfirm();
   // --- STATE ---
   const [orders, setOrders] = useState([]);
   const [pendingParchis, setPendingParchis] = useState([]); 
@@ -25,17 +28,7 @@ export default function UserDashboard({ user, onExit, onLogout }) {
   const [showAddressForm, setShowAddressForm] = useState(false);
   const [newAddress, setNewAddress] = useState("");
 
-  // 🌟 NEW: PREMIUM POP-UP STATES
-  const [toast, setToast] = useState({ show: false, message: '', type: 'success' });
-  const [confirmData, setConfirmData] = useState({ show: false, title: '', message: '', onConfirm: null });
-
   const BASE_URL = "https://darkslategrey-snail-415133.hostingersite.com";
-
-  // --- HELPER: SHOW TOAST ---
-  const triggerToast = (msg, type = 'success') => {
-    setToast({ show: true, message: msg, type });
-    setTimeout(() => setToast({ show: false, message: '', type: 'success' }), 3000);
-  };
 
   // --- DATA FETCHING ---
   const fetchOrders = () => {
@@ -66,17 +59,19 @@ export default function UserDashboard({ user, onExit, onLogout }) {
   // --- LOGIC FUNCTIONS ---
 
   // ❌ CUSTOM CANCEL FLOW
-  const initiateCancel = (orderId) => {
-    setConfirmData({
-      show: true,
-      title: "Cancel Order?",
-      message: "Are you sure? This action cannot be undone.",
-      onConfirm: () => executeCancel(orderId)
+  const initiateCancel = async (orderId) => {
+    const ok = await askConfirm({
+      title: 'Cancel order?',
+      message: 'Are you sure? This action cannot be undone.',
+      confirmText: 'Cancel order',
+      cancelText: 'Keep order',
+      danger: true,
     });
+    if (!ok) return;
+    executeCancel(orderId);
   };
 
   const executeCancel = async (orderId) => {
-    setConfirmData({ ...confirmData, show: false });
     try {
       const res = await fetch(`${BASE_URL}/orders/${orderId}`, {
         method: "PATCH",
@@ -148,29 +143,6 @@ export default function UserDashboard({ user, onExit, onLogout }) {
       {/* 🧾 MODALS */}
       <ReceiptModal selectedOrder={selectedOrder} setSelectedOrder={setSelectedOrder} />
       <OrderReviewModal isOpen={isReviewModalOpen} onClose={() => setIsReviewModalOpen(false)} order={orderToReview} onSubmitReviews={() => triggerToast("Feedback received!")} />
-
-      {/* 🌟 PREMIUM TOAST NOTIFICATION */}
-      {toast.show && (
-        <div style={{ position: 'fixed', top: '25px', left: '50%', transform: 'translateX(-50%)', backgroundColor: toast.type === 'success' ? '#0c831f' : '#ef4444', color: 'white', padding: '12px 24px', borderRadius: '14px', zIndex: 9999, fontWeight: '700', boxShadow: '0 10px 25px rgba(0,0,0,0.2)', display: 'flex', alignItems: 'center', gap: '10px', animation: 'slideIn 0.3s ease-out' }}>
-          <style>{`@keyframes slideIn { from { transform: translate(-50%, -100px); } to { transform: translate(-50%, 0); } }`}</style>
-          <span>{toast.type === 'success' ? '✅' : '❌'}</span>
-          {toast.message}
-        </div>
-      )}
-
-      {/* 🌟 PREMIUM CONFIRMATION MODAL */}
-      {confirmData.show && (
-        <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)', zIndex: 10000, display: 'flex', justifyContent: 'center', alignItems: 'center', padding: '20px' }}>
-          <div style={{ backgroundColor: 'white', width: '100%', maxWidth: '320px', padding: '25px', borderRadius: '24px', textAlign: 'center', boxShadow: '0 20px 40px rgba(0,0,0,0.3)' }}>
-            <h3 style={{ margin: '0 0 10px 0', fontSize: '1.25rem', fontWeight: '900', color: '#0f172a' }}>{confirmData.title}</h3>
-            <p style={{ margin: '0 0 25px 0', color: '#64748b', fontSize: '0.95rem', lineHeight: '1.5', fontWeight: '500' }}>{confirmData.message}</p>
-            <div style={{ display: 'flex', gap: '12px' }}>
-              <button onClick={() => setConfirmData({ ...confirmData, show: false })} style={{ flex: 1, padding: '12px', border: '1px solid #e2e8f0', background: 'white', borderRadius: '12px', fontWeight: '700', cursor: 'pointer', color: '#64748b' }}>Dismiss</button>
-              <button onClick={confirmData.onConfirm} style={{ flex: 1, padding: '12px', border: 'none', background: '#ef4444', borderRadius: '12px', fontWeight: '800', cursor: 'pointer', color: 'white' }}>Confirm</button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

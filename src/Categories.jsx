@@ -1,7 +1,16 @@
 import React from 'react';
-import UploadParchi from './UploadParchi.jsx'; 
+import UploadParchi from './UploadParchi.jsx';
 
-export default function Categories({ onCategorySelect, searchQuery = "" }) {
+const TOP_PICKS = [
+  { icon: '🥛', label: 'Dairy & Eggs',    name: 'Dairy, Bread & Eggs' },
+  { icon: '🌾', label: 'Atta & Rice',     name: 'Atta & Rice' },
+  { icon: '🥨', label: 'Chips & Namkeen', name: 'Chips & Namkeen' },
+  { icon: '🥤', label: 'Drinks',          name: 'Drinks & Juices' },
+  { icon: '🧼', label: 'Bath & Body',     name: 'Bath & Body' },
+  { icon: '💊', label: 'Health & Pharma', name: 'Health & Pharma' },
+];
+
+export default function Categories({ onCategorySelect, searchQuery = "", onAddToCart }) {
 
   const menuData = [
     {
@@ -57,8 +66,70 @@ export default function Categories({ onCategorySelect, searchQuery = "" }) {
       <div style={{ padding: '10px 15px' }}>
         
         <div style={{ marginBottom: '25px' }}>
-          <UploadParchi />
+          <UploadParchi onAddToCart={onAddToCart} />
         </div>
+
+        {/* 🔥 QUICK ACCESS — TOP CATEGORY PILLS */}
+        {!searchQuery && (
+          <div style={{ marginBottom: '24px' }}>
+            <h3 style={{
+              margin: '0 0 12px 4px',
+              fontSize: '1rem',
+              fontWeight: 800,
+              color: '#0f172a',
+              letterSpacing: '-0.2px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px'
+            }}>
+              <span aria-hidden="true">🔥</span> Top Picks
+            </h3>
+            <div
+              className="hide-scroll"
+              style={{
+                display: 'flex',
+                gap: '10px',
+                overflowX: 'auto',
+                paddingBottom: '4px',
+                marginInline: '-15px',
+                paddingInline: '15px',
+                scrollbarWidth: 'none'
+              }}
+            >
+              {TOP_PICKS.map(pick => (
+                <button
+                  key={pick.name}
+                  onClick={() => onCategorySelect && onCategorySelect(pick.name)}
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    padding: '10px 16px',
+                    borderRadius: '999px',
+                    border: '1px solid #e2e8f0',
+                    background: 'white',
+                    color: '#0f172a',
+                    fontSize: '0.85rem',
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                    whiteSpace: 'nowrap',
+                    flexShrink: 0,
+                    boxShadow: '0 1px 2px rgba(0,0,0,0.03)',
+                    fontFamily: 'inherit',
+                    transition: 'transform 0.1s ease, background 0.15s ease'
+                  }}
+                  onMouseDown={e => e.currentTarget.style.transform = 'scale(0.96)'}
+                  onMouseUp={e => e.currentTarget.style.transform = 'scale(1)'}
+                  onMouseLeave={e => e.currentTarget.style.transform = 'scale(1)'}
+                >
+                  <span aria-hidden="true" style={{ fontSize: '1.05rem' }}>{pick.icon}</span>
+                  <span>{pick.label}</span>
+                </button>
+              ))}
+            </div>
+            <style>{`.hide-scroll::-webkit-scrollbar { display: none; }`}</style>
+          </div>
+        )}
 
         {filteredMenuData.length === 0 ? (
           <div style={{ textAlign: 'center', padding: '60px 20px', color: '#94a3b8' }}>

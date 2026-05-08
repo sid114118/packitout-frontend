@@ -1,6 +1,10 @@
 import React, { useState } from 'react';
+import { useToast, useConfirm, usePrompt } from '../../ui/DialogProvider.jsx';
 
-export default function InventoryTab({ shopData, masterCatalog, handleInventoryUpdate }) {
+export default function InventoryTab({ shopData, masterCatalog, handleInventoryUpdate, onInventoryRefresh }) {
+  const toast = useToast();
+  const confirmDialog = useConfirm();
+  const askForValue = usePrompt();
   // --- STATES FOR SEARCH & EDITING ---
   const [searchMaster, setSearchMaster] = useState("");
   const [searchInventory, setSearchInventory] = useState("");
@@ -35,21 +39,36 @@ export default function InventoryTab({ shopData, masterCatalog, handleInventoryU
   // ==========================================
   const handleBulkImport = async () => {
     const shopId = shopData?._id;
-    if (!shopId) return alert("Shop ID is missing!");
-    
-    // 1. Prompt the Admin for a discount percentage!
-    const discountInput = window.prompt("Enter the discount percentage to apply to ALL master products (e.g., type 5 for 5% off, or 0 for full MRP):", "5");
-    
-    // If they click "Cancel", stop everything.
-    if (discountInput === null) return;
-
-    // Validate that they typed a real number
-    const discountPercent = Number(discountInput);
-    if (isNaN(discountPercent) || discountPercent < 0 || discountPercent > 100) {
-      return alert("Please enter a valid number between 0 and 100.");
+    if (!shopId) {
+      toast("Shop ID is missing!", 'error');
+      return;
     }
 
-    const confirmImport = window.confirm(`⚠️ WARNING: This will wipe current inventory and import ALL Master Products at a ${discountPercent}% discount. Continue?`);
+    // 1. Ask the admin for a discount percentage
+    const discountInput = await askForValue({
+      title: 'Bulk Import Discount',
+      message: 'Enter the discount percentage to apply to ALL master products (e.g., 5 for 5% off, or 0 for full MRP).',
+      defaultValue: '5',
+      placeholder: '0 - 100',
+      inputMode: 'numeric',
+      confirmText: 'Continue',
+    });
+
+    if (discountInput === null) return; // user cancelled
+
+    const discountPercent = Number(discountInput);
+    if (isNaN(discountPercent) || discountPercent < 0 || discountPercent > 100) {
+      toast("Please enter a valid number between 0 and 100.", 'warn');
+      return;
+    }
+
+    const confirmImport = await confirmDialog({
+      title: 'Wipe & re-import inventory?',
+      message: `This will erase your current inventory and import ALL master products at a ${discountPercent}% discount. This cannot be undone.`,
+      confirmText: 'Yes, replace inventory',
+      cancelText: 'Cancel',
+      danger: true,
+    });
     if (!confirmImport) return;
 
     setIsImporting(true);
@@ -59,17 +78,16 @@ export default function InventoryTab({ shopData, masterCatalog, handleInventoryU
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ discountPercent: discountPercent })
       });
-      
+
       const data = await response.json();
       if (response.ok) {
-        alert("✅ " + data.message);
-        // Instantly reload the page to show the fresh inventory!
-        window.location.reload(); 
+        toast(data.message || 'Inventory imported!');
+        if (onInventoryRefresh) await onInventoryRefresh();
       } else {
-        alert("❌ Error: " + data.error);
+        toast(data.error || 'Import failed', 'error');
       }
     } catch (err) {
-      alert("Network error. Could not reach the server.");
+      toast("Network error. Could not reach the server.", 'error');
     } finally {
       setIsImporting(false);
     }

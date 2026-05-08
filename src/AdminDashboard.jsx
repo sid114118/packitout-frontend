@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useToast } from './ui/DialogProvider.jsx';
 import ProductsTab from './components/AdminDashboard/ProductsTab';
 import ShopsTab from './components/AdminDashboard/ShopsTab';
 import UsersTab from './components/AdminDashboard/UsersTab';
@@ -6,7 +7,8 @@ import GlobalOrdersTab from './components/AdminDashboard/GlobalOrdersTab';
 import AdminParchiManager from './components/AdminDashboard/AdminParchiManager'; // 🌟 Your Master POS!
 
 export default function AdminDashboard({ onExit }) {
-  const [activeTab, setActiveTab] = useState("shops"); 
+  const toast = useToast();
+  const [activeTab, setActiveTab] = useState("shops");
   
   const [products, setProducts] = useState([]);
   const [shops, setShops] = useState([]);
@@ -61,22 +63,22 @@ export default function AdminDashboard({ onExit }) {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(form)
         });
-        if (res.ok) alert("✅ Product Updated Successfully!");
+        if (res.ok) toast("Product updated!");
       } else {
         const res = await fetch(`${BASE_URL}/master-products`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(form)
         });
-        if (res.ok) alert("✅ New Product Added to Master Catalog!");
+        if (res.ok) toast("New product added to master catalog!");
       }
 
       setForm(initialProductForm);
       setEditingProductId(null);
-      fetchData(); 
+      fetchData();
     } catch (err) {
       console.error(err);
-      alert("❌ Failed to save product. Check your connection.");
+      toast("Failed to save product. Check your connection.", 'error');
     }
   };
 
@@ -118,17 +120,17 @@ export default function AdminDashboard({ onExit }) {
         await fetch(`${BASE_URL}/shops/${editingShopId}/admin-edit`, {
           method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(shopForm)
         });
-        alert("✅ Shop Updated Successfully!");
+        toast("Shop updated!");
       } else {
         await fetch(`${BASE_URL}/shops`, {
           method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(shopForm)
         });
-        alert("✅ Shop Partner Registered!");
+        toast("Shop partner registered!");
       }
       setShopForm(initialShopForm);
       setEditingShopId(null);
       fetchData();
-    } catch (err) { alert("❌ Something went wrong."); }
+    } catch (err) { toast("Something went wrong.", 'error'); }
   };
 
   const startEditingShop = (shop) => {
@@ -165,11 +167,11 @@ export default function AdminDashboard({ onExit }) {
         {loading ? <div style={{ textAlign: 'center', marginTop: '50px', color: '#64748b' }}>Loading data...</div> : (
           <>
             {/* 🔀 ROUTING: This tells React which component to show based on the active tab */}
-            {activeTab === "products" && <ProductsTab products={products} form={form} setForm={setForm} handleProductSubmit={handleProductSubmit} CATEGORIES={CATEGORIES} editingProductId={editingProductId} startEditingProduct={startEditingProduct} cancelEdit={cancelEditProduct} />}
-            
+            {activeTab === "products" && <ProductsTab products={products} form={form} setForm={setForm} handleProductSubmit={handleProductSubmit} CATEGORIES={CATEGORIES} editingProductId={editingProductId} startEditingProduct={startEditingProduct} cancelEdit={cancelEditProduct} onProductsChanged={fetchData} />}
+
             {activeTab === "shops" && <ShopsTab shops={shops} shopForm={shopForm} setShopForm={setShopForm} handleShopSubmit={handleShopSubmit} editingShopId={editingShopId} startEditingShop={startEditingShop} cancelEditShop={cancelEditShop} />}
-            
-            {activeTab === "users" && <UsersTab users={users} />}
+
+            {activeTab === "users" && <UsersTab users={users} onUsersChanged={fetchData} />}
             
             {/* 🌟 NEW: Render the Orders and Master POS components */}
             {activeTab === "orders" && <GlobalOrdersTab orders={orders} />}

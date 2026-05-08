@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import OneSignal from 'react-onesignal'; // 🚀 IMPORTED ONESIGNAL HERE
+import { useToast } from './ui/DialogProvider.jsx';
 
 import Header from './Header.jsx';
 import Categories from './Categories.jsx';
@@ -48,6 +49,7 @@ class CrashCatcher extends React.Component {
 }
 
 export default function App() {
+  const toast = useToast();
   const [currentView, setCurrentView] = useState("customer");
   const [isAdminAuthenticated, setIsAdminAuthenticated] = useState(false);
   const [isShopAuthenticated, setIsShopAuthenticated] = useState(null);
@@ -134,7 +136,7 @@ export default function App() {
 
   const handleAddToCart = (product) => {
     if (!loggedInUser) {
-      alert("Please log in first! 🛒");
+      toast("Please log in first! 🛒", 'info');
       window.location.hash = "#account";
       return;
     }
@@ -191,6 +193,13 @@ export default function App() {
     window.location.hash = "";
   };
 
+  const handleUserUpdate = (updatedUser, { clearCart = false } = {}) => {
+    if (!updatedUser) return;
+    localStorage.setItem("packitout_user", JSON.stringify(updatedUser));
+    setLoggedInUser(updatedUser);
+    if (clearCart) setCart([]);
+  };
+
   const handleUserLogout = () => {
     localStorage.removeItem("packitout_user");
     setLoggedInUser(null);
@@ -217,10 +226,10 @@ export default function App() {
         const updatedUser = await response.json();
         setLoggedInUser(updatedUser);
         localStorage.setItem("packitout_user", JSON.stringify(updatedUser));
-        alert("Success! Shop updated. 🏪");
+        toast("Shop updated! 🏪");
         window.location.hash = "";
       }
-    } catch (err) { alert("Failed to update shop."); }
+    } catch (err) { toast("Failed to update shop.", 'error'); }
   };
 
   const renderContent = () => {
@@ -248,7 +257,7 @@ export default function App() {
       if (viewingShop) return <ShopDetail shop={viewingShop} onBack={() => setViewingShop(null)} onSetPrimary={handleSetPrimaryShop} />;
       return (
         <div style={{ paddingBottom: '80px' }}>
-          <Header user={loggedInUser} />
+          <Header user={loggedInUser} onUserUpdate={handleUserUpdate} />
           <Nearby user={loggedInUser} onSelectShop={(shop) => setViewingShop(shop)} />
         </div>
       );
@@ -269,7 +278,7 @@ export default function App() {
     return (
       <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', backgroundColor: '#f3f4f6', paddingBottom: cart.length > 0 ? '140px' : '70px' }}>
         <div style={{ position: 'sticky', top: isHeaderVisible ? '0px' : '-65px', zIndex: 1001, transition: 'top 0.3s ease-in-out' }}>
-          <Header user={loggedInUser} />
+          <Header user={loggedInUser} onUserUpdate={handleUserUpdate} />
           <div style={{ padding: '10px 15px', backgroundColor: '#f3f4f6' }}>
             <div onClick={() => setIsSearchOpen(true)} style={{ display: 'flex', alignItems: 'center', backgroundColor: '#ffffff', borderRadius: '12px', padding: '10px 15px', border: '1px solid #e2e8f0' }}>
               <span style={{ color: '#94a3b8' }}>Search items...</span>
@@ -278,16 +287,17 @@ export default function App() {
         </div>
 
         {/* 🛡️ Hides Categories if viewing a Brand */}
-        {!selectedCategory && !selectedBrand && !isSearchOpen && <Categories onCategorySelect={setSelectedCategory} />}
+        {!selectedCategory && !selectedBrand && !isSearchOpen && <Categories onCategorySelect={setSelectedCategory} onAddToCart={handleAddToCart} />}
         
         <main style={{ flex: 1, padding: '1rem 0' }}>
           <CrashCatcher>
-            <ProductFeed 
-              user={loggedInUser} 
-              cart={cart} 
-              onAddToCart={handleAddToCart} 
-              onRemoveFromCart={handleRemoveFromCart} 
-              onViewCart={() => window.location.hash = "#cart"} 
+            <ProductFeed
+              user={loggedInUser}
+              onUserUpdate={handleUserUpdate}
+              cart={cart}
+              onAddToCart={handleAddToCart}
+              onRemoveFromCart={handleRemoveFromCart}
+              onViewCart={() => window.location.hash = "#cart"}
               selectedCategory={selectedCategory} 
               onClearCategory={() => setSelectedCategory(null)} 
               // 🏷️ PASS BRAND STATE DOWN

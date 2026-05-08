@@ -1,0 +1,11 @@
+node_modules/
+dist/
+.env
+.env.local
+.env.*.local
+*.log
+.DS_Store
+
+# Backend repo lives in its own git repo at packitout-api/
+# Don't commit it inside the frontend repo.
+packitout-api/

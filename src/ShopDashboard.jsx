@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useToast } from './ui/DialogProvider.jsx';
 
 // 🔗 IMPORTING YOUR WORKERS!
 import OrdersTab from './components/ShopDashboard/OrdersTab';
@@ -9,8 +10,9 @@ import NotificationBell from './NotificationBell';
 import ShopReviews from './components/ShopDashboard/ShopReviews'; 
 
 export default function ShopDashboard({ user, onExit }) {
+  const toast = useToast();
   // --- STATE ---
-  const [activeTab, setActiveTab] = useState("orders"); 
+  const [activeTab, setActiveTab] = useState("orders");
   const [orders, setOrders] = useState([]); 
   const [masterCatalog, setMasterCatalog] = useState([]); 
   const [shopData, setShopData] = useState(user); 
@@ -45,12 +47,19 @@ export default function ShopDashboard({ user, onExit }) {
     } catch (err) { console.log(err); } 
   }; 
 
-  const fetchMasterCatalog = async () => { 
-    try { 
-      const res = await fetch(`${BASE_URL}/master-products`); 
-      setMasterCatalog(await res.json()); 
-    } catch (err) { console.log(err); } 
-  }; 
+  const fetchMasterCatalog = async () => {
+    try {
+      const res = await fetch(`${BASE_URL}/master-products`);
+      setMasterCatalog(await res.json());
+    } catch (err) { console.log(err); }
+  };
+
+  const refreshShopData = async () => {
+    try {
+      const res = await fetch(`${BASE_URL}/shops/${shopData._id}/menu`);
+      if (res.ok) setShopData(await res.json());
+    } catch (err) { console.log(err); }
+  };
 
   const fetchParchis = async () => {
     try {
@@ -89,13 +98,13 @@ export default function ShopDashboard({ user, onExit }) {
       // 3. Catch server errors
       if (!res.ok) {
         const errorData = await res.json();
-        alert("BACKEND REJECTED IT: " + (errorData.error || "Unknown Error"));
+        toast(errorData.error || "Server rejected the update", 'error');
         fetchOrders(); // Reload actual database state
       }
-    } catch (err) { 
-      console.log(err); 
-      alert("NETWORK ERROR: Cannot reach Hostinger server.");
-    } 
+    } catch (err) {
+      console.log(err);
+      toast("Network error. Cannot reach server.", 'error');
+    }
   }; 
 
   const handleInventoryUpdate = async (productId, sellingPrice, inStock = true) => { 
@@ -105,14 +114,14 @@ export default function ShopDashboard({ user, onExit }) {
         headers: { "Content-Type": "application/json" }, 
         body: JSON.stringify({ productId, sellingPrice: Number(sellingPrice), inStock }) 
       }); 
-      if (res.ok) { 
-        setShopData(await res.json()); 
-        alert("✅ Store Updated!"); 
-      } else { 
-        const errorData = await res.json(); 
-        alert("❌ Error: " + (errorData.error || "Failed to update")); 
-      } 
-    } catch (err) { console.log(err); } 
+      if (res.ok) {
+        setShopData(await res.json());
+        toast("Store updated!");
+      } else {
+        const errorData = await res.json();
+        toast(errorData.error || "Failed to update", 'error');
+      }
+    } catch (err) { console.log(err); }
   }; 
 
   const handleAddToBill = (item) => {
@@ -145,13 +154,13 @@ export default function ShopDashboard({ user, onExit }) {
         setSelectedParchi(null);
         setParchiBill([]);
         fetchOrders();
-        alert(`✅ Digital Bill Sent to ${selectedParchi.customerName || 'Customer'}!`);
+        toast(`Digital bill sent to ${selectedParchi.customerName || 'customer'}!`);
       } else {
-        alert("❌ Failed to create the order. Please try again.");
+        toast("Failed to create the order. Please try again.", 'error');
       }
     } catch (err) {
       console.log(err);
-      alert("❌ Something went wrong sending the bill.");
+      toast("Something went wrong sending the bill.", 'error');
     }
   };
 
@@ -188,7 +197,7 @@ export default function ShopDashboard({ user, onExit }) {
       <div style={{ padding: '15px', maxWidth: '800px', margin: '0 auto' }}> 
         {activeTab === "orders" && <OrdersTab orders={orders} updateOrderStatus={updateOrderStatus} />}
         {activeTab === "parchis" && <ParchiTab parchiRequests={parchiRequests} selectedParchi={selectedParchi} setSelectedParchi={setSelectedParchi} parchiBill={parchiBill} setParchiBill={setParchiBill} handleAddToBill={handleAddToBill} handleSendBill={handleSendBill} shopData={shopData} />}
-        {activeTab === "inventory" && <InventoryTab shopData={shopData} masterCatalog={masterCatalog} handleInventoryUpdate={handleInventoryUpdate} />}
+        {activeTab === "inventory" && <InventoryTab shopData={shopData} masterCatalog={masterCatalog} handleInventoryUpdate={handleInventoryUpdate} onInventoryRefresh={refreshShopData} />}
         {activeTab === "reviews" && <ShopReviews shopId={shopData._id} shopRating={shopData.rating} totalReviews={shopData.totalReviews} />}
       </div>
     </div>

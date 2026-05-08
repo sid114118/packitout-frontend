@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
+import { useToast } from '../ui/DialogProvider.jsx';
 
 export default function ReviewSection({ targetId, reviews = [], type = "Product" }) {
+  const toast = useToast();
   const [showForm, setShowForm] = useState(false);
   const [rating, setRating] = useState(5);
   const [comment, setComment] = useState("");
@@ -24,7 +26,7 @@ export default function ReviewSection({ targetId, reviews = [], type = "Product"
       setIsSubmitting(false);
       setShowForm(false);
       setComment("");
-      alert("Review submitted successfully! (Frontend Only)");
+      toast("Review submitted!");
     }, 1000);
   };
 

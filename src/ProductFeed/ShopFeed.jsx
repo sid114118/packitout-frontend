@@ -1,20 +1,23 @@
 import React, { useState } from 'react';
 import ProductModal from './ProductModal.jsx';
-import ProductListView from './ProductListView.jsx'; 
-import SearchPage from '../SearchPage.jsx'; 
+import ProductListView from './ProductListView.jsx';
+import SearchPage from '../SearchPage.jsx';
 import { VariantBottomSheet, ModernProductCard, ProductRow } from './FeedComponents.jsx';
 import ShopCarousel from './ShopCarousel.jsx';
+import { useToast, useConfirm } from '../ui/DialogProvider.jsx';
 
 // 🌟 IMPORT OUR NEW BRAIN!
 import useShopFeedData from './useShopFeedData'; // Adjust path based on where you saved it
 
-export default function ShopFeed({ 
-  user, onAddToCart, onRemoveFromCart, onViewCart, cart = [], 
-  selectedCategory, onClearCategory, 
+export default function ShopFeed({
+  user, onUserUpdate, onAddToCart, onRemoveFromCart, onViewCart, cart = [],
+  selectedCategory, onClearCategory,
   selectedBrand, onBrandSelect, onClearBrand,
-  isSearchOpen, onOpenSearch, onCloseSearch 
+  isSearchOpen, onOpenSearch, onCloseSearch
 }) {
-  
+  const toast = useToast();
+  const confirmDialog = useConfirm();
+
   // 🌟 CALL THE BRAIN - It gives us all the arrays perfectly formatted!
   const { 
     loading, items, shopInfo, nearbyShops, 
@@ -29,14 +32,22 @@ export default function ShopFeed({
   const BASE_URL = "https://darkslategrey-snail-415133.hostingersite.com";
 
   const handleSwitchShop = async (newShop) => {
-    if (!window.confirm(`Switch to ${newShop.name}? This will clear your current cart.`)) return;
+    const ok = await confirmDialog({
+      title: `Switch to ${newShop.name}?`,
+      message: 'This will clear your current cart.',
+      confirmText: 'Switch shop',
+      danger: true,
+    });
+    if (!ok) return;
     try {
       const res = await fetch(`${BASE_URL}/users/${user._id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ primaryShop: newShop._id }) });
       if(res.ok) {
-        localStorage.setItem("packitout_user", JSON.stringify(await res.json()));
-        window.location.reload();
+        const updated = await res.json();
+        if (onUserUpdate) onUserUpdate(updated, { clearCart: true });
+        else localStorage.setItem("packitout_user", JSON.stringify(updated));
+        toast(`Switched to ${newShop.name}!`);
       }
-    } catch (err) { alert("Failed to switch shop."); }
+    } catch (err) { toast("Failed to switch shop.", 'error'); }
   };
 
   const handleQuickAdd = (item) => {

@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
+import { useToast } from '../../ui/DialogProvider.jsx';
 
 export default function ParchiManager() {
+  const toast = useToast();
   const [parchis, setParchis] = useState([]);
   const [selectedParchi, setSelectedParchi] = useState(null);
   const [activeShop, setActiveShop] = useState(null); // Holds the specific shop's inventory
@@ -36,7 +38,7 @@ export default function ParchiManager() {
       setActiveShop(shopData);
       setSelectedParchi(parchi);
     } catch (err) {
-      alert("Failed to load the shop's inventory for this parchi.");
+      toast("Failed to load the shop's inventory for this parchi.", 'error');
       console.error(err);
     }
     setIsLoading(false);
@@ -84,18 +86,18 @@ export default function ParchiManager() {
       });
 
       if (res.ok) {
-        alert(`✅ Order Created for ${selectedParchi.customerName || 'Customer'} on behalf of ${activeShop.name}!`);
+        toast(`Order created for ${selectedParchi.customerName || 'customer'} on behalf of ${activeShop.name}!`);
         setSelectedParchi(null);
         setActiveShop(null);
         setParchiBill([]);
         setSearchQuery("");
         fetchAllParchis(); // Refresh the list
       } else {
-        alert("❌ Failed to create the order.");
+        toast("Failed to create the order.", 'error');
       }
     } catch (err) {
       console.error(err);
-      alert("❌ Something went wrong sending the bill.");
+      toast("Something went wrong sending the bill.", 'error');
     }
   };
 

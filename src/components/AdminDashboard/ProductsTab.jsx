@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
+import { useToast } from '../../ui/DialogProvider.jsx';
 
-export default function ProductsTab({ products, form, setForm, handleProductSubmit, CATEGORIES, editingProductId, startEditingProduct, cancelEdit }) {
-  
+export default function ProductsTab({ products, form, setForm, handleProductSubmit, CATEGORIES, editingProductId, startEditingProduct, cancelEdit, onProductsChanged }) {
+  const toast = useToast();
+
   // 🌟 BULK UPLOAD STATES
   const [file, setFile] = useState(null);
   const [uploading, setUploading] = useState(false);
@@ -15,7 +17,10 @@ export default function ProductsTab({ products, form, setForm, handleProductSubm
 
   // 🚀 THE BULK UPLOAD HANDLER
   const handleBulkUpload = async () => {
-    if (!file) return alert('Please select a CSV file first! 📁');
+    if (!file) {
+      toast('Please select a CSV file first! 📁', 'warn');
+      return;
+    }
 
     const formData = new FormData();
     formData.append('file', file);
@@ -24,22 +29,21 @@ export default function ProductsTab({ products, form, setForm, handleProductSubm
     try {
       const response = await fetch(`${BASE_URL}/master-products/bulk-upload`, {
         method: 'POST',
-        body: formData, 
+        body: formData,
       });
 
       const data = await response.json();
-      
+
       if (response.ok) {
-        alert(`🎉 ${data.message}`);
+        toast(data.message || 'Upload complete!');
         setFile(null);
-        // Refresh the page to load the newly added catalog items
-        window.location.reload(); 
+        if (onProductsChanged) onProductsChanged();
       } else {
-        alert(`❌ Error: ${data.error}`);
+        toast(data.error || 'Upload failed', 'error');
       }
     } catch (err) {
       console.error(err);
-      alert('Upload failed. Please check your connection or server.');
+      toast('Upload failed. Please check your connection or server.', 'error');
     }
     setUploading(false);
   };
