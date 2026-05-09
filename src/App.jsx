@@ -143,6 +143,7 @@ export default function App() {
       if (window.location.hash === "#admin") setCurrentView("admin");
       else if (window.location.hash === "#shop") setCurrentView("shop");
       else if (window.location.hash === "#account") setCurrentView("account");
+      else if (window.location.hash === "#orders") setCurrentView("orders");
       else if (window.location.hash === "#cart") setCurrentView("cart");
       else if (window.location.hash === "#success") setCurrentView("success");
       else if (window.location.hash === "#nearby") setCurrentView("nearby");
@@ -264,6 +265,10 @@ export default function App() {
       if (!loggedInUser) return <UserAuth onLoginSuccess={handleUserLogin} />;
       return <UserDashboard user={loggedInUser} onExit={() => window.location.hash = ""} onLogout={handleUserLogout} />;
     }
+    if (currentView === "orders") {
+      if (!loggedInUser) return <UserAuth onLoginSuccess={handleUserLogin} />;
+      return <UserDashboard user={loggedInUser} initialSection="orders" onExit={() => window.location.hash = ""} onLogout={handleUserLogout} />;
+    }
     if (currentView === "success") return <OrderSuccess />;
     if (currentView === "cart") {
       return (
@@ -343,7 +348,7 @@ export default function App() {
     );
   };
 
-  const showBottomNav = ["customer", "Customer", "nearby", "account", "cart", "success"].includes(currentView);
+  const showBottomNav = ["customer", "Customer", "nearby", "account", "orders", "cart", "success"].includes(currentView);
 
   return (
     <CrashCatcher>

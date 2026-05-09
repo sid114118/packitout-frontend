@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import OneSignal from 'react-onesignal';
 import { useToast, useConfirm } from './ui/DialogProvider.jsx';
 
@@ -8,7 +8,7 @@ import AddressBook from './components/UserDashboard/AddressBook';
 import ReceiptModal from './components/UserDashboard/ReceiptModal';
 import OrderReviewModal from './components/UserDashboard/OrderReviewModal'; 
 
-export default function UserDashboard({ user, onExit, onLogout }) {
+export default function UserDashboard({ user, onExit, onLogout, initialSection }) {
   const triggerToast = useToast();
   const askConfirm = useConfirm();
   // --- STATE ---
@@ -29,6 +29,15 @@ export default function UserDashboard({ user, onExit, onLogout }) {
   const [newAddress, setNewAddress] = useState("");
 
   const BASE_URL = "https://darkslategrey-snail-415133.hostingersite.com";
+
+  const ordersRef = useRef(null);
+  useEffect(() => {
+    if (initialSection !== 'orders') return;
+    const id = window.requestAnimationFrame(() => {
+      ordersRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+    return () => window.cancelAnimationFrame(id);
+  }, [initialSection]);
 
   // --- DATA FETCHING ---
   const fetchOrders = () => {
@@ -120,15 +129,17 @@ export default function UserDashboard({ user, onExit, onLogout }) {
       />
 
       <div style={{ padding: '0 20px 20px 20px', maxWidth: '600px', margin: '0 auto' }}>
-        <OrdersList 
-          activeOrders={activeOrders} 
-          pastOrders={pastOrders} 
-          pendingParchis={pendingParchis}
-          loading={loading} 
-          setSelectedOrder={setSelectedOrder} 
-          onOpenReview={(order) => { setOrderToReview(order); setIsReviewModalOpen(true); }}
-          onCancelOrder={initiateCancel} // ⚡ Uses our new Custom Confirm
-        />
+        <div ref={ordersRef} style={{ scrollMarginTop: '12px' }}>
+          <OrdersList
+            activeOrders={activeOrders}
+            pastOrders={pastOrders}
+            pendingParchis={pendingParchis}
+            loading={loading}
+            setSelectedOrder={setSelectedOrder}
+            onOpenReview={(order) => { setOrderToReview(order); setIsReviewModalOpen(true); }}
+            onCancelOrder={initiateCancel}
+          />
+        </div>
 
         <AddressBook 
           addresses={addresses} showAddressForm={showAddressForm} setShowAddressForm={setShowAddressForm}
