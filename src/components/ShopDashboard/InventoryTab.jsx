@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useToast, useConfirm, usePrompt } from '../../ui/DialogProvider.jsx';
+import { cdnImage } from '../../utils/cloudinaryUrl.js';
 
 export default function InventoryTab({ shopData, masterCatalog, handleInventoryUpdate, onInventoryRefresh }) {
   const toast = useToast();
@@ -150,7 +151,7 @@ export default function InventoryTab({ shopData, masterCatalog, handleInventoryU
                 
                 {/* Product Info */}
                 <div style={{ marginBottom: '10px' }}>
-                  <div style={{ fontSize: '24px', marginBottom: '5px' }}>{m.image ? <img src={m.image} alt="" style={{ height: '30px', objectFit: 'contain'}} /> : m.emoji}</div>
+                  <div style={{ fontSize: '24px', marginBottom: '5px' }}>{m.image ? <img src={cdnImage(m.image, 100)} alt="" loading="lazy" decoding="async" style={{ height: '30px', objectFit: 'contain'}} /> : m.emoji}</div>
                   <div style={{ fontSize: '0.8rem', fontWeight: 'bold', color: '#0f172a', lineHeight: '1.2', height: '30px', overflow: 'hidden' }}>{m.name}</div>
                   <div style={{ fontSize: '0.75rem', color: '#64748b', marginTop: '4px', fontWeight: '600' }}>MRP: ₹{m.mrp}</div>
                 </div>
@@ -211,7 +212,7 @@ export default function InventoryTab({ shopData, masterCatalog, handleInventoryU
                 <div style={{ display: 'flex', gap: '15px', alignItems: 'center', width: '100%' }}>
                   {/* Image/Emoji */}
                   <div style={{ width: '56px', height: '56px', backgroundColor: '#f8fafc', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '24px', flexShrink: 0 }}>
-                    {item.product.image ? <img src={item.product.image} style={{ maxWidth: '44px', maxHeight: '44px', objectFit: 'contain' }} alt="" /> : item.product.emoji}
+                    {item.product.image ? <img src={cdnImage(item.product.image, 150)} loading="lazy" decoding="async" style={{ maxWidth: '44px', maxHeight: '44px', objectFit: 'contain' }} alt="" /> : item.product.emoji}
                   </div>
 
                   {/* Details */}

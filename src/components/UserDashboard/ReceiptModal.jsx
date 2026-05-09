@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import ViewReviewModal from './ViewReviewModal';
+import { cdnImage } from '../../utils/cloudinaryUrl.js';
 
 export default function ReceiptModal({ selectedOrder, setSelectedOrder }) {
   const [isViewReviewModalOpen, setIsViewReviewModalOpen] = useState(false);
@@ -71,7 +72,7 @@ export default function ReceiptModal({ selectedOrder, setSelectedOrder }) {
               {(selectedOrder.imageUrl || selectedOrder.parchiImage || selectedOrder.image) && (
                 <div style={{ marginBottom: '15px', textAlign: 'center' }}>
                   <span style={{ display: 'block', fontSize: '0.75rem', color: '#64748b', fontWeight: '800', marginBottom: '8px', letterSpacing: '1px' }}>ATTACHED LIST</span>
-                  <img src={selectedOrder.imageUrl || selectedOrder.parchiImage || selectedOrder.image} alt="Uploaded Parchi" style={{ maxWidth: '100%', maxHeight: '120px', borderRadius: '8px', objectFit: 'contain', border: '1px solid #e2e8f0', padding: '4px' }} />
+                  <img src={cdnImage(selectedOrder.imageUrl || selectedOrder.parchiImage || selectedOrder.image, 400)} alt="Uploaded Parchi" loading="lazy" decoding="async" style={{ maxWidth: '100%', maxHeight: '120px', borderRadius: '8px', objectFit: 'contain', border: '1px solid #e2e8f0', padding: '4px' }} />
                 </div>
               )}
 

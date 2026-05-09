@@ -36,97 +36,99 @@ export default function useShopFeedData(user) {
 
     const shopId = typeof user.primaryShop === 'object' ? user.primaryShop._id : user.primaryShop;
     const cacheKey = `packitout_feed_cache_${shopId}`;
+    let cancelled = false;
 
-    // ==========================================
-    // 🤫 THE SILENT BACKGROUND FETCH
-    // ==========================================
+    const fetchJson = (url) => fetch(url).then(r => r.ok ? r.json() : null).catch(() => null);
+
     const fetchShopProducts = async () => {
-      try {
-        const res = await fetch(`${BASE_URL}/shops/${shopId}/menu?t=${new Date().getTime()}`);
-        const shopData = await res.json();
-        
-        const newShopInfo = { name: shopData.name, isOpen: shopData.isOpen };
-        setShopInfo(newShopInfo);
-        
-        let newNearbyShops = [];
-        if (user && user.pincode) {
-          const shopsRes = await fetch(`${BASE_URL}/shops/all/${user.pincode}`);
-          const shopsData = await shopsRes.json();
-          newNearbyShops = shopsData.filter(s => s._id !== shopId);
-          setNearbyShops(newNearbyShops); 
-        }
+      // Fire all three independent requests in parallel. The old code chained
+      // them sequentially and the /orders call was a global table scan — now
+      // /orders/user/:userId returns just the recent items list for one user.
+      const [shopData, nearbyShopsData, userOrders] = await Promise.all([
+        fetchJson(`${BASE_URL}/shops/${shopId}/menu/lean?t=${Date.now()}`),
+        user.pincode ? fetchJson(`${BASE_URL}/shops/all/${user.pincode}`) : Promise.resolve([]),
+        user._id ? fetchJson(`${BASE_URL}/orders/user/${user._id}`) : Promise.resolve([]),
+      ]);
 
-        const groupedMap = new Map();
-        const availableItems = [];
+      if (cancelled) return;
 
-        shopData.inventory?.filter(item => item && item.product).forEach(item => {
-          const mrp = Number(item.product.mrp || 0);
-          const sellingPrice = (item.sellingPrice !== undefined && item.sellingPrice !== null) ? Number(item.sellingPrice) : mrp;
-          const isDiscounted = mrp > 0 && sellingPrice < mrp;
-          const discountPercent = (isDiscounted && mrp > 0) ? Math.round(((mrp - sellingPrice) / mrp) * 100) : 0;
+      if (!shopData) {
+        setLoading(false);
+        return;
+      }
 
-          const formattedItem = { ...item.product, sellingPrice, mrp, inStock: item.inStock, isDiscounted, discountPercent };
+      const newShopInfo = { name: shopData.name, isOpen: shopData.isOpen };
+      setShopInfo(newShopInfo);
 
-          if (formattedItem.itemGroupId && formattedItem.itemGroupId.trim() !== "") {
-            const groupId = String(formattedItem.itemGroupId).trim().toUpperCase();
-            if (!groupedMap.has(groupId)) {
-              formattedItem.variants = [{ ...formattedItem }]; 
-              groupedMap.set(groupId, formattedItem);
-              availableItems.push(formattedItem);
-            } else {
-              groupedMap.get(groupId).variants.push({ ...formattedItem });
-            }
-          } else {
+      const newNearbyShops = Array.isArray(nearbyShopsData)
+        ? nearbyShopsData.filter(s => s._id !== shopId)
+        : [];
+      setNearbyShops(newNearbyShops);
+
+      const groupedMap = new Map();
+      const availableItems = [];
+
+      shopData.inventory?.filter(item => item && item.product).forEach(item => {
+        const mrp = Number(item.product.mrp || 0);
+        const sellingPrice = (item.sellingPrice !== undefined && item.sellingPrice !== null) ? Number(item.sellingPrice) : mrp;
+        const isDiscounted = mrp > 0 && sellingPrice < mrp;
+        const discountPercent = (isDiscounted && mrp > 0) ? Math.round(((mrp - sellingPrice) / mrp) * 100) : 0;
+
+        const formattedItem = { ...item.product, sellingPrice, mrp, inStock: item.inStock, isDiscounted, discountPercent };
+
+        if (formattedItem.itemGroupId && formattedItem.itemGroupId.trim() !== "") {
+          const groupId = String(formattedItem.itemGroupId).trim().toUpperCase();
+          if (!groupedMap.has(groupId)) {
+            formattedItem.variants = [{ ...formattedItem }];
+            groupedMap.set(groupId, formattedItem);
             availableItems.push(formattedItem);
+          } else {
+            groupedMap.get(groupId).variants.push({ ...formattedItem });
           }
-        });
-        
-        setItems(availableItems);
-        
-        const newShopDeals = availableItems.filter(i => i.isDiscounted && i.inStock).sort((a, b) => b.discountPercent - a.discountPercent).slice(0, 12);
-        const newBestSellers = availableItems.filter(i => i.inStock).slice(0, 12);
-        const newUnder99 = availableItems.filter(i => i.sellingPrice > 0 && i.sellingPrice < 100 && i.inStock).slice(0, 12);
-        const newArrivalsList = [...availableItems].reverse().filter(i => i.inStock).slice(0, 12);
-        
-        setShopDeals(newShopDeals);
-        setShopBestSellers(newBestSellers);
-        setUnder99(newUnder99);
-        setNewArrivals(newArrivalsList);
-        
-        // --- SMART "BUY IT AGAIN" ---
-        let pastBoughtIds = new Set();
-        try {
-          const ordersRes = await fetch(`${BASE_URL}/orders`);
-          const allOrders = await ordersRes.json();
-          const myOrders = allOrders.filter(o => o.userId?._id === user._id || o.userId === user._id);
-          myOrders.forEach(order => {
-            order.items?.forEach(orderedItem => {
-              const pId = orderedItem.product?._id || orderedItem.product || orderedItem._id || orderedItem.productId;
-              if (pId) pastBoughtIds.add(pId.toString());
-            });
+        } else {
+          availableItems.push(formattedItem);
+        }
+      });
+
+      setItems(availableItems);
+
+      const newShopDeals = availableItems.filter(i => i.isDiscounted && i.inStock).sort((a, b) => b.discountPercent - a.discountPercent).slice(0, 12);
+      const newBestSellers = availableItems.filter(i => i.inStock).slice(0, 12);
+      const newUnder99 = availableItems.filter(i => i.sellingPrice > 0 && i.sellingPrice < 100 && i.inStock).slice(0, 12);
+      const newArrivalsList = [...availableItems].reverse().filter(i => i.inStock).slice(0, 12);
+
+      setShopDeals(newShopDeals);
+      setShopBestSellers(newBestSellers);
+      setUnder99(newUnder99);
+      setNewArrivals(newArrivalsList);
+
+      const pastBoughtIds = new Set();
+      if (Array.isArray(userOrders)) {
+        userOrders.forEach(order => {
+          order.items?.forEach(orderedItem => {
+            const pId = orderedItem.product?._id || orderedItem.product || orderedItem._id || orderedItem.productId;
+            if (pId) pastBoughtIds.add(pId.toString());
           });
-        } catch (err) { console.log("Could not load past orders"); }
+        });
+      }
 
-        const realBuyItAgain = availableItems.filter(i => i.inStock && pastBoughtIds.has(i._id.toString()));
-        const finalBuyItAgain = realBuyItAgain.length > 0 ? realBuyItAgain.slice(0, 12) : availableItems.filter(i => i.inStock).sort(() => 0.5 - Math.random()).slice(0, 12);
-        setBuyItAgain(finalBuyItAgain);
+      const realBuyItAgain = availableItems.filter(i => i.inStock && pastBoughtIds.has(i._id.toString()));
+      const finalBuyItAgain = realBuyItAgain.length > 0 ? realBuyItAgain.slice(0, 12) : availableItems.filter(i => i.inStock).sort(() => 0.5 - Math.random()).slice(0, 12);
+      setBuyItAgain(finalBuyItAgain);
 
-        // --- TIME BASED LOGIC ---
-        const hour = new Date().getHours();
-        let timeTitle = ""; let timeSubtitle = ""; let keywords = [];
-        if (hour >= 5 && hour < 11) { timeTitle = "🌤️ Breakfast & Dairy"; timeSubtitle = "Start your morning right"; keywords = ["dairy", "bread", "milk", "eggs", "breakfast"]; } 
-        else if (hour >= 11 && hour < 16) { timeTitle = "⚡ Mid-Day Energy Boost"; timeSubtitle = "Keep the momentum going"; keywords = ["snacks", "drinks", "beverages", "chips"]; } 
-        else if (hour >= 16 && hour < 22) { timeTitle = "🌙 Evening Cravings"; timeSubtitle = "Perfect time for a snack"; keywords = ["ice cream", "maggi", "noodles", "chocolate"]; } 
-        else { timeTitle = "🦉 Late Night Essentials"; timeSubtitle = "We are still awake for you"; keywords = ["snacks", "beverages", "noodles", "condoms"]; }
+      const hour = new Date().getHours();
+      let timeTitle = ""; let timeSubtitle = ""; let keywords = [];
+      if (hour >= 5 && hour < 11) { timeTitle = "🌤️ Breakfast & Dairy"; timeSubtitle = "Start your morning right"; keywords = ["dairy", "bread", "milk", "eggs", "breakfast"]; }
+      else if (hour >= 11 && hour < 16) { timeTitle = "⚡ Mid-Day Energy Boost"; timeSubtitle = "Keep the momentum going"; keywords = ["snacks", "drinks", "beverages", "chips"]; }
+      else if (hour >= 16 && hour < 22) { timeTitle = "🌙 Evening Cravings"; timeSubtitle = "Perfect time for a snack"; keywords = ["ice cream", "maggi", "noodles", "chocolate"]; }
+      else { timeTitle = "🦉 Late Night Essentials"; timeSubtitle = "We are still awake for you"; keywords = ["snacks", "beverages", "noodles", "condoms"]; }
 
-        const matchedItems = availableItems.filter(i => i.inStock && keywords.some(kw => (i.category || "").toLowerCase().includes(kw) || (i.name || "").toLowerCase().includes(kw)));
-        const finalTimeBased = { title: timeTitle, subtitle: timeSubtitle, items: matchedItems.length > 0 ? matchedItems.slice(0, 12) : availableItems.filter(i => i.inStock).slice(0, 12) };
-        setTimeBased(finalTimeBased);
+      const matchedItems = availableItems.filter(i => i.inStock && keywords.some(kw => (i.category || "").toLowerCase().includes(kw) || (i.name || "").toLowerCase().includes(kw)));
+      const finalTimeBased = { title: timeTitle, subtitle: timeSubtitle, items: matchedItems.length > 0 ? matchedItems.slice(0, 12) : availableItems.filter(i => i.inStock).slice(0, 12) };
+      setTimeBased(finalTimeBased);
 
-        // ==========================================
-        // 💾 3. SAVE FRESH DATA TO CACHE
-        // ==========================================
-        const freshCache = {
+      try {
+        localStorage.setItem(cacheKey, JSON.stringify({
           items: availableItems,
           shopInfo: newShopInfo,
           nearbyShops: newNearbyShops,
@@ -135,18 +137,20 @@ export default function useShopFeedData(user) {
           under99: newUnder99,
           newArrivals: newArrivalsList,
           buyItAgain: finalBuyItAgain,
-          timeBased: finalTimeBased
-        };
-        localStorage.setItem(cacheKey, JSON.stringify(freshCache));
+          timeBased: finalTimeBased,
+        }));
+      } catch (e) { /* quota or serialization error — non-fatal */ }
 
-      } catch (err) { 
-        console.error("Feed Load Error:", err); 
-      } finally {
-        setLoading(false);
-      }
+      setLoading(false);
     };
 
-    fetchShopProducts();
+    fetchShopProducts().catch(err => {
+      if (cancelled) return;
+      console.error("Feed Load Error:", err);
+      setLoading(false);
+    });
+
+    return () => { cancelled = true; };
   }, [user]);
 
   // Return all the calculated data back to the component!

@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useToast } from '../../ui/DialogProvider.jsx';
+import { cdnImage } from '../../utils/cloudinaryUrl.js';
 
 export default function ProductsTab({ products, form, setForm, handleProductSubmit, CATEGORIES, editingProductId, startEditingProduct, cancelEdit, onProductsChanged }) {
   const toast = useToast();
@@ -170,7 +171,7 @@ export default function ProductsTab({ products, form, setForm, handleProductSubm
           <div key={p._id} style={{ backgroundColor: 'white', padding: '15px', borderRadius: '10px', boxShadow: '0 2px 4px rgba(0,0,0,0.05)', border: '1px solid #e2e8f0', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
             <div>
               <div style={{ display: 'flex', gap: '10px', alignItems: 'center', marginBottom: '10px' }}>
-                <div style={{ fontSize: '2rem' }}>{p.image ? <img src={p.image} style={{ width: '40px', height: '40px', objectFit: 'contain' }} alt="" /> : p.emoji}</div>
+                <div style={{ fontSize: '2rem' }}>{p.image ? <img src={cdnImage(p.image, 120)} loading="lazy" decoding="async" style={{ width: '40px', height: '40px', objectFit: 'contain' }} alt="" /> : p.emoji}</div>
                 <div>
                   <strong style={{ display: 'block', color: '#0f172a' }}>{p.name}</strong>
                   <span style={{ fontSize: '0.8rem', color: '#64748b' }}>{p.brand} • {p.qnty}</span>

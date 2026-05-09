@@ -1,22 +1,39 @@
-import React, { useState, useEffect } from 'react';
-import OneSignal from 'react-onesignal'; // 🚀 IMPORTED ONESIGNAL HERE
+import React, { useState, useEffect, lazy, Suspense } from 'react';
 import { useToast } from './ui/DialogProvider.jsx';
 
+// Eagerly imported: rendered on the customer's first paint.
 import Header from './Header.jsx';
 import Categories from './Categories.jsx';
-import AdminDashboard from './AdminDashboard.jsx';
-import AdminLogin from './AdminLogin.jsx';
-import ShopDashboard from './ShopDashboard.jsx';
-import ShopLogin from './ShopLogin.jsx';
-import UserDashboard from './UserDashboard.jsx';
-import UserAuth from './UserAuth.jsx';
 import ProductFeed from './ProductFeed.jsx';
-import Cart from './Cart.jsx';
-import OrderSuccess from './OrderSuccess.jsx';
 import BottomNav from './BottomNav.jsx';
-import Nearby from './Nearby.jsx';
-import ShopDetail from './ShopDetail.jsx';
-import Footer from './Footer.jsx';
+
+// Lazy: only fetched when the user navigates into them. Keeps the customer's
+// initial bundle from carrying admin/shop/account/cart/nearby code.
+const AdminDashboard = lazy(() => import('./AdminDashboard.jsx'));
+const AdminLogin = lazy(() => import('./AdminLogin.jsx'));
+const ShopDashboard = lazy(() => import('./ShopDashboard.jsx'));
+const ShopLogin = lazy(() => import('./ShopLogin.jsx'));
+const UserDashboard = lazy(() => import('./UserDashboard.jsx'));
+const UserAuth = lazy(() => import('./UserAuth.jsx'));
+const Cart = lazy(() => import('./Cart.jsx'));
+const OrderSuccess = lazy(() => import('./OrderSuccess.jsx'));
+const Nearby = lazy(() => import('./Nearby.jsx'));
+const ShopDetail = lazy(() => import('./ShopDetail.jsx'));
+
+// Module-level so repeated calls (login/logout) don't kick off duplicate fetches.
+let onesignalPromise;
+const loadOneSignal = () => {
+  if (!onesignalPromise) {
+    onesignalPromise = import('react-onesignal').then(m => m.default);
+  }
+  return onesignalPromise;
+};
+
+const RouteFallback = () => (
+  <div style={{ minHeight: '60vh', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#94a3b8', fontSize: '0.9rem', fontWeight: 600 }}>
+    Loading…
+  </div>
+);
 
 class CrashCatcher extends React.Component {
   constructor(props) { super(props); this.state = { err: null, info: null }; }
@@ -78,20 +95,28 @@ export default function App() {
     } catch { return []; }
   });
 
-  // 🚀 ONESIGNAL INITIALIZATION 🚀
+  // OneSignal SDK is ~200KB and was blocking first paint. Defer it to idle so
+  // the feed renders first; the push permission prompt then slides in.
   useEffect(() => {
     const runOneSignal = async () => {
       try {
+        const OneSignal = await loadOneSignal();
         await OneSignal.init({
-          appId: "1da2e78d-0874-4965-a895-42c9237ee92b", // Your exact App ID
+          appId: "1da2e78d-0874-4965-a895-42c9237ee92b",
           allowLocalhostAsSecureOrigin: true,
         });
-        OneSignal.Slidedown.promptPush(); // Prompts user to allow notifications
+        OneSignal.Slidedown.promptPush();
       } catch (error) {
         console.error("OneSignal Initialization Error:", error);
       }
     };
-    runOneSignal();
+
+    if (typeof window.requestIdleCallback === 'function') {
+      const id = window.requestIdleCallback(runOneSignal, { timeout: 4000 });
+      return () => window.cancelIdleCallback?.(id);
+    }
+    const id = setTimeout(runOneSignal, 2500);
+    return () => clearTimeout(id);
   }, []);
 
   useEffect(() => {
@@ -183,12 +208,9 @@ export default function App() {
     localStorage.setItem("packitout_user", JSON.stringify(userData));
     setLoggedInUser(userData);
     
-    // 🚀 LINK USER ID TO ONESIGNAL ON LOGIN
-    try {
-      OneSignal.login(userData._id.toString());
-    } catch (err) {
-      console.log("OneSignal Login Error", err);
-    }
+    loadOneSignal()
+      .then(OneSignal => OneSignal.login(userData._id.toString()))
+      .catch(err => console.log("OneSignal Login Error", err));
 
     window.location.hash = "";
   };
@@ -205,12 +227,9 @@ export default function App() {
     setLoggedInUser(null);
     setCart([]); 
 
-    // 🚀 LOGOUT FROM ONESIGNAL
-    try {
-      OneSignal.logout();
-    } catch (err) {
-      console.log("OneSignal Logout Error", err);
-    }
+    loadOneSignal()
+      .then(OneSignal => OneSignal.logout())
+      .catch(err => console.log("OneSignal Logout Error", err));
 
     window.location.hash = "";
   };
@@ -328,7 +347,9 @@ export default function App() {
 
   return (
     <CrashCatcher>
-      {renderContent()}
+      <Suspense fallback={<RouteFallback />}>
+        {renderContent()}
+      </Suspense>
       {showBottomNav && <BottomNav currentView={currentView} />}
     </CrashCatcher>
   );

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { cdnImage } from './utils/cloudinaryUrl.js';
 
 export default function ShopDetail({ shop, onBack, onSetPrimary }) {
   const [reviews, setReviews] = useState([]);
@@ -26,7 +27,7 @@ export default function ShopDetail({ shop, onBack, onSetPrimary }) {
       {/* Header Image */}
       <div style={{ height: '220px', position: 'relative', backgroundColor: '#0c831f' }}>
         <button onClick={onBack} style={{ position: 'absolute', top: '20px', left: '20px', backgroundColor: 'white', border: 'none', width: '40px', height: '40px', borderRadius: '50%', fontSize: '1.2rem', fontWeight: 'bold', cursor: 'pointer', boxShadow: '0 4px 10px rgba(0,0,0,0.2)', zIndex: 10 }}>←</button>
-        {shop.shopImage && <img src={shop.shopImage} style={{ width: '100%', height: '100%', objectFit: 'cover', opacity: 0.8 }} alt={shop.name} />}
+        {shop.shopImage && <img src={cdnImage(shop.shopImage, 800)} decoding="async" style={{ width: '100%', height: '100%', objectFit: 'cover', opacity: 0.8 }} alt={shop.name} />}
       </div>
 
       {/* Detail Content */}

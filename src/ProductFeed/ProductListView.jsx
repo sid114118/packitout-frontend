@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import { ModernProductCard } from './FeedComponents.jsx';
+import { cdnImage } from '../utils/cloudinaryUrl.js';
 
 export default function ProductListView({ 
   title, 
@@ -168,7 +169,7 @@ export default function ProductListView({
                 >
                   <div style={{ width: '44px', height: '44px', backgroundColor: isActive ? '#fef2f2' : '#f1f5f9', borderRadius: '50%', display: 'flex', justifyContent: 'center', alignItems: 'center', overflow: 'hidden', border: isActive ? '1px solid #fca5a5' : '1px solid transparent', transition: 'all 0.2s ease' }}>
                     {thumbImage ? (
-                      <img src={thumbImage} alt="" style={{ width: '70%', height: '70%', objectFit: 'contain', mixBlendMode: 'multiply' }} />
+                      <img src={cdnImage(thumbImage, 150)} alt="" loading="lazy" decoding="async" style={{ width: '70%', height: '70%', objectFit: 'contain', mixBlendMode: 'multiply' }} />
                     ) : (
                       <span style={{ fontSize: '1.2rem' }}>{thumbEmoji}</span>
                     )}

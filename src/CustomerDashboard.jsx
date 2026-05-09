@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useToast } from './ui/DialogProvider.jsx';
+import { cdnImage } from './utils/cloudinaryUrl.js';
 
 export default function CustomerDashboard({ user, onExit }) {
   const toast = useToast();
@@ -20,7 +21,7 @@ export default function CustomerDashboard({ user, onExit }) {
 
   const fetchShopMenu = async (shopId) => {
     try {
-      const res = await fetch(`${BASE_URL}/shops/${shopId}/menu?t=${new Date().getTime()}`);
+      const res = await fetch(`${BASE_URL}/shops/${shopId}/menu/lean?t=${new Date().getTime()}`);
       setShopMenu(await res.json());
     } catch (err) { console.log(err); }
     setLoading(false);
@@ -104,7 +105,7 @@ export default function CustomerDashboard({ user, onExit }) {
                         {discountPercent}% OFF
                       </div>
                     )}
-                    {item.product.image ? <img src={item.product.image} style={{ maxHeight: '90px', maxWidth: '100%', objectFit: 'contain' }} alt={item.product.name} /> : <span style={{fontSize: '40px'}}>{item.product.emoji}</span>}
+                    {item.product.image ? <img src={cdnImage(item.product.image, 250)} loading="lazy" decoding="async" style={{ maxHeight: '90px', maxWidth: '100%', objectFit: 'contain' }} alt={item.product.name} /> : <span style={{fontSize: '40px'}}>{item.product.emoji}</span>}
                   </div>
                   
                   <div style={{ fontSize: '0.75rem', color: '#94a3b8', textTransform: 'uppercase', fontWeight: 'bold' }}>{item.product.brand}</div>

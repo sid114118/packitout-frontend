@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
+import { cdnImage } from '../../utils/cloudinaryUrl.js';
 
-export default function OrdersList({ 
+export default function OrdersList({
   activeOrders, 
   pastOrders, 
   pendingParchis, 
@@ -25,7 +26,7 @@ export default function OrdersList({
               style={{ background: 'white', padding: '12px', borderRadius: '20px', boxShadow: '0 4px 15px rgba(0,0,0,0.03)', border: '1px solid #e2e8f0', cursor: 'pointer', marginBottom: '12px', display: 'flex', gap: '12px', alignItems: 'center' }}
             >
               <div style={{ width: '50px', height: '50px', borderRadius: '12px', overflow: 'hidden', backgroundColor: '#f8fafc', flexShrink: 0 }}>
-                <img src={parchi.imageUrl || parchi.parchiImage} alt="Uploaded" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                <img src={cdnImage(parchi.imageUrl || parchi.parchiImage, 200)} alt="Uploaded" loading="lazy" decoding="async" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
               </div>
               
               <div style={{ flex: 1 }}>

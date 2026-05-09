@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useToast } from '../../ui/DialogProvider.jsx';
+import { cdnImage } from '../../utils/cloudinaryUrl.js';
 
 // 🛡️ THE FIX: This safely extracts the pure string ID no matter how the data is shaped!
 const getProductId = (item) => {
@@ -140,7 +141,7 @@ export default function OrderReviewModal({ isOpen, onClose, order, onSubmitRevie
                     <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flex: 1, paddingRight: '10px' }}>
                         <div style={{ width: '35px', height: '35px', backgroundColor: '#f1f5f9', borderRadius: '8px', display: 'flex', justifyContent: 'center', alignItems: 'center', overflow: 'hidden' }}>
-                           {item.image ? <img src={item.image} alt="" style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }} /> : <span>📦</span>}
+                           {item.image ? <img src={cdnImage(item.image, 150)} alt="" loading="lazy" decoding="async" style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }} /> : <span>📦</span>}
                         </div>
                         <div style={{ fontSize: '0.85rem', fontWeight: '600', color: '#334155', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
                           {item.name}

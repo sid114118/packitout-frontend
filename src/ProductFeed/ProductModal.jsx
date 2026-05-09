@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import ReviewSection from './ReviewSection.jsx';
-import CrossSellSlider from './CrossSell.jsx'; 
+import CrossSellSlider from './CrossSell.jsx';
+import { cdnImage } from '../utils/cloudinaryUrl.js';
 
 // ── Highlight Row Component ──
 const HighlightRow = ({ label, value }) => {
@@ -86,6 +87,22 @@ export default function ProductModal({ product, isOpen, onClose, onAddToCart, on
     }
   }, [isOpen, selectedVariant?._id]);
 
+  // The shop feed ships a slim product payload — pull the full doc on open so
+  // description / ingredients / nutrition rows have data to render.
+  useEffect(() => {
+    if (!isOpen || !selectedVariant?._id) return;
+    if (selectedVariant.description !== undefined) return;
+    let cancelled = false;
+    fetch(`${BASE_URL}/master-products/${selectedVariant._id}`)
+      .then(res => res.ok ? res.json() : null)
+      .then(full => {
+        if (cancelled || !full) return;
+        setSelectedVariant(prev => prev && prev._id === full._id ? { ...prev, ...full } : prev);
+      })
+      .catch(() => {});
+    return () => { cancelled = true; };
+  }, [isOpen, selectedVariant?._id]);
+
   const handleRelatedProductClick = (clickedProduct) => {
     setCurrentProduct(clickedProduct);
     setSelectedVariant(clickedProduct);
@@ -142,7 +159,7 @@ export default function ProductModal({ product, isOpen, onClose, onAddToCart, on
               {discountPercent}% OFF
             </div>
           )}
-          {selectedVariant.image ? <img src={selectedVariant.image} alt={selectedVariant.name} style={{ maxHeight: '85%', maxWidth: '85%', objectFit: 'contain', mixBlendMode: 'multiply' }} /> : <span style={{ fontSize: '80px' }}>{selectedVariant.emoji}</span>}
+          {selectedVariant.image ? <img src={cdnImage(selectedVariant.image, 600)} alt={selectedVariant.name} decoding="async" style={{ maxHeight: '85%', maxWidth: '85%', objectFit: 'contain', mixBlendMode: 'multiply' }} /> : <span style={{ fontSize: '80px' }}>{selectedVariant.emoji}</span>}
         </div>
 
         <div style={{ padding: '0 20px' }}>

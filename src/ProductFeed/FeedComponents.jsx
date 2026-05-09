@@ -1,5 +1,6 @@
 import React, { memo } from 'react';
-import { createPortal } from 'react-dom'; 
+import { createPortal } from 'react-dom';
+import { cdnImage } from '../utils/cloudinaryUrl.js';
 
 // 📋 1. FIXED VARIANT SELECTION SHEET (Premium Native Redesign)
 export function VariantBottomSheet({ product, onClose, onAddToCart }) {
@@ -43,7 +44,7 @@ export function VariantBottomSheet({ product, onClose, onAddToCart }) {
                     {/* Image Stage */}
                     <div style={{ position: 'relative', width: '56px', height: '56px', backgroundColor: '#f8fafc', borderRadius: '12px', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
                       {vDiscounted && <span style={{ position: 'absolute', top: '-6px', left: '-6px', backgroundColor: '#ef4444', color: '#fff', fontSize: '0.6rem', fontWeight: '800', padding: '3px 6px', borderRadius: '6px' }}>{vDiscountPercent}% OFF</span>}
-                      {variant.image ? <img src={variant.image} alt="" loading="lazy" style={{ maxWidth: '44px', maxHeight: '44px', objectFit: 'contain', mixBlendMode: 'multiply' }} /> : <span style={{ fontSize: '24px' }}>{variant.emoji}</span>}
+                      {variant.image ? <img src={cdnImage(variant.image, 150)} alt="" loading="lazy" decoding="async" style={{ maxWidth: '44px', maxHeight: '44px', objectFit: 'contain', mixBlendMode: 'multiply' }} /> : <span style={{ fontSize: '24px' }}>{variant.emoji}</span>}
                     </div>
                     
                     {/* Size & Price */}
@@ -116,7 +117,7 @@ const ModernProductCardBase = ({ item, isCarousel, shopClosed, onOpenDetails, on
             {item.discountPercent}% OFF
           </span>
         )}
-        {item.image ? <img src={item.image} alt={safeName} loading="lazy" style={{ maxHeight: '85%', maxWidth: '85%', objectFit: 'contain', mixBlendMode: 'multiply' }} /> : <span style={{fontSize: '40px'}}>{item.emoji}</span>}
+        {item.image ? <img src={cdnImage(item.image, 300)} alt={safeName} loading="lazy" decoding="async" style={{ maxHeight: '85%', maxWidth: '85%', objectFit: 'contain', mixBlendMode: 'multiply' }} /> : <span style={{fontSize: '40px'}}>{item.emoji}</span>}
       </div>
       
       <div style={{ display: 'flex', flexDirection: 'column', flexGrow: 1, justifyContent: 'space-between' }}>

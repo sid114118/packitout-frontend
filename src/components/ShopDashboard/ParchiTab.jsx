@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { cdnImage } from '../../utils/cloudinaryUrl.js';
 
 export default function ParchiTab({
   parchiRequests,
@@ -44,7 +45,7 @@ export default function ParchiTab({
             <div key={req._id} style={{ backgroundColor: 'white', padding: '20px', borderRadius: '16px', boxShadow: '0 4px 15px rgba(0,0,0,0.03)', border: '1px solid #e2e8f0', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '15px', marginBottom: '15px' }}>
                 <div style={{ width: '50px', height: '50px', borderRadius: '10px', backgroundColor: '#f1f5f9', overflow: 'hidden', flexShrink: 0 }}>
-                  <img src={req.imageUrl} alt="Parchi Thumbnail" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  <img src={cdnImage(req.imageUrl, 150)} alt="Parchi Thumbnail" loading="lazy" decoding="async" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                 </div>
                 <div>
                   <div style={{ fontWeight: '800', color: '#0f172a', fontSize: '1.1rem' }}>{req.customerName || "Customer"}</div>
@@ -98,7 +99,7 @@ export default function ParchiTab({
                 </a>
               </div>
               <div style={{ flex: 1, display: 'flex', justifyContent: 'center', alignItems: 'flex-start' }}>
-                <img src={selectedParchi.imageUrl} alt="Parchi" style={{ maxWidth: '100%', borderRadius: '12px', boxShadow: '0 10px 30px rgba(0,0,0,0.5)' }} />
+                <img src={cdnImage(selectedParchi.imageUrl, 800)} alt="Parchi" decoding="async" style={{ maxWidth: '100%', borderRadius: '12px', boxShadow: '0 10px 30px rgba(0,0,0,0.5)' }} />
               </div>
             </div>
 

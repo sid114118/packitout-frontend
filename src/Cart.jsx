@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import Payment from './Payment.jsx'; 
-import useScrollToTop from './useScrollToTop'; 
+import Payment from './Payment.jsx';
+import useScrollToTop from './useScrollToTop';
+import { cdnImage } from './utils/cloudinaryUrl.js';
 
 // 🚀 FIX: The "export default" is right here so App.jsx can read it!
 export default function Cart({ cart, setCart, user, onBack, onCheckoutSuccess }) {
@@ -163,7 +164,7 @@ export default function Cart({ cart, setCart, user, onBack, onCheckoutSuccess })
                 {/* Product Image Squircle */}
                 <div style={{ width: '65px', height: '65px', backgroundColor: '#f8fafc', borderRadius: '16px', display: 'flex', justifyContent: 'center', alignItems: 'center', border: '1px solid rgba(0,0,0,0.02)', position: 'relative', flexShrink: 0 }}>
                   {isDiscounted && <span style={{ position: 'absolute', top: '-6px', left: '-6px', backgroundColor: '#ef4444', color: '#fff', fontSize: '0.55rem', fontWeight: '900', padding: '3px 6px', borderRadius: '6px', zIndex: 1 }}>OFFER</span>}
-                  {item.image ? <img src={item.image} style={{ maxWidth: '80%', maxHeight: '80%', objectFit: 'contain', mixBlendMode: 'multiply' }} alt={item.name} /> : <span style={{ fontSize: '30px' }}>{item.emoji}</span>}
+                  {item.image ? <img src={cdnImage(item.image, 200)} loading="lazy" decoding="async" style={{ maxWidth: '80%', maxHeight: '80%', objectFit: 'contain', mixBlendMode: 'multiply' }} alt={item.name} /> : <span style={{ fontSize: '30px' }}>{item.emoji}</span>}
                 </div>
 
                 <div style={{ flex: 1 }}>

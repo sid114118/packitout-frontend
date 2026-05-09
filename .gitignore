@@ -5,6 +5,7 @@ dist/
 .env.*.local
 *.log
 .DS_Store
+.claude/
 
 # Backend repo lives in its own git repo at packitout-api/
 # Don't commit it inside the frontend repo.

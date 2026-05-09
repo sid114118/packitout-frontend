@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { cdnImage } from './utils/cloudinaryUrl.js';
 
 export default function Nearby({ user, onSelectShop }) {
   const [shops, setShops] = useState([]);
@@ -45,7 +46,7 @@ export default function Nearby({ user, onSelectShop }) {
             {/* Shop Image */}
             <div style={{ height: '100px', backgroundColor: '#e2e8f0', position: 'relative' }}>
                {shop.shopImage ? (
-                 <img src={shop.shopImage} style={{ width: '100%', height: '100%', objectFit: 'cover' }} alt={shop.name} />
+                 <img src={cdnImage(shop.shopImage, 500)} loading="lazy" decoding="async" style={{ width: '100%', height: '100%', objectFit: 'cover' }} alt={shop.name} />
                ) : (
                  <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '2rem' }}>🏪</div>
                )}

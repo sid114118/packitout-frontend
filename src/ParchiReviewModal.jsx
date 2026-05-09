@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useToast } from './ui/DialogProvider.jsx';
+import { cdnImage } from './utils/cloudinaryUrl.js';
 
 export default function ParchiReviewModal({ isOpen, items, onClose, onConfirm, onSendToShop, sendingToShop }) {
   const toast = useToast();
@@ -120,7 +121,7 @@ export default function ParchiReviewModal({ isOpen, items, onClose, onConfirm, o
 
               <div style={{ width: 44, height: 44, borderRadius: 10, background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', flexShrink: 0, border: '1px solid #e2e8f0' }}>
                 {row.product?.image ? (
-                  <img src={row.product.image} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  <img src={cdnImage(row.product.image, 150)} alt="" loading="lazy" decoding="async" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                 ) : (
                   <span style={{ fontSize: '1.2rem' }}>{row.product?.emoji || '🛒'}</span>
                 )}

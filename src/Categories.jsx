@@ -1,5 +1,6 @@
 import React from 'react';
 import UploadParchi from './UploadParchi.jsx';
+import { cdnImage } from './utils/cloudinaryUrl.js';
 
 const TOP_PICKS = [
   { icon: '🥛', label: 'Dairy & Eggs',    name: 'Dairy, Bread & Eggs' },
@@ -175,14 +176,18 @@ export default function Categories({ onCategorySelect, searchQuery = "", onAddTo
                       border: '1px solid rgba(0,0,0,0.02)'
                     }}>
                       {item.image ? (
-                        <img 
-                          src={item.image} 
-                          alt={item.name} 
-                          style={{ 
-                            width: '100%', 
-                            height: '100%', 
-                            objectFit: 'cover', 
-                          }} 
+                        <img
+                          src={cdnImage(item.image, 200)}
+                          alt={item.name}
+                          loading="lazy"
+                          decoding="async"
+                          width="72"
+                          height="72"
+                          style={{
+                            width: '100%',
+                            height: '100%',
+                            objectFit: 'cover',
+                          }}
                         />
                       ) : (
                         <span style={{ fontSize: '1.8rem' }}>{item.icon}</span>
