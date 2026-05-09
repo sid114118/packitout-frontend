@@ -1,70 +1,176 @@
 import React, { useState } from 'react';
-import useScrollToTop from './useScrollToTop'; // 👈 1. Import your tool
+import useScrollToTop from './useScrollToTop';
+
+const API_BASE = "https://darkslategrey-snail-415133.hostingersite.com";
+const RAZORPAY_SCRIPT_SRC = "https://checkout.razorpay.com/v1/checkout.js";
+
+// Inject the Razorpay checkout script on demand. Returns a promise that resolves
+// when window.Razorpay is available. Cached after first load.
+let razorpayScriptPromise = null;
+const loadRazorpayScript = () => {
+  if (typeof window !== 'undefined' && window.Razorpay) return Promise.resolve(true);
+  if (razorpayScriptPromise) return razorpayScriptPromise;
+  razorpayScriptPromise = new Promise((resolve) => {
+    const script = document.createElement('script');
+    script.src = RAZORPAY_SCRIPT_SRC;
+    script.async = true;
+    script.onload = () => resolve(true);
+    script.onerror = () => { razorpayScriptPromise = null; resolve(false); };
+    document.body.appendChild(script);
+  });
+  return razorpayScriptPromise;
+};
 
 export default function Payment({ user, cart, targetShop, finalBill, useCoins, coinsUsed, onBack, onCheckoutSuccess }) {
-  
-  // 🚀 2. Run it right at the top of your component!
   useScrollToTop();
 
   const [status, setStatus] = useState("");
-  const [paymentMethod, setPaymentMethod] = useState("UPI"); 
-  
-  // 🛡️ Ensure finalBill is always a number so .toFixed() never crashes
+  const [paymentMethod, setPaymentMethod] = useState("UPI");
+
   const safeFinalBill = Number(finalBill || 0);
 
-  const handleCheckout = async () => {
-    setStatus(`⏳ Processing ${paymentMethod} Payment...`);
-    
-    try {
-      // 🛡️ Strip out null items and force numbers to prevent Backend crashes
-      const cleanCartItems = cart.filter(item => item !== null).map(item => ({
-        productId: item._id,
-        name: item.name,
-        qty: Number(item.qty || 1),
-        price: Number(item.sellingPrice !== undefined ? item.sellingPrice : (item.mrp || 0))
-      }));
+  const cleanCartItems = () => cart
+    .filter(item => item !== null)
+    .map(item => ({
+      productId: item._id,
+      name: item.name,
+      qty: Number(item.qty || 1),
+      price: Number(item.sellingPrice !== undefined ? item.sellingPrice : (item.mrp || 0)),
+    }));
 
-      const response = await fetch("https://darkslategrey-snail-415133.hostingersite.com/orders", {
-        method: "POST",
+  const placeCodOrder = async () => {
+    const response = await fetch(`${API_BASE}/orders`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        userId: user._id,
+        shopId: targetShop._id,
+        paymentMethod: "COD",
+        paymentStatus: "Unpaid",
+        items: cleanCartItems(),
+        totalAmount: safeFinalBill,
+        coinsUsed: useCoins ? Number(coinsUsed || 0) : 0,
+      }),
+    });
+    if (!response.ok) throw new Error("Failed to place order");
+
+    if (useCoins && coinsUsed > 0) {
+      const newCoinBalance = Math.round(Number(user.coins || 0) - Number(coinsUsed));
+      await fetch(`${API_BASE}/users/${user._id}`, {
+        method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          userId: user._id, 
-          shopId: targetShop._id,
-          paymentMethod: paymentMethod, 
-          paymentStatus: paymentMethod === "COD" ? "Unpaid" : "Paid", 
-          items: cleanCartItems,
-          totalAmount: safeFinalBill
-        })
+        body: JSON.stringify({ coins: newCoinBalance }),
       });
+      localStorage.setItem("packitout_user", JSON.stringify({ ...user, coins: newCoinBalance }));
+    }
+  };
 
-      if (response.ok) {
-        if (useCoins && coinsUsed > 0) {
-          const newCoinBalance = Math.round(Number(user.coins || 0) - Number(coinsUsed)); 
-          await fetch(`https://darkslategrey-snail-415133.hostingersite.com/users/${user._id}`, {
-            method: "PATCH",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ coins: newCoinBalance })
-          });
-          
-          const updatedUser = { ...user, coins: newCoinBalance };
-          localStorage.setItem("packitout_user", JSON.stringify(updatedUser));
-        }
+  const placeOnlineOrder = async () => {
+    const ok = await loadRazorpayScript();
+    if (!ok || !window.Razorpay) throw new Error("Could not load payment gateway. Check your connection.");
 
-        setStatus("✅ Order Placed Successfully!");
-        setTimeout(() => onCheckoutSuccess(), 1500);
-      } else {
-        setStatus("❌ Failed to process order.");
-        setTimeout(() => setStatus(""), 3000);
-      }
-    } catch (err) { 
-      setStatus("❌ Connection error"); 
+    const items = cleanCartItems();
+    const coinsUsedSafe = useCoins ? Number(coinsUsed || 0) : 0;
+
+    const createRes = await fetch(`${API_BASE}/payments/create-order`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        userId: user._id,
+        shopId: targetShop._id,
+        items,
+        coinsUsed: coinsUsedSafe,
+      }),
+    });
+    const createData = await createRes.json();
+    if (!createRes.ok) throw new Error(createData.error || "Could not start payment.");
+
+    const { razorpayOrderId, amount, currency, keyId } = createData;
+    if (!keyId) throw new Error("Payment gateway not configured on the server.");
+
+    return new Promise((resolve, reject) => {
+      const rzp = new window.Razorpay({
+        key: keyId,
+        amount,
+        currency,
+        order_id: razorpayOrderId,
+        name: targetShop?.name || "PackItOut",
+        description: `Order from ${targetShop?.name || "your shop"}`,
+        prefill: {
+          name: user?.name || "",
+          contact: user?.phone || "",
+        },
+        theme: { color: "#0c831f" },
+        method: paymentMethod === "Card"
+          ? { card: true, upi: false, netbanking: false, wallet: false }
+          : { upi: true, card: false, netbanking: false, wallet: false },
+        modal: {
+          ondismiss: () => reject(new Error("Payment cancelled")),
+        },
+        handler: async (response) => {
+          try {
+            setStatus("⏳ Verifying payment...");
+            const verifyRes = await fetch(`${API_BASE}/payments/verify`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                razorpay_order_id: response.razorpay_order_id,
+                razorpay_payment_id: response.razorpay_payment_id,
+                razorpay_signature: response.razorpay_signature,
+                userId: user._id,
+                shopId: targetShop._id,
+                items,
+                paymentMethod,
+                coinsUsed: coinsUsedSafe,
+              }),
+            });
+            const verifyData = await verifyRes.json();
+            if (!verifyRes.ok || !verifyData.success) {
+              throw new Error(verifyData.error || "Payment could not be verified.");
+            }
+
+            if (coinsUsedSafe > 0) {
+              const newCoinBalance = Math.round(Number(user.coins || 0) - coinsUsedSafe);
+              localStorage.setItem("packitout_user", JSON.stringify({ ...user, coins: newCoinBalance }));
+            }
+            resolve(verifyData.order);
+          } catch (err) {
+            reject(err);
+          }
+        },
+      });
+      rzp.on('payment.failed', (resp) => {
+        reject(new Error(resp?.error?.description || "Payment failed"));
+      });
+      rzp.open();
+    });
+  };
+
+  const handleCheckout = async () => {
+    if (!targetShop?._id || !user?._id) {
+      setStatus("❌ Missing shop or user info.");
       setTimeout(() => setStatus(""), 3000);
+      return;
+    }
+
+    setStatus(`⏳ Processing ${paymentMethod} Payment...`);
+    try {
+      if (paymentMethod === "COD") {
+        await placeCodOrder();
+      } else {
+        await placeOnlineOrder();
+      }
+      setStatus("✅ Order Placed Successfully!");
+      setTimeout(() => onCheckoutSuccess(), 1500);
+    } catch (err) {
+      setStatus(`❌ ${err.message || "Payment failed"}`);
+      setTimeout(() => setStatus(""), 3500);
     }
   };
 
   return (
     <div style={{ backgroundColor: '#f3f4f6', minHeight: '100vh', fontFamily: 'sans-serif', paddingBottom: '180px', animation: 'fadeIn 0.2s ease-in' }}>
-      
+
       {/* Payment Header */}
       <div style={{ position: 'sticky', top: 0, backgroundColor: 'white', padding: '16px 20px', display: 'flex', alignItems: 'center', gap: '15px', borderBottom: '1px solid #e5e7eb', zIndex: 100 }}>
         <button onClick={onBack} style={{ background: 'none', border: 'none', fontSize: '1.4rem', cursor: 'pointer', color: '#111827', display: 'flex', alignItems: 'center' }}>←</button>
@@ -72,7 +178,7 @@ export default function Payment({ user, cart, targetShop, finalBill, useCoins, c
       </div>
 
       <div style={{ padding: '16px', maxWidth: '800px', margin: '0 auto' }}>
-        
+
         {/* Bill Summary Strip */}
         <div style={{ backgroundColor: 'white', padding: '16px', borderRadius: '12px', marginBottom: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', boxShadow: '0 2px 8px rgba(0,0,0,0.02)' }}>
           <div style={{ color: '#64748b', fontWeight: '600', fontSize: '0.9rem' }}>Amount to Pay</div>
@@ -83,7 +189,7 @@ export default function Payment({ user, cart, targetShop, finalBill, useCoins, c
 
         {/* Payment Options */}
         <div style={{ backgroundColor: 'white', borderRadius: '12px', overflow: 'hidden', boxShadow: '0 2px 8px rgba(0,0,0,0.02)' }}>
-          
+
           <label style={{ display: 'flex', alignItems: 'center', padding: '16px', borderBottom: '1px solid #f1f5f9', cursor: 'pointer', backgroundColor: paymentMethod === 'UPI' ? '#f4fbf6' : 'white' }}>
             <input type="radio" name="payment" value="UPI" checked={paymentMethod === 'UPI'} onChange={() => setPaymentMethod('UPI')} style={{ width: '20px', height: '20px', accentColor: '#0c831f', marginRight: '16px' }} />
             <div style={{ fontSize: '1.5rem', marginRight: '12px' }}>📱</div>
@@ -121,8 +227,8 @@ export default function Payment({ user, cart, targetShop, finalBill, useCoins, c
       )}
 
       <div style={{ position: 'fixed', bottom: '70px', left: 0, right: 0, backgroundColor: 'white', padding: '12px 16px', borderTop: '1px solid #e5e7eb', boxShadow: '0 -4px 10px rgba(0,0,0,0.03)', zIndex: 90 }}>
-        <button 
-          onClick={handleCheckout} 
+        <button
+          onClick={handleCheckout}
           disabled={status.includes("⏳")}
           style={{ width: '100%', maxWidth: '800px', margin: '0 auto', display: 'flex', justifyContent: 'center', alignItems: 'center', padding: '16px 20px', backgroundColor: '#0c831f', color: 'white', border: 'none', borderRadius: '12px', fontWeight: '900', fontSize: '1.1rem', cursor: 'pointer', boxShadow: '0 4px 12px rgba(12, 131, 31, 0.3)', opacity: status.includes("⏳") ? 0.7 : 1, transition: 'all 0.2s ease' }}
         >

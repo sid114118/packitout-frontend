@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import ViewReviewModal from './ViewReviewModal';
+import OrderTimeline from './OrderTimeline';
 import { cdnImage } from '../../utils/cloudinaryUrl.js';
 
 export default function ReceiptModal({ selectedOrder, setSelectedOrder }) {
@@ -68,6 +69,11 @@ export default function ReceiptModal({ selectedOrder, setSelectedOrder }) {
 
               <div className="dashed-line"></div>
 
+              {/* 🕐 ORDER TIMELINE */}
+              {selectedOrder._id && selectedOrder.status && (
+                <OrderTimeline order={selectedOrder} />
+              )}
+
               {/* UPLOADED PARCHI (If exists) */}
               {(selectedOrder.imageUrl || selectedOrder.parchiImage || selectedOrder.image) && (
                 <div style={{ marginBottom: '15px', textAlign: 'center' }}>
@@ -123,10 +129,7 @@ export default function ReceiptModal({ selectedOrder, setSelectedOrder }) {
 
               {/* PRINTER FOOTER */}
               <div style={{ textAlign: 'center', marginTop: '25px' }}>
-                <span style={{ display: 'inline-block', padding: '6px 12px', borderRadius: '8px', fontSize: '0.8rem', fontWeight: '800', textTransform: 'uppercase', backgroundColor: isDelivered ? '#ecfdf5' : '#f8fafc', color: isDelivered ? '#10b981' : '#64748b', border: '1px solid', borderColor: isDelivered ? '#d1fae5' : '#e2e8f0' }}>
-                  STATUS: {selectedOrder.status}
-                </span>
-                <div style={{ marginTop: '15px', fontSize: '0.8rem', color: '#94a3b8', fontWeight: '600' }}>
+                <div style={{ fontSize: '0.8rem', color: '#94a3b8', fontWeight: '600' }}>
                   Thank you for shopping with us!
                 </div>
               </div>
