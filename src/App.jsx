@@ -30,8 +30,9 @@ const loadOneSignal = () => {
 };
 
 const RouteFallback = () => (
-  <div style={{ minHeight: '60vh', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#94a3b8', fontSize: '0.9rem', fontWeight: 600 }}>
-    Loading…
+  <div style={{ minHeight: '60vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '14px', color: '#64748b', fontSize: '0.9rem', fontWeight: 600 }}>
+    <div className="pio-spinner" aria-hidden="true" />
+    <span>Loading…</span>
   </div>
 );
 
@@ -41,23 +42,38 @@ class CrashCatcher extends React.Component {
   render() {
     if (this.state.err) {
       return (
-        <div style={{ padding: '60px 20px', background: '#991b1b', color: 'white', minHeight: '100vh', textAlign: 'left', fontFamily: 'monospace' }}>
-          <h2 style={{ margin: '0 0 10px 0' }}>🚨 APP CRASHED</h2>
-          <div style={{ background: 'rgba(0,0,0,0.2)', padding: '15px', borderRadius: '8px' }}>
-             <p style={{ fontWeight: 'bold' }}>Error: {this.state.err}</p>
+        <div style={{ padding: '40px 20px', minHeight: '100vh', background: '#f4f6f8', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div style={{ width: '100%', maxWidth: '420px', background: '#fff', borderRadius: '20px', padding: '28px 22px', boxShadow: '0 10px 25px rgba(15,23,42,0.08)', textAlign: 'center' }}>
+            <div style={{ width: '64px', height: '64px', margin: '0 auto 18px', borderRadius: '50%', background: '#fee2e2', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#dc2626" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <circle cx="12" cy="12" r="10" />
+                <line x1="12" y1="8" x2="12" y2="12" />
+                <line x1="12" y1="16" x2="12.01" y2="16" />
+              </svg>
+            </div>
+            <h2 style={{ margin: '0 0 8px', fontSize: '1.2rem', fontWeight: 800, color: '#0f172a' }}>Something went wrong</h2>
+            <p style={{ margin: '0 0 20px', fontSize: '0.9rem', color: '#64748b', lineHeight: 1.5 }}>
+              We hit an unexpected error. You can try again — your info is safe.
+            </p>
+            <details style={{ textAlign: 'left', marginBottom: '20px', fontSize: '0.75rem', color: '#94a3b8' }}>
+              <summary style={{ cursor: 'pointer', fontWeight: 600 }}>Show details</summary>
+              <pre style={{ marginTop: '8px', padding: '10px', background: '#f8fafc', borderRadius: '8px', overflowX: 'auto', fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace' }}>{this.state.err}</pre>
+            </details>
+            <button
+              onClick={() => window.location.reload()}
+              className="pio-press"
+              style={{ width: '100%', padding: '14px', background: '#16a34a', color: '#fff', border: 'none', borderRadius: '12px', fontWeight: 800, fontSize: '1rem', cursor: 'pointer', boxShadow: '0 8px 22px rgba(22, 163, 74, 0.28)' }}
+            >
+              Reload app
+            </button>
+            <button
+              onClick={() => { localStorage.removeItem("packitout_cart"); window.location.reload(); }}
+              className="pio-press"
+              style={{ marginTop: '10px', width: '100%', padding: '14px', background: '#fff', color: '#0f172a', border: '1px solid #e2e8f0', borderRadius: '12px', fontWeight: 700, fontSize: '0.95rem', cursor: 'pointer' }}
+            >
+              Clear cart and reload
+            </button>
           </div>
-          <button 
-            onClick={() => { localStorage.removeItem("packitout_cart"); window.location.reload(); }} 
-            style={{ marginTop: '20px', padding: '15px', width: '100%', background: '#ef4444', color: 'white', border: 'none', borderRadius: '10px', fontWeight: 'bold' }}
-          >
-            🗑️ Clear Broken Cart & Restart
-          </button>
-          <button 
-            onClick={() => window.location.reload()} 
-            style={{ marginTop: '10px', padding: '15px', width: '100%', background: 'white', color: '#991b1b', border: 'none', borderRadius: '10px', fontWeight: 'bold' }}
-          >
-            🔄 Simple Refresh
-          </button>
         </div>
       );
     }
@@ -300,12 +316,23 @@ export default function App() {
     }, 0);
 
     return (
-      <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', backgroundColor: '#f3f4f6', paddingBottom: cart.length > 0 ? '140px' : '70px' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', backgroundColor: '#f3f4f6', paddingBottom: cart.length > 0 ? 'calc(150px + env(safe-area-inset-bottom, 0px))' : 'calc(76px + env(safe-area-inset-bottom, 0px))' }}>
         <div style={{ position: 'sticky', top: isHeaderVisible ? '0px' : '-65px', zIndex: 1001, transition: 'top 0.3s ease-in-out' }}>
           <Header user={loggedInUser} onUserUpdate={handleUserUpdate} />
           <div style={{ padding: '10px 15px', backgroundColor: '#f3f4f6' }}>
-            <div onClick={() => setIsSearchOpen(true)} style={{ display: 'flex', alignItems: 'center', backgroundColor: '#ffffff', borderRadius: '12px', padding: '10px 15px', border: '1px solid #e2e8f0' }}>
-              <span style={{ color: '#94a3b8' }}>Search items...</span>
+            <div
+              onClick={() => setIsSearchOpen(true)}
+              role="button"
+              tabIndex={0}
+              onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') setIsSearchOpen(true); }}
+              className="pio-press"
+              style={{ display: 'flex', alignItems: 'center', gap: '10px', backgroundColor: '#ffffff', borderRadius: '14px', padding: '12px 14px', border: '1px solid #e2e8f0', boxShadow: '0 1px 2px rgba(15,23,42,0.04)', cursor: 'pointer' }}
+            >
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <circle cx="11" cy="11" r="7" />
+                <line x1="21" y1="21" x2="16.65" y2="16.65" />
+              </svg>
+              <span style={{ color: '#94a3b8', fontSize: '0.95rem', fontWeight: 500 }}>Search for atta, milk, soap…</span>
             </div>
           </div>
         </div>
@@ -336,12 +363,49 @@ export default function App() {
         </main>
         
         {cart.length > 0 && (
-          <div onClick={() => window.location.hash = "#cart"} style={{ position: 'fixed', bottom: '80px', left: '12px', right: '12px', zIndex: 1000, backgroundColor: '#0c831f', color: '#fff', padding: '12px 16px', borderRadius: '12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', boxShadow: '0 8px 24px rgba(12, 131, 31, 0.4)' }}>
-            <div>
-              <div style={{ fontWeight: '600', fontSize: '0.75rem' }}>{cartTotalItems} items</div>
-              <div style={{ fontWeight: '800', fontSize: '1.1rem' }}>₹{cartTotalPrice.toFixed(2)}</div>
+          <div
+            onClick={() => window.location.hash = "#cart"}
+            role="button"
+            tabIndex={0}
+            onKeyDown={(e) => { if (e.key === 'Enter') window.location.hash = "#cart"; }}
+            className="pio-press"
+            style={{
+              position: 'fixed',
+              bottom: 'calc(76px + env(safe-area-inset-bottom, 0px))',
+              left: '12px',
+              right: '12px',
+              maxWidth: '600px',
+              margin: '0 auto',
+              zIndex: 1000,
+              background: 'linear-gradient(135deg, #16a34a 0%, #15803d 100%)',
+              color: '#fff',
+              padding: '12px 16px',
+              borderRadius: '14px',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              boxShadow: '0 12px 28px rgba(22, 163, 74, 0.38)',
+              cursor: 'pointer'
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: 'rgba(255,255,255,0.18)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                  <path d="M5.5 8h13l-1 12.2a1.5 1.5 0 0 1-1.5 1.3H8a1.5 1.5 0 0 1-1.5-1.3L5.5 8z" />
+                  <path d="M8.5 8V6a3.5 3.5 0 0 1 7 0v2" />
+                </svg>
+              </div>
+              <div>
+                <div style={{ fontWeight: 600, fontSize: '0.72rem', opacity: 0.92 }}>{cartTotalItems} item{cartTotalItems !== 1 ? 's' : ''}</div>
+                <div style={{ fontWeight: 800, fontSize: '1.08rem', letterSpacing: '-0.2px' }}>₹{cartTotalPrice.toFixed(2)}</div>
+              </div>
             </div>
-            <div style={{ fontWeight: '800' }}>View Cart ▶</div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontWeight: 800, fontSize: '0.95rem' }}>
+              <span>View Cart</span>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <polyline points="9 18 15 12 9 6" />
+              </svg>
+            </div>
           </div>
         )}
       </div>

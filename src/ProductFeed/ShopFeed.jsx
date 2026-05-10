@@ -93,7 +93,11 @@ export default function ShopFeed({
           <ProductRow title="Freshly Restocked" subtitle="Back on shelves" items={newArrivals} onViewAll={setViewAll} shopClosed={shopClosed} onOpenDetails={setSelectedProductDetails} onQuickAdd={handleQuickAdd} cart={cart} onRemoveFromCart={onRemoveFromCart} />
 
           <ShopCarousel shops={nearbyShops} onSwitchShop={handleSwitchShop} />
-          <div style={{ textAlign: 'center', padding: '10px 0 40px 0', color: '#94a3b8', fontSize: '0.8rem', fontWeight: '600' }}>🚀 End of list</div>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '12px', padding: '24px 24px 40px', color: '#94a3b8', fontSize: '0.78rem', fontWeight: 600, letterSpacing: '0.5px', textTransform: 'uppercase' }}>
+            <span style={{ flex: 1, height: '1px', background: 'linear-gradient(to right, transparent, #e2e8f0)' }} />
+            <span>You're all caught up</span>
+            <span style={{ flex: 1, height: '1px', background: 'linear-gradient(to left, transparent, #e2e8f0)' }} />
+          </div>
         </>
       )}
 

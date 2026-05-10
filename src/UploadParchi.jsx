@@ -54,7 +54,9 @@ export default function UploadParchi({ onAddToCart }) {
   const [sendingToShop, setSendingToShop] = useState(false);
 
   const fileInputRef = useRef(null);
-  const BASE_URL = "https://darkslategrey-snail-415133.hostingersite.com";
+  const BASE_URL = import.meta.env.DEV
+    ? "http://localhost:5000"
+    : "https://darkslategrey-snail-415133.hostingersite.com";
 
   const sendRawToShop = async (file) => {
     if (!file) {

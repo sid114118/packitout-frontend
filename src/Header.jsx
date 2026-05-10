@@ -70,55 +70,69 @@ export default function Header({ user, onUserUpdate }) {
   return (
     <header style={{ backgroundColor: '#ffffff', position: 'relative', zIndex: 1000, borderBottom: isChanging ? 'none' : '1px solid #f3f4f6' }}>
       
-      <div style={{ padding: '12px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        
+      <div style={{ padding: '12px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px' }}>
+
         {/* LEFT: Stacked Location Button with Open Status & CHANGE text */}
-        <div 
-          onClick={() => setIsChanging(!isChanging)} 
-          style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}
+        <div
+          onClick={() => setIsChanging(!isChanging)}
+          role="button"
+          tabIndex={0}
+          aria-expanded={isChanging}
+          className="pio-press"
+          style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer', flex: 1, minWidth: 0 }}
         >
-          <div style={{ fontSize: '1.6rem' }}>📍</div>
-          <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-            
+          <div style={{ width: '38px', height: '38px', borderRadius: '12px', background: '#f0fdf4', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
+              <circle cx="12" cy="10" r="3" />
+            </svg>
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', minWidth: 0, flex: 1 }}>
+
             {/* Top row: Shopping From + OPEN Badge */}
             <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <span style={{ fontSize: '0.7rem', color: '#6b7280', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+              <span style={{ fontSize: '0.68rem', color: '#64748b', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.4px' }}>
                 {topText}
               </span>
               {activeShopName && (
-                <span style={{ fontSize: '0.55rem', padding: '2px 5px', borderRadius: '4px', backgroundColor: isShopOpen ? '#d1fae5' : '#fee2e2', color: isShopOpen ? '#059669' : '#dc2626', fontWeight: '900', letterSpacing: '0.5px' }}>
-                  {isShopOpen ? '🟢 OPEN' : '🔴 CLOSED'}
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '0.6rem', padding: '2px 6px', borderRadius: '999px', backgroundColor: isShopOpen ? '#dcfce7' : '#fee2e2', color: isShopOpen ? '#15803d' : '#b91c1c', fontWeight: 800, letterSpacing: '0.3px' }}>
+                  <span style={{ width: '5px', height: '5px', borderRadius: '50%', background: isShopOpen ? '#16a34a' : '#dc2626' }} />
+                  {isShopOpen ? 'OPEN' : 'CLOSED'}
                 </span>
               )}
             </div>
 
-            {/* Bottom row: Shop Name + CHANGE button */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#111827', fontWeight: '900', fontSize: '1.05rem', marginTop: '2px' }}>
-              <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '180px' }}>
+            {/* Bottom row: Shop Name + chevron */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#0f172a', fontWeight: 800, fontSize: '1rem', marginTop: '2px', minWidth: 0 }}>
+              <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', minWidth: 0, letterSpacing: '-0.2px' }}>
                 {bottomText}
               </span>
-              <span style={{ fontSize: '0.75rem', color: '#0c831f', fontWeight: '800', backgroundColor: '#f4fbf6', padding: '2px 6px', borderRadius: '4px', border: '1px solid #dcfce7' }}>
-                {isChanging ? 'CLOSE' : 'CHANGE'}
-              </span>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" style={{ flexShrink: 0, transform: isChanging ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s ease' }}>
+                <polyline points="6 9 12 15 18 9" />
+              </svg>
             </div>
           </div>
         </div>
 
         {/* RIGHT: Profile Avatar */}
-        <div 
-          onClick={() => window.location.hash = "#account"} 
-          style={{ width: '38px', height: '38px', backgroundColor: '#f3f4f6', borderRadius: '50%', display: 'flex', justifyContent: 'center', alignItems: 'center', fontSize: '1.2rem', cursor: 'pointer', border: '1px solid #e5e7eb' }}
-          title="My Profile"
+        <button
+          onClick={() => window.location.hash = "#account"}
+          aria-label="My profile"
+          className="pio-press"
+          style={{ width: '40px', height: '40px', backgroundColor: '#f4f6f8', borderRadius: '50%', display: 'flex', justifyContent: 'center', alignItems: 'center', cursor: 'pointer', border: '1px solid #e2e8f0', flexShrink: 0, padding: 0 }}
         >
-          👤
-        </div>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#475569" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            <circle cx="12" cy="7.5" r="3.75" />
+            <path d="M4.5 20.5a7.5 7.5 0 0 1 15 0" />
+          </svg>
+        </button>
       </div>
 
       {/* 🔍 EXPANDING SHOP SELECTOR */}
       {isChanging && (
-        <div style={{ backgroundColor: '#ffffff', padding: '16px', borderTop: '1px solid #f3f4f6', borderBottom: '1px solid #e5e7eb', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.05)', animation: 'slideDown 0.2s ease-out', position: 'absolute', width: '100%', boxSizing: 'border-box' }}>
-          
-          <style>{`@keyframes slideDown { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }`}</style>
+        <div style={{ backgroundColor: '#ffffff', padding: '16px', borderTop: '1px solid #f1f5f9', borderBottom: '1px solid #e2e8f0', boxShadow: '0 10px 20px -8px rgba(15,23,42,0.08)', animation: 'slideDown 0.22s ease-out', boxSizing: 'border-box' }}>
+
+          <style>{`@keyframes slideDown { from { opacity: 0; transform: translateY(-8px); } to { opacity: 1; transform: translateY(0); } }`}</style>
 
           <div style={{ fontSize: '0.85rem', color: '#111827', fontWeight: '800', marginBottom: '10px' }}>Change your location</div>
           

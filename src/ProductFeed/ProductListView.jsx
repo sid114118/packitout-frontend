@@ -17,6 +17,7 @@ export default function ProductListView({
 }) {
   const BOTTOM_NAV_HEIGHT = '56px';
   const [selectedSub, setSelectedSub] = useState("All");
+  const [selectedBrand, setSelectedBrand] = useState("All Brands");
 
   // 🚀 LAZY LOADING STATE: Only load 16 items at a time!
   const [visibleCount, setVisibleCount] = useState(16);
@@ -52,7 +53,12 @@ export default function ProductListView({
   // 🚀 RESET VISIBLE COUNT when changing subcategories
   useEffect(() => {
     setVisibleCount(16);
+    setSelectedBrand("All Brands");
   }, [selectedSub]);
+
+  useEffect(() => {
+    setVisibleCount(16);
+  }, [selectedBrand]);
 
   // 🚀 FLATTEN THE VARIANTS FOR THE LIST VIEW
   const flattenedItems = useMemo(() => {
@@ -68,15 +74,32 @@ export default function ProductListView({
     });
   }, [items]);
 
-  // 🧠 SMART EXTRACTOR
-  const subcategories = useMemo(() => {
+  // 🧠 SMART EXTRACTOR — prefers subCategory, falls back to brand so the
+  // sidebar still shows on categories where subCategory is empty/"nan".
+  const { subcategories, groupingKey } = useMemo(() => {
+    const isValid = (v) => {
+      if (!v) return false;
+      const s = String(v).trim();
+      return s !== "" && s.toLowerCase() !== "nan";
+    };
+
     const subs = new Set();
     flattenedItems.forEach(item => {
-      if (item.subCategory && String(item.subCategory).trim() !== "" && String(item.subCategory).trim().toLowerCase() !== "nan") {
-        subs.add(item.subCategory);
-      }
+      if (isValid(item.subCategory)) subs.add(String(item.subCategory).trim());
     });
-    return ["All", ...Array.from(subs)];
+    if (subs.size > 0) {
+      return { subcategories: ["All", ...Array.from(subs)], groupingKey: "subCategory" };
+    }
+
+    const brands = new Set();
+    flattenedItems.forEach(item => {
+      if (isValid(item.brand)) brands.add(String(item.brand).trim());
+    });
+    if (brands.size > 1) {
+      return { subcategories: ["All", ...Array.from(brands)], groupingKey: "brand" };
+    }
+
+    return { subcategories: ["All"], groupingKey: "subCategory" };
   }, [flattenedItems]);
 
   const hasSubcategories = subcategories.length > 1;
@@ -84,8 +107,29 @@ export default function ProductListView({
   // 🎯 FILTER LOGIC
   const filteredItems = useMemo(() => {
     if (selectedSub === "All") return flattenedItems;
-    return flattenedItems.filter(item => item.subCategory === selectedSub);
-  }, [flattenedItems, selectedSub]);
+    return flattenedItems.filter(item => String(item[groupingKey] || "").trim() === selectedSub);
+  }, [flattenedItems, selectedSub, groupingKey]);
+
+  // 🏷️ BRAND CHIPS — derived from items in the current subcategory.
+  // Only show when sidebar isn't already grouping by brand AND there are 2+ brands.
+  const brandsInView = useMemo(() => {
+    if (groupingKey === "brand") return [];
+    const isValid = (v) => v && String(v).trim() && String(v).trim().toLowerCase() !== "nan";
+    const set = new Set();
+    filteredItems.forEach(item => {
+      if (isValid(item.brand)) set.add(String(item.brand).trim());
+    });
+    if (set.size < 2) return [];
+    return ["All Brands", ...Array.from(set).sort((a, b) => a.localeCompare(b))];
+  }, [filteredItems, groupingKey]);
+
+  const showBrandBar = brandsInView.length > 0;
+  const activeBrand = showBrandBar ? selectedBrand : "All Brands";
+
+  const finalItems = useMemo(() => {
+    if (!showBrandBar || activeBrand === "All Brands") return filteredItems;
+    return filteredItems.filter(item => String(item.brand || "").trim() === activeBrand);
+  }, [filteredItems, activeBrand, showBrandBar]);
 
   // ⚡ INFINITE SCROLL HANDLER ⚡
   const handleScroll = (e) => {
@@ -116,6 +160,8 @@ export default function ProductListView({
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
         .sidebar-scroll::-webkit-scrollbar { display: none; }
         .sidebar-scroll { -ms-overflow-style: none; scrollbar-width: none; }
+        .hide-scroll::-webkit-scrollbar { display: none; }
+        .hide-scroll { -ms-overflow-style: none; scrollbar-width: none; }
       `}</style>
       
       {/* 🌟 PREMIUM HEADER 🌟 */}
@@ -139,7 +185,7 @@ export default function ProductListView({
               const isActive = selectedSub === sub;
               
               const getBestThumbnail = () => {
-                let itemsInSub = sub === "All" ? flattenedItems : flattenedItems.filter(item => item.subCategory === sub);
+                let itemsInSub = sub === "All" ? flattenedItems : flattenedItems.filter(item => String(item[groupingKey] || "").trim() === sub);
                 let premiumItems = itemsInSub.filter(item => item.image && item.inStock);
                 if (premiumItems.length > 0) {
                   premiumItems.sort((a, b) => {
@@ -182,34 +228,102 @@ export default function ProductListView({
         )}
 
         {/* ➡️ THE RIGHT PRODUCT GRID (NOW WITH LAZY LOADING!) */}
-        <div 
-          id="product-grid-scroll" 
-          className="sidebar-scroll" 
+        <div
+          id="product-grid-scroll"
+          className="sidebar-scroll"
           style={{ flex: 1, overflowY: 'auto', padding: '12px' }}
           onScroll={handleScroll} // ⚡ Scroll listener attached!
         >
-          {filteredItems.length === 0 ? (
+          {/* 🏷️ BRAND FILTER CHIPS — sticky at top of grid */}
+          {showBrandBar && (
+            <div
+              className="hide-scroll"
+              style={{
+                position: 'sticky',
+                top: '-12px',
+                marginInline: '-12px',
+                marginTop: '-12px',
+                marginBottom: '10px',
+                padding: '10px 12px',
+                background: 'rgba(244, 246, 248, 0.95)',
+                backdropFilter: 'saturate(180%) blur(8px)',
+                WebkitBackdropFilter: 'saturate(180%) blur(8px)',
+                borderBottom: '1px solid #e2e8f0',
+                zIndex: 5,
+                display: 'flex',
+                gap: '8px',
+                overflowX: 'auto',
+                scrollbarWidth: 'none'
+              }}
+            >
+              {brandsInView.map((brand) => {
+                const isActive = activeBrand === brand;
+                const isAll = brand === "All Brands";
+                return (
+                  <button
+                    key={brand}
+                    onClick={() => setSelectedBrand(brand)}
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      padding: '7px 14px',
+                      borderRadius: '999px',
+                      border: isActive ? '1px solid #16a34a' : '1px solid #e2e8f0',
+                      background: isActive ? '#16a34a' : '#fff',
+                      color: isActive ? '#fff' : '#0f172a',
+                      fontSize: '0.78rem',
+                      fontWeight: 700,
+                      cursor: 'pointer',
+                      whiteSpace: 'nowrap',
+                      flexShrink: 0,
+                      boxShadow: isActive ? '0 2px 8px rgba(22, 163, 74, 0.25)' : '0 1px 2px rgba(0,0,0,0.03)',
+                      fontFamily: 'inherit',
+                      transition: 'all 0.15s ease'
+                    }}
+                  >
+                    {isAll && <span aria-hidden="true">🏷️</span>}
+                    <span>{brand}</span>
+                  </button>
+                );
+              })}
+            </div>
+          )}
+
+          {finalItems.length === 0 ? (
             <div style={{ textAlign: 'center', padding: '40px 20px', color: '#94a3b8' }}>
               <div style={{ fontSize: '2.5rem', marginBottom: '10px' }}>🔍</div>
               <div style={{ fontWeight: '700' }}>No items found</div>
+              {showBrandBar && activeBrand !== "All Brands" && (
+                <button
+                  onClick={() => setSelectedBrand("All Brands")}
+                  style={{
+                    marginTop: '12px', padding: '8px 16px', borderRadius: '999px',
+                    border: '1px solid #16a34a', background: '#fff', color: '#16a34a',
+                    fontWeight: 700, fontSize: '0.8rem', cursor: 'pointer', fontFamily: 'inherit'
+                  }}
+                >
+                  Show all brands
+                </button>
+              )}
             </div>
           ) : (
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '12px', paddingBottom: cartTotalItems > 0 ? '80px' : '20px' }}>
-              
+
               {/* ⚡ ONLY MAP THE SLICED ITEMS! */}
-              {filteredItems.slice(0, visibleCount).map((item, index) => (
-                <ModernProductCard 
-                  key={`${item._id}-${index}`} 
-                  item={item} 
-                  isCarousel={false} 
-                  shopClosed={shopClosed} 
-                  onOpenDetails={onOpenDetails} 
-                  onQuickAdd={onQuickAdd} 
-                  cart={cart} 
-                  onRemoveFromCart={onRemoveFromCart} 
+              {finalItems.slice(0, visibleCount).map((item, index) => (
+                <ModernProductCard
+                  key={`${item._id}-${index}`}
+                  item={item}
+                  isCarousel={false}
+                  shopClosed={shopClosed}
+                  onOpenDetails={onOpenDetails}
+                  onQuickAdd={onQuickAdd}
+                  cart={cart}
+                  onRemoveFromCart={onRemoveFromCart}
                 />
               ))}
-              
+
             </div>
           )}
         </div>

@@ -1,0 +1,106 @@
+/* ───────────────────────── Design tokens ───────────────────────── */
+:root {
+  /* Brand greens — a single, consistent ramp */
+  --brand-50:  #f0fdf4;
+  --brand-100: #dcfce7;
+  --brand-200: #bbf7d0;
+  --brand-500: #16a34a;
+  --brand-600: #15803d;
+  --brand-700: #166534;
+
+  /* Accent (used for ADD / discount) */
+  --accent-500: #ef4444;
+  --accent-100: #fee2e2;
+  --accent-200: #fecaca;
+
+  /* Surface + ink */
+  --surface:        #ffffff;
+  --surface-muted:  #f4f6f8;
+  --surface-soft:   #f8fafc;
+  --border:         #e2e8f0;
+  --border-soft:    #f1f5f9;
+
+  --ink-900: #0f172a;
+  --ink-700: #334155;
+  --ink-500: #64748b;
+  --ink-400: #94a3b8;
+
+  /* Radii — keep it to a 4-step scale */
+  --r-sm: 8px;
+  --r-md: 12px;
+  --r-lg: 16px;
+  --r-xl: 20px;
+  --r-pill: 999px;
+
+  /* Shadows */
+  --shadow-sm: 0 1px 2px rgba(15, 23, 42, 0.04);
+  --shadow-md: 0 4px 12px rgba(15, 23, 42, 0.05);
+  --shadow-lg: 0 10px 25px rgba(15, 23, 42, 0.08);
+  --shadow-brand: 0 8px 22px rgba(22, 163, 74, 0.28);
+
+  /* Safe-area aware bottom inset */
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+/* ───────────────────────── Reset + base ───────────────────────── */
+*, *::before, *::after { box-sizing: border-box; }
+
+html, body, #root {
+  margin: 0;
+  padding: 0;
+  background: var(--surface-muted);
+  color: var(--ink-900);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+               "Helvetica Neue", Arial, "Noto Sans", system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+button { font-family: inherit; }
+input, select, textarea { font-family: inherit; }
+
+/* Crisp tap on mobile, hide gnarly tap highlight */
+button, a, [role="button"] { -webkit-tap-highlight-color: transparent; }
+
+/* Hide scrollbars on horizontal carousels (used by .premium-hide-scroll, .hide-scroll) */
+.premium-hide-scroll, .hide-scroll {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.premium-hide-scroll::-webkit-scrollbar,
+.hide-scroll::-webkit-scrollbar { display: none; }
+
+/* ───────────────────────── Reusable animations ───────────────────────── */
+@keyframes pio-fade-in {
+  from { opacity: 0; transform: translateY(4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes pio-shimmer {
+  0%   { background-position: -200px 0; }
+  100% { background-position: calc(200px + 100%) 0; }
+}
+@keyframes pio-spin { to { transform: rotate(360deg); } }
+
+/* Skeleton block — shimmer placeholder used by route fallback */
+.pio-skel {
+  background: linear-gradient(90deg, #eef2f7 0%, #f8fafc 50%, #eef2f7 100%);
+  background-size: 200px 100%;
+  background-repeat: no-repeat;
+  animation: pio-shimmer 1.2s linear infinite;
+  border-radius: var(--r-md);
+}
+
+/* Spinner */
+.pio-spinner {
+  width: 28px;
+  height: 28px;
+  border: 3px solid var(--border);
+  border-top-color: var(--brand-500);
+  border-radius: 50%;
+  animation: pio-spin 0.8s linear infinite;
+}
+
+/* Subtle press effect for interactive surfaces */
+.pio-press { transition: transform 0.12s ease, box-shadow 0.18s ease; }
+.pio-press:active { transform: scale(0.98); }
