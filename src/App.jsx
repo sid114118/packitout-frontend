@@ -6,6 +6,7 @@ import Header from './Header.jsx';
 import Categories from './Categories.jsx';
 import ProductFeed from './ProductFeed.jsx';
 import BottomNav from './BottomNav.jsx';
+import HeroBanner from './HeroBanner.jsx';
 
 // Lazy: only fetched when the user navigates into them. Keeps the customer's
 // initial bundle from carrying admin/shop/account/cart/nearby code.
@@ -336,6 +337,9 @@ export default function App() {
             </div>
           </div>
         </div>
+
+        {/* 🎯 Hero promo banner — only on home view */}
+        {!selectedCategory && !selectedBrand && !isSearchOpen && <HeroBanner />}
 
         {/* 🛡️ Hides Categories if viewing a Brand */}
         {!selectedCategory && !selectedBrand && !isSearchOpen && <Categories onCategorySelect={setSelectedCategory} onAddToCart={handleAddToCart} />}
