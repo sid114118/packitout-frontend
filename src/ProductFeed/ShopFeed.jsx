@@ -29,7 +29,7 @@ export default function ShopFeed({
   const [selectedVariantProduct, setSelectedVariantProduct] = useState(null);
   const [viewAll, setViewAll] = useState(null); 
 
-  const BASE_URL = "https://darkslategrey-snail-415133.hostingersite.com";
+  const BASE_URL = (import.meta.env.VITE_API_BASE || "https://darkslategrey-snail-415133.hostingersite.com");
 
   const handleSwitchShop = async (newShop) => {
     const ok = await confirmDialog({
@@ -43,8 +43,10 @@ export default function ShopFeed({
       const res = await fetch(`${BASE_URL}/users/${user._id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ primaryShop: newShop._id }) });
       if(res.ok) {
         const updated = await res.json();
+        // onUserUpdate is always passed from App.jsx; writing to localStorage
+        // alone would leave React state out of sync with the persisted user,
+        // so we just no-op rather than silently desyncing.
         if (onUserUpdate) onUserUpdate(updated, { clearCart: true });
-        else localStorage.setItem("packitout_user", JSON.stringify(updated));
         toast(`Switched to ${newShop.name}!`);
       }
     } catch (err) { toast("Failed to switch shop.", 'error'); }

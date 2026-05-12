@@ -1,16 +1,37 @@
 import { useState, useEffect } from 'react';
 
-const BASE_URL = "https://darkslategrey-snail-415133.hostingersite.com";
+const BASE_URL = (import.meta.env.VITE_API_BASE || "https://darkslategrey-snail-415133.hostingersite.com");
+
+// Don't paint prices/stock that are older than this from the cache.
+const FEED_CACHE_MAX_AGE_MS = 24 * 60 * 60 * 1000; // 24h
+// Master catalog rarely changes; safe to reuse across logins on the device.
+const MASTER_CACHE_KEY = 'packitout_master_products_v1';
+const MASTER_CACHE_MAX_AGE_MS = 24 * 60 * 60 * 1000;
+
+const readMaster = () => {
+  try {
+    const raw = localStorage.getItem(MASTER_CACHE_KEY);
+    if (!raw) return null;
+    const { at, data } = JSON.parse(raw);
+    if (!at || Date.now() - at > MASTER_CACHE_MAX_AGE_MS) return null;
+    return Array.isArray(data) ? data : null;
+  } catch { return null; }
+};
 
 export default function useShopFeedData(user) {
-  
-  // ⚡ ZERO-FRAME CACHE: Read memory BEFORE React even draws the first pixel!
+
+  // ⚡ ZERO-FRAME CACHE: Read memory BEFORE React even draws the first pixel.
+  // Discards anything older than FEED_CACHE_MAX_AGE_MS so the user never sees
+  // month-old prices if the API has been down.
   const initialCache = (() => {
     if (!user || !user.primaryShop) return null;
     const shopId = typeof user.primaryShop === 'object' ? user.primaryShop._id : user.primaryShop;
     try {
-      const cached = localStorage.getItem(`packitout_feed_cache_${shopId}`);
-      return cached ? JSON.parse(cached) : null;
+      const raw = localStorage.getItem(`packitout_feed_cache_v2_${shopId}`);
+      if (!raw) return null;
+      const parsed = JSON.parse(raw);
+      if (parsed?.cachedAt && Date.now() - parsed.cachedAt > FEED_CACHE_MAX_AGE_MS) return null;
+      return parsed;
     } catch (e) { return null; }
   })();
 
@@ -35,20 +56,30 @@ export default function useShopFeedData(user) {
     }
 
     const shopId = typeof user.primaryShop === 'object' ? user.primaryShop._id : user.primaryShop;
-    const cacheKey = `packitout_feed_cache_${shopId}`;
+    const cacheKey = `packitout_feed_cache_v2_${shopId}`;
     let cancelled = false;
 
     const fetchJson = (url) => fetch(url).then(r => r.ok ? r.json() : null).catch(() => null);
 
     const fetchShopProducts = async () => {
-      // Fire all three independent requests in parallel. The old code chained
-      // them sequentially and the /orders call was a global table scan — now
-      // /orders/user/:userId returns just the recent items list for one user.
-      const [shopData, nearbyShopsData, userOrders] = await Promise.all([
+      // Skip the master-products network call if we already have a fresh
+      // copy in localStorage — the master catalog rarely changes and is
+      // shared across all shops on the device.
+      const cachedMaster = readMaster();
+      const masterPromise = cachedMaster
+        ? Promise.resolve(cachedMaster)
+        : fetchJson(`${BASE_URL}/master-products`);
+
+      const [shopData, nearbyShopsData, userOrders, masterProducts] = await Promise.all([
         fetchJson(`${BASE_URL}/shops/${shopId}/menu/lean?t=${Date.now()}`),
         user.pincode ? fetchJson(`${BASE_URL}/shops/all/${user.pincode}`) : Promise.resolve([]),
         user._id ? fetchJson(`${BASE_URL}/orders/user/${user._id}`) : Promise.resolve([]),
+        masterPromise,
       ]);
+
+      if (!cachedMaster && Array.isArray(masterProducts)) {
+        try { localStorage.setItem(MASTER_CACHE_KEY, JSON.stringify({ at: Date.now(), data: masterProducts })); } catch {}
+      }
 
       if (cancelled) return;
 
@@ -65,16 +96,28 @@ export default function useShopFeedData(user) {
         : [];
       setNearbyShops(newNearbyShops);
 
+      const masterMap = new Map();
+      if (Array.isArray(masterProducts)) {
+        masterProducts.forEach(mp => {
+          if (mp && mp._id) masterMap.set(String(mp._id), mp);
+        });
+      }
+
       const groupedMap = new Map();
       const availableItems = [];
 
       shopData.inventory?.filter(item => item && item.product).forEach(item => {
-        const mrp = Number(item.product.mrp || 0);
+        const pid = String(item.product._id || '');
+        const master = masterMap.get(pid) || {};
+        // Master fills gaps; shop's product wins where both define a value.
+        const productMerged = { ...master, ...item.product };
+
+        const mrp = Number(productMerged.mrp || 0);
         const sellingPrice = (item.sellingPrice !== undefined && item.sellingPrice !== null) ? Number(item.sellingPrice) : mrp;
         const isDiscounted = mrp > 0 && sellingPrice < mrp;
         const discountPercent = (isDiscounted && mrp > 0) ? Math.round(((mrp - sellingPrice) / mrp) * 100) : 0;
 
-        const formattedItem = { ...item.product, sellingPrice, mrp, inStock: item.inStock, isDiscounted, discountPercent };
+        const formattedItem = { ...productMerged, sellingPrice, mrp, inStock: item.inStock, isDiscounted, discountPercent };
 
         if (formattedItem.itemGroupId && formattedItem.itemGroupId.trim() !== "") {
           const groupId = String(formattedItem.itemGroupId).trim().toUpperCase();
@@ -129,6 +172,7 @@ export default function useShopFeedData(user) {
 
       try {
         localStorage.setItem(cacheKey, JSON.stringify({
+          cachedAt: Date.now(),
           items: availableItems,
           shopInfo: newShopInfo,
           nearbyShops: newNearbyShops,
