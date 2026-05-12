@@ -15,11 +15,14 @@ const AdminLogin = lazy(() => import('./AdminLogin.jsx'));
 const ShopDashboard = lazy(() => import('./ShopDashboard.jsx'));
 const ShopLogin = lazy(() => import('./ShopLogin.jsx'));
 const UserDashboard = lazy(() => import('./UserDashboard.jsx'));
+const OrdersPage = lazy(() => import('./OrdersPage.jsx'));
 const UserAuth = lazy(() => import('./UserAuth.jsx'));
 const Cart = lazy(() => import('./Cart.jsx'));
 const OrderSuccess = lazy(() => import('./OrderSuccess.jsx'));
 const Nearby = lazy(() => import('./Nearby.jsx'));
 const ShopDetail = lazy(() => import('./ShopDetail.jsx'));
+
+const BASE_URL = (import.meta.env.VITE_API_BASE || "https://darkslategrey-snail-415133.hostingersite.com");
 
 // Module-level so repeated calls (login/logout) don't kick off duplicate fetches.
 let onesignalPromise;
@@ -254,7 +257,7 @@ export default function App() {
 
   const handleSetPrimaryShop = async (shopId) => {
     try {
-      const response = await fetch(`https://darkslategrey-snail-415133.hostingersite.com/users/${loggedInUser._id}`, {
+      const response = await fetch(`${BASE_URL}/users/${loggedInUser._id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ primaryShop: shopId })
@@ -280,11 +283,11 @@ export default function App() {
     }
     if (currentView === "account") {
       if (!loggedInUser) return <UserAuth onLoginSuccess={handleUserLogin} />;
-      return <UserDashboard user={loggedInUser} onExit={() => window.location.hash = ""} onLogout={handleUserLogout} />;
+      return <UserDashboard user={loggedInUser} onExit={() => window.location.hash = ""} onLogout={handleUserLogout} onUserUpdate={handleUserUpdate} />;
     }
     if (currentView === "orders") {
       if (!loggedInUser) return <UserAuth onLoginSuccess={handleUserLogin} />;
-      return <UserDashboard user={loggedInUser} initialSection="orders" onExit={() => window.location.hash = ""} onLogout={handleUserLogout} />;
+      return <OrdersPage user={loggedInUser} onExit={() => window.location.hash = ""} onAddToCart={handleAddToCart} />;
     }
     if (currentView === "success") return <OrderSuccess />;
     if (currentView === "cart") {

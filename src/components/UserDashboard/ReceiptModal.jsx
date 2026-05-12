@@ -3,12 +3,13 @@ import ViewReviewModal from './ViewReviewModal';
 import OrderTimeline from './OrderTimeline';
 import { cdnImage } from '../../utils/cloudinaryUrl.js';
 
-export default function ReceiptModal({ selectedOrder, setSelectedOrder }) {
+export default function ReceiptModal({ selectedOrder, setSelectedOrder, onReorderItem }) {
   const [isViewReviewModalOpen, setIsViewReviewModalOpen] = useState(false);
 
   if (!selectedOrder) return null;
 
   const isDelivered = selectedOrder.status && (selectedOrder.status.includes('✅') || selectedOrder.status.includes('🎉'));
+  const isCancelled = (selectedOrder.status || '').toLowerCase().includes('cancel');
   const isAlreadyReviewed = selectedOrder.isReviewed === true;
 
   return (
@@ -98,14 +99,30 @@ export default function ReceiptModal({ selectedOrder, setSelectedOrder }) {
                         const price = item.price || item.sellingPrice || item.mrp || item.product?.sellingPrice || item.product?.mrp || 0;
                         return (
                           <tr key={i}>
-                            <td style={{ padding: '6px 0', color: '#0f172a', fontWeight: '700', verticalAlign: 'top', width: '60%' }}>
+                            <td style={{ padding: '6px 0', color: '#0f172a', fontWeight: '700', verticalAlign: 'top', width: '55%' }}>
                               {item.name}
                             </td>
                             <td style={{ padding: '6px 0', textAlign: 'center', color: '#475569', verticalAlign: 'top', fontWeight: '600' }}>
                               x{item.qty}
                             </td>
-                            <td style={{ padding: '6px 0', textAlign: 'right', fontWeight: '800', color: '#0f172a', verticalAlign: 'top' }}>
-                              ₹{price * item.qty}
+                            <td style={{ padding: '6px 0', textAlign: 'right', fontWeight: '800', color: '#0f172a', verticalAlign: 'top', whiteSpace: 'nowrap' }}>
+                              <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                                <span>₹{price * item.qty}</span>
+                                {onReorderItem && !isCancelled && (
+                                  <button
+                                    onClick={(e) => { e.stopPropagation(); onReorderItem(item); }}
+                                    aria-label={`Reorder ${item.name}`}
+                                    style={{
+                                      background: '#16a34a', color: '#fff', border: 'none',
+                                      width: '22px', height: '22px', borderRadius: '7px',
+                                      fontWeight: 900, fontSize: '0.85rem', cursor: 'pointer',
+                                      display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                                      boxShadow: '0 2px 6px rgba(22,163,74,0.32)',
+                                      lineHeight: 1,
+                                    }}
+                                  >+</button>
+                                )}
+                              </div>
                             </td>
                           </tr>
                         );

@@ -20,26 +20,26 @@ export default function ProfileHeader({
 
   return (
     <>
-      {/* ── PREMIUM DARK HEADER ─────────────────────────────────── */}
+      {/* ── CORAL HEADER (matches Upload Parchi) ──────────────── */}
       <div
         style={{
-          background: 'linear-gradient(165deg, #0b1220 0%, #0f172a 50%, #1e293b 100%)',
+          background: 'linear-gradient(135deg, #ff6b6b 0%, #ff4757 100%)',
           padding: '14px 18px 64px',
           color: '#fff',
           borderBottomLeftRadius: '28px',
           borderBottomRightRadius: '28px',
-          boxShadow: '0 14px 32px rgba(15, 23, 42, 0.35)',
+          boxShadow: '0 14px 32px rgba(255, 71, 87, 0.32)',
           position: 'relative',
           overflow: 'hidden',
         }}
       >
-        {/* Soft green glow accent */}
+        {/* Soft white glow accent */}
         <div
           aria-hidden="true"
           style={{
             position: 'absolute', top: '-80px', right: '-60px',
             width: '220px', height: '220px', borderRadius: '50%',
-            background: 'radial-gradient(circle, rgba(34,197,94,0.32), rgba(34,197,94,0) 70%)',
+            background: 'radial-gradient(circle, rgba(255,255,255,0.30), rgba(255,255,255,0) 70%)',
             pointerEvents: 'none',
           }}
         />
@@ -48,7 +48,7 @@ export default function ProfileHeader({
           style={{
             position: 'absolute', bottom: '20px', left: '-50px',
             width: '180px', height: '180px', borderRadius: '50%',
-            background: 'radial-gradient(circle, rgba(22,163,74,0.18), rgba(22,163,74,0) 70%)',
+            background: 'radial-gradient(circle, rgba(255,255,255,0.18), rgba(255,255,255,0) 70%)',
             pointerEvents: 'none',
           }}
         />
@@ -80,11 +80,11 @@ export default function ProfileHeader({
           <div
             style={{
               width: '66px', height: '66px', borderRadius: '50%',
-              background: 'linear-gradient(135deg, #16a34a, #15803d)',
+              background: '#fff',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
-              fontSize: '1.7rem', fontWeight: 800, color: '#fff', flexShrink: 0,
-              boxShadow: '0 0 0 3px rgba(34,197,94,0.25), 0 8px 20px rgba(22,163,74,0.35)',
-              border: '2px solid rgba(255,255,255,0.15)',
+              fontSize: '1.7rem', fontWeight: 900, color: '#ff4757', flexShrink: 0,
+              boxShadow: '0 0 0 3px rgba(255,255,255,0.25), 0 8px 20px rgba(0,0,0,0.18)',
+              border: '2px solid rgba(255,255,255,0.85)',
             }}
           >
             {initial}
@@ -93,15 +93,15 @@ export default function ProfileHeader({
             <h2 style={{ margin: 0, fontSize: '1.4rem', fontWeight: 800, letterSpacing: '-0.3px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
               {editForm.name || "Customer"}
             </h2>
-            <div style={{ marginTop: '6px', display: 'flex', flexWrap: 'wrap', gap: '6px 10px', fontSize: '0.8rem', color: '#cbd5e1', fontWeight: 600 }}>
+            <div style={{ marginTop: '6px', display: 'flex', flexWrap: 'wrap', gap: '6px 10px', fontSize: '0.8rem', color: 'rgba(255,255,255,0.88)', fontWeight: 600 }}>
               <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#22c55e" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                   <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z" />
                 </svg>
                 {user?.phone || '—'}
               </span>
               <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#22c55e" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                   <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
                   <circle cx="12" cy="10" r="3" />
                 </svg>

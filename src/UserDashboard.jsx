@@ -1,102 +1,51 @@
-import React, { useState, useEffect, useRef } from 'react';
-import OneSignal from 'react-onesignal';
-import { useToast, useConfirm } from './ui/DialogProvider.jsx';
+import React, { useState, useEffect } from 'react';
+import { useToast } from './ui/DialogProvider.jsx';
 
 import ProfileHeader from './components/UserDashboard/ProfileHeader';
-import OrdersList from './components/UserDashboard/OrdersList';
 import AddressBook from './components/UserDashboard/AddressBook';
-import ReceiptModal from './components/UserDashboard/ReceiptModal';
-import OrderReviewModal from './components/UserDashboard/OrderReviewModal'; 
 
-export default function UserDashboard({ user, onExit, onLogout, initialSection }) {
+const BASE_URL = (import.meta.env.VITE_API_BASE || "https://darkslategrey-snail-415133.hostingersite.com");
+
+export default function UserDashboard({ user, onExit, onLogout, onUserUpdate }) {
   const triggerToast = useToast();
-  const askConfirm = useConfirm();
-  // --- STATE ---
-  const [orders, setOrders] = useState([]);
-  const [pendingParchis, setPendingParchis] = useState([]); 
-  const [loading, setLoading] = useState(true);
-  const [selectedOrder, setSelectedOrder] = useState(null); 
-  const [orderToReview, setOrderToReview] = useState(null);
-  const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
-  const [coinBalance, setCoinBalance] = useState(user?.coins || 0);
-  const [myReferralCode, setMyReferralCode] = useState(user?.referralCode || ""); 
+
+  // Derive directly from the user prop so a successful save (or any future
+  // refresh of the user object via onUserUpdate) updates the UI immediately.
+  const coinBalance = user?.coins || 0;
+  const myReferralCode = user?.referralCode || "";
+
   const [primaryShop, setPrimaryShop] = useState(null);
   const [isEditingProfile, setIsEditingProfile] = useState(false);
-  const [editForm, setEditForm] = useState({ name: user?.name || "", pincode: user?.pincode || "", primaryShop: "" });
+  const [editForm, setEditForm] = useState({
+    name: user?.name || "",
+    pincode: user?.pincode || "",
+    primaryShop: typeof user?.primaryShop === 'object' ? user.primaryShop?._id : (user?.primaryShop || ""),
+  });
   const [nearbyShops, setNearbyShops] = useState([]);
-  const [addresses, setAddresses] = useState([{ id: 1, label: "🏠 Home", detail: `Block A, Near Main Gate, ${user?.pincode}` }]);
+  const [addresses] = useState([{ id: 1, label: "🏠 Home", detail: `Block A, Near Main Gate, ${user?.pincode}` }]);
   const [showAddressForm, setShowAddressForm] = useState(false);
   const [newAddress, setNewAddress] = useState("");
 
-  const BASE_URL = "https://darkslategrey-snail-415133.hostingersite.com";
-
-  const ordersRef = useRef(null);
+  // Fetch shops in this user's pincode so the "Primary shop" dropdown has
+  // real options. Without this the select is permanently empty.
   useEffect(() => {
-    if (initialSection !== 'orders') return;
-    const id = window.requestAnimationFrame(() => {
-      ordersRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    });
-    return () => window.cancelAnimationFrame(id);
-  }, [initialSection]);
+    if (!user?.pincode) return;
+    let cancelled = false;
+    fetch(`${BASE_URL}/shops/all/${user.pincode}`)
+      .then(res => res.ok ? res.json() : [])
+      .then(data => { if (!cancelled) setNearbyShops(Array.isArray(data) ? data : []); })
+      .catch(() => {});
+    return () => { cancelled = true; };
+  }, [user?.pincode]);
 
-  // --- DATA FETCHING ---
-  const fetchOrders = () => {
-    fetch(`${BASE_URL}/orders`)
-      .then(res => res.json())
-      .then(data => {
-        const myOrders = data
-          .filter(order => order.userId?._id === user._id || order.userId === user._id)
-          .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-        setOrders(myOrders);
-        setLoading(false);
-      })
-      .catch(() => setLoading(false));
-  };
-
+  // Resolve the user's current primary shop into a friendly object for the
+  // info row in ProfileHeader.
   useEffect(() => {
-    fetchOrders();
-    // OneSignal & Profile fetch logic remains the same...
-    const initOneSignal = async () => {
-      try {
-        await OneSignal.init({ appId: "1da2e78d-0874-4965-a895-42c9237ee92b", allowLocalhostAsSecureOrigin: true });
-        if (user?._id) OneSignal.login(user._id);
-      } catch (e) {}
-    };
-    initOneSignal();
-  }, [user._id]);
-
-  // --- LOGIC FUNCTIONS ---
-
-  // ❌ CUSTOM CANCEL FLOW
-  const initiateCancel = async (orderId) => {
-    const ok = await askConfirm({
-      title: 'Cancel order?',
-      message: 'Are you sure? This action cannot be undone.',
-      confirmText: 'Cancel order',
-      cancelText: 'Keep order',
-      danger: true,
-    });
-    if (!ok) return;
-    executeCancel(orderId);
-  };
-
-  const executeCancel = async (orderId) => {
-    try {
-      const res = await fetch(`${BASE_URL}/orders/${orderId}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status: "Cancelled ❌" })
-      });
-      if (res.ok) {
-        triggerToast("Order cancelled successfully!");
-        fetchOrders();
-      } else {
-        triggerToast("Could not cancel. Order is in process.", "error");
-      }
-    } catch (err) {
-      triggerToast("Network error. Try again.", "error");
-    }
-  };
+    const pid = typeof user?.primaryShop === 'object' ? user.primaryShop?._id : user?.primaryShop;
+    if (!pid || nearbyShops.length === 0) return;
+    const match = nearbyShops.find(s => s._id === pid);
+    if (match) setPrimaryShop(match);
+  }, [user?.primaryShop, nearbyShops]);
 
   const handleSaveProfile = async (e) => {
     e.preventDefault();
@@ -108,20 +57,21 @@ export default function UserDashboard({ user, onExit, onLogout, initialSection }
       });
       if (res.ok) {
         const updated = await res.json();
-        setPrimaryShop(updated.primaryShop);
+        // Push the new user up to App so the header/orders/etc. all refresh.
+        if (onUserUpdate) onUserUpdate(updated);
+        setPrimaryShop(updated.primaryShop && typeof updated.primaryShop === 'object' ? updated.primaryShop : nearbyShops.find(s => s._id === updated.primaryShop) || null);
         setIsEditingProfile(false);
         triggerToast("Profile updated!");
+      } else {
+        triggerToast("Failed to update profile", "error");
       }
     } catch (err) { triggerToast("Failed to update profile", "error"); }
   };
 
-  const activeOrders = orders.filter(o => o.status !== "Delivered ✅" && o.status !== "Done 🎉" && !o.status.includes("Cancelled"));
-  const pastOrders = orders.filter(o => o.status === "Delivered ✅" || o.status === "Done 🎉" || o.status.includes("Cancelled"));
-
   return (
-    <div style={{ backgroundColor: '#f8fafc', minHeight: '100vh', fontFamily: 'system-ui, -apple-system, sans-serif', paddingBottom: '60px' }}>
-      
-      <ProfileHeader 
+    <div style={{ backgroundColor: '#f8fafc', minHeight: '100vh', fontFamily: 'system-ui, -apple-system, sans-serif', paddingBottom: '90px' }}>
+
+      <ProfileHeader
         user={user} onExit={onExit} coinBalance={coinBalance} myReferralCode={myReferralCode}
         isEditingProfile={isEditingProfile} setIsEditingProfile={setIsEditingProfile}
         editForm={editForm} setEditForm={setEditForm} handleSaveProfile={handleSaveProfile}
@@ -129,19 +79,31 @@ export default function UserDashboard({ user, onExit, onLogout, initialSection }
       />
 
       <div style={{ padding: '0 20px 20px 20px', maxWidth: '600px', margin: '0 auto' }}>
-        <div ref={ordersRef} style={{ scrollMarginTop: '12px' }}>
-          <OrdersList
-            activeOrders={activeOrders}
-            pastOrders={pastOrders}
-            pendingParchis={pendingParchis}
-            loading={loading}
-            setSelectedOrder={setSelectedOrder}
-            onOpenReview={(order) => { setOrderToReview(order); setIsReviewModalOpen(true); }}
-            onCancelOrder={initiateCancel}
-          />
-        </div>
 
-        <AddressBook 
+        {/* Quick link to Orders page */}
+        <button
+          onClick={() => window.location.hash = "#orders"}
+          style={{
+            width: '100%', marginBottom: '15px',
+            padding: '16px',
+            background: '#fff', border: '1px solid #e2e8f0', borderRadius: '16px',
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+            cursor: 'pointer', boxShadow: '0 4px 14px rgba(15,23,42,0.04)',
+          }}
+        >
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '12px' }}>
+            <span style={{
+              width: '38px', height: '38px', borderRadius: '12px',
+              background: 'linear-gradient(135deg, #f0fdf4, #dcfce7)',
+              display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+              fontSize: '1.1rem',
+            }}>🧾</span>
+            <span style={{ fontWeight: 800, color: '#0f172a', fontSize: '0.95rem' }}>My orders</span>
+          </span>
+          <span style={{ color: '#94a3b8', fontSize: '1.2rem' }}>›</span>
+        </button>
+
+        <AddressBook
           addresses={addresses} showAddressForm={showAddressForm} setShowAddressForm={setShowAddressForm}
           newAddress={newAddress} setNewAddress={setNewAddress} handleSaveAddress={(e) => { e.preventDefault(); triggerToast("Address Saved!"); setShowAddressForm(false); }}
         />
@@ -150,10 +112,6 @@ export default function UserDashboard({ user, onExit, onLogout, initialSection }
           Log Out
         </button>
       </div>
-
-      {/* 🧾 MODALS */}
-      <ReceiptModal selectedOrder={selectedOrder} setSelectedOrder={setSelectedOrder} />
-      <OrderReviewModal isOpen={isReviewModalOpen} onClose={() => setIsReviewModalOpen(false)} order={orderToReview} onSubmitReviews={() => triggerToast("Feedback received!")} />
     </div>
   );
 }
