@@ -104,6 +104,46 @@ export default function ProductListView({
 
   const hasSubcategories = subcategories.length > 1;
 
+  // 🚀 Precompute the "best thumbnail" for each sidebar entry ONCE per items
+  // change. Previously this ran inline on every render — O(subs × items)
+  // each time, which made opening a category feel laggy.
+  const subThumbnails = useMemo(() => {
+    const map = new Map();
+    if (subcategories.length === 0) return map;
+
+    const buckets = new Map();
+    buckets.set("All", flattenedItems);
+    flattenedItems.forEach(item => {
+      const key = String(item[groupingKey] || "").trim();
+      if (!key) return;
+      if (!buckets.has(key)) buckets.set(key, []);
+      buckets.get(key).push(item);
+    });
+
+    subcategories.forEach(sub => {
+      const bucket = buckets.get(sub) || [];
+      let best = null;
+      let bestDiscount = -1;
+      let bestMrp = -1;
+      // Single linear pass — pick the in-stock item with image that has the
+      // largest discount, breaking ties on MRP. No .sort() needed.
+      for (const item of bucket) {
+        if (!item.image || !item.inStock) continue;
+        const d = item.discountPercent || 0;
+        const m = item.mrp || 0;
+        if (d > bestDiscount || (d === bestDiscount && m > bestMrp)) {
+          best = item;
+          bestDiscount = d;
+          bestMrp = m;
+        }
+      }
+      if (!best) best = bucket[0];
+      map.set(sub, best);
+    });
+
+    return map;
+  }, [flattenedItems, subcategories, groupingKey]);
+
   // 🎯 FILTER LOGIC
   const filteredItems = useMemo(() => {
     if (selectedSub === "All") return flattenedItems;
@@ -181,31 +221,15 @@ export default function ProductListView({
         {/* ⬅️ THE LEFT SIDEBAR */}
         {hasSubcategories && (
           <div className="sidebar-scroll" style={{ width: '85px', backgroundColor: '#f8fafc', borderRight: '1px solid #e2e8f0', overflowY: 'auto', flexShrink: 0 }}>
-            {subcategories.map((sub, index) => {
+            {subcategories.map((sub) => {
               const isActive = selectedSub === sub;
-              
-              const getBestThumbnail = () => {
-                let itemsInSub = sub === "All" ? flattenedItems : flattenedItems.filter(item => String(item[groupingKey] || "").trim() === sub);
-                let premiumItems = itemsInSub.filter(item => item.image && item.inStock);
-                if (premiumItems.length > 0) {
-                  premiumItems.sort((a, b) => {
-                    const discountA = a.discountPercent || 0;
-                    const discountB = b.discountPercent || 0;
-                    if (discountB !== discountA) return discountB - discountA; 
-                    return (b.mrp || 0) - (a.mrp || 0);
-                  });
-                  return premiumItems[0];
-                }
-                return itemsInSub[0];
-              };
-
-              const bestItemInSub = getBestThumbnail();
+              const bestItemInSub = subThumbnails.get(sub);
               const thumbImage = bestItemInSub?.image;
               const thumbEmoji = bestItemInSub?.emoji || "🛒";
 
               return (
-                <div 
-                  key={index}
+                <div
+                  key={sub}
                   onClick={() => {
                     setSelectedSub(sub);
                     const grid = document.getElementById('product-grid-scroll');
