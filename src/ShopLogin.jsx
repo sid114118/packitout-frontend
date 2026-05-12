@@ -1,12 +1,14 @@
 import React, { useState } from 'react';
 
+const BASE_URL = (import.meta.env.VITE_API_BASE || "https://darkslategrey-snail-415133.hostingersite.com");
+
 export default function ShopLogin({ onLogin }) {
   const [form, setForm] = useState({ phone: "", password: "" });
   const [error, setError] = useState("");
 
   const handleLogin = async (e) => {
     e.preventDefault();
-    const res = await fetch("https://darkslategrey-snail-415133.hostingersite.com/shop-login", {
+    const res = await fetch(`${BASE_URL}/shop-login`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(form)

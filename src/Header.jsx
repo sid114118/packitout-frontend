@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { useToast } from './ui/DialogProvider.jsx';
 
+const BASE_URL = (import.meta.env.VITE_API_BASE || "https://darkslategrey-snail-415133.hostingersite.com");
+
 export default function Header({ user, onUserUpdate }) {
   const toast = useToast();
   const [isChanging, setIsChanging] = useState(false);
@@ -20,7 +22,7 @@ export default function Header({ user, onUserUpdate }) {
     setHasSearched(false); 
     
     try {
-      const res = await fetch(`https://darkslategrey-snail-415133.hostingersite.com/shops/all/${pincode}`);
+      const res = await fetch(`${BASE_URL}/shops/all/${pincode}`);
       const data = await res.json();
       setShops(data);
       if (data.length > 0) setSelectedShopId(data[0]._id);
@@ -41,15 +43,16 @@ export default function Header({ user, onUserUpdate }) {
     if (!selectedShopId) return;
 
     try {
-      const res = await fetch(`https://darkslategrey-snail-415133.hostingersite.com/users/${user._id}`, {
+      const res = await fetch(`${BASE_URL}/users/${user._id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ pincode: pincode, primaryShop: selectedShopId })
       });
       const updatedUser = await res.json();
 
+      // App.jsx always passes onUserUpdate; the bare localStorage fallback
+      // would desync React state, so we no-op in that case.
       if (onUserUpdate) onUserUpdate(updatedUser, { clearCart: true });
-      else localStorage.setItem("packitout_user", JSON.stringify(updatedUser));
 
       setActiveShopName(updatedUser.primaryShop?.name || "");
       setIsChanging(false);

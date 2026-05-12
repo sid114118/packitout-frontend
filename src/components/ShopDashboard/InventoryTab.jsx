@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import { useToast, useConfirm, usePrompt } from '../../ui/DialogProvider.jsx';
 import { cdnImage } from '../../utils/cloudinaryUrl.js';
 
+const BASE_URL = (import.meta.env.VITE_API_BASE || "https://darkslategrey-snail-415133.hostingersite.com");
+
 export default function InventoryTab({ shopData, masterCatalog, handleInventoryUpdate, onInventoryRefresh }) {
   const toast = useToast();
   const confirmDialog = useConfirm();
@@ -74,7 +76,7 @@ export default function InventoryTab({ shopData, masterCatalog, handleInventoryU
 
     setIsImporting(true);
     try {
-      const response = await fetch(`https://darkslategrey-snail-415133.hostingersite.com/shops/${shopId}/bulk-import`, {
+      const response = await fetch(`${BASE_URL}/shops/${shopId}/bulk-import`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ discountPercent: discountPercent })

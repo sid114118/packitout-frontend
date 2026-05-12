@@ -8,7 +8,7 @@ export default function CustomerDashboard({ user, onExit }) {
   const [cart, setCart] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  const BASE_URL = "https://darkslategrey-snail-415133.hostingersite.com";
+  const BASE_URL = (import.meta.env.VITE_API_BASE || "https://darkslategrey-snail-415133.hostingersite.com");
 
   useEffect(() => {
     if (user?.primaryShop) {

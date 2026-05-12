@@ -24,9 +24,14 @@ export default function SearchPage({
   const BOTTOM_NAV_HEIGHT = '56px';
 
   useEffect(() => {
-    const savedSearches = localStorage.getItem('packitout_recent_searches');
-    if (savedSearches) {
-      setRecentSearches(JSON.parse(savedSearches));
+    try {
+      const savedSearches = localStorage.getItem('packitout_recent_searches');
+      if (!savedSearches) return;
+      const parsed = JSON.parse(savedSearches);
+      if (Array.isArray(parsed)) setRecentSearches(parsed);
+    } catch {
+      // Corrupted JSON — drop the bad entry so we don't crash on every mount.
+      try { localStorage.removeItem('packitout_recent_searches'); } catch {}
     }
   }, []);
 
@@ -47,7 +52,7 @@ export default function SearchPage({
       setRecentSearches(prev => {
         const term = debouncedQuery.trim();
         const updated = [term, ...prev.filter(q => q.toLowerCase() !== term.toLowerCase())].slice(0, 5);
-        localStorage.setItem('packitout_recent_searches', JSON.stringify(updated));
+        try { localStorage.setItem('packitout_recent_searches', JSON.stringify(updated)); } catch {}
         return updated;
       });
     }

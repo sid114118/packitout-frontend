@@ -11,7 +11,7 @@ export default function ParchiManager() {
   const [searchQuery, setSearchQuery] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
-  const BASE_URL = "https://darkslategrey-snail-415133.hostingersite.com";
+  const BASE_URL = (import.meta.env.VITE_API_BASE || "https://darkslategrey-snail-415133.hostingersite.com");
 
   // --- 1. FETCH ALL PENDING PARCHIS ---
   const fetchAllParchis = async () => {

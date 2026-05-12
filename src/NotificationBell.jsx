@@ -5,7 +5,7 @@ export default function NotificationBell({ ownerType, ownerId }) {
   const [showDropdown, setShowDropdown] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
 
-  const BASE_URL = "https://darkslategrey-snail-415133.hostingersite.com";
+  const BASE_URL = (import.meta.env.VITE_API_BASE || "https://darkslategrey-snail-415133.hostingersite.com");
 
   useEffect(() => {
     if (!ownerId) return;

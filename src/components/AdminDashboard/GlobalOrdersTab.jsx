@@ -4,7 +4,7 @@ import { useToast } from '../../ui/DialogProvider.jsx';
 export default function GlobalOrdersTab({ orders }) {
   const toast = useToast();
   const [pingingOrderId, setPingingOrderId] = useState(null);
-  const BASE_URL = "https://darkslategrey-snail-415133.hostingersite.com";
+  const BASE_URL = (import.meta.env.VITE_API_BASE || "https://darkslategrey-snail-415133.hostingersite.com");
 
   // --- 🔔 THE PING FUNCTION ---
   const handlePingShop = async (shopId, orderId) => {

@@ -42,11 +42,6 @@ export default function OrderTimeline({ order }) {
   const isCancelled = currentStage === "cancelled";
   const currentIdx = isCancelled ? -1 : stageIndex(currentStage);
 
-  // ETA: 15 minutes from order placement (matches Cart.jsx "Ready in 10-15 mins" copy).
-  const placedAt = order.createdAt ? new Date(order.createdAt) : null;
-  const etaAt = placedAt ? new Date(placedAt.getTime() + 15 * 60 * 1000) : null;
-  const showEta = !isCancelled && currentStage !== "delivered" && etaAt;
-
   if (isCancelled) {
     const cancelTs = timestampForStage(order.statusHistory, "cancelled", null);
     return (
@@ -69,20 +64,12 @@ export default function OrderTimeline({ order }) {
   return (
     <div style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: '14px', padding: '16px', marginBottom: '18px' }}>
 
-      {/* Header: current stage + ETA */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '14px' }}>
-        <div>
-          <div style={{ fontSize: '0.7rem', color: '#94a3b8', fontWeight: '800', letterSpacing: '0.5px' }}>STATUS</div>
-          <div style={{ color: '#0f172a', fontSize: '1.05rem', fontWeight: '900', marginTop: '2px' }}>
-            {STAGES[currentIdx]?.label || "Order Placed"}
-          </div>
+      {/* Header: current stage */}
+      <div style={{ marginBottom: '14px' }}>
+        <div style={{ fontSize: '0.7rem', color: '#94a3b8', fontWeight: '800', letterSpacing: '0.5px' }}>STATUS</div>
+        <div style={{ color: '#0f172a', fontSize: '1.05rem', fontWeight: '900', marginTop: '2px' }}>
+          {STAGES[currentIdx]?.label || "Order Placed"}
         </div>
-        {showEta && (
-          <div style={{ textAlign: 'right' }}>
-            <div style={{ fontSize: '0.7rem', color: '#94a3b8', fontWeight: '800', letterSpacing: '0.5px' }}>EXPECTED BY</div>
-            <div style={{ color: '#16a34a', fontSize: '1.05rem', fontWeight: '900', marginTop: '2px' }}>{fmtTime(etaAt)}</div>
-          </div>
-        )}
       </div>
 
       {/* Vertical timeline */}

@@ -8,7 +8,7 @@ export default function ProductsTab({ products, form, setForm, handleProductSubm
   // 🌟 BULK UPLOAD STATES
   const [file, setFile] = useState(null);
   const [uploading, setUploading] = useState(false);
-  const BASE_URL = "https://darkslategrey-snail-415133.hostingersite.com";
+  const BASE_URL = (import.meta.env.VITE_API_BASE || "https://darkslategrey-snail-415133.hostingersite.com");
 
   // Helper function to handle the multi-select dropdowns for related/substitute products
   const handleMultiSelect = (e, fieldName) => {

@@ -3,6 +3,8 @@ import Payment from './Payment.jsx';
 import useScrollToTop from './useScrollToTop';
 import { cdnImage } from './utils/cloudinaryUrl.js';
 
+const BASE_URL = (import.meta.env.VITE_API_BASE || "https://darkslategrey-snail-415133.hostingersite.com");
+
 // 🚀 FIX: The "export default" is right here so App.jsx can read it!
 export default function Cart({ cart, setCart, user, onBack, onCheckoutSuccess }) {
   useScrollToTop(); 
@@ -62,7 +64,7 @@ export default function Cart({ cart, setCart, user, onBack, onCheckoutSuccess })
   useEffect(() => {
     if (user?.pincode) {
       setLoadingShops(true);
-      fetch(`https://darkslategrey-snail-415133.hostingersite.com/shops/all/${user.pincode}`)
+      fetch(`${BASE_URL}/shops/all/${user.pincode}`)
         .then(res => res.json())
         .then(data => {
           if (data.length > 0) {
@@ -133,7 +135,6 @@ export default function Cart({ cart, setCart, user, onBack, onCheckoutSuccess })
                   {targetShop.name}
                   <span style={{ backgroundColor: '#fef08a', color: '#854d0e', fontSize: '0.65rem', padding: '3px 8px', borderRadius: '6px', fontWeight: '800' }}>⭐ Primary</span>
                 </div>
-                <div style={{ fontSize: '0.8rem', color: '#16a34a', marginTop: '4px', fontWeight: '700' }}>Ready in 10-15 mins</div>
               </div>
               <div style={{ backgroundColor: '#16a34a', color: 'white', width: '28px', height: '28px', display: 'flex', justifyContent: 'center', alignItems: 'center', borderRadius: '8px', fontSize: '1.1rem', fontWeight: '900', boxShadow: '0 4px 10px rgba(22, 163, 74, 0.2)' }}>
                 ✓

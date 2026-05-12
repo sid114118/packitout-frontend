@@ -21,7 +21,7 @@ export default function ShopDashboard({ user, onExit }) {
   const [selectedParchi, setSelectedParchi] = useState(null);
   const [parchiBill, setParchiBill] = useState([]);
 
-  const BASE_URL = "https://darkslategrey-snail-415133.hostingersite.com";
+  const BASE_URL = (import.meta.env.VITE_API_BASE || "https://darkslategrey-snail-415133.hostingersite.com");
 
   // --- DATA FETCHING ---
   useEffect(() => {

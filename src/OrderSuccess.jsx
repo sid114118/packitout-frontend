@@ -47,7 +47,7 @@ export default function OrderSuccess() {
         {/* 📦 Floating Action Card */}
         <div style={{ backgroundColor: 'white', color: '#111827', borderRadius: '20px', padding: '24px', width: '100%', maxWidth: '340px', boxShadow: '0 20px 40px rgba(0,0,0,0.2)' }}>
             <div style={{ fontSize: '3.5rem', marginBottom: '10px' }}>🛵</div>
-            <h3 style={{ margin: '0 0 8px 0', fontWeight: '900', fontSize: '1.3rem' }}>Ready in 10-15 mins</h3>
+            <h3 style={{ margin: '0 0 8px 0', fontWeight: '900', fontSize: '1.3rem' }}>Order received</h3>
             <p style={{ margin: '0 0 24px 0', fontSize: '0.9rem', color: '#64748b', fontWeight: '600' }}>You can track your order status in your profile dashboard.</p>
             
             <button 

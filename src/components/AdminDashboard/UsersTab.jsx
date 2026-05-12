@@ -6,7 +6,7 @@ export default function UsersTab({ users, onUsersChanged }) {
   const askForValue = usePrompt();
   // 🛡️ STATE MOVED INSIDE: Now it manages its own form and will never crash!
   const [userForm, setUserForm] = useState({ name: "", phone: "", pincode: "", password: "" });
-  const BASE_URL = "https://darkslategrey-snail-415133.hostingersite.com";
+  const BASE_URL = (import.meta.env.VITE_API_BASE || "https://darkslategrey-snail-415133.hostingersite.com");
 
   // --- 🚀 ADD NEW USER ---
   const handleAddUser = async (e) => {

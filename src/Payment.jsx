@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import useScrollToTop from './useScrollToTop';
 
-const API_BASE = "https://darkslategrey-snail-415133.hostingersite.com";
+const API_BASE = (import.meta.env.VITE_API_BASE || "https://darkslategrey-snail-415133.hostingersite.com");
 const RAZORPAY_SCRIPT_SRC = "https://checkout.razorpay.com/v1/checkout.js";
 
 // Inject the Razorpay checkout script on demand. Returns a promise that resolves

@@ -1,24 +1,32 @@
 import React, { useState, useEffect } from 'react';
 import { cdnImage } from './utils/cloudinaryUrl.js';
 
+const BASE_URL = (import.meta.env.VITE_API_BASE || "https://darkslategrey-snail-415133.hostingersite.com");
+
 export default function Nearby({ user, onSelectShop }) {
   const [shops, setShops] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (user?.pincode) {
-      fetch(`https://darkslategrey-snail-415133.hostingersite.com/shops/all/${user.pincode}`)
-        .then(res => res.json())
-        .then(data => {
-          setShops(data);
-          setLoading(true);
-          setLoading(false);
-        })
-        .catch(() => setLoading(false));
+    if (!user?.pincode) {
+      setLoading(false);
+      return;
     }
+    let cancelled = false;
+    setLoading(true);
+    fetch(`${BASE_URL}/shops/all/${user.pincode}`)
+      .then(res => res.json())
+      .then(data => {
+        if (cancelled) return;
+        setShops(Array.isArray(data) ? data : []);
+        setLoading(false);
+      })
+      .catch(() => { if (!cancelled) setLoading(false); });
+    return () => { cancelled = true; };
   }, [user]);
 
   if (loading) return <div style={{ padding: '20px', textAlign: 'center' }}>Searching for local shops...</div>;
+  if (!user?.pincode) return <div style={{ padding: '24px', textAlign: 'center', color: '#64748b', fontWeight: 600 }}>Add your pincode in Profile to see nearby shops.</div>;
 
   return (
     <div style={{ padding: '15px', backgroundColor: '#f3f4f6', minHeight: '100vh' }}>
@@ -66,7 +74,7 @@ export default function Nearby({ user, onSelectShop }) {
                 {shop.name}
               </div>
               <div style={{ fontSize: '0.7rem', color: '#64748b', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                ⭐ {shop.rating?.toFixed(1) || "5.0"} • 10-15 mins
+                ⭐ {shop.rating?.toFixed(1) || "5.0"}
               </div>
             </div>
           </div>
