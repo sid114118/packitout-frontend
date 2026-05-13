@@ -76,39 +76,63 @@ export default function OrdersTab({ orders, updateOrderStatus }) {
         </div>
 
         {/* 🚀 EXPLICIT ACTION BUTTONS (Only for Active Orders) */}
-        {isActive && (
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', borderTop: '1px dashed #e2e8f0', paddingTop: '15px' }}>
-            
-            <button 
-              onClick={() => updateOrderStatus(order._id, 'Packing 📦')}
-              style={{ flex: '1 1 45%', padding: '10px', backgroundColor: '#f1f5f9', color: '#334155', border: '1px solid #cbd5e1', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer', fontSize: '0.9rem' }}
-            >
-              📦 Packing
-            </button>
-            
-            <button 
-              onClick={() => updateOrderStatus(order._id, 'Ready to Collect 🛍️')}
-              style={{ flex: '1 1 45%', padding: '10px', backgroundColor: '#e0f2fe', color: '#0369a1', border: '1px solid #bae6fd', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer', fontSize: '0.9rem' }}
-            >
-              🛍️ Ready
-            </button>
-            
-            <button 
-              onClick={() => updateOrderStatus(order._id, 'Delivered ✅')}
-              style={{ flex: '1 1 100%', padding: '12px', backgroundColor: '#0c831f', color: 'white', border: 'none', borderRadius: '8px', fontWeight: '800', cursor: 'pointer', fontSize: '1rem', boxShadow: '0 4px 10px rgba(12, 131, 31, 0.2)', marginTop: '4px' }}
-            >
-              ✅ Mark as Delivered
-            </button>
+        {isActive && (() => {
+          const isPending = order.status === 'Pending';
+          return (
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', borderTop: '1px dashed #e2e8f0', paddingTop: '15px' }}>
 
-            <button 
-              onClick={() => updateOrderStatus(order._id, 'Cancelled ❌')}
-              style={{ flex: '1 1 100%', padding: '10px', backgroundColor: 'transparent', color: '#ef4444', border: '1px dashed #fca5a5', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer', fontSize: '0.9rem', marginTop: '4px' }}
-            >
-              ❌ Cancel Order
-            </button>
+              {/* Pending orders only show Accept + Cancel until the shop confirms.
+                  Once accepted, the rest of the workflow appears. */}
+              {isPending ? (
+                <>
+                  <button
+                    onClick={() => updateOrderStatus(order._id, 'Accepted 👨‍🍳')}
+                    style={{ flex: '1 1 100%', padding: '14px', backgroundColor: '#16a34a', color: 'white', border: 'none', borderRadius: '10px', fontWeight: '900', cursor: 'pointer', fontSize: '1.05rem', boxShadow: '0 6px 16px rgba(22, 163, 74, 0.32)' }}
+                  >
+                    👨‍🍳 Accept Order
+                  </button>
 
-          </div>
-        )}
+                  <button
+                    onClick={() => updateOrderStatus(order._id, 'Cancelled ❌')}
+                    style={{ flex: '1 1 100%', padding: '10px', backgroundColor: 'transparent', color: '#ef4444', border: '1px dashed #fca5a5', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer', fontSize: '0.9rem', marginTop: '4px' }}
+                  >
+                    ❌ Cancel Order
+                  </button>
+                </>
+              ) : (
+                <>
+                  <button
+                    onClick={() => updateOrderStatus(order._id, 'Packing 📦')}
+                    style={{ flex: '1 1 45%', padding: '10px', backgroundColor: '#f1f5f9', color: '#334155', border: '1px solid #cbd5e1', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer', fontSize: '0.9rem' }}
+                  >
+                    📦 Packing
+                  </button>
+
+                  <button
+                    onClick={() => updateOrderStatus(order._id, 'Ready to Collect 🛍️')}
+                    style={{ flex: '1 1 45%', padding: '10px', backgroundColor: '#e0f2fe', color: '#0369a1', border: '1px solid #bae6fd', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer', fontSize: '0.9rem' }}
+                  >
+                    🛍️ Ready
+                  </button>
+
+                  <button
+                    onClick={() => updateOrderStatus(order._id, 'Delivered ✅')}
+                    style={{ flex: '1 1 100%', padding: '12px', backgroundColor: '#0c831f', color: 'white', border: 'none', borderRadius: '8px', fontWeight: '800', cursor: 'pointer', fontSize: '1rem', boxShadow: '0 4px 10px rgba(12, 131, 31, 0.2)', marginTop: '4px' }}
+                  >
+                    ✅ Mark as Delivered
+                  </button>
+
+                  <button
+                    onClick={() => updateOrderStatus(order._id, 'Cancelled ❌')}
+                    style={{ flex: '1 1 100%', padding: '10px', backgroundColor: 'transparent', color: '#ef4444', border: '1px dashed #fca5a5', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer', fontSize: '0.9rem', marginTop: '4px' }}
+                  >
+                    ❌ Cancel Order
+                  </button>
+                </>
+              )}
+            </div>
+          );
+        })()}
 
       </div>
     );

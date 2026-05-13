@@ -36,6 +36,12 @@ export default function Payment({ user, cart, targetShop, finalBill, useCoins, c
       name: item.name,
       qty: Number(item.qty || 1),
       price: Number(item.sellingPrice !== undefined ? item.sellingPrice : (item.mrp || 0)),
+      // Display metadata — lets the Orders page show item images / qty labels
+      // instead of generic placeholders.
+      image: item.image || "",
+      qnty: item.qnty || "",
+      brand: item.brand || "",
+      emoji: item.emoji || "🛒",
     }));
 
   const placeCodOrder = async () => {
