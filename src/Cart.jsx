@@ -142,7 +142,13 @@ export default function Cart({ cart, setCart, user, onBack, onCheckoutSuccess })
             </div>
           ) : (
             <div style={{ padding: '16px', background: '#fef2f2', color: '#b91c1c', borderRadius: '14px', fontSize: '0.9rem', fontWeight: '700', border: '1px solid #fecaca' }}>
-              ❌ No shops found in your pincode. Please update your profile.
+              <div style={{ marginBottom: '10px' }}>❌ No shops found in your pincode. Please update your profile.</div>
+              <button
+                onClick={() => { window.location.hash = "#account"; }}
+                style={{ width: '100%', padding: '12px', backgroundColor: '#16a34a', color: '#fff', border: 'none', borderRadius: '10px', fontWeight: '800', fontSize: '0.9rem', cursor: 'pointer', boxShadow: '0 4px 10px rgba(22, 163, 74, 0.2)' }}
+              >
+                Update Pincode
+              </button>
             </div>
           )}
         </div>
@@ -199,6 +205,9 @@ export default function Cart({ cart, setCart, user, onBack, onCheckoutSuccess })
               <strong style={{ color: '#854d0e', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.95rem', fontWeight: '800' }}>🪙 PackIt Coins</strong>
               <div style={{ fontSize: '0.75rem', color: '#ca8a04', marginTop: '4px', fontWeight: '700' }}>
                 Balance: {Math.round(user.coins)} • Max usable: ₹{maxUsableDiscount.toFixed(2)}
+              </div>
+              <div style={{ fontSize: '0.68rem', color: '#a16207', marginTop: '4px', fontWeight: '600' }}>
+                10 coins = ₹1 • Up to 10% off this order
               </div>
             </div>
             <label style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer' }}>

@@ -2,6 +2,7 @@ import React from 'react';
 
 const ACTIVE = '#0c831f';
 const INACTIVE = '#94a3b8';
+const BRAND = '#16a34a';
 
 const HomeIcon = ({ active }) => active ? (
   <svg width="24" height="24" viewBox="0 0 24 24" fill={ACTIVE} aria-hidden="true">
@@ -49,6 +50,14 @@ const UserIcon = ({ active }) => active ? (
   </svg>
 );
 
+// White cart icon for the center pill (always white — pill is brand green)
+const CartIconWhite = () => (
+  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <path d="M5.5 8h13l-1 12.2a1.5 1.5 0 0 1-1.5 1.3H8a1.5 1.5 0 0 1-1.5-1.3L5.5 8z"/>
+    <path d="M8.5 8V6a3.5 3.5 0 0 1 7 0v2"/>
+  </svg>
+);
+
 const TAB_CSS = `
 .pn-tab { background: none; border: 0; padding: 4px 0 0; flex: 1; display: flex; flex-direction: column; align-items: center; cursor: pointer; -webkit-tap-highlight-color: transparent; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; transition: transform 0.12s ease; outline: none; }
 .pn-tab:active { transform: scale(0.92); }
@@ -57,9 +66,17 @@ const TAB_CSS = `
 .pn-tab-label { font-size: 0.7rem; font-weight: 600; margin-top: 3px; letter-spacing: 0.01em; transition: color 0.2s ease, font-weight 0.2s ease; }
 .pn-tab-label.active { color: ${ACTIVE}; font-weight: 700; }
 .pn-tab-label.inactive { color: ${INACTIVE}; }
+
+/* Center Cart tab — distinct via color/size, no protrusion to avoid clashing
+   with the floating View-Cart bar (zIndex 1000) that sits above the nav. */
+.pn-cart-tab { background: none; border: 0; padding: 0 0 0; flex: 1; display: flex; flex-direction: column; align-items: center; cursor: pointer; -webkit-tap-highlight-color: transparent; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; outline: none; position: relative; }
+.pn-cart-pill { width: 42px; height: 42px; border-radius: 50%; background: linear-gradient(135deg, ${BRAND} 0%, #15803d 100%); display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 12px rgba(22, 163, 74, 0.4); transition: transform 0.12s ease; }
+.pn-cart-tab:active .pn-cart-pill { transform: scale(0.92); }
+.pn-cart-pill.active { box-shadow: 0 6px 16px rgba(22, 163, 74, 0.55); }
+.pn-cart-badge { position: absolute; top: -2px; right: calc(50% - 24px); min-width: 18px; height: 18px; padding: 0 5px; border-radius: 999px; background: #ef4444; color: #fff; font-size: 0.62rem; font-weight: 900; display: flex; align-items: center; justify-content: center; border: 2px solid #fff; box-shadow: 0 2px 6px rgba(239, 68, 68, 0.4); box-sizing: border-box; line-height: 1; }
 `;
 
-export default function BottomNav({ currentView }) {
+export default function BottomNav({ currentView, cartCount = 0 }) {
   const handleNav = (hash) => {
     if (window.location.hash === hash || (hash === "" && !window.location.hash)) {
       window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -72,13 +89,18 @@ export default function BottomNav({ currentView }) {
   const isNearby = currentView === 'nearby';
   const isOrders = currentView === 'orders';
   const isProfile = currentView === 'account';
+  const isCart = currentView === 'cart';
 
-  const tabs = [
+  const sideTabs = [
     { key: 'home', label: 'Home', hash: '', active: isHome, Icon: HomeIcon },
     { key: 'nearby', label: 'Nearby', hash: '#nearby', active: isNearby, Icon: PinIcon },
+  ];
+  const rightTabs = [
     { key: 'orders', label: 'Orders', hash: '#orders', active: isOrders, Icon: BagIcon },
     { key: 'profile', label: 'Profile', hash: '#account', active: isProfile, Icon: UserIcon },
   ];
+
+  const cartBadge = cartCount > 99 ? '99+' : cartCount;
 
   return (
     <>
@@ -100,7 +122,40 @@ export default function BottomNav({ currentView }) {
         zIndex: 998,
         boxShadow: '0 -6px 20px rgba(15, 23, 42, 0.05)',
       }}>
-        {tabs.map(({ key, label, hash, active, Icon }) => (
+        {sideTabs.map(({ key, label, hash, active, Icon }) => (
+          <button
+            key={key}
+            type="button"
+            className="pn-tab"
+            onClick={() => handleNav(hash)}
+            aria-label={label}
+            aria-current={active ? 'page' : undefined}
+          >
+            <div className={`pn-tab-pill ${active ? 'active' : ''}`}>
+              <Icon active={active} />
+            </div>
+            <span className={`pn-tab-label ${active ? 'active' : 'inactive'}`}>{label}</span>
+          </button>
+        ))}
+
+        {/* Raised center Cart tab */}
+        <button
+          type="button"
+          className="pn-cart-tab"
+          onClick={() => handleNav('#cart')}
+          aria-label={`Cart${cartCount > 0 ? `, ${cartCount} item${cartCount === 1 ? '' : 's'}` : ''}`}
+          aria-current={isCart ? 'page' : undefined}
+        >
+          <div className={`pn-cart-pill ${isCart ? 'active' : ''}`}>
+            <CartIconWhite />
+          </div>
+          {cartCount > 0 && (
+            <span className="pn-cart-badge" aria-hidden="true">{cartBadge}</span>
+          )}
+          <span className={`pn-tab-label ${isCart ? 'active' : 'inactive'}`} style={{ marginTop: '4px' }}>Cart</span>
+        </button>
+
+        {rightTabs.map(({ key, label, hash, active, Icon }) => (
           <button
             key={key}
             type="button"

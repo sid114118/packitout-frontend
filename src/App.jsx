@@ -204,8 +204,10 @@ export default function App() {
       const existingItem = cleanCart.find(item => item._id === lightProduct._id);
       
       if (existingItem) {
-        return cleanCart.map(item => 
-          item._id === lightProduct._id ? { ...item, qty: (item.qty || 1) + 1 } : item
+        return cleanCart.map(item =>
+          item._id === lightProduct._id
+            ? { ...item, qty: (Number(item.qty) || 0) + 1 }
+            : item
         );
       }
       return [...cleanCart, { ...lightProduct, qty: 1 }];
@@ -240,7 +242,13 @@ export default function App() {
     if (!updatedUser) return;
     localStorage.setItem("packitout_user", JSON.stringify(updatedUser));
     setLoggedInUser(updatedUser);
-    if (clearCart) setCart([]);
+    if (clearCart) {
+      setCart([]);
+      // Shop changed → category/brand filters from the previous shop's catalog
+      // no longer make sense. Drop them so the user lands on the new shop's home.
+      setSelectedCategory(null);
+      setSelectedBrand(null);
+    }
   };
 
   const handleUserLogout = () => {
@@ -421,12 +429,18 @@ export default function App() {
 
   const showBottomNav = ["customer", "Customer", "nearby", "account", "orders", "cart", "success"].includes(currentView);
 
+  // Total item count for the Cart tab badge — sum of qty across all cart items.
+  const navCartCount = cart.reduce((sum, item) => {
+    if (!item) return sum;
+    return sum + (Number(item.qty) || 0);
+  }, 0);
+
   return (
     <CrashCatcher>
       <Suspense fallback={<RouteFallback />}>
         {renderContent()}
       </Suspense>
-      {showBottomNav && <BottomNav currentView={currentView} />}
+      {showBottomNav && <BottomNav currentView={currentView} cartCount={navCartCount} />}
     </CrashCatcher>
   );
                }

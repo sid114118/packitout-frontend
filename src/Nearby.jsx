@@ -73,7 +73,7 @@ export default function Nearby({ user, onSelectShop }) {
               <div style={{ fontWeight: '800', fontSize: '0.9rem', color: '#111827', marginBottom: '4px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                 {shop.name}
               </div>
-              <div style={{ fontSize: '0.7rem', color: '#64748b', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '4px' }}>
+              <div style={{ fontSize: '0.7rem', color: '#64748b', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '4px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                 ⭐ {shop.rating?.toFixed(1) || "5.0"}
               </div>
             </div>

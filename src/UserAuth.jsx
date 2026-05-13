@@ -253,7 +253,7 @@ export default function UserAuth({ onLoginSuccess }) {
             <form onSubmit={handleLogin} style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
               <input type="tel" inputMode="numeric" maxLength={10} placeholder="Phone Number (10 digits)" value={phone} onChange={e => setPhone(e.target.value.replace(/\D/g, ''))} required style={inputStyle} />
               <input type="password" placeholder="Password" value={password} onChange={e => setPassword(e.target.value)} required style={inputStyle} />
-              <button type="submit" disabled={busy} style={primaryBtn(busy)}>Login</button>
+              <button type="submit" disabled={busy} style={primaryBtn(busy)}>{busy ? "Logging in…" : "Login"}</button>
             </form>
             <div style={{ marginTop: '12px', textAlign: 'right' }}>
               <span onClick={() => switchMode("forgot")} style={linkStyle}>
@@ -267,7 +267,7 @@ export default function UserAuth({ onLoginSuccess }) {
         {mode === "signup" && step === "phone" && (
           <form onSubmit={handleSignupSendOtp} style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
             <input type="tel" inputMode="numeric" maxLength={10} placeholder="Phone Number (10 digits)" value={phone} onChange={e => setPhone(e.target.value.replace(/\D/g, ''))} required style={inputStyle} />
-            <button type="submit" disabled={busy} style={primaryBtn(busy)}>Send OTP</button>
+            <button type="submit" disabled={busy} style={primaryBtn(busy)}>{busy ? "Sending OTP…" : "Send OTP"}</button>
           </form>
         )}
 
@@ -275,7 +275,7 @@ export default function UserAuth({ onLoginSuccess }) {
         {mode === "signup" && step === "otp" && (
           <form onSubmit={handleSignupVerifyOtp} style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
             <input type="tel" inputMode="numeric" maxLength={6} placeholder="6-digit OTP" value={otp} onChange={e => setOtp(e.target.value.replace(/\D/g, ''))} required style={otpInputStyle} />
-            <button type="submit" disabled={busy} style={primaryBtn(busy)}>Verify OTP</button>
+            <button type="submit" disabled={busy} style={primaryBtn(busy)}>{busy ? "Verifying…" : "Verify OTP"}</button>
             <button type="button" onClick={() => { setStep("phone"); setStatus(""); setOtp(""); setDevOtp(""); }} style={ghostBtn}>← Change number</button>
           </form>
         )}
@@ -287,7 +287,7 @@ export default function UserAuth({ onLoginSuccess }) {
             <input type="tel" inputMode="numeric" maxLength={6} placeholder="Delivery Pincode (6 digits)" value={pincode} onChange={e => setPincode(e.target.value.replace(/\D/g, ''))} required style={inputStyle} />
             <input type="password" placeholder="Password (min 6 chars)" value={password} onChange={e => setPassword(e.target.value)} required style={inputStyle} />
             <input type="text" placeholder="Referral Code (Optional)" value={referredBy} onChange={e => setReferredBy(e.target.value.toUpperCase())} style={inputStyle} />
-            <button type="submit" disabled={busy} style={primaryBtn(busy)}>Create Account</button>
+            <button type="submit" disabled={busy} style={primaryBtn(busy)}>{busy ? "Creating account…" : "Create Account"}</button>
           </form>
         )}
 
@@ -295,7 +295,7 @@ export default function UserAuth({ onLoginSuccess }) {
         {mode === "forgot" && step === "phone" && (
           <form onSubmit={handleForgotSendOtp} style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
             <input type="tel" inputMode="numeric" maxLength={10} placeholder="Registered Phone Number" value={phone} onChange={e => setPhone(e.target.value.replace(/\D/g, ''))} required style={inputStyle} />
-            <button type="submit" disabled={busy} style={primaryBtn(busy)}>Send OTP</button>
+            <button type="submit" disabled={busy} style={primaryBtn(busy)}>{busy ? "Sending OTP…" : "Send OTP"}</button>
             <button type="button" onClick={() => switchMode("login")} style={ghostBtn}>← Back to Login</button>
           </form>
         )}
@@ -304,7 +304,7 @@ export default function UserAuth({ onLoginSuccess }) {
         {mode === "forgot" && step === "otp" && (
           <form onSubmit={handleForgotVerifyOtp} style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
             <input type="tel" inputMode="numeric" maxLength={6} placeholder="6-digit OTP" value={otp} onChange={e => setOtp(e.target.value.replace(/\D/g, ''))} required style={otpInputStyle} />
-            <button type="submit" disabled={busy} style={primaryBtn(busy)}>Verify OTP</button>
+            <button type="submit" disabled={busy} style={primaryBtn(busy)}>{busy ? "Verifying…" : "Verify OTP"}</button>
             <button type="button" onClick={() => { setStep("phone"); setStatus(""); setOtp(""); setDevOtp(""); }} style={ghostBtn}>← Change number</button>
           </form>
         )}
@@ -314,7 +314,7 @@ export default function UserAuth({ onLoginSuccess }) {
           <form onSubmit={handleResetPassword} style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
             <input type="password" placeholder="New Password (min 6 chars)" value={newPassword} onChange={e => setNewPassword(e.target.value)} required style={inputStyle} />
             <input type="password" placeholder="Confirm New Password" value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} required style={inputStyle} />
-            <button type="submit" disabled={busy} style={primaryBtn(busy)}>Reset & Sign In</button>
+            <button type="submit" disabled={busy} style={primaryBtn(busy)}>{busy ? "Updating…" : "Reset & Sign In"}</button>
           </form>
         )}
 

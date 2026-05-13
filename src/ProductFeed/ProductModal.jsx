@@ -61,10 +61,20 @@ export default function ProductModal({ product, isOpen, onClose, onAddToCart, on
         window.history.pushState({ name: 'productModal' }, '');
       }
       const handlePopState = () => {
+        // Reset modal-internal state so the next open doesn't briefly render
+        // the previous product before the new `product` prop arrives.
+        setCurrentProduct(null);
+        setSelectedVariant(null);
+        setProductReviews([]);
+        setShowStickyAdd(false);
         onCloseRef.current();
       };
       window.addEventListener('popstate', handlePopState);
       return () => window.removeEventListener('popstate', handlePopState);
+    } else {
+      // Closed via parent (not popstate) — still clear internal state.
+      setCurrentProduct(null);
+      setSelectedVariant(null);
     }
   }, [isOpen]);
 

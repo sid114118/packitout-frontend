@@ -16,22 +16,24 @@ export default function Header({ user, onUserUpdate }) {
   // 🟢 Check if shop is open
   const isShopOpen = user?.primaryShop?.isOpen !== false; 
 
+  const isValidPincode = /^\d{6}$/.test(pincode);
+
   const handleFindShops = async () => {
-    if (!pincode) return;
+    if (!isValidPincode) return;
     setLoadingShops(true);
-    setHasSearched(false); 
-    
+    setHasSearched(false);
+
     try {
       const res = await fetch(`${BASE_URL}/shops/all/${pincode}`);
       const data = await res.json();
-      setShops(data);
-      if (data.length > 0) setSelectedShopId(data[0]._id);
+      setShops(Array.isArray(data) ? data : []);
+      if (Array.isArray(data) && data.length > 0) setSelectedShopId(data[0]._id);
     } catch (err) {
       console.log("Error finding shops", err);
     }
-    
+
     setLoadingShops(false);
-    setHasSearched(true); 
+    setHasSearched(true);
   };
 
   const handleSaveShop = async () => {
@@ -140,19 +142,23 @@ export default function Header({ user, onUserUpdate }) {
           <div style={{ fontSize: '0.85rem', color: '#111827', fontWeight: '800', marginBottom: '10px' }}>Change your location</div>
           
           <div style={{ display: 'flex', gap: '8px', marginBottom: '12px' }}>
-            <input 
-              type="text" 
-              placeholder="Enter Pincode (e.g. 110001)" 
-              value={pincode} 
+            <input
+              type="tel"
+              inputMode="numeric"
+              pattern="[0-9]{6}"
+              maxLength={6}
+              placeholder="Enter Pincode (e.g. 110001)"
+              value={pincode}
               onChange={e => {
-                setPincode(e.target.value);
-                setHasSearched(false); 
+                setPincode(e.target.value.replace(/\D/g, ''));
+                setHasSearched(false);
               }}
               style={{ flex: 1, padding: '12px 14px', borderRadius: '10px', border: '1px solid #cbd5e1', outline: 'none', backgroundColor: '#f8fafc', fontSize: '0.95rem', fontWeight: '600', color: '#111827', boxSizing: 'border-box' }}
             />
-            <button 
-              onClick={handleFindShops} 
-              style={{ backgroundColor: '#0c831f', color: 'white', border: 'none', padding: '0 20px', borderRadius: '10px', fontWeight: '800', cursor: 'pointer', fontSize: '0.95rem', boxShadow: '0 2px 6px rgba(12, 131, 31, 0.2)' }}
+            <button
+              onClick={handleFindShops}
+              disabled={!isValidPincode || loadingShops}
+              style={{ backgroundColor: (isValidPincode && !loadingShops) ? '#16a34a' : '#94a3b8', color: 'white', border: 'none', padding: '0 20px', borderRadius: '10px', fontWeight: '800', cursor: (isValidPincode && !loadingShops) ? 'pointer' : 'not-allowed', fontSize: '0.95rem', boxShadow: (isValidPincode && !loadingShops) ? '0 2px 6px rgba(22, 163, 74, 0.2)' : 'none' }}
             >
               {loadingShops ? "..." : "Find"}
             </button>
