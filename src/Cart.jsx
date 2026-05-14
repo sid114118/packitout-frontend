@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import Payment from './Payment.jsx';
+import PickupTimePicker from './PickupTimePicker.jsx';
 import useScrollToTop from './useScrollToTop';
 import { cdnImage } from './utils/cloudinaryUrl.js';
 
@@ -12,8 +13,11 @@ export default function Cart({ cart, setCart, user, onBack, onCheckoutSuccess })
   const [targetShop, setTargetShop] = useState(null); 
   const [loadingShops, setLoadingShops] = useState(true);
   
-  // 💳 Show Payment Screen State
-  const [showPayment, setShowPayment] = useState(false);
+  // 🚦 Checkout step: 'cart' → 'pickup' → 'payment'
+  const [step, setStep] = useState('cart');
+
+  // 🕒 Pickup-time selection (set on the PickupTimePicker step)
+  const [pickup, setPickup] = useState({ pickupTime: null, isUrgent: false });
 
   // 🪙 Coin Discount State
   const [useCoins, setUseCoins] = useState(false);
@@ -92,17 +96,33 @@ export default function Cart({ cart, setCart, user, onBack, onCheckoutSuccess })
     );
   }
 
-  // 💳 ================= RENDER PAYMENT SCREEN ================= 💳
-  if (showPayment) {
+  // 🕒 ================= RENDER PICKUP-TIME SCREEN ================= 🕒
+  if (step === 'pickup') {
     return (
-      <Payment 
+      <PickupTimePicker
+        finalBill={finalBill}
+        onBack={() => setStep('cart')}
+        onContinue={(choice) => {
+          setPickup(choice);
+          setStep('payment');
+        }}
+      />
+    );
+  }
+
+  // 💳 ================= RENDER PAYMENT SCREEN ================= 💳
+  if (step === 'payment') {
+    return (
+      <Payment
         user={user}
         cart={cart}
         targetShop={targetShop}
         finalBill={finalBill}
         useCoins={useCoins}
         coinsUsed={coinsUsed}
-        onBack={() => setShowPayment(false)} 
+        pickupTime={pickup.pickupTime}
+        isUrgent={pickup.isUrgent}
+        onBack={() => setStep('pickup')}
         onCheckoutSuccess={onCheckoutSuccess}
       />
     );
@@ -261,12 +281,12 @@ export default function Cart({ cart, setCart, user, onBack, onCheckoutSuccess })
 
       {/* Modern Floating Checkout Button */}
       <div style={{ position: 'fixed', bottom: '65px', left: 0, right: 0, backgroundColor: 'rgba(255, 255, 255, 0.9)', backdropFilter: 'blur(10px)', padding: '16px', borderTop: '1px solid rgba(0,0,0,0.05)', zIndex: 999 }}>
-        <button 
-          onClick={() => setShowPayment(true)} 
+        <button
+          onClick={() => setStep('pickup')}
           disabled={!targetShop}
           style={{ width: '100%', maxWidth: '800px', margin: '0 auto', display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '18px 24px', backgroundColor: targetShop ? '#16a34a' : '#cbd5e1', color: 'white', border: 'none', borderRadius: '16px', fontWeight: '900', fontSize: '1.15rem', cursor: targetShop ? 'pointer' : 'not-allowed', boxShadow: targetShop ? '0 8px 25px rgba(22, 163, 74, 0.35)' : 'none', transition: 'all 0.2s ease' }}
         >
-          <span>Select Payment</span>
+          <span>Choose Pickup Time</span>
           <span>₹{finalBill.toFixed(2)} ›</span>
         </button>
       </div>

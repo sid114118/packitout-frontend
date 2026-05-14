@@ -21,13 +21,23 @@ const loadRazorpayScript = () => {
   return razorpayScriptPromise;
 };
 
-export default function Payment({ user, cart, targetShop, finalBill, useCoins, coinsUsed, onBack, onCheckoutSuccess }) {
+export default function Payment({ user, cart, targetShop, finalBill, useCoins, coinsUsed, pickupTime, isUrgent, onBack, onCheckoutSuccess }) {
   useScrollToTop();
 
   const [status, setStatus] = useState("");
   const [paymentMethod, setPaymentMethod] = useState("UPI");
 
   const safeFinalBill = Number(finalBill || 0);
+  const safePickup = {
+    pickupTime: pickupTime || null,
+    isUrgent: Boolean(isUrgent),
+  };
+
+  const pickupLabel = safePickup.isUrgent
+    ? '⚡ Urgent — ASAP'
+    : safePickup.pickupTime
+      ? `🕒 Pickup at ${new Date(safePickup.pickupTime).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}`
+      : null;
 
   const cleanCartItems = () => cart
     .filter(item => item !== null)
@@ -56,6 +66,8 @@ export default function Payment({ user, cart, targetShop, finalBill, useCoins, c
         items: cleanCartItems(),
         totalAmount: safeFinalBill,
         coinsUsed: useCoins ? Number(coinsUsed || 0) : 0,
+        pickupTime: safePickup.pickupTime,
+        isUrgent: safePickup.isUrgent,
       }),
     });
     if (!response.ok) throw new Error("Failed to place order");
@@ -86,6 +98,8 @@ export default function Payment({ user, cart, targetShop, finalBill, useCoins, c
         shopId: targetShop._id,
         items,
         coinsUsed: coinsUsedSafe,
+        pickupTime: safePickup.pickupTime,
+        isUrgent: safePickup.isUrgent,
       }),
     });
     const createData = await createRes.json();
@@ -128,6 +142,8 @@ export default function Payment({ user, cart, targetShop, finalBill, useCoins, c
                 items,
                 paymentMethod,
                 coinsUsed: coinsUsedSafe,
+                pickupTime: safePickup.pickupTime,
+                isUrgent: safePickup.isUrgent,
               }),
             });
             const verifyData = await verifyRes.json();
@@ -186,10 +202,37 @@ export default function Payment({ user, cart, targetShop, finalBill, useCoins, c
       <div style={{ padding: '16px', maxWidth: '800px', margin: '0 auto' }}>
 
         {/* Bill Summary Strip */}
-        <div style={{ backgroundColor: 'white', padding: '16px', borderRadius: '12px', marginBottom: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', boxShadow: '0 2px 8px rgba(0,0,0,0.02)' }}>
+        <div style={{ backgroundColor: 'white', padding: '16px', borderRadius: '12px', marginBottom: '12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', boxShadow: '0 2px 8px rgba(0,0,0,0.02)' }}>
           <div style={{ color: '#64748b', fontWeight: '600', fontSize: '0.9rem' }}>Amount to Pay</div>
           <div style={{ color: '#111827', fontWeight: '900', fontSize: '1.4rem' }}>₹{safeFinalBill.toFixed(2)}</div>
         </div>
+
+        {/* Pickup-time strip */}
+        {pickupLabel && (
+          <div
+            style={{
+              backgroundColor: safePickup.isUrgent ? '#fff1f2' : '#f0fdf4',
+              border: safePickup.isUrgent ? '1px solid #fecaca' : '1px solid #bbf7d0',
+              padding: '12px 16px',
+              borderRadius: '12px',
+              marginBottom: '20px',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+            }}
+          >
+            <div>
+              <div style={{ fontSize: '0.7rem', fontWeight: 800, letterSpacing: '0.5px', color: safePickup.isUrgent ? '#991b1b' : '#166534', textTransform: 'uppercase' }}>Pickup</div>
+              <div style={{ fontWeight: 900, color: safePickup.isUrgent ? '#b91c1c' : '#166534', fontSize: '1rem', marginTop: '2px' }}>{pickupLabel}</div>
+            </div>
+            <button
+              onClick={onBack}
+              style={{ background: 'transparent', border: 'none', color: safePickup.isUrgent ? '#b91c1c' : '#166534', fontWeight: 800, fontSize: '0.85rem', cursor: 'pointer' }}
+            >
+              Change
+            </button>
+          </div>
+        )}
 
         <h3 style={{ fontSize: '1.05rem', fontWeight: '800', color: '#111827', marginBottom: '12px', paddingLeft: '4px' }}>Select Payment Method</h3>
 

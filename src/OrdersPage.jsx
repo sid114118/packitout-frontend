@@ -497,6 +497,14 @@ function OrderCard({ order, onOpen, onCancel, onReview, onReorderItem }) {
   const extraCount = items.length - previewItems.length;
   const createdAt = order.createdAt ? new Date(order.createdAt) : null;
 
+  // 🕒 Pickup time chosen at checkout — only relevant while order is live.
+  const isUrgent = Boolean(order.isUrgent);
+  const pickupAt = order.pickupTime ? new Date(order.pickupTime) : null;
+  const pickupClock = (pickupAt && !Number.isNaN(pickupAt.getTime()))
+    ? pickupAt.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })
+    : null;
+  const showPickupBadge = live && (isUrgent || pickupClock);
+
   return (
     <div
       onClick={onOpen}
@@ -541,6 +549,22 @@ function OrderCard({ order, onOpen, onCancel, onReview, onReorderItem }) {
           {order.status || 'Pending'}
         </div>
       </div>
+
+      {/* Pickup-time chip (live orders only) */}
+      {showPickupBadge && (
+        <div style={{
+          marginTop: '10px',
+          display: 'inline-flex', alignItems: 'center', gap: '6px',
+          padding: '5px 10px',
+          borderRadius: '999px',
+          background: isUrgent ? '#fef2f2' : '#f0fdf4',
+          border: `1px solid ${isUrgent ? '#fecaca' : '#bbf7d0'}`,
+          color: isUrgent ? '#b91c1c' : '#166534',
+          fontSize: '0.72rem', fontWeight: 800, letterSpacing: '0.3px',
+        }}>
+          {isUrgent ? <>⚡ Urgent · ASAP</> : <>🕒 Pickup at {pickupClock}</>}
+        </div>
+      )}
 
       {/* Items preview with per-item reorder */}
       {previewItems.length > 0 && (

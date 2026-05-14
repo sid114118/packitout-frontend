@@ -16,9 +16,23 @@ export default function OrdersTab({ orders, updateOrderStatus }) {
     // Safely determine payment status
     const isPaid = order.paymentStatus === 'Paid' || order.paymentStatus === 'Success';
 
+    // 🕒 Pickup time (set by customer at checkout)
+    const isUrgent = Boolean(order.isUrgent);
+    const pickupAt = order.pickupTime ? new Date(order.pickupTime) : null;
+    const pickupValid = pickupAt && !Number.isNaN(pickupAt.getTime());
+    const pickupClock = pickupValid ? pickupAt.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }) : null;
+
     return (
-      <div style={{ backgroundColor: 'white', padding: '20px', borderRadius: '16px', boxShadow: '0 4px 15px rgba(0,0,0,0.05)', border: isActive ? '2px solid #10b981' : '1px solid #e2e8f0', marginBottom: '15px' }}>
-        
+      <div style={{ backgroundColor: 'white', padding: '20px', borderRadius: '16px', boxShadow: '0 4px 15px rgba(0,0,0,0.05)', border: isUrgent && isActive ? '2px solid #ef4444' : isActive ? '2px solid #10b981' : '1px solid #e2e8f0', marginBottom: '15px' }}>
+
+        {/* 🚨 URGENT banner — only for active urgent orders */}
+        {isUrgent && isActive && (
+          <div style={{ background: 'linear-gradient(90deg, #ef4444, #dc2626)', color: '#fff', padding: '10px 12px', borderRadius: '10px', fontWeight: 900, fontSize: '0.9rem', letterSpacing: '0.5px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px', boxShadow: '0 6px 16px rgba(239, 68, 68, 0.25)' }}>
+            <span>⚡ URGENT — Customer wants this ASAP</span>
+            <span style={{ background: 'rgba(255,255,255,0.2)', padding: '3px 8px', borderRadius: '6px', fontSize: '0.75rem' }}>~15 min</span>
+          </div>
+        )}
+
         {/* Header: Order ID & Status */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', borderBottom: '1px solid #f1f5f9', paddingBottom: '12px', marginBottom: '12px' }}>
           <div>
@@ -33,6 +47,17 @@ export default function OrdersTab({ orders, updateOrderStatus }) {
             {order.status}
           </div>
         </div>
+
+        {/* 🕒 Scheduled pickup row — shown when customer picked a specific time */}
+        {!isUrgent && pickupClock && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', backgroundColor: '#f0fdf4', border: '1px solid #bbf7d0', padding: '10px 12px', borderRadius: '10px', marginBottom: '12px' }}>
+            <span style={{ fontSize: '1.2rem' }}>🕒</span>
+            <div>
+              <div style={{ fontSize: '0.7rem', color: '#166534', fontWeight: 800, letterSpacing: '0.5px', textTransform: 'uppercase' }}>Customer Pickup</div>
+              <div style={{ fontWeight: 900, color: '#0f172a', fontSize: '0.95rem', marginTop: '2px' }}>at {pickupClock}</div>
+            </div>
+          </div>
+        )}
 
         {/* Customer Details */}
         <div style={{ marginBottom: '15px', backgroundColor: '#f8fafc', padding: '12px', borderRadius: '12px' }}>

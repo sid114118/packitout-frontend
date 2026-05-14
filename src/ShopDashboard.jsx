@@ -5,9 +5,10 @@ import { useToast } from './ui/DialogProvider.jsx';
 import OrdersTab from './components/ShopDashboard/OrdersTab';
 import ParchiTab from './components/ShopDashboard/ParchiTab';
 import InventoryTab from './components/ShopDashboard/InventoryTab';
-import NotificationBell from './NotificationBell'; 
+import NotificationBell from './NotificationBell';
 // 🌟 IMPORT THE NEW REVIEWS COMPONENT
-import ShopReviews from './components/ShopDashboard/ShopReviews'; 
+import ShopReviews from './components/ShopDashboard/ShopReviews';
+import ComplaintsTab from './components/ShopDashboard/ComplaintsTab';
 
 export default function ShopDashboard({ user, onExit }) {
   const toast = useToast();
@@ -192,6 +193,7 @@ export default function ShopDashboard({ user, onExit }) {
         <button onClick={() => setActiveTab("parchis")} style={tabStyle(activeTab === "parchis")}>🧾 Parchis {parchiRequests.length > 0 && <span style={badgeStyle}>{parchiRequests.length}</span>}</button>
         <button onClick={() => setActiveTab("inventory")} style={tabStyle(activeTab === "inventory")}>📊 Manage Inventory</button>
         <button onClick={() => setActiveTab("reviews")} style={tabStyle(activeTab === "reviews")}>⭐ Reviews</button>
+        <button onClick={() => setActiveTab("complaints")} style={tabStyle(activeTab === "complaints")}>📣 Complaints</button>
       </div>
 
       <div style={{ padding: '15px', maxWidth: '800px', margin: '0 auto' }}> 
@@ -199,6 +201,7 @@ export default function ShopDashboard({ user, onExit }) {
         {activeTab === "parchis" && <ParchiTab parchiRequests={parchiRequests} selectedParchi={selectedParchi} setSelectedParchi={setSelectedParchi} parchiBill={parchiBill} setParchiBill={setParchiBill} handleAddToBill={handleAddToBill} handleSendBill={handleSendBill} shopData={shopData} />}
         {activeTab === "inventory" && <InventoryTab shopData={shopData} masterCatalog={masterCatalog} handleInventoryUpdate={handleInventoryUpdate} onInventoryRefresh={refreshShopData} />}
         {activeTab === "reviews" && <ShopReviews shopId={shopData._id} shopRating={shopData.rating} totalReviews={shopData.totalReviews} />}
+        {activeTab === "complaints" && <ComplaintsTab shopId={shopData._id} shopName={shopData.name} />}
       </div>
     </div>
   );

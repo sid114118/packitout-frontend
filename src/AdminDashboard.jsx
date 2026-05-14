@@ -5,6 +5,7 @@ import ShopsTab from './components/AdminDashboard/ShopsTab';
 import UsersTab from './components/AdminDashboard/UsersTab';
 import GlobalOrdersTab from './components/AdminDashboard/GlobalOrdersTab';
 import AdminParchiManager from './components/AdminDashboard/AdminParchiManager'; // 🌟 Your Master POS!
+import ComplaintsTab from './components/AdminDashboard/ComplaintsTab';
 
 export default function AdminDashboard({ onExit }) {
   const toast = useToast();
@@ -160,6 +161,7 @@ export default function AdminDashboard({ onExit }) {
           <button onClick={() => setActiveTab("users")} style={tabButtonStyle(activeTab === "users")}>👤 Users</button>
           <button onClick={() => setActiveTab("orders")} style={tabButtonStyle(activeTab === "orders")}>🛒 Orders</button>
           <button onClick={() => setActiveTab("parchis")} style={tabButtonStyle(activeTab === "parchis")}>🧾 Master POS</button>
+          <button onClick={() => setActiveTab("complaints")} style={tabButtonStyle(activeTab === "complaints")}>📣 Complaints</button>
         </div>
       </nav>
 
@@ -177,6 +179,8 @@ export default function AdminDashboard({ onExit }) {
             {activeTab === "orders" && <GlobalOrdersTab orders={orders} />}
             
             {activeTab === "parchis" && <AdminParchiManager />}
+
+            {activeTab === "complaints" && <ComplaintsTab />}
           </>
         )}
       </div>

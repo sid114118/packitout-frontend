@@ -3,6 +3,9 @@ import { useToast } from './ui/DialogProvider.jsx';
 
 import ProfileHeader from './components/UserDashboard/ProfileHeader';
 import AddressBook from './components/UserDashboard/AddressBook';
+import TermsModal from './components/UserDashboard/TermsModal';
+import ComplaintModal from './components/UserDashboard/ComplaintModal';
+import MyComplaintsModal from './components/UserDashboard/MyComplaintsModal';
 
 const BASE_URL = (import.meta.env.VITE_API_BASE || "https://darkslategrey-snail-415133.hostingersite.com");
 
@@ -25,6 +28,11 @@ export default function UserDashboard({ user, onExit, onLogout, onUserUpdate }) 
   const [addresses] = useState([{ id: 1, label: "🏠 Home", detail: `Block A, Near Main Gate, ${user?.pincode}` }]);
   const [showAddressForm, setShowAddressForm] = useState(false);
   const [newAddress, setNewAddress] = useState("");
+
+  // Support modals (T&C + complaint form + my complaints) live at the bottom of the profile.
+  const [showTerms, setShowTerms] = useState(false);
+  const [showComplaint, setShowComplaint] = useState(false);
+  const [showMyComplaints, setShowMyComplaints] = useState(false);
 
   // Fetch shops in this user's pincode so the "Primary shop" dropdown has
   // real options. Without this the select is permanently empty.
@@ -108,10 +116,93 @@ export default function UserDashboard({ user, onExit, onLogout, onUserUpdate }) 
           newAddress={newAddress} setNewAddress={setNewAddress} handleSaveAddress={(e) => { e.preventDefault(); triggerToast("Address Saved!"); setShowAddressForm(false); }}
         />
 
+        {/* Help & Legal — file a complaint and read the T&C */}
+        <div style={{ marginTop: '15px', background: '#fff', border: '1px solid #e2e8f0', borderRadius: '16px', overflow: 'hidden', boxShadow: '0 4px 14px rgba(15,23,42,0.04)' }}>
+          <div style={{ fontSize: '0.7rem', color: '#64748b', fontWeight: 800, letterSpacing: '0.5px', textTransform: 'uppercase', padding: '14px 16px 6px' }}>
+            Help & Legal
+          </div>
+
+          <button
+            onClick={() => setShowComplaint(true)}
+            style={{
+              width: '100%', padding: '14px 16px',
+              background: '#fff', border: 'none', borderTop: '1px solid #f1f5f9',
+              display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+              cursor: 'pointer', textAlign: 'left',
+            }}
+          >
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '12px' }}>
+              <span style={{
+                width: '38px', height: '38px', borderRadius: '12px',
+                background: 'linear-gradient(135deg, #fff1f2, #fee2e2)',
+                display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                fontSize: '1.1rem',
+              }}>📣</span>
+              <span>
+                <div style={{ fontWeight: 800, color: '#0f172a', fontSize: '0.95rem' }}>File a Complaint</div>
+                <div style={{ fontSize: '0.78rem', color: '#64748b', fontWeight: 600, marginTop: '2px' }}>About a shop, item, or the app</div>
+              </span>
+            </span>
+            <span style={{ color: '#94a3b8', fontSize: '1.2rem' }}>›</span>
+          </button>
+
+          <button
+            onClick={() => setShowMyComplaints(true)}
+            style={{
+              width: '100%', padding: '14px 16px',
+              background: '#fff', border: 'none', borderTop: '1px solid #f1f5f9',
+              display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+              cursor: 'pointer', textAlign: 'left',
+            }}
+          >
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '12px' }}>
+              <span style={{
+                width: '38px', height: '38px', borderRadius: '12px',
+                background: 'linear-gradient(135deg, #f0fdf4, #dcfce7)',
+                display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                fontSize: '1.1rem',
+              }}>💬</span>
+              <span>
+                <div style={{ fontWeight: 800, color: '#0f172a', fontSize: '0.95rem' }}>My Complaints &amp; Replies</div>
+                <div style={{ fontSize: '0.78rem', color: '#64748b', fontWeight: 600, marginTop: '2px' }}>See responses from the shop or admin</div>
+              </span>
+            </span>
+            <span style={{ color: '#94a3b8', fontSize: '1.2rem' }}>›</span>
+          </button>
+
+          <button
+            onClick={() => setShowTerms(true)}
+            style={{
+              width: '100%', padding: '14px 16px',
+              background: '#fff', border: 'none', borderTop: '1px solid #f1f5f9',
+              display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+              cursor: 'pointer', textAlign: 'left',
+            }}
+          >
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '12px' }}>
+              <span style={{
+                width: '38px', height: '38px', borderRadius: '12px',
+                background: 'linear-gradient(135deg, #eff6ff, #dbeafe)',
+                display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                fontSize: '1.1rem',
+              }}>📜</span>
+              <span>
+                <div style={{ fontWeight: 800, color: '#0f172a', fontSize: '0.95rem' }}>Terms & Conditions</div>
+                <div style={{ fontSize: '0.78rem', color: '#64748b', fontWeight: 600, marginTop: '2px' }}>How PackItOut works</div>
+              </span>
+            </span>
+            <span style={{ color: '#94a3b8', fontSize: '1.2rem' }}>›</span>
+          </button>
+        </div>
+
         <button onClick={onLogout} style={{ width: '100%', padding: '16px', marginTop: '15px', background: '#fff1f2', color: '#e11d48', border: '1px solid #fecdd3', borderRadius: '16px', fontWeight: '800', cursor: 'pointer' }}>
           Log Out
         </button>
       </div>
+
+      <TermsModal open={showTerms} onClose={() => setShowTerms(false)} />
+      <ComplaintModal open={showComplaint} onClose={() => setShowComplaint(false)} user={user} />
+      <MyComplaintsModal open={showMyComplaints} onClose={() => setShowMyComplaints(false)} user={user} />
     </div>
   );
 }
