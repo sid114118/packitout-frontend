@@ -7,6 +7,8 @@ import SearchPage from '../SearchPage.jsx';
 
 import { VariantBottomSheet, ModernProductCard, ProductRow } from './FeedComponents.jsx';
 import HomeFooter from '../components/HomeFooter.jsx';
+import { useRankingConfig } from '../ui/RankingProvider.jsx';
+import { applyBrandPriority } from '../utils/rankingSort.js';
 
 export default function GuestFeed({ 
   user, onAddToCart, onRemoveFromCart, onViewCart, cart = [], 
@@ -15,13 +17,14 @@ export default function GuestFeed({
   // 🟢 Search Triggers from App.jsx
   isSearchOpen, onOpenSearch, onCloseSearch 
 }) {
+  const { config: rankingConfig } = useRankingConfig();
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
 
   // Modal & View States
-  const [selectedProductDetails, setSelectedProductDetails] = useState(null); 
+  const [selectedProductDetails, setSelectedProductDetails] = useState(null);
   const [selectedVariantProduct, setSelectedVariantProduct] = useState(null);
-  const [viewAll, setViewAll] = useState(null); 
+  const [viewAll, setViewAll] = useState(null);
 
   // Carousel States
   const [trendingPlatform, setTrendingPlatform] = useState([]);
@@ -31,6 +34,17 @@ export default function GuestFeed({
   const [timeBased, setTimeBased] = useState({ title: "", subtitle: "", items: [] });
   const [newArrivals, setNewArrivals] = useState([]);
   const [buyItAgain, setBuyItAgain] = useState([]);
+
+  // Memoize ranked variants. Each row re-sorts only when its source array
+  // or the admin's config changes; cheap when ranking is disabled because
+  // applyBrandPriority returns the original array unchanged.
+  const rankedTrendingPlatform = React.useMemo(() => applyBrandPriority(trendingPlatform, rankingConfig), [trendingPlatform, rankingConfig]);
+  const rankedShopDeals = React.useMemo(() => applyBrandPriority(shopDeals, rankingConfig), [shopDeals, rankingConfig]);
+  const rankedShopBestSellers = React.useMemo(() => applyBrandPriority(shopBestSellers, rankingConfig), [shopBestSellers, rankingConfig]);
+  const rankedUnder99 = React.useMemo(() => applyBrandPriority(under99, rankingConfig), [under99, rankingConfig]);
+  const rankedTimeBased = React.useMemo(() => ({ ...timeBased, items: applyBrandPriority(timeBased.items, rankingConfig) }), [timeBased, rankingConfig]);
+  const rankedNewArrivals = React.useMemo(() => applyBrandPriority(newArrivals, rankingConfig), [newArrivals, rankingConfig]);
+  const rankedBuyItAgain = React.useMemo(() => applyBrandPriority(buyItAgain, rankingConfig), [buyItAgain, rankingConfig]);
 
   const BASE_URL = (import.meta.env.VITE_API_BASE || "https://darkslategrey-snail-415133.hostingersite.com");
 
@@ -176,13 +190,13 @@ export default function GuestFeed({
       {/* 🌟 3. NORMAL FEED 🌟 */}
       {!isSearchOpen && !viewAll && !selectedCategory && (
         <>
-          <ProductRow title="🚀 Trending on PackItOut" subtitle="What everyone is ordering" items={trendingPlatform} onViewAll={setViewAll} shopClosed={false} onOpenDetails={setSelectedProductDetails} onQuickAdd={handleQuickAdd} cart={cart} onRemoveFromCart={onRemoveFromCart} />
-          <ProductRow title={timeBased.title} subtitle={timeBased.subtitle} items={timeBased.items} onViewAll={setViewAll} shopClosed={false} onOpenDetails={setSelectedProductDetails} onQuickAdd={handleQuickAdd} cart={cart} onRemoveFromCart={onRemoveFromCart} />
-          <ProductRow title="🔥 Today's Mega Steals" subtitle="Unbeatable prices" items={shopDeals} onViewAll={setViewAll} shopClosed={false} onOpenDetails={setSelectedProductDetails} onQuickAdd={handleQuickAdd} cart={cart} onRemoveFromCart={onRemoveFromCart} />
-          <ProductRow title="🛍️ Recommended For You" subtitle="Top picks for guests" items={buyItAgain} onViewAll={setViewAll} shopClosed={false} onOpenDetails={setSelectedProductDetails} onQuickAdd={handleQuickAdd} cart={cart} onRemoveFromCart={onRemoveFromCart} />
-          <ProductRow title="💰 The Under ₹99 Store" subtitle="Budget friendly grabs" items={under99} onViewAll={setViewAll} shopClosed={false} onOpenDetails={setSelectedProductDetails} onQuickAdd={handleQuickAdd} cart={cart} onRemoveFromCart={onRemoveFromCart} />
-          <ProductRow title="🆕 Freshly Restocked" subtitle="Back on the shelves" items={newArrivals} onViewAll={setViewAll} shopClosed={false} onOpenDetails={setSelectedProductDetails} onQuickAdd={handleQuickAdd} cart={cart} onRemoveFromCart={onRemoveFromCart} />
-          <ProductRow title="👑 Top Selling Today" subtitle="Customer favorites" items={shopBestSellers} onViewAll={setViewAll} shopClosed={false} onOpenDetails={setSelectedProductDetails} onQuickAdd={handleQuickAdd} cart={cart} onRemoveFromCart={onRemoveFromCart} />
+          <ProductRow title="🚀 Trending on PackItOut" subtitle="What everyone is ordering" items={rankedTrendingPlatform} onViewAll={setViewAll} shopClosed={false} onOpenDetails={setSelectedProductDetails} onQuickAdd={handleQuickAdd} cart={cart} onRemoveFromCart={onRemoveFromCart} />
+          <ProductRow title={rankedTimeBased.title} subtitle={rankedTimeBased.subtitle} items={rankedTimeBased.items} onViewAll={setViewAll} shopClosed={false} onOpenDetails={setSelectedProductDetails} onQuickAdd={handleQuickAdd} cart={cart} onRemoveFromCart={onRemoveFromCart} />
+          <ProductRow title="🔥 Today's Mega Steals" subtitle="Unbeatable prices" items={rankedShopDeals} onViewAll={setViewAll} shopClosed={false} onOpenDetails={setSelectedProductDetails} onQuickAdd={handleQuickAdd} cart={cart} onRemoveFromCart={onRemoveFromCart} />
+          <ProductRow title="🛍️ Recommended For You" subtitle="Top picks for guests" items={rankedBuyItAgain} onViewAll={setViewAll} shopClosed={false} onOpenDetails={setSelectedProductDetails} onQuickAdd={handleQuickAdd} cart={cart} onRemoveFromCart={onRemoveFromCart} />
+          <ProductRow title="💰 The Under ₹99 Store" subtitle="Budget friendly grabs" items={rankedUnder99} onViewAll={setViewAll} shopClosed={false} onOpenDetails={setSelectedProductDetails} onQuickAdd={handleQuickAdd} cart={cart} onRemoveFromCart={onRemoveFromCart} />
+          <ProductRow title="🆕 Freshly Restocked" subtitle="Back on the shelves" items={rankedNewArrivals} onViewAll={setViewAll} shopClosed={false} onOpenDetails={setSelectedProductDetails} onQuickAdd={handleQuickAdd} cart={cart} onRemoveFromCart={onRemoveFromCart} />
+          <ProductRow title="👑 Top Selling Today" subtitle="Customer favorites" items={rankedShopBestSellers} onViewAll={setViewAll} shopClosed={false} onOpenDetails={setSelectedProductDetails} onQuickAdd={handleQuickAdd} cart={cart} onRemoveFromCart={onRemoveFromCart} />
           
           <HomeFooter
             endMessage="That's all for today"

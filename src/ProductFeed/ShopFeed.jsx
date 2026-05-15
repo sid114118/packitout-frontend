@@ -6,6 +6,8 @@ import { VariantBottomSheet, ModernProductCard, ProductRow } from './FeedCompone
 import ShopCarousel from './ShopCarousel.jsx';
 import { useToast, useConfirm } from '../ui/DialogProvider.jsx';
 import HomeFooter from '../components/HomeFooter.jsx';
+import { useRankingConfig } from '../ui/RankingProvider.jsx';
+import { applyBrandPriority } from '../utils/rankingSort.js';
 
 // 🌟 IMPORT OUR NEW BRAIN!
 import useShopFeedData from './useShopFeedData'; // Adjust path based on where you saved it
@@ -18,12 +20,26 @@ export default function ShopFeed({
 }) {
   const toast = useToast();
   const confirmDialog = useConfirm();
+  const { config: rankingConfig } = useRankingConfig();
 
   // 🌟 CALL THE BRAIN - It gives us all the arrays perfectly formatted!
-  const { 
-    loading, items, shopInfo, nearbyShops, 
-    shopDeals, shopBestSellers, under99, timeBased, newArrivals, buyItAgain 
+  const {
+    loading, items, shopInfo, nearbyShops,
+    shopDeals, shopBestSellers, under99, timeBased, newArrivals, buyItAgain
   } = useShopFeedData(user);
+
+  // Apply admin brand-priority ranking to every home-row in a single pass.
+  // useMemo dependencies include rankingConfig so changes from the admin
+  // panel reflow the rows immediately (after RankingProvider refresh).
+  const rankedTimeBased = React.useMemo(
+    () => ({ ...timeBased, items: applyBrandPriority(timeBased.items, rankingConfig) }),
+    [timeBased, rankingConfig]
+  );
+  const rankedShopDeals = React.useMemo(() => applyBrandPriority(shopDeals, rankingConfig), [shopDeals, rankingConfig]);
+  const rankedShopBestSellers = React.useMemo(() => applyBrandPriority(shopBestSellers, rankingConfig), [shopBestSellers, rankingConfig]);
+  const rankedUnder99 = React.useMemo(() => applyBrandPriority(under99, rankingConfig), [under99, rankingConfig]);
+  const rankedNewArrivals = React.useMemo(() => applyBrandPriority(newArrivals, rankingConfig), [newArrivals, rankingConfig]);
+  const rankedBuyItAgain = React.useMemo(() => applyBrandPriority(buyItAgain, rankingConfig), [buyItAgain, rankingConfig]);
   
   // UI States (Modals & Views)
   const [selectedProductDetails, setSelectedProductDetails] = useState(null); 
@@ -88,12 +104,12 @@ export default function ShopFeed({
 
       {!isSearchOpen && !isListViewActive && (
         <>
-          <ProductRow title={timeBased.title} subtitle={timeBased.subtitle} items={timeBased.items} onViewAll={setViewAll} shopClosed={shopClosed} onOpenDetails={setSelectedProductDetails} onQuickAdd={handleQuickAdd} cart={cart} onRemoveFromCart={onRemoveFromCart} />
-          <ProductRow title="Price Crash" subtitle="Extra Savings" items={shopDeals} onViewAll={setViewAll} shopClosed={shopClosed} onOpenDetails={setSelectedProductDetails} onQuickAdd={handleQuickAdd} cart={cart} onRemoveFromCart={onRemoveFromCart} />
-          <ProductRow title="Top Picks for You" subtitle="Popular items" items={shopBestSellers} onViewAll={setViewAll} shopClosed={shopClosed} onOpenDetails={setSelectedProductDetails} onQuickAdd={handleQuickAdd} cart={cart} onRemoveFromCart={onRemoveFromCart} />
-          <ProductRow title="The Under ₹99 Store" subtitle="Budget friendly grabs" items={under99} onViewAll={setViewAll} shopClosed={shopClosed} onOpenDetails={setSelectedProductDetails} onQuickAdd={handleQuickAdd} cart={cart} onRemoveFromCart={onRemoveFromCart} />
-          <ProductRow title="Buy It Again" subtitle="Your favorites" items={buyItAgain} onViewAll={setViewAll} shopClosed={shopClosed} onOpenDetails={setSelectedProductDetails} onQuickAdd={handleQuickAdd} cart={cart} onRemoveFromCart={onRemoveFromCart} />
-          <ProductRow title="Freshly Restocked" subtitle="Back on shelves" items={newArrivals} onViewAll={setViewAll} shopClosed={shopClosed} onOpenDetails={setSelectedProductDetails} onQuickAdd={handleQuickAdd} cart={cart} onRemoveFromCart={onRemoveFromCart} />
+          <ProductRow title={rankedTimeBased.title} subtitle={rankedTimeBased.subtitle} items={rankedTimeBased.items} onViewAll={setViewAll} shopClosed={shopClosed} onOpenDetails={setSelectedProductDetails} onQuickAdd={handleQuickAdd} cart={cart} onRemoveFromCart={onRemoveFromCart} />
+          <ProductRow title="Price Crash" subtitle="Extra Savings" items={rankedShopDeals} onViewAll={setViewAll} shopClosed={shopClosed} onOpenDetails={setSelectedProductDetails} onQuickAdd={handleQuickAdd} cart={cart} onRemoveFromCart={onRemoveFromCart} />
+          <ProductRow title="Top Picks for You" subtitle="Popular items" items={rankedShopBestSellers} onViewAll={setViewAll} shopClosed={shopClosed} onOpenDetails={setSelectedProductDetails} onQuickAdd={handleQuickAdd} cart={cart} onRemoveFromCart={onRemoveFromCart} />
+          <ProductRow title="The Under ₹99 Store" subtitle="Budget friendly grabs" items={rankedUnder99} onViewAll={setViewAll} shopClosed={shopClosed} onOpenDetails={setSelectedProductDetails} onQuickAdd={handleQuickAdd} cart={cart} onRemoveFromCart={onRemoveFromCart} />
+          <ProductRow title="Buy It Again" subtitle="Your favorites" items={rankedBuyItAgain} onViewAll={setViewAll} shopClosed={shopClosed} onOpenDetails={setSelectedProductDetails} onQuickAdd={handleQuickAdd} cart={cart} onRemoveFromCart={onRemoveFromCart} />
+          <ProductRow title="Freshly Restocked" subtitle="Back on shelves" items={rankedNewArrivals} onViewAll={setViewAll} shopClosed={shopClosed} onOpenDetails={setSelectedProductDetails} onQuickAdd={handleQuickAdd} cart={cart} onRemoveFromCart={onRemoveFromCart} />
 
           <ShopCarousel shops={nearbyShops} onSwitchShop={handleSwitchShop} />
           <HomeFooter endMessage="You're all caught up" />

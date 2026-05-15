@@ -2,6 +2,8 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import { ModernProductCard } from './FeedComponents.jsx';
 import { cdnImage } from '../utils/cloudinaryUrl.js';
+import { useRankingConfig } from '../ui/RankingProvider.jsx';
+import { applyBrandPriority } from '../utils/rankingSort.js';
 
 export default function ProductListView({ 
   title, 
@@ -16,6 +18,7 @@ export default function ProductListView({
   onSearchClick   
 }) {
   const BOTTOM_NAV_HEIGHT = '56px';
+  const { config: rankingConfig } = useRankingConfig();
   const [selectedSub, setSelectedSub] = useState("All");
   const [selectedBrand, setSelectedBrand] = useState("All Brands");
 
@@ -167,9 +170,11 @@ export default function ProductListView({
   const activeBrand = showBrandBar ? selectedBrand : "All Brands";
 
   const finalItems = useMemo(() => {
-    if (!showBrandBar || activeBrand === "All Brands") return filteredItems;
-    return filteredItems.filter(item => String(item.brand || "").trim() === activeBrand);
-  }, [filteredItems, activeBrand, showBrandBar]);
+    const base = (!showBrandBar || activeBrand === "All Brands")
+      ? filteredItems
+      : filteredItems.filter(item => String(item.brand || "").trim() === activeBrand);
+    return applyBrandPriority(base, rankingConfig);
+  }, [filteredItems, activeBrand, showBrandBar, rankingConfig]);
 
   // ⚡ INFINITE SCROLL HANDLER ⚡
   const handleScroll = (e) => {

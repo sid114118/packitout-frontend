@@ -6,6 +6,8 @@ import UsersTab from './components/AdminDashboard/UsersTab';
 import GlobalOrdersTab from './components/AdminDashboard/GlobalOrdersTab';
 import AdminParchiManager from './components/AdminDashboard/AdminParchiManager'; // 🌟 Your Master POS!
 import ComplaintsTab from './components/AdminDashboard/ComplaintsTab';
+import MissedSearchesTab from './components/AdminDashboard/MissedSearchesTab';
+import BrandRankingTab from './components/AdminDashboard/BrandRankingTab';
 
 export default function AdminDashboard({ onExit }) {
   const toast = useToast();
@@ -162,6 +164,8 @@ export default function AdminDashboard({ onExit }) {
           <button onClick={() => setActiveTab("orders")} style={tabButtonStyle(activeTab === "orders")}>🛒 Orders</button>
           <button onClick={() => setActiveTab("parchis")} style={tabButtonStyle(activeTab === "parchis")}>🧾 Master POS</button>
           <button onClick={() => setActiveTab("complaints")} style={tabButtonStyle(activeTab === "complaints")}>📣 Complaints</button>
+          <button onClick={() => setActiveTab("missed")} style={tabButtonStyle(activeTab === "missed")}>🔎 Missed Searches</button>
+          <button onClick={() => setActiveTab("ranking")} style={tabButtonStyle(activeTab === "ranking")}>🎯 Ranking</button>
         </div>
       </nav>
 
@@ -181,6 +185,10 @@ export default function AdminDashboard({ onExit }) {
             {activeTab === "parchis" && <AdminParchiManager />}
 
             {activeTab === "complaints" && <ComplaintsTab />}
+
+            {activeTab === "missed" && <MissedSearchesTab />}
+
+            {activeTab === "ranking" && <BrandRankingTab />}
           </>
         )}
       </div>
