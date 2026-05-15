@@ -5,6 +5,7 @@ import SearchPage from '../SearchPage.jsx';
 import { VariantBottomSheet, ModernProductCard, ProductRow } from './FeedComponents.jsx';
 import ShopCarousel from './ShopCarousel.jsx';
 import { useToast, useConfirm } from '../ui/DialogProvider.jsx';
+import HomeFooter from '../components/HomeFooter.jsx';
 
 // 🌟 IMPORT OUR NEW BRAIN!
 import useShopFeedData from './useShopFeedData'; // Adjust path based on where you saved it
@@ -95,11 +96,7 @@ export default function ShopFeed({
           <ProductRow title="Freshly Restocked" subtitle="Back on shelves" items={newArrivals} onViewAll={setViewAll} shopClosed={shopClosed} onOpenDetails={setSelectedProductDetails} onQuickAdd={handleQuickAdd} cart={cart} onRemoveFromCart={onRemoveFromCart} />
 
           <ShopCarousel shops={nearbyShops} onSwitchShop={handleSwitchShop} />
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '12px', padding: '24px 24px 40px', color: '#94a3b8', fontSize: '0.78rem', fontWeight: 600, letterSpacing: '0.5px', textTransform: 'uppercase' }}>
-            <span style={{ flex: 1, height: '1px', background: 'linear-gradient(to right, transparent, #e2e8f0)' }} />
-            <span>You're all caught up</span>
-            <span style={{ flex: 1, height: '1px', background: 'linear-gradient(to left, transparent, #e2e8f0)' }} />
-          </div>
+          <HomeFooter endMessage="You're all caught up" />
         </>
       )}
 

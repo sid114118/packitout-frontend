@@ -4,6 +4,7 @@ import NotificationBell from './NotificationBell';
 import ReceiptModal from './components/UserDashboard/ReceiptModal';
 import OrderReviewModal from './components/UserDashboard/OrderReviewModal';
 import { cdnImage } from './utils/cloudinaryUrl.js';
+import StorefrontIcon from './ui/StorefrontIcon.jsx';
 
 const BASE_URL = (import.meta.env.VITE_API_BASE || "https://darkslategrey-snail-415133.hostingersite.com");
 
@@ -260,7 +261,7 @@ export default function OrdersPage({ user, onExit, onAddToCart }) {
             <div style={{ width: '1px', height: '38px', background: '#e2e8f0' }} />
             <Stat label="Total spent" value={fmtINR(stats.totalSpent)} icon="💰" small />
             <div style={{ width: '1px', height: '38px', background: '#e2e8f0' }} />
-            <Stat label="Favourite shop" value={stats.favShop} icon="🏪" small ellipsis />
+            <Stat label="Favourite shop" value={stats.favShop} icon={<StorefrontIcon size={14} color="#16a34a" />} small ellipsis />
           </div>
         )}
 

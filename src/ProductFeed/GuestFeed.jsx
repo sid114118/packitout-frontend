@@ -6,6 +6,7 @@ import ProductListView from './ProductListView.jsx';
 import SearchPage from '../SearchPage.jsx'; 
 
 import { VariantBottomSheet, ModernProductCard, ProductRow } from './FeedComponents.jsx';
+import HomeFooter from '../components/HomeFooter.jsx';
 
 export default function GuestFeed({ 
   user, onAddToCart, onRemoveFromCart, onViewCart, cart = [], 
@@ -183,9 +184,10 @@ export default function GuestFeed({
           <ProductRow title="🆕 Freshly Restocked" subtitle="Back on the shelves" items={newArrivals} onViewAll={setViewAll} shopClosed={false} onOpenDetails={setSelectedProductDetails} onQuickAdd={handleQuickAdd} cart={cart} onRemoveFromCart={onRemoveFromCart} />
           <ProductRow title="👑 Top Selling Today" subtitle="Customer favorites" items={shopBestSellers} onViewAll={setViewAll} shopClosed={false} onOpenDetails={setSelectedProductDetails} onQuickAdd={handleQuickAdd} cart={cart} onRemoveFromCart={onRemoveFromCart} />
           
-          <div style={{ textAlign: 'center', padding: '10px 0 40px 0', color: '#94a3b8', fontSize: '0.8rem', fontWeight: '600' }}>
-            Sign in to see nearby shops! 🚀
-          </div>
+          <HomeFooter
+            endMessage="That's all for today"
+            signInNudge="Sign in to unlock nearby shops, faster reorder, and pickup-time deals."
+          />
         </>
       )}
 

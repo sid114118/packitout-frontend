@@ -1,6 +1,7 @@
 import React from 'react';
 import NotificationBell from '../../NotificationBell';
 import { useToast } from '../../ui/DialogProvider.jsx';
+import StorefrontIcon from '../../ui/StorefrontIcon.jsx';
 
 export default function ProfileHeader({
   user,
@@ -293,8 +294,14 @@ export default function ProfileHeader({
                     border: `1px solid ${primaryShop ? '#bbf7d0' : '#fde68a'}`,
                     padding: '4px 10px', borderRadius: '999px',
                     fontSize: '0.78rem', fontWeight: 700,
+                    display: 'inline-flex', alignItems: 'center', gap: '6px',
                   }}>
-                    {primaryShop ? `🏪 ${primaryShop.name}` : "Not selected"}
+                    {primaryShop ? (
+                      <>
+                        <StorefrontIcon size={14} color="#15803d" />
+                        {primaryShop.name}
+                      </>
+                    ) : "Not selected"}
                   </span>
                 }
                 last

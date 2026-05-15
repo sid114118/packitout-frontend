@@ -9,6 +9,8 @@ import NotificationBell from './NotificationBell';
 // 🌟 IMPORT THE NEW REVIEWS COMPONENT
 import ShopReviews from './components/ShopDashboard/ShopReviews';
 import ComplaintsTab from './components/ShopDashboard/ComplaintsTab';
+import ShopPhotoModal from './components/ShopDashboard/ShopPhotoModal';
+import { cdnImage } from './utils/cloudinaryUrl.js';
 
 export default function ShopDashboard({ user, onExit }) {
   const toast = useToast();
@@ -18,9 +20,10 @@ export default function ShopDashboard({ user, onExit }) {
   const [masterCatalog, setMasterCatalog] = useState([]); 
   const [shopData, setShopData] = useState(user); 
 
-  const [parchiRequests, setParchiRequests] = useState([]); 
+  const [parchiRequests, setParchiRequests] = useState([]);
   const [selectedParchi, setSelectedParchi] = useState(null);
   const [parchiBill, setParchiBill] = useState([]);
+  const [photoModalOpen, setPhotoModalOpen] = useState(false);
 
   const BASE_URL = (import.meta.env.VITE_API_BASE || "https://darkslategrey-snail-415133.hostingersite.com");
 
@@ -168,24 +171,69 @@ export default function ShopDashboard({ user, onExit }) {
   return (
     <div style={{ backgroundColor: '#f8fafc', minHeight: '100vh', paddingBottom: '70px', fontFamily: 'sans-serif' }}>
       
-      {/* 🏪 TOP HEADER WITH NOTIFICATION BELL */}
-      <div style={{ backgroundColor: '#0f172a', color: 'white', padding: '15px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', position: 'sticky', top: 0, zIndex: 100, boxShadow: '0 2px 10px rgba(0,0,0,0.1)' }}> 
-        <div> 
-          <h2 style={{ margin: 0, fontSize: '1.2rem', color: '#10b981' }}>🏪 {shopData.name}</h2> 
-          <span style={{ fontSize: '0.8rem', color: '#94a3b8' }}>Partner Dashboard</span> 
-        </div> 
-        
-        <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}> 
+      {/* TOP HEADER WITH SHOP AVATAR + NOTIFICATION BELL */}
+      <div style={{ backgroundColor: '#0f172a', color: 'white', padding: '15px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', position: 'sticky', top: 0, zIndex: 100, boxShadow: '0 2px 10px rgba(0,0,0,0.1)' }}>
+        <button
+          onClick={() => setPhotoModalOpen(true)}
+          aria-label="Change shop photo"
+          style={{
+            display: 'flex', alignItems: 'center', gap: '12px',
+            background: 'transparent', border: 'none', padding: 0,
+            cursor: 'pointer', color: 'inherit', textAlign: 'left',
+            minWidth: 0,
+          }}
+        >
+          <span style={{
+            position: 'relative',
+            display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+            width: '44px', height: '44px', borderRadius: '50%',
+            background: shopData.shopImage ? 'transparent' : 'linear-gradient(135deg, #16a34a 0%, #15803d 100%)',
+            overflow: 'hidden',
+            boxShadow: '0 2px 8px rgba(22,163,74,0.35)',
+            border: '2px solid rgba(16,185,129,0.5)',
+            flexShrink: 0,
+          }}>
+            {shopData.shopImage ? (
+              <img
+                src={cdnImage(shopData.shopImage, 160)}
+                alt={shopData.name}
+                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+              />
+            ) : (
+              <span style={{ fontSize: '1.05rem', fontWeight: 900, color: '#fff' }}>
+                {(shopData.name || '?').trim().charAt(0).toUpperCase()}
+              </span>
+            )}
+            <span style={{
+              position: 'absolute', bottom: '-2px', right: '-2px',
+              background: '#10b981', borderRadius: '50%', padding: '3px',
+              border: '2px solid #0f172a',
+              display: 'inline-flex',
+            }}>
+              <svg width="9" height="9" viewBox="0 0 24 24" fill="#fff" aria-hidden="true">
+                <path d="M12 4v16M4 12h16" stroke="#fff" strokeWidth="3" strokeLinecap="round" />
+              </svg>
+            </span>
+          </span>
+          <span style={{ minWidth: 0 }}>
+            <span style={{ display: 'block', margin: 0, fontSize: '1.05rem', color: '#10b981', fontWeight: 800, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '180px' }}>
+              {shopData.name}
+            </span>
+            <span style={{ fontSize: '0.75rem', color: '#94a3b8' }}>Partner Dashboard</span>
+          </span>
+        </button>
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
           <NotificationBell ownerType="shop" ownerId={shopData._id} />
 
-          <button onClick={toggleShopStatus} style={{ padding: '6px 12px', borderRadius: '20px', fontWeight: 'bold', border: 'none', cursor: 'pointer', backgroundColor: shopData.isOpen ? '#d1fae5' : '#fee2e2', color: shopData.isOpen ? '#059669' : '#b91c1c' }} > 
-            {shopData.isOpen ? '🟢 OPEN' : '🔴 CLOSED'} 
-          </button> 
+          <button onClick={toggleShopStatus} style={{ padding: '6px 12px', borderRadius: '20px', fontWeight: 'bold', border: 'none', cursor: 'pointer', backgroundColor: shopData.isOpen ? '#d1fae5' : '#fee2e2', color: shopData.isOpen ? '#059669' : '#b91c1c' }} >
+            {shopData.isOpen ? '🟢 OPEN' : '🔴 CLOSED'}
+          </button>
           <button onClick={onExit} style={{ background: '#ef4444', color: 'white', border: 'none', padding: '6px 12px', borderRadius: '6px', fontWeight: 'bold', cursor: 'pointer' }}>
             Logout
-          </button> 
-        </div> 
-      </div> 
+          </button>
+        </div>
+      </div>
 
       {/* 🗂️ TAB NAVIGATION (NEW REVIEWS TAB ADDED) */}
       <div className="hide-scroll" style={{ display: 'flex', backgroundColor: '#1e293b', padding: '10px 20px', gap: '15px', overflowX: 'auto', whiteSpace: 'nowrap' }}>
@@ -203,6 +251,13 @@ export default function ShopDashboard({ user, onExit }) {
         {activeTab === "reviews" && <ShopReviews shopId={shopData._id} shopRating={shopData.rating} totalReviews={shopData.totalReviews} />}
         {activeTab === "complaints" && <ComplaintsTab shopId={shopData._id} shopName={shopData.name} />}
       </div>
+
+      <ShopPhotoModal
+        open={photoModalOpen}
+        onClose={() => setPhotoModalOpen(false)}
+        shop={shopData}
+        onShopUpdated={(updated) => setShopData(updated)}
+      />
     </div>
   );
 }

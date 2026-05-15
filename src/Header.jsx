@@ -60,7 +60,7 @@ export default function Header({ user, onUserUpdate }) {
       setIsChanging(false);
       setShops([]);
       setHasSearched(false);
-      toast("Shop updated! 🏪");
+      toast("Primary shop updated");
     } catch (err) {
       console.log("Error saving shop", err);
       toast("Could not save shop. Try again.", 'error');

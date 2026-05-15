@@ -1,10 +1,11 @@
 import React, { useEffect, useState } from 'react';
 import ComplaintReplyThread from '../ShopDashboard/ComplaintReplyThread';
+import StorefrontIcon from '../../ui/StorefrontIcon.jsx';
 
 const BASE_URL = (import.meta.env.VITE_API_BASE || "https://darkslategrey-snail-415133.hostingersite.com");
 
 const CATEGORY_META = {
-  shop: { icon: '🏪', label: 'Shop',  bg: '#fff1f2', fg: '#b91c1c', border: '#fecaca' },
+  shop: { icon: <StorefrontIcon size={12} color="#b91c1c" />, label: 'Shop',  bg: '#fff1f2', fg: '#b91c1c', border: '#fecaca' },
   item: { icon: '🛒', label: 'Item',  bg: '#fef9c3', fg: '#854d0e', border: '#fde68a' },
   app:  { icon: '📱', label: 'App',   bg: '#eff6ff', fg: '#1d4ed8', border: '#bfdbfe' },
 };
@@ -102,7 +103,7 @@ export default function MyComplaintsModal({ open, onClose, user }) {
                     {/* Top row */}
                     <div style={{ display: 'flex', justifyContent: 'space-between', gap: '8px', flexWrap: 'wrap', marginBottom: '8px' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-                        <span style={{ background: cat.bg, color: cat.fg, border: `1px solid ${cat.border}`, padding: '4px 10px', borderRadius: '999px', fontSize: '0.74rem', fontWeight: 800 }}>
+                        <span style={{ background: cat.bg, color: cat.fg, border: `1px solid ${cat.border}`, padding: '4px 10px', borderRadius: '999px', fontSize: '0.74rem', fontWeight: 800, display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
                           {cat.icon} {cat.label}
                         </span>
                         <span style={{ background: stMeta.bg, color: stMeta.fg, padding: '4px 10px', borderRadius: '999px', fontSize: '0.74rem', fontWeight: 800 }}>

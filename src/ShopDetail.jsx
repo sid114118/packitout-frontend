@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { cdnImage } from './utils/cloudinaryUrl.js';
+import StorefrontIcon from './ui/StorefrontIcon.jsx';
 
 export default function ShopDetail({ shop, onBack, onSetPrimary }) {
   const [reviews, setReviews] = useState([]);
@@ -104,13 +105,14 @@ export default function ShopDetail({ shop, onBack, onSetPrimary }) {
         </div>
 
         {/* Primary Action */}
-        <button 
+        <button
           onClick={() => onSetPrimary(shop._id)}
-          style={{ width: '100%', marginTop: '40px', padding: '18px', backgroundColor: '#0c831f', color: 'white', border: 'none', borderRadius: '16px', fontWeight: '900', fontSize: '1.1rem', cursor: 'pointer', boxShadow: '0 8px 20px rgba(12, 131, 31, 0.2)', transition: 'transform 0.1s' }}
+          style={{ width: '100%', marginTop: '40px', padding: '18px', backgroundColor: '#0c831f', color: 'white', border: 'none', borderRadius: '16px', fontWeight: '900', fontSize: '1.1rem', cursor: 'pointer', boxShadow: '0 8px 20px rgba(12, 131, 31, 0.2)', transition: 'transform 0.1s', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '10px' }}
           onMouseDown={(e) => e.currentTarget.style.transform = 'scale(0.98)'}
           onMouseUp={(e) => e.currentTarget.style.transform = 'scale(1)'}
         >
-          Set as Primary Shop 🏪
+          Set as Primary Shop
+          <StorefrontIcon size={20} color="#fff" accent="#bbf7d0" />
         </button>
       </div>
     </div>

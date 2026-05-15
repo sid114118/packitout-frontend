@@ -274,7 +274,7 @@ export default function App() {
         const updatedUser = await response.json();
         setLoggedInUser(updatedUser);
         localStorage.setItem("packitout_user", JSON.stringify(updatedUser));
-        toast("Shop updated! 🏪");
+        toast("Primary shop updated");
         window.location.hash = "";
       }
     } catch (err) { toast("Failed to update shop.", 'error'); }

@@ -1,10 +1,11 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useToast } from '../../ui/DialogProvider.jsx';
+import StorefrontIcon from '../../ui/StorefrontIcon.jsx';
 
 const BASE_URL = (import.meta.env.VITE_API_BASE || "https://darkslategrey-snail-415133.hostingersite.com");
 
 const CATEGORIES = [
-  { key: 'shop', label: 'A Shop',   icon: '🏪', help: 'Behaviour, packing, missing items, etc.' },
+  { key: 'shop', label: 'A Shop',   icon: <StorefrontIcon size={22} color="#16a34a" />, help: 'Behaviour, packing, missing items, etc.' },
   { key: 'item', label: 'An Item',  icon: '🛒', help: 'Damaged, expired, wrong product.' },
   { key: 'app',  label: 'The App',  icon: '📱', help: 'Bugs, feature requests, anything else.' },
 ];
@@ -166,7 +167,7 @@ export default function ComplaintModal({ open, onClose, user }) {
                     boxShadow: active ? '0 6px 16px rgba(22,163,74,0.15)' : 'none',
                   }}
                 >
-                  <span style={{ fontSize: '1.4rem' }}>{c.icon}</span>
+                  <span style={{ fontSize: '1.4rem', lineHeight: 1, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', height: '28px' }}>{c.icon}</span>
                   <span style={{ fontSize: '0.82rem', fontWeight: active ? 900 : 700, color: '#0f172a' }}>{c.label}</span>
                 </button>
               );
