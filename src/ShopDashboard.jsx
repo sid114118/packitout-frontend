@@ -87,21 +87,31 @@ export default function ShopDashboard({ user, onExit }) {
   }; 
 
   // 🚀 THIS IS THE FIX: IT WILL INSTANTLY UPDATE THE SCREEN OR SCREAM THE ERROR AT YOU
-  const updateOrderStatus = async (orderId, newStatus) => { 
-    try { 
+  // Auth: every order mutation now carries the shop's bearer token. Cancel
+  // intent is routed to the dedicated /shop-cancel endpoint so coin/Razorpay
+  // refunds always fire — never via PATCH.
+  const updateOrderStatus = async (orderId, newStatus) => {
+    const authHeader = shopData.sessionToken ? { "Authorization": `Bearer ${shopData.sessionToken}` } : {};
+    const isCancel = /cancel|reject/i.test(newStatus);
+
+    try {
       // 1. Instantly change UI so it feels lightning fast
       setOrders(prev => prev.map(o => o._id === orderId ? { ...o, status: newStatus } : o));
 
       // 2. Tell the server
-      const res = await fetch(`${BASE_URL}/orders/${orderId}`, { 
-        method: "PATCH", 
-        headers: { "Content-Type": "application/json" }, 
-        body: JSON.stringify({ status: newStatus }) 
-      }); 
+      const url = isCancel ? `${BASE_URL}/orders/${orderId}/shop-cancel` : `${BASE_URL}/orders/${orderId}`;
+      const method = isCancel ? "POST" : "PATCH";
+      const body = isCancel ? JSON.stringify({ reason: 'Cancelled by shop' }) : JSON.stringify({ status: newStatus });
+
+      const res = await fetch(url, {
+        method,
+        headers: { "Content-Type": "application/json", ...authHeader },
+        body,
+      });
 
       // 3. Catch server errors
       if (!res.ok) {
-        const errorData = await res.json();
+        const errorData = await res.json().catch(() => ({}));
         toast(errorData.error || "Server rejected the update", 'error');
         fetchOrders(); // Reload actual database state
       }
@@ -109,7 +119,7 @@ export default function ShopDashboard({ user, onExit }) {
       console.log(err);
       toast("Network error. Cannot reach server.", 'error');
     }
-  }; 
+  };
 
   const handleInventoryUpdate = async (productId, sellingPrice, inStock = true) => { 
     try { 

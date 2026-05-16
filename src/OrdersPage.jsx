@@ -89,17 +89,26 @@ export default function OrdersPage({ user, onExit, onAddToCart }) {
       danger: true,
     });
     if (!ok) return;
+    // Cancel now routes through /user-cancel so coins and any Razorpay payment
+    // are refunded. Requires the session token issued at login — users on
+    // pre-token sessions need to log out and back in.
+    const authHeader = user?.sessionToken ? { "Authorization": `Bearer ${user.sessionToken}` } : {};
     try {
-      const res = await fetch(`${BASE_URL}/orders/${orderId}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status: "Cancelled ❌" })
+      const res = await fetch(`${BASE_URL}/orders/${orderId}/user-cancel`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...authHeader },
+        body: JSON.stringify({})
       });
       if (res.ok) {
-        triggerToast("Order cancelled successfully!");
+        triggerToast("Order cancelled. Refund is being processed.");
         fetchOrders();
       } else {
-        triggerToast("Could not cancel. Order is in process.", "error");
+        const err = await res.json().catch(() => ({}));
+        if (res.status === 401) {
+          triggerToast("Session expired — please log out and log back in.", "error");
+        } else {
+          triggerToast(err.error || "Could not cancel.", "error");
+        }
       }
     } catch (err) {
       triggerToast("Network error. Try again.", "error");
