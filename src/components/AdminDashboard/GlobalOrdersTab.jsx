@@ -1,10 +1,31 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useToast } from '../../ui/DialogProvider.jsx';
+import { useOrderAlarm } from '../../utils/orderAlarm.js';
+
+// Admin alarm only fires once an order has been Pending this long — short enough
+// to escalate before the customer gives up, long enough that the shop gets a fair
+// window to accept on their own without admin noise.
+const STALLED_THRESHOLD_MS = 2 * 60 * 1000;
 
 export default function GlobalOrdersTab({ orders }) {
   const toast = useToast();
   const [pingingOrderId, setPingingOrderId] = useState(null);
   const BASE_URL = (import.meta.env.VITE_API_BASE || "https://darkslategrey-snail-415133.hostingersite.com");
+
+  // Re-evaluate "is this order stalled now?" every 15s. The `orders` prop only
+  // refreshes on tab mount, but the threshold check is purely time-based — this
+  // tick re-runs the filter without needing a refetch.
+  const [now, setNow] = useState(Date.now());
+  useEffect(() => {
+    const t = setInterval(() => setNow(Date.now()), 15000);
+    return () => clearInterval(t);
+  }, []);
+
+  const stalledOrders = (orders || []).filter(o =>
+    o.status === 'Pending' && (now - new Date(o.createdAt).getTime()) > STALLED_THRESHOLD_MS
+  );
+  const stalledCount = stalledOrders.length;
+  const { muted, setMuted, needsUnlock, unlock } = useOrderAlarm(stalledCount > 0, { intervalMs: 3500 });
 
   // --- 🔔 THE PING FUNCTION ---
   const handlePingShop = async (shopId, orderId) => {
@@ -38,6 +59,45 @@ export default function GlobalOrdersTab({ orders }) {
 
   return (
     <div style={cardStyle}>
+      {/* 🚨 STALLED ORDER ALARM — fires when shops aren't responding */}
+      {stalledCount > 0 && (
+        <div style={{
+          marginBottom: '15px',
+          background: 'linear-gradient(90deg, #ef4444, #dc2626)', color: '#fff',
+          padding: '14px 16px', borderRadius: '12px',
+          boxShadow: '0 10px 25px rgba(239, 68, 68, 0.35)',
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px',
+          animation: 'adminAlarmPulse 1.2s ease-in-out infinite',
+        }}>
+          <style>{`@keyframes adminAlarmPulse { 0%, 100% { box-shadow: 0 10px 25px rgba(239, 68, 68, 0.35); } 50% { box-shadow: 0 10px 35px rgba(239, 68, 68, 0.7); } }`}</style>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0 }}>
+            <span style={{ fontSize: '1.4rem' }}>🚨</span>
+            <div style={{ minWidth: 0 }}>
+              <div style={{ fontWeight: 900, fontSize: '0.95rem' }}>
+                {stalledCount} order{stalledCount > 1 ? 's' : ''} stalled &gt; 2 min — shop not responding
+              </div>
+              <div style={{ fontSize: '0.78rem', opacity: 0.9 }}>Use 🔔 Ping Shop in the table to escalate</div>
+            </div>
+          </div>
+          <div style={{ display: 'flex', gap: '8px', flexShrink: 0 }}>
+            {needsUnlock && !muted && (
+              <button
+                onClick={unlock}
+                style={{ background: '#fff', color: '#dc2626', border: 'none', padding: '8px 12px', borderRadius: '8px', fontWeight: 800, fontSize: '0.8rem', cursor: 'pointer' }}
+              >
+                🔔 Enable sound
+              </button>
+            )}
+            <button
+              onClick={() => setMuted(!muted)}
+              style={{ background: 'rgba(255,255,255,0.2)', color: '#fff', border: '1px solid rgba(255,255,255,0.4)', padding: '8px 12px', borderRadius: '8px', fontWeight: 700, fontSize: '0.8rem', cursor: 'pointer' }}
+            >
+              {muted ? '🔈 Unmute' : '🔇 Mute'}
+            </button>
+          </div>
+        </div>
+      )}
+
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
         <h3 style={{ margin: 0 }}>Global Order Pulse ({orders?.length || 0})</h3>
       </div>

@@ -4,6 +4,7 @@ import ProductsTab from './components/AdminDashboard/ProductsTab';
 import ShopsTab from './components/AdminDashboard/ShopsTab';
 import UsersTab from './components/AdminDashboard/UsersTab';
 import GlobalOrdersTab from './components/AdminDashboard/GlobalOrdersTab';
+import LiveOpsTab from './components/AdminDashboard/LiveOpsTab';
 import AdminParchiManager from './components/AdminDashboard/AdminParchiManager'; // 🌟 Your Master POS!
 import ComplaintsTab from './components/AdminDashboard/ComplaintsTab';
 import MissedSearchesTab from './components/AdminDashboard/MissedSearchesTab';
@@ -42,6 +43,19 @@ export default function AdminDashboard({ onExit }) {
   const CATEGORIES = ["Dairy, Bread & Eggs", "Fruits & Veg", "Atta, Rice & Dal", "Chips & Namkeen", "Drinks & Juices", "Sweets & Chocolates", "Ice Creams", "Instant Food", "Bath & Body", "Health & Pharma"];
 
   useEffect(() => { fetchData(); }, [activeTab]);
+
+  // Keep the global orders board live so the stalled-order alarm in
+  // GlobalOrdersTab actually sees new orders without the admin re-clicking the tab.
+  useEffect(() => {
+    if (activeTab !== "orders") return;
+    const poll = setInterval(async () => {
+      try {
+        const res = await fetch(`${BASE_URL}/orders`);
+        if (res.ok) setOrders(await res.json());
+      } catch (err) { /* swallow — next tick will retry */ }
+    }, 15000);
+    return () => clearInterval(poll);
+  }, [activeTab]);
 
   const fetchData = async () => {
     setLoading(true);
@@ -162,6 +176,7 @@ export default function AdminDashboard({ onExit }) {
           <button onClick={() => setActiveTab("shops")} style={tabButtonStyle(activeTab === "shops")}>🏪 Shops</button>
           <button onClick={() => setActiveTab("users")} style={tabButtonStyle(activeTab === "users")}>👤 Users</button>
           <button onClick={() => setActiveTab("orders")} style={tabButtonStyle(activeTab === "orders")}>🛒 Orders</button>
+          <button onClick={() => setActiveTab("liveops")} style={tabButtonStyle(activeTab === "liveops")}>🛡️ Live Ops</button>
           <button onClick={() => setActiveTab("parchis")} style={tabButtonStyle(activeTab === "parchis")}>🧾 Master POS</button>
           <button onClick={() => setActiveTab("complaints")} style={tabButtonStyle(activeTab === "complaints")}>📣 Complaints</button>
           <button onClick={() => setActiveTab("missed")} style={tabButtonStyle(activeTab === "missed")}>🔎 Missed Searches</button>
@@ -181,6 +196,8 @@ export default function AdminDashboard({ onExit }) {
             
             {/* 🌟 NEW: Render the Orders and Master POS components */}
             {activeTab === "orders" && <GlobalOrdersTab orders={orders} />}
+
+            {activeTab === "liveops" && <LiveOpsTab />}
             
             {activeTab === "parchis" && <AdminParchiManager />}
 

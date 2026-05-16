@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useOrderAlarm } from '../../utils/orderAlarm.js';
 
 export default function OrdersTab({ orders, updateOrderStatus }) {
   const [showPastOrders, setShowPastOrders] = useState(false);
@@ -6,6 +7,12 @@ export default function OrdersTab({ orders, updateOrderStatus }) {
   // Split orders into Active and Past based on their status
   const activeOrders = orders.filter(o => !o.status?.includes('✅') && !o.status?.includes('❌'));
   const pastOrders = orders.filter(o => o.status?.includes('✅') || o.status?.includes('❌'));
+
+  // 🚨 ALARM: ring while any order is still Pending (shop hasn't accepted/rejected).
+  // Stops the instant every pending order gets Accept or Cancel.
+  const pendingOrders = activeOrders.filter(o => o.status === 'Pending');
+  const pendingCount = pendingOrders.length;
+  const { muted, setMuted, needsUnlock, unlock } = useOrderAlarm(pendingCount > 0);
 
   const OrderCard = ({ order, isActive }) => {
     // Safely extract customer info
@@ -165,6 +172,45 @@ export default function OrdersTab({ orders, updateOrderStatus }) {
 
   return (
     <div>
+      {/* 🚨 ALARM BANNER — sticks at top while there are unaccepted orders */}
+      {pendingCount > 0 && (
+        <div style={{
+          position: 'sticky', top: 0, zIndex: 50, marginBottom: '15px',
+          background: 'linear-gradient(90deg, #ef4444, #dc2626)', color: '#fff',
+          padding: '14px 16px', borderRadius: '12px',
+          boxShadow: '0 10px 25px rgba(239, 68, 68, 0.35)',
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px',
+          animation: 'alarmPulse 1.2s ease-in-out infinite',
+        }}>
+          <style>{`@keyframes alarmPulse { 0%, 100% { box-shadow: 0 10px 25px rgba(239, 68, 68, 0.35); } 50% { box-shadow: 0 10px 35px rgba(239, 68, 68, 0.7); } }`}</style>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0 }}>
+            <span style={{ fontSize: '1.4rem' }}>🚨</span>
+            <div style={{ minWidth: 0 }}>
+              <div style={{ fontWeight: 900, fontSize: '0.95rem' }}>
+                {pendingCount} new order{pendingCount > 1 ? 's' : ''} waiting
+              </div>
+              <div style={{ fontSize: '0.78rem', opacity: 0.9 }}>Tap Accept or Cancel to silence</div>
+            </div>
+          </div>
+          <div style={{ display: 'flex', gap: '8px', flexShrink: 0 }}>
+            {needsUnlock && !muted && (
+              <button
+                onClick={unlock}
+                style={{ background: '#fff', color: '#dc2626', border: 'none', padding: '8px 12px', borderRadius: '8px', fontWeight: 800, fontSize: '0.8rem', cursor: 'pointer' }}
+              >
+                🔔 Enable sound
+              </button>
+            )}
+            <button
+              onClick={() => setMuted(!muted)}
+              style={{ background: 'rgba(255,255,255,0.2)', color: '#fff', border: '1px solid rgba(255,255,255,0.4)', padding: '8px 12px', borderRadius: '8px', fontWeight: 700, fontSize: '0.8rem', cursor: 'pointer' }}
+            >
+              {muted ? '🔈 Unmute' : '🔇 Mute'}
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* 🚀 ACTIVE ORDERS */}
       <h3 style={{ color: '#0f172a', fontSize: '1.2rem', marginBottom: '15px', display: 'flex', justifyContent: 'space-between' }}>
         Live Orders <span>{activeOrders.length}</span>
