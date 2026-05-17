@@ -70,15 +70,15 @@ export default function Payment({ user, cart, targetShop, finalBill, useCoins, c
         isUrgent: safePickup.isUrgent,
       }),
     });
-    if (!response.ok) throw new Error("Failed to place order");
+    const order = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(order.error || "Failed to place order");
 
-    if (useCoins && coinsUsed > 0) {
-      const newCoinBalance = Math.round(Number(user.coins || 0) - Number(coinsUsed));
-      await fetch(`${API_BASE}/users/${user._id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ coins: newCoinBalance }),
-      });
+    // Coin deduction is handled atomically server-side inside POST /orders.
+    // Mirror the trusted coinsUsed value from the saved order into localStorage
+    // for snappy UI; the user object resyncs from /users/:id on next focus.
+    const debited = Number(order?.coinsUsed || 0);
+    if (debited > 0) {
+      const newCoinBalance = Math.max(0, Math.round(Number(user.coins || 0) - debited));
       localStorage.setItem("packitout_user", JSON.stringify({ ...user, coins: newCoinBalance }));
     }
   };
