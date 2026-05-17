@@ -15,16 +15,47 @@ export default function Nearby({ user, onSelectShop }) {
     }
     let cancelled = false;
     setLoading(true);
-    fetch(`${BASE_URL}/shops/all/${user.pincode}`)
-      .then(res => res.json())
-      .then(data => {
-        if (cancelled) return;
-        setShops(Array.isArray(data) ? data : []);
-        setLoading(false);
-      })
-      .catch(() => { if (!cancelled) setLoading(false); });
+
+    // Try the browser geolocation API once; if granted, the backend can sort
+    // shops by distance and attach a distanceKm field. If denied or absent,
+    // we fall back to the pincode-only listing (no distance shown).
+    const fetchShops = (qs = '') => {
+      fetch(`${BASE_URL}/shops/all/${user.pincode}${qs}`)
+        .then(res => res.json())
+        .then(data => {
+          if (cancelled) return;
+          setShops(Array.isArray(data) ? data : []);
+          setLoading(false);
+        })
+        .catch(() => { if (!cancelled) setLoading(false); });
+    };
+
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          if (cancelled) return;
+          const { latitude, longitude } = pos.coords;
+          fetchShops(`?lat=${latitude}&lng=${longitude}`);
+        },
+        () => { if (!cancelled) fetchShops(); }, // permission denied / unavailable
+        { enableHighAccuracy: false, timeout: 8000, maximumAge: 5 * 60 * 1000 }
+      );
+    } else {
+      fetchShops();
+    }
+
     return () => { cancelled = true; };
   }, [user]);
+
+  // Format the distance the server attached. < 1 km shows in metres; else km
+  // with one decimal. Walk time uses a flat 5 km/h walking pace — accurate
+  // enough for "feels nearby" UX without needing a routing API.
+  const formatDistance = (km) => {
+    if (typeof km !== 'number' || !Number.isFinite(km)) return null;
+    const distLabel = km < 1 ? `${Math.round(km * 1000)} m` : `${km.toFixed(1)} km`;
+    const walkMin = Math.max(1, Math.round((km / 5) * 60));
+    return `${distLabel} · ~${walkMin} min walk`;
+  };
 
   if (loading) return <div style={{ padding: '20px', textAlign: 'center' }}>Searching for local shops...</div>;
   if (!user?.pincode) return <div style={{ padding: '24px', textAlign: 'center', color: '#64748b', fontWeight: 600 }}>Add your pincode in Profile to see nearby shops.</div>;
@@ -53,6 +84,7 @@ export default function Nearby({ user, onSelectShop }) {
         {shops.map(shop => {
           const initial = (shop.name || '?').trim().charAt(0).toUpperCase();
           const rating = Number(shop.rating) || 5.0;
+          const distanceLabel = formatDistance(shop.distanceKm) || shop.distance;
           return (
             <button
               key={shop._id}
@@ -180,9 +212,9 @@ export default function Nearby({ user, onSelectShop }) {
                     </svg>
                     {rating.toFixed(1)}
                   </span>
-                  {shop.distance ? (
+                  {distanceLabel ? (
                     <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                      {shop.distance}
+                      {distanceLabel}
                     </span>
                   ) : (
                     <span style={{ color: '#16a34a' }}>Local store</span>

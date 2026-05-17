@@ -10,6 +10,7 @@ import NotificationBell from './NotificationBell';
 import ShopReviews from './components/ShopDashboard/ShopReviews';
 import ComplaintsTab from './components/ShopDashboard/ComplaintsTab';
 import ShopPhotoModal from './components/ShopDashboard/ShopPhotoModal';
+import ShopLocationBanner from './components/ShopDashboard/ShopLocationBanner';
 import { cdnImage } from './utils/cloudinaryUrl.js';
 
 export default function ShopDashboard({ user, onExit }) {
@@ -254,7 +255,9 @@ export default function ShopDashboard({ user, onExit }) {
         <button onClick={() => setActiveTab("complaints")} style={tabStyle(activeTab === "complaints")}>📣 Complaints</button>
       </div>
 
-      <div style={{ padding: '15px', maxWidth: '800px', margin: '0 auto' }}> 
+      <ShopLocationBanner shopData={shopData} onShopUpdated={setShopData} />
+
+      <div style={{ padding: '15px', maxWidth: '800px', margin: '0 auto' }}>
         {activeTab === "orders" && <OrdersTab orders={orders} updateOrderStatus={updateOrderStatus} />}
         {activeTab === "parchis" && <ParchiTab parchiRequests={parchiRequests} selectedParchi={selectedParchi} setSelectedParchi={setSelectedParchi} parchiBill={parchiBill} setParchiBill={setParchiBill} handleAddToBill={handleAddToBill} handleSendBill={handleSendBill} shopData={shopData} />}
         {activeTab === "inventory" && <InventoryTab shopData={shopData} masterCatalog={masterCatalog} handleInventoryUpdate={handleInventoryUpdate} onInventoryRefresh={refreshShopData} />}
