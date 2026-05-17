@@ -190,7 +190,7 @@ export default function GuestFeed({
       {/* 🌟 3. NORMAL FEED 🌟 */}
       {!isSearchOpen && !viewAll && !selectedCategory && (
         <>
-          <ProductRow title="🆕 Freshly Restocked" subtitle="Back on the shelves" items={rankedNewArrivals} onViewAll={setViewAll} shopClosed={false} onOpenDetails={setSelectedProductDetails} onQuickAdd={handleQuickAdd} cart={cart} onRemoveFromCart={onRemoveFromCart} />
+          <ProductRow title="🆕 Freshly Restocked" subtitle="Back on the shelves" items={rankedNewArrivals} onViewAll={setViewAll} shopClosed={false} onOpenDetails={setSelectedProductDetails} onQuickAdd={handleQuickAdd} cart={cart} onRemoveFromCart={onRemoveFromCart} hideBrandPrefix />
           <ProductRow title="🚀 Trending on PackItOut" subtitle="What everyone is ordering" items={rankedTrendingPlatform} onViewAll={setViewAll} shopClosed={false} onOpenDetails={setSelectedProductDetails} onQuickAdd={handleQuickAdd} cart={cart} onRemoveFromCart={onRemoveFromCart} />
           <ProductRow title={rankedTimeBased.title} subtitle={rankedTimeBased.subtitle} items={rankedTimeBased.items} onViewAll={setViewAll} shopClosed={false} onOpenDetails={setSelectedProductDetails} onQuickAdd={handleQuickAdd} cart={cart} onRemoveFromCart={onRemoveFromCart} />
           <ProductRow title="🔥 Today's Mega Steals" subtitle="Unbeatable prices" items={rankedShopDeals} onViewAll={setViewAll} shopClosed={false} onOpenDetails={setSelectedProductDetails} onQuickAdd={handleQuickAdd} cart={cart} onRemoveFromCart={onRemoveFromCart} />

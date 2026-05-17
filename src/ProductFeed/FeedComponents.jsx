@@ -77,7 +77,7 @@ export function VariantBottomSheet({ product, onClose, onAddToCart }) {
 }
 
 // 💎 2. HIGH-PERFORMANCE MODERN PRODUCT CARD
-const ModernProductCardBase = ({ item, isCarousel, shopClosed, onOpenDetails, onQuickAdd, cart = [], onRemoveFromCart }) => {
+const ModernProductCardBase = ({ item, isCarousel, shopClosed, onOpenDetails, onQuickAdd, cart = [], onRemoveFromCart, hideBrandPrefix = false }) => {
   const isOutOfStock = !item.inStock;
   const isMultiVariant = item.variants && item.variants.length > 1;
   const safeCart = Array.isArray(cart) ? cart.filter(c => c !== null) : [];
@@ -85,8 +85,8 @@ const ModernProductCardBase = ({ item, isCarousel, shopClosed, onOpenDetails, on
 
   const safeBrand = (item.brand && item.brand !== "nan") ? item.brand : "";
   const safeName = item.name || "";
-  const displayTitle = (safeBrand && !safeName.toLowerCase().includes(safeBrand.toLowerCase())) 
-    ? `${safeBrand} ${safeName}` 
+  const displayTitle = (!hideBrandPrefix && safeBrand && !safeName.toLowerCase().includes(safeBrand.toLowerCase()))
+    ? `${safeBrand} ${safeName}`
     : safeName;
 
   return (
@@ -183,7 +183,7 @@ const areCardsEqual = (prevProps, nextProps) => {
 export const ModernProductCard = memo(ModernProductCardBase, areCardsEqual);
 
 // 🛤️ 3. THE SMART PRODUCT ROW
-export function ProductRow({ title, subtitle, items, onViewAll, shopClosed, onOpenDetails, onQuickAdd, cart = [], onRemoveFromCart }) {
+export function ProductRow({ title, subtitle, items, onViewAll, shopClosed, onOpenDetails, onQuickAdd, cart = [], onRemoveFromCart, hideBrandPrefix = false }) {
   if (!items || items.length === 0) return null;
 
   const flattenedItems = items.flatMap(item => {
@@ -217,15 +217,16 @@ export function ProductRow({ title, subtitle, items, onViewAll, shopClosed, onOp
       
       <div className="premium-hide-scroll" style={{ display: 'flex', overflowX: 'auto', gap: '16px', padding: '0 16px 10px 16px', scrollSnapType: 'x mandatory' }}>
         {flattenedItems.map((item, index) => (
-          <ModernProductCard 
-            key={`${item._id}-${index}`} 
-            item={item} 
-            isCarousel={true} 
-            shopClosed={shopClosed} 
-            onOpenDetails={onOpenDetails} 
-            onQuickAdd={onQuickAdd} 
-            cart={cart} 
-            onRemoveFromCart={onRemoveFromCart} 
+          <ModernProductCard
+            key={`${item._id}-${index}`}
+            item={item}
+            isCarousel={true}
+            shopClosed={shopClosed}
+            onOpenDetails={onOpenDetails}
+            onQuickAdd={onQuickAdd}
+            cart={cart}
+            onRemoveFromCart={onRemoveFromCart}
+            hideBrandPrefix={hideBrandPrefix}
           />
         ))}
       </div>
