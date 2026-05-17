@@ -40,7 +40,7 @@ export default function Nearby({ user, onSelectShop }) {
           Shops around the corner
         </h2>
         <div style={{ fontSize: '0.82rem', color: '#64748b', fontWeight: 600, marginTop: '4px' }}>
-          {shops.length > 0 ? `${shops.length} ${shops.length === 1 ? 'shop' : 'shops'} ready to deliver` : 'Looking for stores near you'}
+          {shops.length > 0 ? `${shops.length} ${shops.length === 1 ? 'shop' : 'shops'} ready for pickup` : 'Looking for stores near you'}
         </div>
       </div>
 

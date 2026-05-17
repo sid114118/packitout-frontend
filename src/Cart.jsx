@@ -143,7 +143,7 @@ export default function Cart({ cart, setCart, user, onBack, onCheckoutSuccess })
         {/* 🏪 LOCKED SHOP SELECTION */}
         <div style={{ backgroundColor: '#fff', padding: '16px', borderRadius: '20px', marginBottom: '20px', boxShadow: '0 4px 15px rgba(0,0,0,0.03)' }}>
           <div style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: '800', marginBottom: '12px', letterSpacing: '0.5px', textTransform: 'uppercase' }}>
-            📍 Delivering To ({user?.pincode})
+            📍 Pickup From ({user?.pincode})
           </div>
           
           {loadingShops ? (

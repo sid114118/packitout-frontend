@@ -38,7 +38,7 @@ const fmtINR = (n) => `₹${Number(n || 0).toLocaleString('en-IN')}`;
 const TABS = [
   { key: 'all',       label: 'All' },
   { key: 'live',      label: 'Live' },
-  { key: 'delivered', label: 'Delivered' },
+  { key: 'delivered', label: 'Picked Up' },
   { key: 'cancelled', label: 'Cancelled' },
 ];
 

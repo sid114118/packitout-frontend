@@ -261,8 +261,8 @@ export default function Payment({ user, cart, targetShop, finalBill, useCoins, c
             <input type="radio" name="payment" value="COD" checked={paymentMethod === 'COD'} onChange={() => setPaymentMethod('COD')} style={{ width: '20px', height: '20px', accentColor: '#0c831f', marginRight: '16px' }} />
             <div style={{ fontSize: '1.5rem', marginRight: '12px' }}>💵</div>
             <div>
-              <div style={{ fontWeight: '800', color: '#111827', fontSize: '1rem' }}>Cash on Delivery</div>
-              <div style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: '600', marginTop: '2px' }}>Pay when you receive the order</div>
+              <div style={{ fontWeight: '800', color: '#111827', fontSize: '1rem' }}>Pay at Shop</div>
+              <div style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: '600', marginTop: '2px' }}>Pay at the counter when you pick up</div>
             </div>
           </label>
 

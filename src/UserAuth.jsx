@@ -284,7 +284,7 @@ export default function UserAuth({ onLoginSuccess }) {
         {mode === "signup" && step === "details" && (
           <form onSubmit={handleRegister} style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
             <input type="text" placeholder="Full Name" value={name} onChange={e => setName(e.target.value)} required style={inputStyle} />
-            <input type="tel" inputMode="numeric" maxLength={6} placeholder="Delivery Pincode (6 digits)" value={pincode} onChange={e => setPincode(e.target.value.replace(/\D/g, ''))} required style={inputStyle} />
+            <input type="tel" inputMode="numeric" maxLength={6} placeholder="Pincode (6 digits)" value={pincode} onChange={e => setPincode(e.target.value.replace(/\D/g, ''))} required style={inputStyle} />
             <input type="password" placeholder="Password (min 6 chars)" value={password} onChange={e => setPassword(e.target.value)} required style={inputStyle} />
             <input type="text" placeholder="Referral Code (Optional)" value={referredBy} onChange={e => setReferredBy(e.target.value.toUpperCase())} style={inputStyle} />
             <button type="submit" disabled={busy} style={primaryBtn(busy)}>{busy ? "Creating account…" : "Create Account"}</button>

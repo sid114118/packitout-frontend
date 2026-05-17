@@ -11,7 +11,7 @@ const SECTIONS = [
   },
   {
     title: '3. Payments & PackIt Coins',
-    body: 'Payments are processed via Razorpay (UPI / cards) or settled as Cash on Delivery directly with the shop. PackIt Coins are a loyalty reward, hold no monetary value outside the app, can be capped at 10% of an order, and may be revoked if obtained fraudulently.',
+    body: 'Payments are processed via Razorpay (UPI / cards) or settled directly at the shop when you pick up. PackIt Coins are a loyalty reward, hold no monetary value outside the app, can be capped at 10% of an order, and may be revoked if obtained fraudulently.',
   },
   {
     title: '4. Cancellations & Refunds',
@@ -27,7 +27,7 @@ const SECTIONS = [
   },
   {
     title: '7. Liability',
-    body: 'PackItOut is a marketplace platform. We are not responsible for the quality, packaging or expiry of products delivered by partner shops, but we will help mediate disputes through the in-app complaint system.',
+    body: 'PackItOut is a marketplace platform. We are not responsible for the quality, packaging or expiry of products provided by partner shops, but we will help mediate disputes through the in-app complaint system.',
   },
   {
     title: '8. Changes to these Terms',

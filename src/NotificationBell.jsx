@@ -25,7 +25,7 @@ function iconFor(n) {
   const blob = `${type} ${title} ${msg}`;
   if (/promo|offer|discount|coin|reward/.test(blob)) return '🎉';
   if (/cancel|reject|fail|error|out of stock/.test(blob)) return '🚫';
-  if (/deliver/.test(blob)) return '🛵';
+  if (/pick(?:ed)?[\s-]*up|deliver/.test(blob)) return '🛍️';
   if (/payment|paid|refund/.test(blob)) return '💳';
   if (/review|rating/.test(blob)) return '⭐';
   return '📦';

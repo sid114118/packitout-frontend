@@ -148,10 +148,10 @@ export default function OrdersTab({ orders, updateOrderStatus }) {
                   </button>
 
                   <button
-                    onClick={() => updateOrderStatus(order._id, 'Delivered ✅')}
+                    onClick={() => updateOrderStatus(order._id, 'Picked Up ✅')}
                     style={{ flex: '1 1 100%', padding: '12px', backgroundColor: '#0c831f', color: 'white', border: 'none', borderRadius: '8px', fontWeight: '800', cursor: 'pointer', fontSize: '1rem', boxShadow: '0 4px 10px rgba(12, 131, 31, 0.2)', marginTop: '4px' }}
                   >
-                    ✅ Mark as Delivered
+                    ✅ Mark as Picked Up
                   </button>
 
                   <button

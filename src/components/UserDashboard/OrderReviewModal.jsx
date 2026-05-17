@@ -95,8 +95,8 @@ export default function OrderReviewModal({ isOpen, onClose, order, onSubmitRevie
           {/* 🏪 RATE THE SHOP SECTION */}
           <div style={{ backgroundColor: '#fff', padding: '20px', borderRadius: '16px', boxShadow: '0 2px 8px rgba(0,0,0,0.02)', marginBottom: '20px', border: '1px solid #f1f5f9' }}>
             <div style={{ textAlign: 'center', marginBottom: '15px' }}>
-              <div style={{ fontSize: '2rem', marginBottom: '5px' }}>🚚</div>
-              <h3 style={{ margin: 0, fontSize: '1.05rem', color: '#1e293b' }}>Rate {shopName} & Delivery</h3>
+              <div style={{ fontSize: '2rem', marginBottom: '5px' }}>🛍️</div>
+              <h3 style={{ margin: 0, fontSize: '1.05rem', color: '#1e293b' }}>Rate {shopName}</h3>
             </div>
             
             <div style={{ display: 'flex', justifyContent: 'center', gap: '8px', marginBottom: '15px' }}>

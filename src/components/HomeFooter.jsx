@@ -7,8 +7,8 @@ const BRAND_DARK = '#15803d';
 const TRUST_BADGES = [
   {
     key: 'fast',
-    title: 'Fast delivery',
-    subtitle: 'Doorstep in minutes',
+    title: 'Quick pickup',
+    subtitle: 'Ready in minutes',
     icon: (
       <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={BRAND} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
         <path d="M13 2 4 14h7l-1 8 9-12h-7l1-8z" />
@@ -96,7 +96,7 @@ export default function HomeFooter({ endMessage = "You're all caught up", signIn
           maxWidth: '340px',
           margin: '0 auto 18px',
         }}>
-          Your neighbourhood store, delivered.
+          Your neighbourhood store, ready to pick up.
         </div>
 
         {/* Trust badges */}

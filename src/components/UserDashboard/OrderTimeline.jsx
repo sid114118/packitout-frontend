@@ -15,7 +15,7 @@ const STAGES = [
   { key: "placed",    label: "Order Placed",      icon: "📝" },
   { key: "packing",   label: "Packing",           icon: "📦" },
   { key: "ready",     label: "Ready to Collect",  icon: "🛍️" },
-  { key: "delivered", label: "Delivered",         icon: "✅" },
+  { key: "delivered", label: "Picked Up",         icon: "✅" },
 ];
 
 const stageIndex = (key) => STAGES.findIndex(s => s.key === key);
