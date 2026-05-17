@@ -1,11 +1,13 @@
 import React, { useState } from 'react';
 import { useToast, usePrompt } from '../../ui/DialogProvider.jsx';
+import UserProfileModal from './UserProfileModal';
 
 export default function UsersTab({ users, onUsersChanged }) {
   const toast = useToast();
   const askForValue = usePrompt();
   // 🛡️ STATE MOVED INSIDE: Now it manages its own form and will never crash!
   const [userForm, setUserForm] = useState({ name: "", phone: "", pincode: "", password: "" });
+  const [profileUserId, setProfileUserId] = useState(null);
   const BASE_URL = (import.meta.env.VITE_API_BASE || "https://darkslategrey-snail-415133.hostingersite.com");
 
   // --- 🚀 ADD NEW USER ---
@@ -98,13 +100,17 @@ export default function UsersTab({ users, onUsersChanged }) {
                   <td style={{ padding: '12px', color: '#475569', fontSize: '0.95rem' }}>{u.phone}</td>
                   <td style={{ padding: '12px', color: '#475569', fontSize: '0.95rem' }}>{u.pincode || "Not Set"}</td>
                   <td style={{ padding: '12px', fontWeight: '900', color: '#f59e0b', fontSize: '1.1rem' }}>{u.coins}</td>
-                  <td style={{ padding: '12px', display: 'flex', gap: '10px' }}>
-                    
+                  <td style={{ padding: '12px', display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+
+                    <button onClick={() => setProfileUserId(u._id)} style={actionBtnStyle('#0ea5e9', '#eff6ff')}>
+                      👤 View Profile
+                    </button>
+
                     {/* The Coin editing button is fully functional now! */}
                     <button onClick={() => handleEditUserCoins(u._id, u.coins)} style={actionBtnStyle('#f59e0b', '#fffbeb')}>
                       🪙 Edit Coins
                     </button>
-                    
+
                   </td>
                 </tr>
               ))}
@@ -120,7 +126,13 @@ export default function UsersTab({ users, onUsersChanged }) {
           </table>
         </div>
       </div>
-      
+
+      <UserProfileModal
+        open={!!profileUserId}
+        userId={profileUserId}
+        onClose={() => setProfileUserId(null)}
+      />
+
     </div>
   );
 }
