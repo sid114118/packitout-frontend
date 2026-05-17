@@ -251,6 +251,43 @@ export default function App() {
     }
   };
 
+  // Rehydrate the logged-in user from the server on mount, on tab focus, and
+  // when the user opens the account page. Without this, server-side changes
+  // like admin coin updates never reach the cached localStorage copy and the
+  // UI shows a stale balance until the next login.
+  useEffect(() => {
+    const userId = loggedInUser?._id;
+    if (!userId) return;
+
+    let cancelled = false;
+    const refresh = async () => {
+      try {
+        const res = await fetch(`${BASE_URL}/users/${userId}`);
+        if (!res.ok) return;
+        const fresh = await res.json();
+        if (cancelled || !fresh || !fresh._id) return;
+        localStorage.setItem("packitout_user", JSON.stringify(fresh));
+        setLoggedInUser(fresh);
+      } catch { /* offline / transient — keep cached copy */ }
+    };
+
+    refresh();
+
+    const onFocus = () => refresh();
+    const onVisibility = () => { if (document.visibilityState === 'visible') refresh(); };
+    const onHashChange = () => { if (window.location.hash === '#account') refresh(); };
+
+    window.addEventListener('focus', onFocus);
+    document.addEventListener('visibilitychange', onVisibility);
+    window.addEventListener('hashchange', onHashChange);
+    return () => {
+      cancelled = true;
+      window.removeEventListener('focus', onFocus);
+      document.removeEventListener('visibilitychange', onVisibility);
+      window.removeEventListener('hashchange', onHashChange);
+    };
+  }, [loggedInUser?._id]);
+
   const handleUserLogout = () => {
     localStorage.removeItem("packitout_user");
     setLoggedInUser(null);
