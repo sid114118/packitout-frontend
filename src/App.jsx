@@ -294,12 +294,33 @@ export default function App() {
   const handleUserLogout = () => {
     localStorage.removeItem("packitout_user");
     setLoggedInUser(null);
-    setCart([]); 
+    setCart([]);
 
     loadOneSignal()
       .then(OneSignal => OneSignal.logout())
       .catch(err => console.log("OneSignal Logout Error", err));
 
+    window.location.hash = "";
+  };
+
+  // Shop login/logout — mirror the customer flow. Without these, the backend's
+  // sendPushNotification(shopId, …) for new-order alerts, urgent escalations,
+  // admin pings, and cancellations all silently fail to reach the shop's
+  // device because OneSignal has no external_user_id bound to the shopId.
+  const handleShopLogin = (shopData) => {
+    setIsShopAuthenticated(shopData);
+    if (shopData?._id) {
+      loadOneSignal()
+        .then(OneSignal => OneSignal.login(shopData._id.toString()))
+        .catch(err => console.log("OneSignal Shop Login Error", err));
+    }
+  };
+
+  const handleShopLogout = () => {
+    setIsShopAuthenticated(null);
+    loadOneSignal()
+      .then(OneSignal => OneSignal.logout())
+      .catch(err => console.log("OneSignal Shop Logout Error", err));
     window.location.hash = "";
   };
 
@@ -329,8 +350,8 @@ export default function App() {
       return <AdminDashboard onExit={() => { setIsAdminAuthenticated(false); window.location.hash = ""; }} />;
     }
     if (currentView === "shop") {
-      if (!isShopAuthenticated) return <ShopLogin onLogin={(shopData) => setIsShopAuthenticated(shopData)} />;
-      return <ShopDashboard user={isShopAuthenticated} onExit={() => { setIsShopAuthenticated(null); window.location.hash = ""; }} />;
+      if (!isShopAuthenticated) return <ShopLogin onLogin={handleShopLogin} />;
+      return <ShopDashboard user={isShopAuthenticated} onExit={handleShopLogout} />;
     }
     if (currentView === "account") {
       if (!loggedInUser) return <UserAuth onLoginSuccess={handleUserLogin} />;
