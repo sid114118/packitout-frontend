@@ -1,7 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { useToast } from '../../ui/DialogProvider.jsx';
-
-const BASE_URL = (import.meta.env.VITE_API_BASE || "https://darkslategrey-snail-415133.hostingersite.com");
+import { useToast, useConfirm } from '../../ui/DialogProvider.jsx';
+import { adminFetch, BASE_URL } from '../../utils/api.js';
 
 const SORT_OPTIONS = [
   { key: 'count',          label: 'Most searched' },
@@ -23,6 +22,7 @@ const fmtWhen = (iso) => {
 
 export default function MissedSearchesTab() {
   const toast = useToast();
+  const askConfirm = useConfirm();
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(true);
   const [sortKey, setSortKey] = useState('count');
@@ -62,9 +62,8 @@ export default function MissedSearchesTab() {
     // Optimistic flip — local list updates immediately; revert if server says no.
     setRows(prev => prev.map(r => r._id === row._id ? { ...r, resolved: next } : r));
     try {
-      const res = await fetch(`${BASE_URL}/missed-searches/${row._id}/resolve`, {
+      const res = await adminFetch(`/missed-searches/${row._id}/resolve`, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ resolved: next }),
       });
       if (!res.ok) throw new Error('Server rejected update');
@@ -81,16 +80,24 @@ export default function MissedSearchesTab() {
   };
 
   const handleDelete = async (row) => {
-    if (!window.confirm(`Delete "${row.term}" from the missed-search list?`)) return;
-    const prev = rows;
-    setRows(rows.filter(r => r._id !== row._id));
+    const ok = await askConfirm({
+      title: 'Delete missed search?',
+      message: `Remove "${row.term}" from the missed-search list?`,
+      confirmText: 'Delete',
+      destructive: true,
+    });
+    if (!ok) return;
+    // Use functional setRows so a concurrent toggle on another row is preserved
+    // when we have to roll back on error.
+    let snapshot = null;
+    setRows(prev => { snapshot = prev; return prev.filter(r => r._id !== row._id); });
     try {
-      const res = await fetch(`${BASE_URL}/missed-searches/${row._id}`, { method: 'DELETE' });
+      const res = await adminFetch(`/missed-searches/${row._id}`, { method: 'DELETE' });
       if (!res.ok) throw new Error('Server rejected delete');
       toast('Deleted');
     } catch (err) {
       console.error(err);
-      setRows(prev);
+      if (snapshot) setRows(snapshot);
       toast('Could not delete. Try again.', 'error');
     }
   };

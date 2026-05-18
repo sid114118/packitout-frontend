@@ -53,8 +53,10 @@ export default function GuestFeed({
       setLoading(true);
       try {
         const res = await fetch(`${BASE_URL}/master-products`);
+        if (!res.ok) { setLoading(false); return; }
         const masterData = await res.json();
-        
+        if (!Array.isArray(masterData)) { setLoading(false); return; }
+
         const groupedMap = new Map();
         const finalItems = [];
 

@@ -161,9 +161,10 @@ export default function ParchiReviewModal({ isOpen, items, onClose, onConfirm, o
                   >−</button>
                   <span style={{ minWidth: 18, textAlign: 'center', fontWeight: 700, color: '#0f172a' }}>{row.qty}</span>
                   <button
-                    onClick={() => updateRow(row.idx, { qty: row.qty + 1 })}
+                    onClick={() => updateRow(row.idx, { qty: Math.min(99, row.qty + 1) })}
                     aria-label="Increase quantity"
                     style={qtyBtn}
+                    disabled={row.qty >= 99}
                   >+</button>
                 </div>
               )}

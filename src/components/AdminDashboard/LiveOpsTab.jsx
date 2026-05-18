@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useToast } from '../../ui/DialogProvider.jsx';
 import { useOrderAlarm } from '../../utils/orderAlarm.js';
+import { adminFetch } from '../../utils/api.js';
 
 // What counts as "needs ops attention". Tuned to match the shop-side alarm
 // thresholds (see [[packitout-pickup-and-complaints]] for context).
@@ -76,7 +77,7 @@ export default function LiveOpsTab() {
     let cancelled = false;
     const fetchOrders = async () => {
       try {
-        const res = await fetch(`${BASE_URL}/orders`);
+        const res = await adminFetch(`/orders`);
         if (!res.ok) return;
         const data = await res.json();
         if (!cancelled) setOrders(Array.isArray(data) ? data : []);
@@ -108,8 +109,8 @@ export default function LiveOpsTab() {
     if (!window.confirm(`Force-accept order #${order._id.slice(-5).toUpperCase()} on behalf of the shop?`)) return;
     setActingOnId(order._id);
     try {
-      const res = await fetch(`${BASE_URL}/admin/orders/${order._id}/force-accept`, {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
+      const res = await adminFetch(`/admin/orders/${order._id}/force-accept`, {
+        method: 'POST',
         body: JSON.stringify({ adminName: 'admin', reason: 'Confirmed verbally by shop' }),
       });
       if (res.ok) {
@@ -128,8 +129,8 @@ export default function LiveOpsTab() {
     if (!reason) return;
     setActingOnId(order._id);
     try {
-      const res = await fetch(`${BASE_URL}/admin/orders/${order._id}/force-cancel`, {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
+      const res = await adminFetch(`/admin/orders/${order._id}/force-cancel`, {
+        method: 'POST',
         body: JSON.stringify({ adminName: 'admin', reason }),
       });
       if (res.ok) {
@@ -147,8 +148,8 @@ export default function LiveOpsTab() {
     setActingOnId(order._id);
     try {
       const shopId = typeof order.shopId === 'object' ? order.shopId?._id : order.shopId;
-      const res = await fetch(`${BASE_URL}/admin/ping-shop`, {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
+      const res = await adminFetch(`/admin/ping-shop`, {
+        method: 'POST',
         body: JSON.stringify({ shopId, orderId: order._id, adminName: 'admin' }),
       });
       if (res.ok) toast("🔔 Urgent ping sent");
@@ -161,8 +162,8 @@ export default function LiveOpsTab() {
     const text = (noteDrafts[order._id] || '').trim();
     if (!text) return;
     try {
-      const res = await fetch(`${BASE_URL}/admin/orders/${order._id}/ops-log`, {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
+      const res = await adminFetch(`/admin/orders/${order._id}/ops-log`, {
+        method: 'POST',
         body: JSON.stringify({ text, adminName: 'admin', action: 'note' }),
       });
       if (res.ok) {

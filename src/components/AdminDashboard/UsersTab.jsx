@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useToast, usePrompt } from '../../ui/DialogProvider.jsx';
 import UserProfileModal from './UserProfileModal';
+import { adminFetch, BASE_URL } from '../../utils/api.js';
 
 export default function UsersTab({ users, onUsersChanged }) {
   const toast = useToast();
@@ -8,9 +9,11 @@ export default function UsersTab({ users, onUsersChanged }) {
   // 🛡️ STATE MOVED INSIDE: Now it manages its own form and will never crash!
   const [userForm, setUserForm] = useState({ name: "", phone: "", pincode: "", password: "" });
   const [profileUserId, setProfileUserId] = useState(null);
-  const BASE_URL = (import.meta.env.VITE_API_BASE || "https://darkslategrey-snail-415133.hostingersite.com");
 
   // --- 🚀 ADD NEW USER ---
+  // NOTE: /register now requires an OTP verificationToken, so this admin-side
+  // form will fail until a dedicated /admin/users POST is added that bypasses
+  // OTP. Leaving the form in place — it surfaces the toast on failure.
   const handleAddUser = async (e) => {
     e.preventDefault();
     try {
@@ -24,7 +27,7 @@ export default function UsersTab({ users, onUsersChanged }) {
         setUserForm({ name: "", phone: "", pincode: "", password: "" });
         if (onUsersChanged) onUsersChanged();
       } else {
-        toast("Failed to register. This phone number might already exist.", 'error');
+        toast("Admin-add-user needs OTP — please ask the customer to self-register.", 'error');
       }
     } catch (err) {
       console.error(err);
@@ -45,14 +48,15 @@ export default function UsersTab({ users, onUsersChanged }) {
 
     if (newCoins !== null && newCoins.trim() !== "" && !isNaN(newCoins)) {
       try {
-        const res = await fetch(`${BASE_URL}/users/${userId}`, {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ coins: Number(newCoins) })
+        const res = await adminFetch(`/admin/users/${userId}/coins`, {
+          method: "POST",
+          body: JSON.stringify({ mode: 'set', value: Number(newCoins) }),
         });
         if (res.ok) {
           toast("Coins updated!");
           if (onUsersChanged) onUsersChanged();
+        } else {
+          toast("Update failed.", 'error');
         }
       } catch (err) {
         toast("Error updating coins.", 'error');
@@ -61,7 +65,7 @@ export default function UsersTab({ users, onUsersChanged }) {
   };
 
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: window.innerWidth < 1024 ? '1fr' : '350px 1fr', gap: '30px' }}>
+    <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)' /* responsive via CSS — see styles.css if you need media-query control. Used to be window.innerWidth, which never re-ran on resize. */, gap: '30px' }}>
       
       {/* LEFT: Add User Form */}
       <div style={cardStyle}>

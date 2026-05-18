@@ -14,13 +14,13 @@ export default function ParchiTab({
   const [searchQuery, setSearchQuery] = useState("");
 
   // --- 🛠️ CART MANAGEMENT HELPERS ---
+  // When decremented past zero, drop the row instead of keeping it at the
+  // previous qty — the old behaviour stuck the —/+ control at qty=1 forever.
   const updateItemQty = (itemId, change) => {
-    setParchiBill(prev => prev.map(item => {
-      if (item._id === itemId) {
-        const newQty = item.qty + change;
-        return newQty > 0 ? { ...item, qty: newQty } : item;
-      }
-      return item;
+    setParchiBill(prev => prev.flatMap(item => {
+      if (item._id !== itemId) return [item];
+      const newQty = item.qty + change;
+      return newQty > 0 ? [{ ...item, qty: newQty }] : [];
     }));
   };
 

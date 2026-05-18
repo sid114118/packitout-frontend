@@ -36,13 +36,17 @@ const buildSlots = () => {
   return out;
 };
 
-// Combine an HH:MM string with today's date into a Date instance.
+// Combine an HH:MM string with today's date into a Date instance. If the
+// resulting time is already in the past (e.g. shop is open until midnight and
+// the user types 8:00 at 23:00), roll forward to tomorrow so next-morning
+// pickups are accepted instead of failing as "in the past".
 const parseCustomTime = (hhmm) => {
   if (!hhmm || !/^\d{2}:\d{2}$/.test(hhmm)) return null;
   const [h, m] = hhmm.split(':').map(Number);
   if (Number.isNaN(h) || Number.isNaN(m)) return null;
   const d = new Date();
   d.setHours(h, m, 0, 0);
+  if (d.getTime() < Date.now()) d.setDate(d.getDate() + 1);
   return d;
 };
 

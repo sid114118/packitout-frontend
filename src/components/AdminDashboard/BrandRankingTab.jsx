@@ -1,8 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useToast } from '../../ui/DialogProvider.jsx';
 import { useRankingConfig } from '../../ui/RankingProvider.jsx';
-
-const BASE_URL = (import.meta.env.VITE_API_BASE || "https://darkslategrey-snail-415133.hostingersite.com");
+import { adminFetch, BASE_URL } from '../../utils/api.js';
 
 export default function BrandRankingTab() {
   const toast = useToast();
@@ -95,9 +94,8 @@ export default function BrandRankingTab() {
   const handleSave = async () => {
     setSaving(true);
     try {
-      const res = await fetch(`${BASE_URL}/ranking-config`, {
+      const res = await adminFetch(`/ranking-config`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ enabled, brandOrder }),
       });
       if (!res.ok) throw new Error('Save failed');

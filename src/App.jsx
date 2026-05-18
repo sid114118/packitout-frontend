@@ -1,5 +1,6 @@
-import React, { useState, useEffect, lazy, Suspense } from 'react';
+import React, { useState, useEffect, useRef, lazy, Suspense } from 'react';
 import { useToast } from './ui/DialogProvider.jsx';
+import { userFetch } from './utils/api.js';
 
 // Eagerly imported: rendered on the customer's first paint.
 import Header from './Header.jsx';
@@ -97,7 +98,9 @@ export default function App() {
 
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isHeaderVisible, setIsHeaderVisible] = useState(true);
-  const [lastScrollY, setLastScrollY] = useState(0);
+  // ref instead of state so the scroll listener doesn't re-bind every event
+  // (which used to remove + add the listener tens of times per second).
+  const lastScrollYRef = useRef(0);
   
   const [loggedInUser, setLoggedInUser] = useState(() => {
     try {
@@ -149,13 +152,14 @@ export default function App() {
   useEffect(() => {
     const handleScroll = () => {
       const currentScrollY = window.scrollY;
-      if (currentScrollY > lastScrollY && currentScrollY > 60) setIsHeaderVisible(false);
-      else if (currentScrollY < lastScrollY) setIsHeaderVisible(true);
-      setLastScrollY(currentScrollY);
+      const last = lastScrollYRef.current;
+      if (currentScrollY > last && currentScrollY > 60) setIsHeaderVisible(false);
+      else if (currentScrollY < last) setIsHeaderVisible(true);
+      lastScrollYRef.current = currentScrollY;
     };
     window.addEventListener("scroll", handleScroll, { passive: true });
     return () => window.removeEventListener("scroll", handleScroll);
-  }, [lastScrollY]);
+  }, []);
 
   useEffect(() => {
     const checkUrl = () => {
@@ -301,17 +305,20 @@ export default function App() {
 
   const handleSetPrimaryShop = async (shopId) => {
     try {
-      const response = await fetch(`${BASE_URL}/users/${loggedInUser._id}`, {
+      const response = await userFetch(loggedInUser, `/users/${loggedInUser._id}`, {
         method: "PATCH",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ primaryShop: shopId })
       });
       if (response.ok) {
         const updatedUser = await response.json();
-        setLoggedInUser(updatedUser);
-        localStorage.setItem("packitout_user", JSON.stringify(updatedUser));
+        // server response strips sessionToken — preserve in-memory.
+        const next = { ...updatedUser, sessionToken: loggedInUser.sessionToken };
+        setLoggedInUser(next);
+        localStorage.setItem("packitout_user", JSON.stringify(next));
         toast("Primary shop updated");
         window.location.hash = "";
+      } else {
+        toast("Failed to update shop.", 'error');
       }
     } catch (err) { toast("Failed to update shop.", 'error'); }
   };

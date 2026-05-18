@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { useToast } from './ui/DialogProvider.jsx';
-
-const BASE_URL = (import.meta.env.VITE_API_BASE || "https://darkslategrey-snail-415133.hostingersite.com");
+import { userFetch, BASE_URL } from './utils/api.js';
 
 export default function Header({ user, onUserUpdate }) {
   const toast = useToast();
@@ -45,18 +44,23 @@ export default function Header({ user, onUserUpdate }) {
     if (!selectedShopId) return;
 
     try {
-      const res = await fetch(`${BASE_URL}/users/${user._id}`, {
+      const res = await userFetch(user, `/users/${user._id}`, {
         method: "PATCH",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ pincode: pincode, primaryShop: selectedShopId })
       });
+      if (!res.ok) {
+        toast("Could not save shop. Try again.", 'error');
+        return;
+      }
       const updatedUser = await res.json();
+      // server response strips sessionToken — preserve it.
+      const next = { ...updatedUser, sessionToken: user.sessionToken };
 
       // App.jsx always passes onUserUpdate; the bare localStorage fallback
       // would desync React state, so we no-op in that case.
-      if (onUserUpdate) onUserUpdate(updatedUser, { clearCart: true });
+      if (onUserUpdate) onUserUpdate(next, { clearCart: true });
 
-      setActiveShopName(updatedUser.primaryShop?.name || "");
+      setActiveShopName(next.primaryShop?.name || "");
       setIsChanging(false);
       setShops([]);
       setHasSearched(false);

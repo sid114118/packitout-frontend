@@ -12,6 +12,7 @@ import ComplaintsTab from './components/ShopDashboard/ComplaintsTab';
 import ShopPhotoModal from './components/ShopDashboard/ShopPhotoModal';
 import ShopLocationBanner from './components/ShopDashboard/ShopLocationBanner';
 import { cdnImage } from './utils/cloudinaryUrl.js';
+import { shopFetch, BASE_URL } from './utils/api.js';
 
 export default function ShopDashboard({ user, onExit }) {
   const toast = useToast();
@@ -25,8 +26,6 @@ export default function ShopDashboard({ user, onExit }) {
   const [selectedParchi, setSelectedParchi] = useState(null);
   const [parchiBill, setParchiBill] = useState([]);
   const [photoModalOpen, setPhotoModalOpen] = useState(false);
-
-  const BASE_URL = (import.meta.env.VITE_API_BASE || "https://darkslategrey-snail-415133.hostingersite.com");
 
   // --- DATA FETCHING ---
   useEffect(() => {
@@ -42,15 +41,20 @@ export default function ShopDashboard({ user, onExit }) {
       fetchParchis();
     }, 10000);
     return () => clearInterval(interval);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [shopData._id]);
 
-  const fetchOrders = async () => { 
-    try { 
-      const res = await fetch(`${BASE_URL}/orders`); 
-      const allOrders = await res.json(); 
-      setOrders(allOrders.filter(o => o.shopId?._id === shopData._id)); 
-    } catch (err) { console.log(err); } 
-  }; 
+  // Shop-scoped fetch — was pulling every order on the platform every 10s and
+  // filtering client-side, which leaked other shops' orders and got slower as
+  // the platform grew. New endpoint enforces ownership server-side.
+  const fetchOrders = async () => {
+    try {
+      const res = await shopFetch(shopData, `/orders/shop/${shopData._id}`);
+      if (!res.ok) return;
+      const data = await res.json();
+      setOrders(Array.isArray(data) ? data : []);
+    } catch (err) { console.log(err); }
+  };
 
   const fetchMasterCatalog = async () => {
     try {
@@ -75,17 +79,22 @@ export default function ShopDashboard({ user, onExit }) {
   };
 
   // --- LOGIC ---
-  const toggleShopStatus = async () => { 
-    const newStatus = !shopData.isOpen; 
-    try { 
-      const res = await fetch(`${BASE_URL}/shops/${shopData._id}`, { 
-        method: "PATCH", 
-        headers: { "Content-Type": "application/json" }, 
-        body: JSON.stringify({ isOpen: newStatus }) 
-      }); 
-      setShopData(await res.json()); 
-    } catch (err) { console.log(err); } 
-  }; 
+  const toggleShopStatus = async () => {
+    const newStatus = !shopData.isOpen;
+    try {
+      const res = await shopFetch(shopData, `/shops/${shopData._id}`, {
+        method: "PATCH",
+        body: JSON.stringify({ isOpen: newStatus })
+      });
+      if (res.ok) {
+        const updated = await res.json();
+        // server doesn't return sessionToken — preserve the in-memory one.
+        setShopData({ ...updated, sessionToken: shopData.sessionToken });
+      } else {
+        toast("Could not toggle store status.", 'error');
+      }
+    } catch (err) { console.log(err); }
+  };
 
   // 🚀 THIS IS THE FIX: IT WILL INSTANTLY UPDATE THE SCREEN OR SCREAM THE ERROR AT YOU
   // Auth: every order mutation now carries the shop's bearer token. Cancel
@@ -122,45 +131,45 @@ export default function ShopDashboard({ user, onExit }) {
     }
   };
 
-  const handleInventoryUpdate = async (productId, sellingPrice, inStock = true) => { 
-    try { 
-      const res = await fetch(`${BASE_URL}/shops/${shopData._id}/inventory`, { 
-        method: "POST", 
-        headers: { "Content-Type": "application/json" }, 
-        body: JSON.stringify({ productId, sellingPrice: Number(sellingPrice), inStock }) 
-      }); 
+  const handleInventoryUpdate = async (productId, sellingPrice, inStock = true) => {
+    try {
+      const res = await shopFetch(shopData, `/shops/${shopData._id}/inventory`, {
+        method: "POST",
+        body: JSON.stringify({ productId, sellingPrice: Number(sellingPrice), inStock })
+      });
       if (res.ok) {
-        setShopData(await res.json());
+        const updated = await res.json();
+        setShopData({ ...updated, sessionToken: shopData.sessionToken });
         toast("Store updated!");
       } else {
-        const errorData = await res.json();
+        const errorData = await res.json().catch(() => ({}));
         toast(errorData.error || "Failed to update", 'error');
       }
     } catch (err) { console.log(err); }
-  }; 
+  };
 
   const handleAddToBill = (item) => {
     setParchiBill(prev => {
       const exists = prev.find(i => i._id === item.product._id);
       if (exists) return prev.map(i => i._id === item.product._id ? { ...i, qty: i.qty + 1 } : i);
-      return [...prev, { ...item.product, price: item.sellingPrice || item.product.mrp, qty: 1 }];
+      // Carry productId so the order schema can link the row to a real master
+      // product downstream (receipts, timelines, "Buy It Again" widgets).
+      return [...prev, { ...item.product, productId: item.product._id, price: item.sellingPrice || item.product.mrp, qty: 1 }];
     });
   };
 
   const handleSendBill = async () => {
-    const totalAmount = parchiBill.reduce((sum, i) => sum + (i.price * i.qty), 0);
-    
     try {
       const res = await fetch(`${BASE_URL}/orders`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          userId: selectedParchi.userId,    
-          shopId: shopData._id,             
-          items: parchiBill,                
-          totalAmount: totalAmount,         
-          status: "Pending",                
-          imageUrl: selectedParchi.imageUrl 
+          userId: selectedParchi.userId,
+          shopId: shopData._id,
+          items: parchiBill,
+          // totalAmount is recomputed server-side; status is server-controlled.
+          parchiId: selectedParchi._id,
+          imageUrl: selectedParchi.imageUrl
         })
       });
 

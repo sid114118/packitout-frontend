@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useToast } from '../../ui/DialogProvider.jsx';
-
-const BASE_URL = (import.meta.env.VITE_API_BASE || "https://darkslategrey-snail-415133.hostingersite.com");
+import { adminFetch } from '../../utils/api.js';
 
 const fmtMoney = (n) => `₹${Number(n || 0).toLocaleString('en-IN', { maximumFractionDigits: 2 })}`;
 const fmtDate = (d) => d ? new Date(d).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '—';
@@ -25,7 +24,7 @@ export default function UserProfileModal({ open, userId, onClose }) {
     let cancelled = false;
     setLoading(true);
     setData(null);
-    fetch(`${BASE_URL}/admin/users/${userId}/profile`)
+    adminFetch(`/admin/users/${userId}/profile`)
       .then(r => r.json().then(j => ({ ok: r.ok, j })))
       .then(({ ok, j }) => {
         if (cancelled) return;

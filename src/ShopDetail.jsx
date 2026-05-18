@@ -12,9 +12,11 @@ export default function ShopDetail({ shop, onBack, onSetPrimary }) {
     if (shop?._id) {
       setLoadingReviews(true);
       fetch(`${BASE_URL}/reviews/shop/${shop._id}`)
-        .then(res => res.json())
+        .then(res => res.ok ? res.json() : [])
         .then(data => {
-          setReviews(data);
+          // Server can return an error object on a 500 — `.slice()` on that
+          // would crash the page. Default to [] so the section just stays empty.
+          setReviews(Array.isArray(data) ? data : []);
           setLoadingReviews(false);
         })
         .catch(() => setLoadingReviews(false));

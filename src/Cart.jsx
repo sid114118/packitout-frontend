@@ -186,7 +186,7 @@ export default function Cart({ cart, setCart, user, onBack, onCheckoutSuccess })
             const isDiscounted = originalPrice > safePrice;
             
             return (
-              <div key={`${item._id}-${index}`} style={{ display: 'flex', gap: '15px', alignItems: 'center', paddingBottom: '20px', marginBottom: '20px', borderBottom: index === cart.length - 1 ? 'none' : '1px solid #f1f5f9' }}>
+              <div key={item._id} style={{ display: 'flex', gap: '15px', alignItems: 'center', paddingBottom: '20px', marginBottom: '20px', borderBottom: index === cart.length - 1 ? 'none' : '1px solid #f1f5f9' }}>
                 
                 {/* Product Image Squircle */}
                 <div style={{ width: '65px', height: '65px', backgroundColor: '#f8fafc', borderRadius: '16px', display: 'flex', justifyContent: 'center', alignItems: 'center', border: '1px solid rgba(0,0,0,0.02)', position: 'relative', flexShrink: 0 }}>

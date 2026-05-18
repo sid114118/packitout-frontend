@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useToast } from '../../ui/DialogProvider.jsx';
 import { cdnImage } from '../../utils/cloudinaryUrl.js';
+import { adminFetch, BASE_URL } from '../../utils/api.js';
 
 export default function ParchiManager() {
   const toast = useToast();
@@ -11,14 +12,13 @@ export default function ParchiManager() {
   const [searchQuery, setSearchQuery] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
-  const BASE_URL = (import.meta.env.VITE_API_BASE || "https://darkslategrey-snail-415133.hostingersite.com");
-
   // --- 1. FETCH ALL PENDING PARCHIS ---
   const fetchAllParchis = async () => {
     try {
-      const res = await fetch(`${BASE_URL}/admin/all-parchis`);
+      const res = await adminFetch(`/admin/all-parchis`);
+      if (!res.ok) return;
       const data = await res.json();
-      setParchis(data);
+      setParchis(Array.isArray(data) ? data : []);
     } catch (err) {
       console.error("Failed to fetch admin parchis:", err);
     }
@@ -50,17 +50,19 @@ export default function ParchiManager() {
     setParchiBill(prev => {
       const exists = prev.find(i => i._id === item.product._id);
       if (exists) return prev.map(i => i._id === item.product._id ? { ...i, qty: i.qty + 1 } : i);
-      return [...prev, { ...item.product, price: item.sellingPrice || item.product.mrp, qty: 1 }];
+      // Store productId so the order schema can link back to the master product;
+      // previously only _id was kept, which left downstream receipts blank.
+      return [...prev, { ...item.product, productId: item.product._id, price: item.sellingPrice || item.product.mrp, qty: 1 }];
     });
   };
 
   const updateItemQty = (itemId, change) => {
-    setParchiBill(prev => prev.map(item => {
-      if (item._id === itemId) {
-        const newQty = item.qty + change;
-        return newQty > 0 ? { ...item, qty: newQty } : item;
-      }
-      return item;
+    setParchiBill(prev => prev.flatMap(item => {
+      if (item._id !== itemId) return [item];
+      const newQty = item.qty + change;
+      // Drop the row when the user decrements past zero, otherwise the
+      // — / + control gets stuck at 1 because the unchanged item is kept.
+      return newQty > 0 ? [{ ...item, qty: newQty }] : [];
     }));
   };
 
@@ -73,16 +75,15 @@ export default function ParchiManager() {
     const totalAmount = parchiBill.reduce((sum, i) => sum + (i.price * i.qty), 0);
     
     try {
-      const res = await fetch(`${BASE_URL}/orders`, {
+      const res = await adminFetch(`/orders`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          userId: selectedParchi.userId,    
-          shopId: selectedParchi.shopId,             
-          items: parchiBill,                
-          totalAmount: totalAmount,         
-          status: "Pending",                
-          imageUrl: selectedParchi.imageUrl 
+          userId: selectedParchi.userId,
+          shopId: selectedParchi.shopId,
+          items: parchiBill,
+          // totalAmount is recomputed server-side; status is server-controlled.
+          parchiId: selectedParchi._id,
+          imageUrl: selectedParchi.imageUrl,
         })
       });
 

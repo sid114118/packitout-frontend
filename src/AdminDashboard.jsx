@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useToast } from './ui/DialogProvider.jsx';
+import { adminFetch, clearAdminToken } from './utils/api.js';
 import ProductsTab from './components/AdminDashboard/ProductsTab';
 import ShopsTab from './components/AdminDashboard/ShopsTab';
 import UsersTab from './components/AdminDashboard/UsersTab';
@@ -42,7 +43,12 @@ export default function AdminDashboard({ onExit }) {
   const BASE_URL = (import.meta.env.VITE_API_BASE || "https://darkslategrey-snail-415133.hostingersite.com");
   const CATEGORIES = ["Dairy, Bread & Eggs", "Fruits & Veg", "Atta, Rice & Dal", "Chips & Namkeen", "Drinks & Juices", "Sweets & Chocolates", "Ice Creams", "Instant Food", "Bath & Body", "Health & Pharma"];
 
-  useEffect(() => { fetchData(); }, [activeTab]);
+  useEffect(() => {
+    let cancelled = false;
+    fetchData(cancelled);
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTab]);
 
   // Keep the global orders board live so the stalled-order alarm in
   // GlobalOrdersTab actually sees new orders without the admin re-clicking the tab.
@@ -50,23 +56,54 @@ export default function AdminDashboard({ onExit }) {
     if (activeTab !== "orders") return;
     const poll = setInterval(async () => {
       try {
-        const res = await fetch(`${BASE_URL}/orders`);
-        if (res.ok) setOrders(await res.json());
+        const res = await adminFetch(`/orders`);
+        if (res.ok) {
+          const data = await res.json();
+          if (Array.isArray(data)) setOrders(data);
+        }
       } catch (err) { /* swallow — next tick will retry */ }
     }, 15000);
     return () => clearInterval(poll);
   }, [activeTab]);
 
-  const fetchData = async () => {
+  // Defensive: every list endpoint now returns an array on success. If the
+  // server returns an error object (or anything non-array), default to [].
+  // Old behaviour was to store the error object as state, then crash on .map().
+  const safeArray = async (res) => {
+    if (!res || !res.ok) return [];
+    try {
+      const data = await res.json();
+      return Array.isArray(data) ? data : [];
+    } catch { return []; }
+  };
+
+  const fetchData = async (cancelled = false) => {
     setLoading(true);
     try {
-      if (activeTab === "products") setProducts(await (await fetch(`${BASE_URL}/master-products`)).json());
-      else if (activeTab === "shops") setShops(await (await fetch(`${BASE_URL}/shops`)).json());
-      else if (activeTab === "users") setUsers(await (await fetch(`${BASE_URL}/users`)).json());
-      else if (activeTab === "orders") setOrders(await (await fetch(`${BASE_URL}/orders`)).json());
-      else if (activeTab === "parchis") setGlobalParchis(await (await fetch(`${BASE_URL}/admin/all-parchis`)).json());
+      let result = null;
+      if (activeTab === "products") {
+        result = await safeArray(await fetch(`${BASE_URL}/master-products`));
+        if (!cancelled) setProducts(result);
+      } else if (activeTab === "shops") {
+        result = await safeArray(await fetch(`${BASE_URL}/shops`));
+        if (!cancelled) setShops(result);
+      } else if (activeTab === "users") {
+        result = await safeArray(await adminFetch(`/users`));
+        if (!cancelled) setUsers(result);
+      } else if (activeTab === "orders") {
+        result = await safeArray(await adminFetch(`/orders`));
+        if (!cancelled) setOrders(result);
+      } else if (activeTab === "parchis") {
+        result = await safeArray(await adminFetch(`/admin/all-parchis`));
+        if (!cancelled) setGlobalParchis(result);
+      }
     } catch (err) { console.log(err); }
-    setLoading(false);
+    if (!cancelled) setLoading(false);
+  };
+
+  const handleLogout = () => {
+    clearAdminToken();
+    if (onExit) onExit();
   };
 
   // --- UPGRADED PRODUCT LOGIC --- 
@@ -74,18 +111,26 @@ export default function AdminDashboard({ onExit }) {
     e.preventDefault(); 
 
     try {
+      // searchTags is a comma-separated string in the form but the backend
+      // expects an array — normalise here so /master-products/* stores the
+      // tags as a proper array (the tag-based search in SearchPage was
+      // silently returning no matches because of this).
+      const payload = {
+        ...form,
+        searchTags: typeof form.searchTags === 'string'
+          ? form.searchTags.split(',').map(s => s.trim()).filter(Boolean)
+          : (Array.isArray(form.searchTags) ? form.searchTags : []),
+      };
       if (editingProductId) {
-        const res = await fetch(`${BASE_URL}/master-products/${editingProductId}`, {
-          method: "PATCH", 
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(form)
+        const res = await adminFetch(`/master-products/${editingProductId}`, {
+          method: "PATCH",
+          body: JSON.stringify(payload),
         });
         if (res.ok) toast("Product updated!");
       } else {
-        const res = await fetch(`${BASE_URL}/master-products`, {
+        const res = await adminFetch(`/master-products`, {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(form)
+          body: JSON.stringify(payload),
         });
         if (res.ok) toast("New product added to master catalog!");
       }
@@ -134,13 +179,13 @@ export default function AdminDashboard({ onExit }) {
     e.preventDefault();
     try {
       if (editingShopId) {
-        await fetch(`${BASE_URL}/shops/${editingShopId}/admin-edit`, {
-          method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(shopForm)
+        await adminFetch(`/shops/${editingShopId}/admin-edit`, {
+          method: "PATCH", body: JSON.stringify(shopForm),
         });
         toast("Shop updated!");
       } else {
-        await fetch(`${BASE_URL}/shops`, {
-          method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(shopForm)
+        await adminFetch(`/shops`, {
+          method: "POST", body: JSON.stringify(shopForm),
         });
         toast("Shop partner registered!");
       }

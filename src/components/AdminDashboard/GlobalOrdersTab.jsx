@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useToast } from '../../ui/DialogProvider.jsx';
 import { useOrderAlarm } from '../../utils/orderAlarm.js';
+import { adminFetch } from '../../utils/api.js';
 
 // Admin alarm only fires once an order has been Pending this long — short enough
 // to escalate before the customer gives up, long enough that the shop gets a fair
@@ -10,7 +11,6 @@ const STALLED_THRESHOLD_MS = 2 * 60 * 1000;
 export default function GlobalOrdersTab({ orders }) {
   const toast = useToast();
   const [pingingOrderId, setPingingOrderId] = useState(null);
-  const BASE_URL = (import.meta.env.VITE_API_BASE || "https://darkslategrey-snail-415133.hostingersite.com");
 
   // Re-evaluate "is this order stalled now?" every 15s. The `orders` prop only
   // refreshes on tab mount, but the threshold check is purely time-based — this
@@ -39,9 +39,8 @@ export default function GlobalOrdersTab({ orders }) {
     setPingingOrderId(orderId); // Show loading state on button
 
     try {
-      const res = await fetch(`${BASE_URL}/admin/ping-shop`, {
+      const res = await adminFetch(`/admin/ping-shop`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ shopId: targetShopId, orderId })
       });
 

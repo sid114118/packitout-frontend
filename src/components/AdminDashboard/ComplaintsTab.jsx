@@ -1,8 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useToast } from '../../ui/DialogProvider.jsx';
 import ComplaintReplyThread from '../ShopDashboard/ComplaintReplyThread';
-
-const BASE_URL = (import.meta.env.VITE_API_BASE || "https://darkslategrey-snail-415133.hostingersite.com");
+import { adminFetch } from '../../utils/api.js';
 
 const CATEGORY_META = {
   shop: { icon: '🏪', label: 'Shop',  bg: '#fff1f2', fg: '#b91c1c', border: '#fecaca' },
@@ -32,7 +31,7 @@ export default function ComplaintsTab() {
   const fetchAll = async () => {
     setLoading(true);
     try {
-      const res = await fetch(`${BASE_URL}/complaints`);
+      const res = await adminFetch(`/complaints`);
       const data = res.ok ? await res.json() : [];
       setComplaints(Array.isArray(data) ? data : []);
     } catch {
@@ -59,9 +58,8 @@ export default function ComplaintsTab() {
     const prev = complaints;
     setComplaints(prev.map(c => c._id === id ? { ...c, status } : c));
     try {
-      const res = await fetch(`${BASE_URL}/complaints/${id}`, {
+      const res = await adminFetch(`/complaints/${id}`, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status }),
       });
       if (!res.ok) throw new Error();
@@ -73,9 +71,8 @@ export default function ComplaintsTab() {
   };
 
   const handleReply = async (id, message) => {
-    const res = await fetch(`${BASE_URL}/complaints/${id}/replies`, {
+    const res = await adminFetch(`/complaints/${id}/replies`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ authorType: 'admin', authorName: 'PackItOut Support', message }),
     });
     if (!res.ok) throw new Error('Could not send reply.');

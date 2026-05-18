@@ -2,14 +2,15 @@ import React, { useEffect, useRef, useState } from 'react';
 import { useToast } from '../../ui/DialogProvider.jsx';
 import { cdnImage } from '../../utils/cloudinaryUrl.js';
 import StorefrontIcon from '../../ui/StorefrontIcon.jsx';
+import { shopFetch } from '../../utils/api.js';
 
-const BASE_URL = (import.meta.env.VITE_API_BASE || "https://darkslategrey-snail-415133.hostingersite.com");
-
-const compressImage = (file, maxSize = 1200) => new Promise((resolve) => {
+const compressImage = (file, maxSize = 1200) => new Promise((resolve, reject) => {
   const reader = new FileReader();
+  reader.onerror = () => reject(new Error('Could not read file'));
   reader.readAsDataURL(file);
   reader.onload = (event) => {
     const img = new Image();
+    img.onerror = () => reject(new Error('Could not decode image'));
     img.src = event.target.result;
     img.onload = () => {
       const canvas = document.createElement('canvas');
@@ -45,11 +46,23 @@ export default function ShopPhotoModal({ open, onClose, shop, onShopUpdated }) {
 
   useEffect(() => {
     if (!open) {
+      // Revoke any leftover blob URL so we don't leak ~1 MB per opened-and-closed cycle.
+      if (preview && preview.startsWith('blob:')) {
+        try { URL.revokeObjectURL(preview); } catch {}
+      }
       setPreview(null);
       setPendingFile(null);
       setUploading(false);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
+
+  // Final cleanup on unmount.
+  useEffect(() => () => {
+    if (preview && preview.startsWith('blob:')) {
+      try { URL.revokeObjectURL(preview); } catch {}
+    }
+  }, [preview]);
 
   if (!open) return null;
 
@@ -70,6 +83,11 @@ export default function ShopPhotoModal({ open, onClose, shop, onShopUpdated }) {
     try {
       const compressed = await compressImage(file);
       const url = URL.createObjectURL(compressed);
+      // Revoke the previous preview before swapping — the old blob URL would
+      // otherwise stay alive in memory until the page reloaded.
+      if (preview && preview.startsWith('blob:')) {
+        try { URL.revokeObjectURL(preview); } catch {}
+      }
       setPreview(url);
       setPendingFile(compressed);
     } catch (err) {
@@ -84,7 +102,7 @@ export default function ShopPhotoModal({ open, onClose, shop, onShopUpdated }) {
     try {
       const formData = new FormData();
       formData.append('shopImage', pendingFile);
-      const res = await fetch(`${BASE_URL}/shops/${shop._id}/upload-image`, {
+      const res = await shopFetch(shop, `/shops/${shop._id}/upload-image`, {
         method: 'POST',
         body: formData,
       });
@@ -94,7 +112,9 @@ export default function ShopPhotoModal({ open, onClose, shop, onShopUpdated }) {
       }
       const updatedShop = await res.json();
       toast('Shop photo updated!');
-      if (onShopUpdated) onShopUpdated(updatedShop);
+      // server response strips sessionToken — preserve the in-memory one so the
+      // shop stays logged in after the photo is replaced.
+      if (onShopUpdated) onShopUpdated({ ...updatedShop, sessionToken: shop.sessionToken });
       onClose();
     } catch (err) {
       console.error(err);

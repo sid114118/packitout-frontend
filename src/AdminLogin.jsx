@@ -1,18 +1,37 @@
 import React, { useState } from 'react';
+import { BASE_URL, setAdminToken } from './utils/api.js';
 
 export default function AdminLogin({ onLogin }) {
   const [adminId, setAdminId] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+  const [submitting, setSubmitting] = useState(false);
 
-  const handleLogin = (e) => {
+  const handleLogin = async (e) => {
     e.preventDefault();
-    
-    // 🔒 THE VAULT: Your Secret Credentials
-    if (adminId === "admin" && password === "packit123") {
-      onLogin(); // Unlocks the dashboard
-    } else {
-      setError("❌ Access Denied: Invalid ID or Password");
+    setError("");
+    setSubmitting(true);
+    try {
+      // Exchange password for the server-side admin token. Old client-side
+      // "admin/packit123" check is gone — anyone could read it from the bundle.
+      const res = await fetch(`${BASE_URL}/admin/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password }),
+      });
+      if (res.ok) {
+        const { token } = await res.json();
+        setAdminToken(token);
+        onLogin();
+        return;
+      }
+      const data = await res.json().catch(() => ({}));
+      if (res.status === 503) setError(data.error || "Server: ADMIN_PASSWORD/ADMIN_TOKEN not configured");
+      else setError(data.error || "❌ Access Denied");
+    } catch (err) {
+      setError("Network error — check the server.");
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -41,11 +60,12 @@ export default function AdminLogin({ onLogin }) {
             onChange={e => setPassword(e.target.value)} 
             style={{ padding: '12px', borderRadius: '8px', border: '1px solid #334155', backgroundColor: '#0f172a', color: 'white', outline: 'none' }} 
           />
-          <button 
-            type="submit" 
-            style={{ padding: '14px', backgroundColor: '#38bdf8', color: '#0f172a', border: 'none', borderRadius: '8px', fontWeight: 'bold', fontSize: '1rem', cursor: 'pointer', marginTop: '10px' }}
+          <button
+            type="submit"
+            disabled={submitting}
+            style={{ padding: '14px', backgroundColor: '#38bdf8', color: '#0f172a', border: 'none', borderRadius: '8px', fontWeight: 'bold', fontSize: '1rem', cursor: submitting ? 'not-allowed' : 'pointer', marginTop: '10px', opacity: submitting ? 0.6 : 1 }}
           >
-            Authenticate
+            {submitting ? 'Authenticating…' : 'Authenticate'}
           </button>
         </form>
 

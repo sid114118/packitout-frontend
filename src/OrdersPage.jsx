@@ -5,8 +5,7 @@ import ReceiptModal from './components/UserDashboard/ReceiptModal';
 import OrderReviewModal from './components/UserDashboard/OrderReviewModal';
 import { cdnImage } from './utils/cloudinaryUrl.js';
 import StorefrontIcon from './ui/StorefrontIcon.jsx';
-
-const BASE_URL = (import.meta.env.VITE_API_BASE || "https://darkslategrey-snail-415133.hostingersite.com");
+import { userFetch, BASE_URL } from './utils/api.js';
 
 const stageOf = (status) => {
   const s = (status || "").toLowerCase();
@@ -67,8 +66,14 @@ export default function OrdersPage({ user, onExit, onAddToCart }) {
     // instantly from cache and refresh silently in the background.
     if (!initialCache) setLoading(true);
     fetch(`${BASE_URL}/orders/user/${user._id}`)
-      .then(res => res.ok ? res.json() : [])
-      .then(data => {
+      .then(res => res.ok ? res.json().then(d => ({ ok: true, data: d })) : { ok: false, data: null })
+      .then(({ ok, data }) => {
+        if (!ok) {
+          // Network/server error — keep the cached orders visible instead of
+          // overwriting them with an empty array (used to wipe the cache).
+          setLoading(false);
+          return;
+        }
         const myOrders = (Array.isArray(data) ? data : [])
           .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
         setOrders(myOrders);
@@ -460,7 +465,31 @@ export default function OrdersPage({ user, onExit, onAddToCart }) {
         isOpen={isReviewModalOpen}
         onClose={() => setIsReviewModalOpen(false)}
         order={orderToReview}
-        onSubmitReviews={() => triggerToast("Feedback received!")}
+        onSubmitReviews={async (payload) => {
+          // Hit /reviews/order-review with the bearer token. Previously the
+          // OrdersPage swallowed the payload and showed a "Feedback received!"
+          // toast — no review ever reached the server.
+          try {
+            const res = await userFetch(user, `/reviews/order-review`, {
+              method: 'POST',
+              body: JSON.stringify(payload),
+            });
+            if (res.ok) {
+              triggerToast("Thanks for the review!");
+              setIsReviewModalOpen(false);
+              // Optimistically flip isReviewed locally so the "Rate" CTA hides.
+              if (orderToReview?._id) {
+                setOrders(prev => prev.map(o => o._id === orderToReview._id ? { ...o, isReviewed: true } : o));
+              }
+              fetchOrders();
+            } else {
+              const err = await res.json().catch(() => ({}));
+              triggerToast(err.error || "Could not submit review.", 'error');
+            }
+          } catch (e) {
+            triggerToast("Network error — try again.", 'error');
+          }
+        }}
       />
     </div>
   );

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useToast } from '../../ui/DialogProvider.jsx';
 import { cdnImage } from '../../utils/cloudinaryUrl.js';
+import { adminFetch } from '../../utils/api.js';
 
 export default function ProductsTab({ products, form, setForm, handleProductSubmit, CATEGORIES, editingProductId, startEditingProduct, cancelEdit, onProductsChanged }) {
   const toast = useToast();
@@ -8,7 +9,6 @@ export default function ProductsTab({ products, form, setForm, handleProductSubm
   // 🌟 BULK UPLOAD STATES
   const [file, setFile] = useState(null);
   const [uploading, setUploading] = useState(false);
-  const BASE_URL = (import.meta.env.VITE_API_BASE || "https://darkslategrey-snail-415133.hostingersite.com");
 
   // Helper function to handle the multi-select dropdowns for related/substitute products
   const handleMultiSelect = (e, fieldName) => {
@@ -28,7 +28,7 @@ export default function ProductsTab({ products, form, setForm, handleProductSubm
 
     setUploading(true);
     try {
-      const response = await fetch(`${BASE_URL}/master-products/bulk-upload`, {
+      const response = await adminFetch(`/master-products/bulk-upload`, {
         method: 'POST',
         body: formData,
       });
