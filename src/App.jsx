@@ -151,6 +151,24 @@ export default function App() {
     return () => clearTimeout(id);
   }, []);
 
+  // Bind the External ID to OneSignal whenever a logged-in user is present,
+  // including the page-reload case where loggedInUser is rehydrated from
+  // localStorage but no fresh login flow runs. Without this effect, returning
+  // customers stayed in "Never Subscribed" state — OneSignal had no External
+  // ID to target so backend pushes silently dropped.
+  useEffect(() => {
+    const userId = loggedInUser?._id;
+    if (!userId) {
+      loadOneSignal()
+        .then(OneSignal => OneSignal.logout())
+        .catch(err => console.log("OneSignal Logout Error", err));
+      return;
+    }
+    loadOneSignal()
+      .then(OneSignal => OneSignal.login(userId.toString()))
+      .catch(err => console.log("OneSignal Login Error", err));
+  }, [loggedInUser?._id]);
+
   useEffect(() => {
     try {
       localStorage.setItem("packitout_cart", JSON.stringify(cart));
@@ -243,11 +261,8 @@ export default function App() {
   const handleUserLogin = (userData) => {
     localStorage.setItem("packitout_user", JSON.stringify(userData));
     setLoggedInUser(userData);
-    
-    loadOneSignal()
-      .then(OneSignal => OneSignal.login(userData._id.toString()))
-      .catch(err => console.log("OneSignal Login Error", err));
-
+    // OneSignal.login is driven by the loggedInUser._id effect above so fresh
+    // logins, page reloads, and returning customers all bind identically.
     window.location.hash = "";
   };
 
@@ -305,11 +320,7 @@ export default function App() {
     localStorage.removeItem("packitout_user");
     setLoggedInUser(null);
     setCart([]);
-
-    loadOneSignal()
-      .then(OneSignal => OneSignal.logout())
-      .catch(err => console.log("OneSignal Logout Error", err));
-
+    // OneSignal.logout is driven by the loggedInUser._id effect above.
     window.location.hash = "";
   };
 
