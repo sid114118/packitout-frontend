@@ -25,10 +25,22 @@ const ShopDetail = lazy(() => import('./ShopDetail.jsx'));
 const BASE_URL = (import.meta.env.VITE_API_BASE || "https://darkslategrey-snail-415133.hostingersite.com");
 
 // Module-level so repeated calls (login/logout) don't kick off duplicate fetches.
+// Bundling init() into the promise guarantees that anyone awaiting
+// loadOneSignal() — login, logout, prompt — sees an initialized SDK. Without
+// this, a user logging in before the deferred init fires would call
+// OneSignal.login(id) on an un-initialized SDK and the External ID would never
+// register, so backend pushes had no one to deliver to.
 let onesignalPromise;
 const loadOneSignal = () => {
   if (!onesignalPromise) {
-    onesignalPromise = import('react-onesignal').then(m => m.default);
+    onesignalPromise = import('react-onesignal').then(async (m) => {
+      const OneSignal = m.default;
+      await OneSignal.init({
+        appId: "1da2e78d-0874-4965-a895-42c9237ee92b",
+        allowLocalhostAsSecureOrigin: true,
+      });
+      return OneSignal;
+    });
   }
   return onesignalPromise;
 };
@@ -119,14 +131,12 @@ export default function App() {
 
   // OneSignal SDK is ~200KB and was blocking first paint. Defer it to idle so
   // the feed renders first; the push permission prompt then slides in.
+  // Init lives inside loadOneSignal() now — here we just trigger it and then
+  // surface the prompt.
   useEffect(() => {
     const runOneSignal = async () => {
       try {
         const OneSignal = await loadOneSignal();
-        await OneSignal.init({
-          appId: "1da2e78d-0874-4965-a895-42c9237ee92b",
-          allowLocalhostAsSecureOrigin: true,
-        });
         OneSignal.Slidedown.promptPush();
       } catch (error) {
         console.error("OneSignal Initialization Error:", error);
