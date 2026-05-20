@@ -7,6 +7,7 @@ import Header from './Header.jsx';
 import Categories from './Categories.jsx';
 import ProductFeed from './ProductFeed.jsx';
 import BottomNav from './BottomNav.jsx';
+import InstallAppBanner from './InstallAppBanner.jsx';
 
 // Lazy: only fetched when the user navigates into them. Keeps the customer's
 // initial bundle from carrying admin/shop/account/cart/nearby code.
@@ -517,12 +518,18 @@ export default function App() {
     return sum + (Number(item.qty) || 0);
   }, 0);
 
+  // Only show the install banner on customer-facing flows, and only when the
+  // cart sticky bar isn't already occupying the same slot above the BottomNav.
+  // (Banner stays mounted across renders so its dismissed-state isn't lost.)
+  const showInstallBanner = showBottomNav && navCartCount === 0;
+
   return (
     <CrashCatcher>
       <Suspense fallback={<RouteFallback />}>
         {renderContent()}
       </Suspense>
       {showBottomNav && <BottomNav currentView={currentView} cartCount={navCartCount} />}
+      <InstallAppBanner show={showInstallBanner} />
     </CrashCatcher>
   );
                }
