@@ -194,19 +194,9 @@ export default function UserAuth({ onLoginSuccess }) {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Could not reset password.");
       setStatus("✅ Password updated! Signing you in...");
-      // Backend may return user payload directly; if not, fall back to login.
-      if (data && (data.id || data.user || data.token)) {
-        setTimeout(() => onLoginSuccess(data), 800);
-      } else {
-        const loginRes = await fetch(`${API_BASE}/login`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ phone: phone.trim(), password: newPassword }),
-        });
-        const loginData = await loginRes.json();
-        if (!loginRes.ok) throw new Error(loginData.error || "Sign-in failed.");
-        setTimeout(() => onLoginSuccess(loginData), 600);
-      }
+      // /auth/reset-password returns the same { _id, …, sessionToken } shape
+      // as /login and /register, so drop straight into the app.
+      setTimeout(() => onLoginSuccess(data), 800);
     } catch (err) {
       setStatus(`❌ ${err.message}`);
       setBusy(false);
