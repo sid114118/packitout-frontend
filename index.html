@@ -2,8 +2,20 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <title>PackItOut</title>
+    <meta name="description" content="Order groceries from nearby shops, pickup-ready in minutes." />
+
+    <!-- PWA: install + branding. theme-color colours the Android status bar
+         when the app is installed; apple-touch-icon is the iOS home-screen
+         icon (iOS ignores manifest icons). -->
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <meta name="theme-color" content="#16a34a" />
+    <link rel="icon" type="image/png" href="/icon-192.png" />
+    <link rel="apple-touch-icon" href="/icon-512.png" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-title" content="PackItOut" />
   </head>
   <body style="margin: 0;">
     <div id="root"></div>
