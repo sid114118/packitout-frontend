@@ -94,9 +94,10 @@ export default function OrdersPage({ user, onExit, onAddToCart }) {
       danger: true,
     });
     if (!ok) return;
-    // Cancel now routes through /user-cancel so coins and any Razorpay payment
-    // are refunded. Requires the session token issued at login — users on
-    // pre-token sessions need to log out and back in.
+    // Cancel now routes through /user-cancel so coins are refunded (and any
+    // UPI receipt is flagged for the shop to action manually). Requires the
+    // session token issued at login — pre-token sessions need to log out and
+    // back in.
     try {
       const res = await userFetch(user, `/orders/${orderId}/user-cancel`, {
         method: "POST",

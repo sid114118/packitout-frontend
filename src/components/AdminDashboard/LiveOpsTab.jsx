@@ -125,7 +125,7 @@ export default function LiveOpsTab() {
   };
 
   const handleForceCancel = async (order) => {
-    const reason = window.prompt(`Cancel order #${order._id.slice(-5).toUpperCase()}? Coins will be refunded; Razorpay refund will be flagged. Enter a reason:`);
+    const reason = window.prompt(`Cancel order #${order._id.slice(-5).toUpperCase()}? Coins will be auto-refunded; any UPI receipt will be flagged for the shop to refund manually. Enter a reason:`);
     if (!reason) return;
     setActingOnId(order._id);
     try {

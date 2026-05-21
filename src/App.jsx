@@ -31,14 +31,21 @@ const BASE_URL = (import.meta.env.VITE_API_BASE || "https://darkslategrey-snail-
 // this, a user logging in before the deferred init fires would call
 // OneSignal.login(id) on an un-initialized SDK and the External ID would never
 // register, so backend pushes had no one to deliver to.
+// OneSignal app ID is public (it ships in the browser SDK init), but it
+// belongs in env so a non-prod build never points at the production app.
+// allowLocalhostAsSecureOrigin must stay OFF in production — leaving it on
+// silently disables OneSignal's strict-origin checks. Default to the
+// production app ID so existing deploys keep working if the env var hasn't
+// been set yet.
+const ONESIGNAL_APP_ID = (import.meta.env.VITE_ONESIGNAL_APP_ID || "1da2e78d-0874-4965-a895-42c9237ee92b");
 let onesignalPromise;
 const loadOneSignal = () => {
   if (!onesignalPromise) {
     onesignalPromise = import('react-onesignal').then(async (m) => {
       const OneSignal = m.default;
       await OneSignal.init({
-        appId: "1da2e78d-0874-4965-a895-42c9237ee92b",
-        allowLocalhostAsSecureOrigin: true,
+        appId: ONESIGNAL_APP_ID,
+        allowLocalhostAsSecureOrigin: import.meta.env.DEV,
       });
       return OneSignal;
     });
@@ -122,13 +129,36 @@ export default function App() {
     } catch { return null; }
   });
 
-  const [cart, setCart] = useState(() => {
+  // Cart is namespaced per-user as `packitout_cart_<userId>`. The legacy
+  // `packitout_cart` key was global — logging out of account A and into
+  // account B on the same device leaked A's cart to B (and silently let B
+  // check out with A's items). On first read for a user we migrate the
+  // legacy key to the new namespace if it exists.
+  const loadCartFor = (uid) => {
+    if (!uid) return [];
     try {
-      const savedCart = localStorage.getItem("packitout_cart");
-      const parsed = savedCart ? JSON.parse(savedCart) : [];
+      const key = `packitout_cart_${uid}`;
+      let raw = localStorage.getItem(key);
+      if (raw == null) {
+        // One-shot migration from the old global key.
+        const legacy = localStorage.getItem("packitout_cart");
+        if (legacy) {
+          try {
+            const parsedLegacy = JSON.parse(legacy);
+            if (Array.isArray(parsedLegacy)) {
+              localStorage.setItem(key, legacy);
+              raw = legacy;
+            }
+          } catch { /* ignore */ }
+          localStorage.removeItem("packitout_cart");
+        }
+      }
+      const parsed = raw ? JSON.parse(raw) : [];
       return Array.isArray(parsed) ? parsed.filter(i => i !== null) : [];
     } catch { return []; }
-  });
+  };
+
+  const [cart, setCart] = useState(() => loadCartFor(loggedInUser?._id));
 
   // OneSignal SDK is ~200KB and was blocking first paint. Defer it to idle so
   // the feed renders first; the push permission prompt then slides in.
@@ -170,13 +200,30 @@ export default function App() {
       .catch(err => console.log("OneSignal Login Error", err));
   }, [loggedInUser?._id]);
 
+  // Persist the cart against the current user's namespaced key. We skip
+  // persistence when no one is logged in — there's nothing to claim a guest
+  // cart back to on the next visit and it would just leak to whoever logs in.
   useEffect(() => {
+    const uid = loggedInUser?._id;
+    if (!uid) return;
     try {
-      localStorage.setItem("packitout_cart", JSON.stringify(cart));
+      localStorage.setItem(`packitout_cart_${uid}`, JSON.stringify(cart));
     } catch (e) {
       console.error("Cart Save Error", e);
     }
-  }, [cart]);
+  }, [cart, loggedInUser?._id]);
+
+  // Swap to the new user's cart on login transition. The first render already
+  // loaded the correct cart via the useState initialiser; this effect handles
+  // the case where the user logs in/out without a page reload.
+  const previousUserIdRef = useRef(loggedInUser?._id || null);
+  useEffect(() => {
+    const nextId = loggedInUser?._id || null;
+    if (nextId === previousUserIdRef.current) return;
+    previousUserIdRef.current = nextId;
+    setCart(loadCartFor(nextId));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loggedInUser?._id]);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -322,12 +369,20 @@ export default function App() {
   }, [loggedInUser?._id]);
 
   const handleUserLogout = () => {
+    const previousUserId = loggedInUser?._id;
     localStorage.removeItem("packitout_user");
     // Wipe admin + shop session blobs too — same device shouldn't carry over
     // privileged credentials from a previous user. The admin token was the
     // worst offender: it survived user logout and any later visit to /#admin
     // would silently inherit the previous admin session.
     clearAdminToken();
+    // Drop the previous user's cart from localStorage so the next user who
+    // logs in on this device starts empty. (The in-memory `setCart([])`
+    // below covers the current React tree; this covers the next page load.)
+    if (previousUserId) {
+      try { localStorage.removeItem(`packitout_cart_${previousUserId}`); } catch {}
+    }
+    try { localStorage.removeItem("packitout_cart"); } catch {} // legacy key
     setIsAdminAuthenticated(false);
     setIsShopAuthenticated(null);
     setLoggedInUser(null);

@@ -11,11 +11,11 @@ const SECTIONS = [
   },
   {
     title: '3. Payments & PackIt Coins',
-    body: 'Payments are processed via Razorpay (UPI / cards) or settled directly at the shop when you pick up. PackIt Coins are a loyalty reward, hold no monetary value outside the app, can be capped at 10% of an order, and may be revoked if obtained fraudulently.',
+    body: 'Payments are either sent directly to the shop via UPI at checkout, or paid in person when you pick up your order. PackItOut does not hold or settle your money — UPI transfers go straight to the shop. PackIt Coins are a loyalty reward, hold no monetary value outside the app, can be capped at 10% of an order, and may be revoked if obtained fraudulently.',
   },
   {
     title: '4. Cancellations & Refunds',
-    body: 'You can cancel an order before the shop accepts it. Once accepted, cancellations are at the shop’s discretion. Refunds for paid online orders are issued back to the original source within 5–7 business days after approval.',
+    body: 'You can cancel an order before the shop accepts it. Once accepted, cancellations are at the shop’s discretion. Because UPI payments go directly to the shop, any money refund is issued by the shop themselves; PackIt Coins are auto-returned to your balance.',
   },
   {
     title: '5. Customer Conduct',

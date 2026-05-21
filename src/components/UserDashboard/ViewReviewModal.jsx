@@ -18,31 +18,39 @@ export default function ViewReviewModal({ isOpen, onClose, order, user, onReview
   const [deleting, setDeleting] = useState(false);
   const toast = useToast();
   const askConfirm = useConfirm();
-  const BASE_URL = (import.meta.env.VITE_API_BASE || "https://darkslategrey-snail-415133.hostingersite.com");
 
+  // Refetch reviews when the modal opens for a given order. Depend on
+  // `order?._id` rather than the order object — previously every parent
+  // re-render passed a fresh object identity and re-ran the fetch.
   useEffect(() => {
-    if (isOpen) {
-      if (!order?._id) {
-        setLoading(false);
-        return;
-      }
-      setLoading(true);
-      fetch(`${BASE_URL}/reviews/order/${order._id}`)
-        .then(async (res) => {
-          if (!res.ok) throw new Error(`HTTP error! Status: ${res.status}`);
-          return res.json();
-        })
-        .then(data => {
-          setReviews(Array.isArray(data) ? data : []);
-          setLoading(false);
-        })
-        .catch(err => {
-          console.error("❌ Failed to fetch reviews:", err);
-          setReviews([]); 
-          setLoading(false); 
-        });
+    if (!isOpen) return;
+    const orderId = order?._id;
+    if (!orderId) {
+      setLoading(false);
+      return;
     }
-  }, [isOpen, order]); 
+    let cancelled = false;
+    setLoading(true);
+    // Route through userFetch so the bearer token is attached. GET /reviews
+    // /order/:id is currently public, but the path centralises auth so a
+    // future tightening of that route doesn't silently break this modal.
+    userFetch(user, `/reviews/order/${orderId}`)
+      .then(async (res) => {
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        return res.json();
+      })
+      .then(data => {
+        if (cancelled) return;
+        setReviews(Array.isArray(data) ? data : []);
+        setLoading(false);
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setReviews([]);
+        setLoading(false);
+      });
+    return () => { cancelled = true; };
+  }, [isOpen, order?._id, user]);
 
   if (!isOpen || !order) return null;
 

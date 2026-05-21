@@ -85,7 +85,9 @@ export default function AdminDashboard({ onExit }) {
         result = await safeArray(await fetch(`${BASE_URL}/master-products`));
         if (!cancelled) setProducts(result);
       } else if (activeTab === "shops") {
-        result = await safeArray(await fetch(`${BASE_URL}/shops`));
+        // GET /shops is admin-gated (used to leak phone/upi/fssai/gst/pan to
+        // every unauthenticated visitor). Send the admin token.
+        result = await safeArray(await adminFetch(`/shops`));
         if (!cancelled) setShops(result);
       } else if (activeTab === "users") {
         result = await safeArray(await adminFetch(`/users`));

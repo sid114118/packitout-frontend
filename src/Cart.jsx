@@ -69,22 +69,27 @@ export default function Cart({ cart, setCart, user, onUserUpdate, onBack, onChec
   };
 
   // 🕵️ Fetch Primary Shop
+  // Depend ONLY on the pincode and the primary-shop id, NOT the whole user
+  // object. Previously any unrelated user mutation (a coin debit on checkout,
+  // a profile refresh) re-ran this effect, which could switch `targetShop`
+  // mid-checkout to a different shop than the order POST was about to use.
+  const pincodeForShops = user?.pincode;
+  const primaryShopId = user?.primaryShop?._id || user?.primaryShop || null;
   useEffect(() => {
-    if (user?.pincode) {
+    if (pincodeForShops) {
       setLoadingShops(true);
-      fetch(`${BASE_URL}/shops/all/${user.pincode}`)
+      fetch(`${BASE_URL}/shops/all/${pincodeForShops}`)
         .then(res => res.json())
         .then(data => {
           if (data.length > 0) {
-            const primaryId = user.primaryShop?._id || user.primaryShop;
-            const myPrimary = data.find(s => s._id === primaryId);
-            setTargetShop(myPrimary || data[0]); 
+            const myPrimary = data.find(s => s._id === primaryShopId);
+            setTargetShop(myPrimary || data[0]);
           }
           setLoadingShops(false);
         })
         .catch(() => setLoadingShops(false));
     }
-  }, [user]);
+  }, [pincodeForShops, primaryShopId]);
 
   // --- EMPTY CART UI (Premium Redesign) ---
   if (!cart || cart.length === 0) {

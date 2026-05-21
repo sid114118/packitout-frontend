@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
-import { useToast, usePrompt } from '../../ui/DialogProvider.jsx';
+import { useToast, usePrompt, useConfirm } from '../../ui/DialogProvider.jsx';
 import UserProfileModal from './UserProfileModal';
 import { adminFetch, BASE_URL } from '../../utils/api.js';
 
 export default function UsersTab({ users, onUsersChanged }) {
   const toast = useToast();
   const askForValue = usePrompt();
+  const askConfirm = useConfirm();
   // 🛡️ STATE MOVED INSIDE: Now it manages its own form and will never crash!
   const [userForm, setUserForm] = useState({ name: "", phone: "", pincode: "", password: "" });
   const [profileUserId, setProfileUserId] = useState(null);
@@ -36,31 +37,52 @@ export default function UsersTab({ users, onUsersChanged }) {
   };
 
   // --- 🪙 QUICK UPDATE COINS ---
-  const handleEditUserCoins = async (userId, currentCoins) => {
-    const newCoins = await askForValue({
+  // Edits a user's loyalty balance. Old behaviour accepted anything that
+  // wasn't NaN — which let through `Infinity`, decimals (silently floored
+  // server-side), and negatives (silently clamped to 0). It also fired the
+  // update without a confirm, so a misclick on the wrong row could zero out
+  // a real user's balance. Strict integer-≥0 validation + a confirm step.
+  const handleEditUserCoins = async (userId, currentCoins, userLabel) => {
+    const raw = await askForValue({
       title: 'Update Coins',
-      message: 'Set the new coin balance for this user.',
+      message: 'Set the new coin balance for this user (whole number, 0 or more).',
       defaultValue: String(currentCoins ?? ''),
       placeholder: 'e.g. 100',
       inputMode: 'numeric',
-      confirmText: 'Update',
+      confirmText: 'Continue',
     });
+    if (raw === null) return; // cancelled
+    const trimmed = String(raw).trim();
+    if (trimmed === '') return;
 
-    if (newCoins !== null && newCoins.trim() !== "" && !isNaN(newCoins)) {
-      try {
-        const res = await adminFetch(`/admin/users/${userId}/coins`, {
-          method: "POST",
-          body: JSON.stringify({ mode: 'set', value: Number(newCoins) }),
-        });
-        if (res.ok) {
-          toast("Coins updated!");
-          if (onUsersChanged) onUsersChanged();
-        } else {
-          toast("Update failed.", 'error');
-        }
-      } catch (err) {
-        toast("Error updating coins.", 'error');
+    const n = Number(trimmed);
+    if (!Number.isFinite(n) || !Number.isInteger(n) || n < 0) {
+      toast('Coins must be a whole number, 0 or more.', 'error');
+      return;
+    }
+
+    const ok = await askConfirm({
+      title: 'Confirm coin change',
+      message: `Set ${userLabel || 'this user'}’s balance from ${currentCoins ?? 0} → ${n}?`,
+      confirmText: 'Update',
+      danger: Number(currentCoins ?? 0) > n, // red button if we're reducing
+    });
+    if (!ok) return;
+
+    try {
+      const res = await adminFetch(`/admin/users/${userId}/coins`, {
+        method: 'POST',
+        body: JSON.stringify({ mode: 'set', value: n }),
+      });
+      if (res.ok) {
+        toast('Coins updated!');
+        if (onUsersChanged) onUsersChanged();
+      } else {
+        const err = await res.json().catch(() => ({}));
+        toast(err.error || 'Update failed.', 'error');
       }
+    } catch (err) {
+      toast('Error updating coins.', 'error');
     }
   };
 
@@ -111,7 +133,7 @@ export default function UsersTab({ users, onUsersChanged }) {
                     </button>
 
                     {/* The Coin editing button is fully functional now! */}
-                    <button onClick={() => handleEditUserCoins(u._id, u.coins)} style={actionBtnStyle('#f59e0b', '#fffbeb')}>
+                    <button onClick={() => handleEditUserCoins(u._id, u.coins, `${u.name || 'Guest'} (${u.phone || '—'})`)} style={actionBtnStyle('#f59e0b', '#fffbeb')}>
                       🪙 Edit Coins
                     </button>
 

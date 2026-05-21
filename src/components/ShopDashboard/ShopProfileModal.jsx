@@ -75,7 +75,7 @@ export default function ShopProfileModal({ open, shop, onClose, onShopUpdated })
           <Field label="Operating hours" value={form.operatingHours} onChange={v => setForm({ ...form, operatingHours: v })} placeholder="09:00 AM - 10:00 PM" />
 
           <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: 10, padding: 12, margin: '12px 0' }}>
-            <div style={{ fontSize: '0.78rem', color: '#15803d', fontWeight: 800, marginBottom: 6 }}>💸 UPI ID — required to send parchi bills</div>
+            <div style={{ fontSize: '0.78rem', color: '#15803d', fontWeight: 800, marginBottom: 6 }}>💸 UPI ID — required to accept UPI payments</div>
             <input
               type="text"
               value={form.upiId}
@@ -86,7 +86,7 @@ export default function ShopProfileModal({ open, shop, onClose, onShopUpdated })
               autoCorrect="off"
             />
             <div style={{ fontSize: '0.72rem', color: '#15803d', marginTop: 6 }}>
-              Customers paying for a parchi bill via UPI will be sent to this address.
+              Money lands directly in your bank. Leave blank to accept only Pay-on-Shop orders.
             </div>
           </div>
 

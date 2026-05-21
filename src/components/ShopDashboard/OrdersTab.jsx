@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useOrderAlarm } from '../../utils/orderAlarm.js';
 
-export default function OrdersTab({ orders, updateOrderStatus }) {
+export default function OrdersTab({ orders, updateOrderStatus, markOrderPaid }) {
   const [showPastOrders, setShowPastOrders] = useState(false);
 
   // Split orders into Active and Past based on their status. Active orders are
@@ -31,8 +31,17 @@ export default function OrdersTab({ orders, updateOrderStatus }) {
     const customerPhone = order.userId?.phone || "No phone";
     const customerAddress = order.userId?.address || "No address provided";
 
-    // Safely determine payment status
+    // Payment state matrix:
+    //   POP + Unpaid              → "✋ Collect at Pickup"
+    //   POP + Paid (after pickup) → "💵 Paid in Person"
+    //   UPI + PendingVerification → "⏳ Awaiting UPI Confirmation" (shop confirms)
+    //   UPI + Paid                → "💳 UPI Received"
     const isPaid = order.paymentStatus === 'Paid' || order.paymentStatus === 'Success';
+    const isUpiPending = order.paymentMethod === 'UPI' && order.paymentStatus === 'PendingVerification';
+    let payBadge = { label: '✋ Collect at Pickup', bg: '#ffedd5', fg: '#c2410c', border: '#fed7aa' };
+    if (isPaid && order.paymentMethod === 'UPI') payBadge = { label: '💳 UPI Received', bg: '#d1fae5', fg: '#059669', border: '#a7f3d0' };
+    else if (isPaid) payBadge = { label: '💵 Paid in Person', bg: '#d1fae5', fg: '#059669', border: '#a7f3d0' };
+    else if (isUpiPending) payBadge = { label: '⏳ Awaiting UPI', bg: '#fef9c3', fg: '#854d0e', border: '#fde68a' };
 
     // 🕒 Pickup time (set by customer at checkout)
     const isUrgent = Boolean(order.isUrgent);
@@ -113,10 +122,30 @@ export default function OrdersTab({ orders, updateOrderStatus }) {
           </div>
           
           {/* 💳 PAYMENT BADGE */}
-          <div style={{ padding: '6px 12px', borderRadius: '8px', fontSize: '0.85rem', fontWeight: '800', backgroundColor: isPaid ? '#d1fae5' : '#ffedd5', color: isPaid ? '#059669' : '#c2410c', border: `1px solid ${isPaid ? '#a7f3d0' : '#fed7aa'}` }}>
-            {isPaid ? '💳 Paid Online' : '✋ To Collect'}
+          <div style={{ padding: '6px 12px', borderRadius: '8px', fontSize: '0.85rem', fontWeight: '800', backgroundColor: payBadge.bg, color: payBadge.fg, border: `1px solid ${payBadge.border}` }}>
+            {payBadge.label}
           </div>
         </div>
+
+        {/* UPI confirmation strip — shop sees this for UPI orders the customer
+            tapped "I've paid" on but the shop hasn't verified in their UPI app
+            yet. One tap confirms receipt and notifies the customer. */}
+        {isUpiPending && isActive && (
+          <div style={{ marginTop: '12px', backgroundColor: '#fffbeb', border: '1px solid #fde68a', borderRadius: '10px', padding: '12px' }}>
+            <div style={{ fontSize: '0.85rem', color: '#92400e', fontWeight: 800, marginBottom: '6px' }}>
+              💸 Customer says they paid ₹{order.totalAmount} via UPI
+            </div>
+            <div style={{ fontSize: '0.75rem', color: '#92400e', marginBottom: '10px' }}>
+              Open your UPI app to confirm the money landed, then tap below.
+            </div>
+            <button
+              onClick={() => markOrderPaid && markOrderPaid(order._id)}
+              style={{ width: '100%', padding: '10px', backgroundColor: '#16a34a', color: 'white', border: 'none', borderRadius: '8px', fontWeight: 800, cursor: 'pointer', fontSize: '0.9rem' }}
+            >
+              ✅ Yes, I received the UPI payment
+            </button>
+          </div>
+        )}
 
         {/* 🚀 EXPLICIT ACTION BUTTONS (Only for Active Orders) */}
         {isActive && (() => {

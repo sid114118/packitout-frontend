@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useToast } from './ui/DialogProvider.jsx';
 import { cdnImage } from './utils/cloudinaryUrl.js';
+import { userFetch } from './utils/api.js';
 
 export default function CustomerDashboard({ user, onExit }) {
   const toast = useToast();
@@ -8,22 +9,25 @@ export default function CustomerDashboard({ user, onExit }) {
   const [cart, setCart] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  const BASE_URL = (import.meta.env.VITE_API_BASE || "https://darkslategrey-snail-415133.hostingersite.com");
-
   useEffect(() => {
     if (user?.primaryShop) {
       const shopId = typeof user.primaryShop === 'object' ? user.primaryShop._id : user.primaryShop;
       fetchShopMenu(shopId);
     } else {
-      setLoading(false); 
+      setLoading(false);
     }
-  }, [user]);
+    // Depend on the shop id only, not the whole user object. Otherwise an
+    // unrelated coin/profile update on `user` re-fetches the menu.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.primaryShop?._id || user?.primaryShop]);
 
   const fetchShopMenu = async (shopId) => {
     try {
-      const res = await fetch(`${BASE_URL}/shops/${shopId}/menu/lean?t=${new Date().getTime()}`);
+      // /shops/:id/menu/lean is public (no PII), but route through userFetch
+      // so any future change to gate it doesn't break this caller.
+      const res = await userFetch(user, `/shops/${shopId}/menu/lean?t=${Date.now()}`);
       setShopMenu(await res.json());
-    } catch (err) { console.log(err); }
+    } catch (err) { /* swallow — handled by spinner state below */ }
     setLoading(false);
   };
 
@@ -48,15 +52,30 @@ export default function CustomerDashboard({ user, onExit }) {
   const handleCheckout = async () => {
     if (cart.length === 0) return;
     try {
-      const orderData = { userId: user._id, shopId: shopMenu._id, items: cart, totalAmount: getCartTotal(), status: "Pending" };
-      const res = await fetch(`${BASE_URL}/orders`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(orderData)
+      // Server requires paymentMethod ∈ {'UPI','POP'} and takes userId from
+      // the bearer token. This quick-checkout path defaults to POP (pay on
+      // pickup) — the full Cart.jsx flow handles the UPI variant via deep
+      // link. items: server recomputes totals; shape just needs productId.
+      const items = cart.map(c => ({
+        productId: c.productId,
+        name: c.name,
+        qty: c.qty,
+        price: c.price,
+      }));
+      const res = await userFetch(user, '/orders', {
+        method: 'POST',
+        body: JSON.stringify({
+          shopId: shopMenu._id,
+          items,
+          paymentMethod: 'POP',
+        }),
       });
       if (res.ok) {
         toast("Order placed! The shopkeeper has been notified.");
         setCart([]);
+      } else {
+        const err = await res.json().catch(() => ({}));
+        toast(err.error || "Could not place order. Please try again.", 'error');
       }
     } catch (err) { toast("Error placing order. Please try again.", 'error'); }
   };

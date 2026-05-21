@@ -101,8 +101,8 @@ export default function ShopDashboard({ user, onExit }) {
 
   // 🚀 THIS IS THE FIX: IT WILL INSTANTLY UPDATE THE SCREEN OR SCREAM THE ERROR AT YOU
   // Auth: every order mutation now carries the shop's bearer token. Cancel
-  // intent is routed to the dedicated /shop-cancel endpoint so coin/Razorpay
-  // refunds always fire — never via PATCH.
+  // intent is routed to the dedicated /shop-cancel endpoint so coin refunds
+  // always fire — never via PATCH.
   const updateOrderStatus = async (orderId, newStatus) => {
     const authHeader = shopData.sessionToken ? { "Authorization": `Bearer ${shopData.sessionToken}` } : {};
     const isCancel = /cancel|reject/i.test(newStatus);
@@ -131,6 +131,30 @@ export default function ShopDashboard({ user, onExit }) {
     } catch (err) {
       console.log(err);
       toast("Network error. Cannot reach server.", 'error');
+    }
+  };
+
+  // Shop confirms a UPI payment landed in their UPI app. Flips the order's
+  // paymentStatus from 'PendingVerification' to 'Paid' server-side and fires
+  // a "payment confirmed" push to the customer. Only valid for UPI orders.
+  const markOrderPaid = async (orderId) => {
+    try {
+      setOrders(prev => prev.map(o => o._id === orderId ? { ...o, paymentStatus: 'Paid' } : o));
+      const res = await shopFetch(shopData, `/orders/${orderId}/mark-paid`, {
+        method: 'POST',
+        body: JSON.stringify({}),
+      });
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        toast(errorData.error || 'Could not mark as paid', 'error');
+        fetchOrders();
+      } else {
+        toast('Payment confirmed ✅');
+      }
+    } catch (err) {
+      console.log(err);
+      toast('Network error. Cannot reach server.', 'error');
+      fetchOrders();
     }
   };
 
@@ -276,7 +300,7 @@ export default function ShopDashboard({ user, onExit }) {
       <ShopLocationBanner shopData={shopData} onShopUpdated={setShopData} />
 
       <div style={{ padding: '15px', maxWidth: '800px', margin: '0 auto' }}>
-        {activeTab === "orders" && <OrdersTab orders={orders} updateOrderStatus={updateOrderStatus} />}
+        {activeTab === "orders" && <OrdersTab orders={orders} updateOrderStatus={updateOrderStatus} markOrderPaid={markOrderPaid} />}
         {activeTab === "parchis" && <ParchiTab parchiRequests={parchiRequests} selectedParchi={selectedParchi} setSelectedParchi={setSelectedParchi} parchiBill={parchiBill} setParchiBill={setParchiBill} handleAddToBill={handleAddToBill} handleSendBill={handleSendBill} shopData={shopData} />}
         {activeTab === "inventory" && <InventoryTab shopData={shopData} masterCatalog={masterCatalog} handleInventoryUpdate={handleInventoryUpdate} onInventoryRefresh={refreshShopData} />}
         {activeTab === "reviews" && <ShopReviews shopId={shopData._id} shopRating={shopData.rating} totalReviews={shopData.totalReviews} />}
