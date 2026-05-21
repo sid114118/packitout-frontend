@@ -73,7 +73,7 @@ export default function ProfileHeader({
             </svg>
             Shop
           </button>
-          <NotificationBell ownerType="user" ownerId={user._id} />
+          <NotificationBell ownerType="user" owner={user} />
         </div>
 
         {/* Identity row */}

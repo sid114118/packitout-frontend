@@ -7,7 +7,7 @@ import { cdnImage } from './utils/cloudinaryUrl.js';
 const BASE_URL = (import.meta.env.VITE_API_BASE || "https://darkslategrey-snail-415133.hostingersite.com");
 
 // 🚀 FIX: The "export default" is right here so App.jsx can read it!
-export default function Cart({ cart, setCart, user, onBack, onCheckoutSuccess }) {
+export default function Cart({ cart, setCart, user, onUserUpdate, onBack, onCheckoutSuccess }) {
   useScrollToTop(); 
 
   const [targetShop, setTargetShop] = useState(null); 
@@ -38,15 +38,19 @@ export default function Cart({ cart, setCart, user, onBack, onCheckoutSuccess })
   }, 0);
 
   const totalProductDiscount = totalMRP - itemTotal;
-  
-  const userCoinValueInRupees = (user?.coins || 0) / 10; 
-  const maxDiscountAllowed = itemTotal * 0.10; 
-  const maxUsableDiscount = Math.min(userCoinValueInRupees, maxDiscountAllowed);
 
-  let rawDiscount = useCoins ? maxUsableDiscount : 0; 
-  const discount = Number(rawDiscount.toFixed(2)); 
-  const coinsUsed = Math.round(discount * 10); 
-  
+  // Coin math mirrors backend computeTrustedTotal() exactly: floor coins at the
+  // 10% cap *before* converting to rupees so what we show as "discount" matches
+  // what the server stores down to the paisa. Previously we computed the cap in
+  // rupees and rounded only at display, which made the customer pay a few paisa
+  // more than the visible total on every order.
+  const userCoins = Math.max(0, Math.floor(Number(user?.coins) || 0));
+  const maxDiscountAllowed = itemTotal * 0.10;                     // rupees
+  const maxCoinsConsumable = Math.floor(maxDiscountAllowed * 10);  // coins
+  const coinsUsed = useCoins ? Math.min(userCoins, maxCoinsConsumable) : 0;
+  const discount = coinsUsed / 10;                                  // exact rupees
+  const maxUsableDiscount = maxCoinsConsumable / 10;                // for display
+
   const finalBill = Number((itemTotal - discount).toFixed(2));
   const totalSavings = totalProductDiscount + discount;
 
@@ -122,6 +126,7 @@ export default function Cart({ cart, setCart, user, onBack, onCheckoutSuccess })
         coinsUsed={coinsUsed}
         pickupTime={pickup.pickupTime}
         isUrgent={pickup.isUrgent}
+        onUserUpdate={onUserUpdate}
         onBack={() => setStep('pickup')}
         onCheckoutSuccess={onCheckoutSuccess}
       />

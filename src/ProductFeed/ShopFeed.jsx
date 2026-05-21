@@ -8,6 +8,7 @@ import { useToast, useConfirm } from '../ui/DialogProvider.jsx';
 import HomeFooter from '../components/HomeFooter.jsx';
 import { useRankingConfig } from '../ui/RankingProvider.jsx';
 import { applyBrandPriority } from '../utils/rankingSort.js';
+import { userFetch } from '../utils/api.js';
 
 // 🌟 IMPORT OUR NEW BRAIN!
 import useShopFeedData from './useShopFeedData'; // Adjust path based on where you saved it
@@ -57,7 +58,7 @@ export default function ShopFeed({
     });
     if (!ok) return;
     try {
-      const res = await fetch(`${BASE_URL}/users/${user._id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ primaryShop: newShop._id }) });
+      const res = await userFetch(user, `/users/${user._id}`, { method: 'PATCH', body: JSON.stringify({ primaryShop: newShop._id }) });
       if(res.ok) {
         const updated = await res.json();
         // onUserUpdate is always passed from App.jsx; writing to localStorage

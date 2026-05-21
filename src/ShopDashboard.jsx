@@ -10,6 +10,7 @@ import NotificationBell from './NotificationBell';
 import ShopReviews from './components/ShopDashboard/ShopReviews';
 import ComplaintsTab from './components/ShopDashboard/ComplaintsTab';
 import ShopPhotoModal from './components/ShopDashboard/ShopPhotoModal';
+import ShopProfileModal from './components/ShopDashboard/ShopProfileModal';
 import ShopLocationBanner from './components/ShopDashboard/ShopLocationBanner';
 import { cdnImage } from './utils/cloudinaryUrl.js';
 import { shopFetch, BASE_URL } from './utils/api.js';
@@ -26,6 +27,7 @@ export default function ShopDashboard({ user, onExit }) {
   const [selectedParchi, setSelectedParchi] = useState(null);
   const [parchiBill, setParchiBill] = useState([]);
   const [photoModalOpen, setPhotoModalOpen] = useState(false);
+  const [profileModalOpen, setProfileModalOpen] = useState(false);
 
   // --- DATA FETCHING ---
   useEffect(() => {
@@ -72,7 +74,8 @@ export default function ShopDashboard({ user, onExit }) {
 
   const fetchParchis = async () => {
     try {
-      const res = await fetch(`${BASE_URL}/parchis/${shopData._id}`);
+      const res = await shopFetch(shopData, `/parchis/${shopData._id}`);
+      if (!res.ok) return;
       const data = await res.json();
       if (Array.isArray(data)) setParchiRequests(data);
     } catch (err) { console.log(err); }
@@ -158,29 +161,31 @@ export default function ShopDashboard({ user, onExit }) {
     });
   };
 
+  // Send the parchi bill to the customer. Posts to /parchis/:id/send-bill so
+  // the customer gets a quote with a UPI-or-Pay-on-pickup choice — does NOT
+  // create an order directly. The order is only created once the customer
+  // accepts the bill on their side.
   const handleSendBill = async () => {
+    if (!shopData.upiId || !shopData.upiId.includes('@')) {
+      toast("Add your UPI ID in shop profile first so customers can pay you.", 'error');
+      return;
+    }
     try {
-      const res = await fetch(`${BASE_URL}/orders`, {
+      const res = await shopFetch(shopData, `/parchis/${selectedParchi._id}/send-bill`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          userId: selectedParchi.userId,
-          shopId: shopData._id,
-          items: parchiBill,
-          // totalAmount is recomputed server-side; status is server-controlled.
-          parchiId: selectedParchi._id,
-          imageUrl: selectedParchi.imageUrl
-        })
+          items: parchiBill.map(i => ({ productId: i.productId || i._id, qty: i.qty })),
+        }),
       });
 
       if (res.ok) {
         setParchiRequests(prev => prev.filter(p => p._id !== selectedParchi._id));
         setSelectedParchi(null);
         setParchiBill([]);
-        fetchOrders();
-        toast(`Digital bill sent to ${selectedParchi.customerName || 'customer'}!`);
+        toast(`Bill sent to ${selectedParchi.customerName || 'customer'}! Awaiting their payment choice.`);
       } else {
-        toast("Failed to create the order. Please try again.", 'error');
+        const err = await res.json().catch(() => ({}));
+        toast(err.error || "Failed to send the bill. Please try again.", 'error');
       }
     } catch (err) {
       console.log(err);
@@ -244,7 +249,11 @@ export default function ShopDashboard({ user, onExit }) {
         </button>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
-          <NotificationBell ownerType="shop" ownerId={shopData._id} />
+          <NotificationBell ownerType="shop" owner={shopData} />
+
+          <button onClick={() => setProfileModalOpen(true)} title="Shop profile / UPI" style={{ background: 'rgba(255,255,255,0.1)', color: 'white', border: 'none', width: 36, height: 36, borderRadius: '50%', fontSize: '1.05rem', cursor: 'pointer' }}>
+            ⚙️
+          </button>
 
           <button onClick={toggleShopStatus} style={{ padding: '6px 12px', borderRadius: '20px', fontWeight: 'bold', border: 'none', cursor: 'pointer', backgroundColor: shopData.isOpen ? '#d1fae5' : '#fee2e2', color: shopData.isOpen ? '#059669' : '#b91c1c' }} >
             {shopData.isOpen ? '🟢 OPEN' : '🔴 CLOSED'}
@@ -271,13 +280,20 @@ export default function ShopDashboard({ user, onExit }) {
         {activeTab === "parchis" && <ParchiTab parchiRequests={parchiRequests} selectedParchi={selectedParchi} setSelectedParchi={setSelectedParchi} parchiBill={parchiBill} setParchiBill={setParchiBill} handleAddToBill={handleAddToBill} handleSendBill={handleSendBill} shopData={shopData} />}
         {activeTab === "inventory" && <InventoryTab shopData={shopData} masterCatalog={masterCatalog} handleInventoryUpdate={handleInventoryUpdate} onInventoryRefresh={refreshShopData} />}
         {activeTab === "reviews" && <ShopReviews shopId={shopData._id} shopRating={shopData.rating} totalReviews={shopData.totalReviews} />}
-        {activeTab === "complaints" && <ComplaintsTab shopId={shopData._id} shopName={shopData.name} />}
+        {activeTab === "complaints" && <ComplaintsTab shop={shopData} />}
       </div>
 
       <ShopPhotoModal
         open={photoModalOpen}
         onClose={() => setPhotoModalOpen(false)}
         shop={shopData}
+        onShopUpdated={(updated) => setShopData(updated)}
+      />
+
+      <ShopProfileModal
+        open={profileModalOpen}
+        shop={shopData}
+        onClose={() => setProfileModalOpen(false)}
         onShopUpdated={(updated) => setShopData(updated)}
       />
     </div>

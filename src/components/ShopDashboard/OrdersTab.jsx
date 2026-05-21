@@ -4,8 +4,19 @@ import { useOrderAlarm } from '../../utils/orderAlarm.js';
 export default function OrdersTab({ orders, updateOrderStatus }) {
   const [showPastOrders, setShowPastOrders] = useState(false);
 
-  // Split orders into Active and Past based on their status
-  const activeOrders = orders.filter(o => !o.status?.includes('✅') && !o.status?.includes('❌'));
+  // Split orders into Active and Past based on their status. Active orders are
+  // sorted so URGENT pickups float to the top regardless of when they were
+  // placed — without this, an urgent order placed after several scheduled ones
+  // would be buried by chronological order and the red banner alone wouldn't
+  // catch the shop's eye fast enough during a busy period.
+  const activeOrders = orders
+    .filter(o => !o.status?.includes('✅') && !o.status?.includes('❌'))
+    .sort((a, b) => {
+      const au = a.isUrgent ? 0 : 1;
+      const bu = b.isUrgent ? 0 : 1;
+      if (au !== bu) return au - bu;
+      return new Date(b.createdAt) - new Date(a.createdAt);
+    });
   const pastOrders = orders.filter(o => o.status?.includes('✅') || o.status?.includes('❌'));
 
   // 🚨 ALARM: ring while any order is still Pending (shop hasn't accepted/rejected).

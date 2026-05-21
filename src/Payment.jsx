@@ -21,7 +21,7 @@ const loadRazorpayScript = () => {
   return razorpayScriptPromise;
 };
 
-export default function Payment({ user, cart, targetShop, finalBill, useCoins, coinsUsed, pickupTime, isUrgent, onBack, onCheckoutSuccess }) {
+export default function Payment({ user, cart, targetShop, finalBill, useCoins, coinsUsed, pickupTime, isUrgent, onUserUpdate, onBack, onCheckoutSuccess }) {
   useScrollToTop();
 
   const [status, setStatus] = useState("");
@@ -74,12 +74,15 @@ export default function Payment({ user, cart, targetShop, finalBill, useCoins, c
     if (!response.ok) throw new Error(order.error || "Failed to place order");
 
     // Coin deduction is handled atomically server-side inside POST /orders.
-    // Mirror the trusted coinsUsed value from the saved order into localStorage
-    // for snappy UI; the user object resyncs from /users/:id on next focus.
+    // Mirror the trusted coinsUsed value into both localStorage AND the
+    // in-memory user (via onUserUpdate) so Cart/Header reflect the new balance
+    // immediately without waiting for the next focus refresh.
     const debited = Number(order?.coinsUsed || 0);
     if (debited > 0) {
       const newCoinBalance = Math.max(0, Math.round(Number(user.coins || 0) - debited));
-      localStorage.setItem("packitout_user", JSON.stringify({ ...user, coins: newCoinBalance }));
+      const next = { ...user, coins: newCoinBalance };
+      localStorage.setItem("packitout_user", JSON.stringify(next));
+      if (onUserUpdate) onUserUpdate(next);
     }
   };
 
@@ -152,8 +155,10 @@ export default function Payment({ user, cart, targetShop, finalBill, useCoins, c
             }
 
             if (coinsUsedSafe > 0) {
-              const newCoinBalance = Math.round(Number(user.coins || 0) - coinsUsedSafe);
-              localStorage.setItem("packitout_user", JSON.stringify({ ...user, coins: newCoinBalance }));
+              const newCoinBalance = Math.max(0, Math.round(Number(user.coins || 0) - coinsUsedSafe));
+              const next = { ...user, coins: newCoinBalance };
+              localStorage.setItem("packitout_user", JSON.stringify(next));
+              if (onUserUpdate) onUserUpdate(next);
             }
             resolve(verifyData.order);
           } catch (err) {

@@ -1,8 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useToast } from '../../ui/DialogProvider.jsx';
 import ComplaintReplyThread from './ComplaintReplyThread';
-
-const BASE_URL = (import.meta.env.VITE_API_BASE || "https://darkslategrey-snail-415133.hostingersite.com");
+import { shopFetch } from '../../utils/api.js';
 
 const STATUS_META = {
   open:     { label: 'Open',     bg: '#fef2f2', fg: '#b91c1c', border: '#fecaca' },
@@ -16,8 +15,10 @@ const CATEGORY_LABEL = {
   app:  { icon: '📱', label: 'About the app' },
 };
 
-export default function ComplaintsTab({ shopId, shopName }) {
+export default function ComplaintsTab({ shop }) {
   const toast = useToast();
+  const shopId = shop?._id;
+  const shopName = shop?.name;
   const [complaints, setComplaints] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showResolved, setShowResolved] = useState(false);
@@ -26,7 +27,7 @@ export default function ComplaintsTab({ shopId, shopName }) {
     if (!shopId) return;
     setLoading(true);
     try {
-      const res = await fetch(`${BASE_URL}/complaints/shop/${shopId}`);
+      const res = await shopFetch(shop, `/complaints/shop/${shopId}`);
       const data = res.ok ? await res.json() : [];
       setComplaints(Array.isArray(data) ? data : []);
     } catch {
@@ -35,7 +36,7 @@ export default function ComplaintsTab({ shopId, shopName }) {
     setLoading(false);
   };
 
-  useEffect(() => { fetchAll(); }, [shopId]);
+  useEffect(() => { fetchAll(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [shopId]);
 
   const { active, past } = useMemo(() => {
     const active = [], past = [];
@@ -47,28 +48,31 @@ export default function ComplaintsTab({ shopId, shopName }) {
     return { active, past };
   }, [complaints]);
 
-  const acknowledge = async (id) => {
+  const setStatus = async (id, status) => {
     const prev = complaints;
-    setComplaints(prev.map(c => c._id === id ? { ...c, status: 'reviewed' } : c));
+    setComplaints(prev.map(c => c._id === id ? { ...c, status } : c));
     try {
-      const res = await fetch(`${BASE_URL}/complaints/${id}`, {
+      const res = await shopFetch(shop, `/complaints/${id}`, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status: 'reviewed' }),
+        body: JSON.stringify({ status }),
       });
       if (!res.ok) throw new Error();
-      toast('Marked reviewed.');
+      toast(status === 'resolved' ? 'Marked resolved.' : 'Marked reviewed.');
     } catch {
       setComplaints(prev);
       toast('Could not update.', 'error');
     }
   };
+  const acknowledge = (id) => setStatus(id, 'reviewed');
+  const resolve = (id) => setStatus(id, 'resolved');
 
   const handleReply = async (id, message) => {
-    const res = await fetch(`${BASE_URL}/complaints/${id}/replies`, {
+    // authorType / authorName are derived server-side from the bearer token now;
+    // we no longer send them in the body. Posting as a logged-in shop produces
+    // authorType='shop' automatically.
+    const res = await shopFetch(shop, `/complaints/${id}/replies`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ authorType: 'shop', authorName: shopName || 'Shop', message }),
+      body: JSON.stringify({ message }),
     });
     if (!res.ok) throw new Error('Could not send reply.');
     const updated = await res.json();
@@ -111,14 +115,24 @@ export default function ComplaintsTab({ shopId, shopName }) {
             {created && <> · {created.toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' })}</>}
           </div>
 
-          {(c.status || 'open') === 'open' && (
-            <button
-              onClick={() => acknowledge(c._id)}
-              style={{ padding: '8px 14px', background: '#0f172a', color: '#fff', border: 'none', borderRadius: '8px', fontWeight: 800, cursor: 'pointer', fontSize: '0.8rem' }}
-            >
-              Mark Reviewed
-            </button>
-          )}
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+            {(c.status || 'open') === 'open' && (
+              <button
+                onClick={() => acknowledge(c._id)}
+                style={{ padding: '8px 14px', background: '#0f172a', color: '#fff', border: 'none', borderRadius: '8px', fontWeight: 800, cursor: 'pointer', fontSize: '0.8rem' }}
+              >
+                Mark Reviewed
+              </button>
+            )}
+            {c.status !== 'resolved' && (
+              <button
+                onClick={() => resolve(c._id)}
+                style={{ padding: '8px 14px', background: '#16a34a', color: '#fff', border: 'none', borderRadius: '8px', fontWeight: 800, cursor: 'pointer', fontSize: '0.8rem' }}
+              >
+                Mark Resolved
+              </button>
+            )}
+          </div>
         </div>
 
         <ComplaintReplyThread

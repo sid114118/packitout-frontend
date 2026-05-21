@@ -65,7 +65,7 @@ export default function OrdersPage({ user, onExit, onAddToCart }) {
     // Only show the skeleton on first-ever load. Returning visits paint
     // instantly from cache and refresh silently in the background.
     if (!initialCache) setLoading(true);
-    fetch(`${BASE_URL}/orders/user/${user._id}`)
+    userFetch(user, `/orders/user/${user._id}`)
       .then(res => res.ok ? res.json().then(d => ({ ok: true, data: d })) : { ok: false, data: null })
       .then(({ ok, data }) => {
         if (!ok) {
@@ -97,11 +97,9 @@ export default function OrdersPage({ user, onExit, onAddToCart }) {
     // Cancel now routes through /user-cancel so coins and any Razorpay payment
     // are refunded. Requires the session token issued at login — users on
     // pre-token sessions need to log out and back in.
-    const authHeader = user?.sessionToken ? { "Authorization": `Bearer ${user.sessionToken}` } : {};
     try {
-      const res = await fetch(`${BASE_URL}/orders/${orderId}/user-cancel`, {
+      const res = await userFetch(user, `/orders/${orderId}/user-cancel`, {
         method: "POST",
-        headers: { "Content-Type": "application/json", ...authHeader },
         body: JSON.stringify({})
       });
       if (res.ok) {
@@ -241,7 +239,7 @@ export default function OrdersPage({ user, onExit, onAddToCart }) {
             </svg>
             Shop
           </button>
-          <NotificationBell ownerType="user" ownerId={user._id} />
+          <NotificationBell ownerType="user" owner={user} />
         </div>
 
         <div style={{ marginTop: '20px', position: 'relative', zIndex: 1 }}>
@@ -460,6 +458,13 @@ export default function OrdersPage({ user, onExit, onAddToCart }) {
         selectedOrder={selectedOrder}
         setSelectedOrder={setSelectedOrder}
         onReorderItem={handleReorderItem}
+        user={user}
+        onReviewsDeleted={(orderId) => {
+          setOrders(prev => prev.map(o => o._id === orderId ? { ...o, isReviewed: false } : o));
+          // Close the receipt modal too — the order just became review-able again,
+          // user can tap Rate from the order card if they want.
+          setSelectedOrder(null);
+        }}
       />
       <OrderReviewModal
         isOpen={isReviewModalOpen}
@@ -691,6 +696,8 @@ function OrderCard({ order, onOpen, onCancel, onReview, onReorderItem }) {
             </button>
           )}
           <button
+            onClick={(e) => { e.stopPropagation(); onOpen(); }}
+            aria-label="Open bill"
             className="op-press"
             style={{ background: '#0f172a', color: '#fff', border: 'none', padding: '6px 12px', borderRadius: '10px', fontSize: '0.78rem', fontWeight: 800, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '3px' }}
           >

@@ -1,8 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useToast } from '../../ui/DialogProvider.jsx';
 import StorefrontIcon from '../../ui/StorefrontIcon.jsx';
-
-const BASE_URL = (import.meta.env.VITE_API_BASE || "https://darkslategrey-snail-415133.hostingersite.com");
+import { userFetch } from '../../utils/api.js';
 
 const CATEGORIES = [
   { key: 'shop', label: 'A Shop',   icon: <StorefrontIcon size={22} color="#16a34a" />, help: 'Behaviour, packing, missing items, etc.' },
@@ -45,7 +44,7 @@ export default function ComplaintModal({ open, onClose, user }) {
   useEffect(() => {
     if (!open || !user?._id) return;
     let cancelled = false;
-    fetch(`${BASE_URL}/orders/user/${user._id}`)
+    userFetch(user, `/orders/user/${user._id}`)
       .then(r => r.ok ? r.json() : [])
       .then(data => {
         if (cancelled) return;
@@ -77,18 +76,17 @@ export default function ComplaintModal({ open, onClose, user }) {
     if (!canSubmit) return;
     setSubmitting(true);
     try {
+      // userId/userName/userPhone come from the bearer session server-side now —
+      // don't send them in the body (they're ignored anyway, but no need to
+      // leak phone numbers over the wire that the server already knows).
       const body = {
-        userId: user?._id,
-        userName: user?.name || 'Customer',
-        userPhone: user?.phone || '',
         targetType: category,
         shopId: category === 'shop' ? shopId : (category === 'item' && shopId) ? shopId : null,
         itemName: category === 'item' ? itemName.trim() : '',
         message: message.trim(),
       };
-      const res = await fetch(`${BASE_URL}/complaints`, {
+      const res = await userFetch(user, `/complaints`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
       });
       if (!res.ok) throw new Error('Failed');

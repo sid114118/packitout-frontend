@@ -88,16 +88,22 @@ export default function ProductModal({ product, isOpen, onClose, onAddToCart, on
   }, [product]);
 
   useEffect(() => {
-    if (isOpen && selectedVariant?._id) {
-      setLoadingReviews(true);
-      fetch(`${BASE_URL}/reviews/product/${selectedVariant._id}`)
-        .then(res => res.json())
-        .then(data => {
-          setProductReviews(Array.isArray(data) ? data : []);
-          setLoadingReviews(false);
-        })
-        .catch(() => setLoadingReviews(false));
-    }
+    if (!isOpen || !selectedVariant?._id) return;
+    setLoadingReviews(true);
+    // Capture the variant id this fetch was started for so we can ignore the
+    // response if the user has already switched products mid-flight (otherwise
+    // late responses overwrote the new product's reviews).
+    const requestedFor = selectedVariant._id;
+    let cancelled = false;
+    fetch(`${BASE_URL}/reviews/product/${requestedFor}`)
+      .then(res => res.ok ? res.json() : [])
+      .then(data => {
+        if (cancelled || requestedFor !== selectedVariant._id) return;
+        setProductReviews(Array.isArray(data) ? data : []);
+        setLoadingReviews(false);
+      })
+      .catch(() => { if (!cancelled) setLoadingReviews(false); });
+    return () => { cancelled = true; };
   }, [isOpen, selectedVariant?._id]);
 
   // The shop feed ships a slim product payload — pull the full doc on open so

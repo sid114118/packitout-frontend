@@ -1,7 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
-
-const BASE_URL = (import.meta.env.VITE_API_BASE || "https://darkslategrey-snail-415133.hostingersite.com");
+import { userFetch, shopFetch } from './utils/api.js';
 
 // Convert a date-ish value into "just now" / "5 min ago" / "2 hr ago" / "3 d ago" / fallback date.
 function relativeTime(ts) {
@@ -36,17 +35,33 @@ function relatedOrderId(n) {
   return n?.orderId || n?.orderID || n?.relatedOrderId || n?.order?._id || null;
 }
 
-export default function NotificationBell({ ownerType, ownerId }) {
+// `owner` is the user or shop object — needed for the bearer token. `ownerType`
+// drives which fetch helper / endpoint is hit. Legacy `ownerId` prop is still
+// honoured for compatibility, but auth headers won't be sent without `owner`.
+export default function NotificationBell({ ownerType, owner, ownerId }) {
+  const effectiveOwner = owner || (ownerId ? { _id: ownerId } : null);
+  const effectiveId = effectiveOwner?._id;
+
   const [notifications, setNotifications] = useState([]);
   const [showPanel, setShowPanel] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
+  const intervalRef = useRef(null);
 
   useEffect(() => {
-    if (!ownerId) return;
+    // Tear down any previous interval before we start a new one. Without this,
+    // switching ownerId (rare but possible — e.g. logout then re-login as a
+    // different user without unmounting the bell) stacked up parallel polls.
+    if (intervalRef.current) {
+      clearInterval(intervalRef.current);
+      intervalRef.current = null;
+    }
+    if (!effectiveId) return;
 
+    const doFetch = ownerType === 'shop' ? shopFetch : userFetch;
     const fetchNotifications = async () => {
       try {
-        const res = await fetch(`${BASE_URL}/notifications/${ownerType}/${ownerId}`);
+        const res = await doFetch(effectiveOwner, `/notifications/${ownerType}/${effectiveId}`);
+        if (!res.ok) return;
         const data = await res.json();
         const list = Array.isArray(data) ? data : [];
         setNotifications(list);
@@ -57,23 +72,35 @@ export default function NotificationBell({ ownerType, ownerId }) {
     };
 
     fetchNotifications();
-    const interval = setInterval(fetchNotifications, 5000);
-    return () => clearInterval(interval);
-  }, [ownerId, ownerType]);
+    intervalRef.current = setInterval(fetchNotifications, 5000);
+    return () => {
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+        intervalRef.current = null;
+      }
+    };
+  }, [effectiveId, ownerType, effectiveOwner]);
 
   const openPanel = async () => {
     setShowPanel(true);
-    if (unreadCount > 0) {
-      // Optimistic: clear badge immediately so user gets instant feedback.
-      setUnreadCount(0);
-      setNotifications(prev => prev.map(n => ({ ...n, isRead: true })));
-      try {
-        await fetch(`${BASE_URL}/notifications/read-all`, {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ [ownerType === 'user' ? 'userId' : 'shopId']: ownerId })
-        });
-      } catch (err) { console.log(err); }
+    if (unreadCount <= 0) return;
+    // Optimistic: clear badge immediately so user gets instant feedback.
+    const prevList = notifications;
+    const prevUnread = unreadCount;
+    setUnreadCount(0);
+    setNotifications(list => list.map(n => ({ ...n, isRead: true })));
+    try {
+      const doFetch = ownerType === 'shop' ? shopFetch : userFetch;
+      const res = await doFetch(effectiveOwner, `/notifications/read-all`, {
+        method: "PATCH",
+        body: JSON.stringify({ [ownerType === 'user' ? 'userId' : 'shopId']: effectiveId })
+      });
+      if (!res.ok) throw new Error('mark-all-read failed');
+    } catch (err) {
+      // Roll back the optimistic update so the badge truthfully reflects state.
+      setNotifications(prevList);
+      setUnreadCount(prevUnread);
+      console.log(err);
     }
   };
 

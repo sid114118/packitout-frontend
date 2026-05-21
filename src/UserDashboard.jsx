@@ -1,13 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { useToast } from './ui/DialogProvider.jsx';
+import { userFetch } from './utils/api.js';
 
 import ProfileHeader from './components/UserDashboard/ProfileHeader';
 import AddressBook from './components/UserDashboard/AddressBook';
 import TermsModal from './components/UserDashboard/TermsModal';
 import ComplaintModal from './components/UserDashboard/ComplaintModal';
 import MyComplaintsModal from './components/UserDashboard/MyComplaintsModal';
-
-const BASE_URL = (import.meta.env.VITE_API_BASE || "https://darkslategrey-snail-415133.hostingersite.com");
+import ParchiBillModal from './components/UserDashboard/ParchiBillModal';
 
 export default function UserDashboard({ user, onExit, onLogout, onUserUpdate }) {
   const triggerToast = useToast();
@@ -25,21 +25,19 @@ export default function UserDashboard({ user, onExit, onLogout, onUserUpdate }) 
     primaryShop: typeof user?.primaryShop === 'object' ? user.primaryShop?._id : (user?.primaryShop || ""),
   });
   const [nearbyShops, setNearbyShops] = useState([]);
-  const [addresses] = useState([{ id: 1, label: "🏠 Home", detail: `Block A, Near Main Gate, ${user?.pincode}` }]);
-  const [showAddressForm, setShowAddressForm] = useState(false);
-  const [newAddress, setNewAddress] = useState("");
 
-  // Support modals (T&C + complaint form + my complaints) live at the bottom of the profile.
+  // Support modals (T&C + complaint form + my complaints + parchi bills) live at the bottom of the profile.
   const [showTerms, setShowTerms] = useState(false);
   const [showComplaint, setShowComplaint] = useState(false);
   const [showMyComplaints, setShowMyComplaints] = useState(false);
+  const [showParchiBills, setShowParchiBills] = useState(false);
 
   // Fetch shops in this user's pincode so the "Primary shop" dropdown has
   // real options. Without this the select is permanently empty.
   useEffect(() => {
     if (!user?.pincode) return;
     let cancelled = false;
-    fetch(`${BASE_URL}/shops/all/${user.pincode}`)
+    userFetch(user, `/shops/all/${user.pincode}`)
       .then(res => res.ok ? res.json() : [])
       .then(data => { if (!cancelled) setNearbyShops(Array.isArray(data) ? data : []); })
       .catch(() => {});
@@ -58,9 +56,8 @@ export default function UserDashboard({ user, onExit, onLogout, onUserUpdate }) 
   const handleSaveProfile = async (e) => {
     e.preventDefault();
     try {
-      const res = await fetch(`${BASE_URL}/users/${user._id}`, {
+      const res = await userFetch(user, `/users/${user._id}`, {
         method: "PATCH",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(editForm)
       });
       if (res.ok) {
@@ -92,7 +89,7 @@ export default function UserDashboard({ user, onExit, onLogout, onUserUpdate }) 
         <button
           onClick={() => window.location.hash = "#orders"}
           style={{
-            width: '100%', marginBottom: '15px',
+            width: '100%', marginBottom: '10px',
             padding: '16px',
             background: '#fff', border: '1px solid #e2e8f0', borderRadius: '16px',
             display: 'flex', alignItems: 'center', justifyContent: 'space-between',
@@ -111,10 +108,33 @@ export default function UserDashboard({ user, onExit, onLogout, onUserUpdate }) 
           <span style={{ color: '#94a3b8', fontSize: '1.2rem' }}>›</span>
         </button>
 
-        <AddressBook
-          addresses={addresses} showAddressForm={showAddressForm} setShowAddressForm={setShowAddressForm}
-          newAddress={newAddress} setNewAddress={setNewAddress} handleSaveAddress={(e) => { e.preventDefault(); triggerToast("Address Saved!"); setShowAddressForm(false); }}
-        />
+        {/* Parchi bills awaiting payment */}
+        <button
+          onClick={() => setShowParchiBills(true)}
+          style={{
+            width: '100%', marginBottom: '15px',
+            padding: '16px',
+            background: '#fff', border: '1px solid #e2e8f0', borderRadius: '16px',
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+            cursor: 'pointer', boxShadow: '0 4px 14px rgba(15,23,42,0.04)',
+          }}
+        >
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '12px' }}>
+            <span style={{
+              width: '38px', height: '38px', borderRadius: '12px',
+              background: 'linear-gradient(135deg, #fef3c7, #fde68a)',
+              display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+              fontSize: '1.1rem',
+            }}>🧾</span>
+            <span style={{ display: 'inline-flex', flexDirection: 'column', alignItems: 'flex-start' }}>
+              <span style={{ fontWeight: 800, color: '#0f172a', fontSize: '0.95rem' }}>My Parchi Bills</span>
+              <span style={{ fontSize: '0.74rem', color: '#64748b', fontWeight: 600 }}>Pay UPI or pickup, see past bills</span>
+            </span>
+          </span>
+          <span style={{ color: '#94a3b8', fontSize: '1.2rem' }}>›</span>
+        </button>
+
+        <AddressBook user={user} />
 
         {/* Help & Legal — file a complaint and read the T&C */}
         <div style={{ marginTop: '15px', background: '#fff', border: '1px solid #e2e8f0', borderRadius: '16px', overflow: 'hidden', boxShadow: '0 4px 14px rgba(15,23,42,0.04)' }}>
@@ -203,6 +223,7 @@ export default function UserDashboard({ user, onExit, onLogout, onUserUpdate }) 
       <TermsModal open={showTerms} onClose={() => setShowTerms(false)} />
       <ComplaintModal open={showComplaint} onClose={() => setShowComplaint(false)} user={user} />
       <MyComplaintsModal open={showMyComplaints} onClose={() => setShowMyComplaints(false)} user={user} />
+      <ParchiBillModal open={showParchiBills} onClose={() => setShowParchiBills(false)} user={user} />
     </div>
   );
 }

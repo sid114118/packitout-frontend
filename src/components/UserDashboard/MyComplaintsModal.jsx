@@ -1,8 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import ComplaintReplyThread from '../ShopDashboard/ComplaintReplyThread';
 import StorefrontIcon from '../../ui/StorefrontIcon.jsx';
-
-const BASE_URL = (import.meta.env.VITE_API_BASE || "https://darkslategrey-snail-415133.hostingersite.com");
+import { userFetch } from '../../utils/api.js';
 
 const CATEGORY_META = {
   shop: { icon: <StorefrontIcon size={12} color="#b91c1c" />, label: 'Shop',  bg: '#fff1f2', fg: '#b91c1c', border: '#fecaca' },
@@ -31,7 +30,7 @@ export default function MyComplaintsModal({ open, onClose, user }) {
     if (!open || !user?._id) return;
     let cancelled = false;
     setLoading(true);
-    fetch(`${BASE_URL}/complaints/user/${user._id}`)
+    userFetch(user, `/complaints/user/${user._id}`)
       .then(r => r.ok ? r.json() : [])
       .then(data => {
         if (cancelled) return;

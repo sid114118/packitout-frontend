@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { cdnImage } from '../../utils/cloudinaryUrl.js';
+import { userFetch } from '../../utils/api.js';
+import { useToast, useConfirm } from '../../ui/DialogProvider.jsx';
 
 const getProductId = (item) => {
   let id = item._id;
@@ -10,9 +12,12 @@ const getProductId = (item) => {
   return id?.toString();
 };
 
-export default function ViewReviewModal({ isOpen, onClose, order }) {
+export default function ViewReviewModal({ isOpen, onClose, order, user, onReviewsDeleted }) {
   const [reviews, setReviews] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [deleting, setDeleting] = useState(false);
+  const toast = useToast();
+  const askConfirm = useConfirm();
   const BASE_URL = (import.meta.env.VITE_API_BASE || "https://darkslategrey-snail-415133.hostingersite.com");
 
   useEffect(() => {
@@ -76,6 +81,38 @@ export default function ViewReviewModal({ isOpen, onClose, order }) {
                       "{shopReview.comment}"
                     </div>
                   )}
+                </div>
+              )}
+
+              {user && reviews.length > 0 && (
+                <div style={{ textAlign: 'center', marginBottom: 20 }}>
+                  <button
+                    disabled={deleting}
+                    onClick={async () => {
+                      const ok = await askConfirm({
+                        title: 'Delete this review?',
+                        message: 'Your rating will be removed and you can re-rate this order.',
+                        confirmText: 'Delete',
+                        danger: true,
+                      });
+                      if (!ok) return;
+                      setDeleting(true);
+                      try {
+                        // Sequential DELETE so the server can recompute the shop
+                        // rating cleanly after each removal.
+                        for (const r of reviews) {
+                          await userFetch(user, `/reviews/${r._id}`, { method: 'DELETE' });
+                        }
+                        toast('Review deleted. You can rate the order again.');
+                        if (onReviewsDeleted) onReviewsDeleted(order._id);
+                        onClose();
+                      } catch { toast('Could not delete review', 'error'); }
+                      finally { setDeleting(false); }
+                    }}
+                    style={{ background: 'transparent', color: '#dc2626', border: '1px solid #fecaca', padding: '8px 14px', borderRadius: 10, fontWeight: 800, fontSize: '0.85rem', cursor: deleting ? 'wait' : 'pointer' }}
+                  >
+                    {deleting ? 'Deleting…' : '🗑️ Delete review & re-rate'}
+                  </button>
                 </div>
               )}
 

@@ -94,7 +94,6 @@ export default function InstallAppBanner({ show = true }) {
         role="dialog"
         aria-modal="true"
         aria-label="How to install PackItOut on iOS"
-        onClick={() => setShowIOSInstructions(false)}
         style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.55)', zIndex: 99999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}
       >
         <div

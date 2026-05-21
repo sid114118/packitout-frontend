@@ -441,20 +441,38 @@ export default function SearchPage({
             </div>
           </div>
         ) : (
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: '12px' }}>
-            {displayItems.slice(0, visibleCount).map((item, index) => (
-              <ModernProductCard
-                key={`${item._id}-${index}`}
-                item={item}
-                isCarousel={false}
-                shopClosed={false}
-                onOpenDetails={onOpenDetails}
-                onQuickAdd={onQuickAdd}
-                cart={safeCart}
-                onRemoveFromCart={onRemoveFromCart}
-              />
-            ))}
-          </div>
+          <>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: '12px' }}>
+              {displayItems.slice(0, visibleCount).map((item, index) => (
+                <ModernProductCard
+                  key={`${item._id}-${index}`}
+                  item={item}
+                  isCarousel={false}
+                  shopClosed={false}
+                  onOpenDetails={onOpenDetails}
+                  onQuickAdd={onQuickAdd}
+                  cart={safeCart}
+                  onRemoveFromCart={onRemoveFromCart}
+                />
+              ))}
+            </div>
+            {/* Load more — without this, results beyond visibleCount (16) were
+                permanently hidden and customers couldn't find products that
+                only matched on a later page. */}
+            {displayItems.length > visibleCount && (
+              <button
+                onClick={() => setVisibleCount(c => c + 24)}
+                style={{
+                  display: 'block', margin: '20px auto 0', padding: '12px 24px',
+                  background: '#fff', color: '#16a34a', border: '1px solid #bbf7d0',
+                  borderRadius: 12, fontWeight: 800, fontSize: '0.92rem', cursor: 'pointer',
+                  boxShadow: '0 4px 12px rgba(22,163,74,0.08)',
+                }}
+              >
+                Load more ({displayItems.length - visibleCount} left)
+              </button>
+            )}
+          </>
         )}
       </div>
 

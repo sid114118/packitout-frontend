@@ -1,6 +1,7 @@
 import React, { useState, useRef } from 'react';
 import { useToast, useConfirm } from './ui/DialogProvider.jsx';
 import ParchiReviewModal from './ParchiReviewModal.jsx';
+import { BASE_URL } from './utils/api.js';
 
 // ⚡ Instant Image Compressor
 const compressImage = (file) => {
@@ -54,9 +55,13 @@ export default function UploadParchi({ onAddToCart }) {
   const [sendingToShop, setSendingToShop] = useState(false);
 
   const fileInputRef = useRef(null);
-  const BASE_URL = import.meta.env.DEV
-    ? "http://localhost:5000"
-    : (import.meta.env.VITE_API_BASE || "https://darkslategrey-snail-415133.hostingersite.com");
+
+  // Both /upload-parchi and /extract-parchi require a user bearer token now.
+  // Read it from the cached user blob (same place App.jsx stores it).
+  const getAuthHeader = () => {
+    const saved = JSON.parse(localStorage.getItem("packitout_user") || "{}");
+    return saved.sessionToken ? { Authorization: `Bearer ${saved.sessionToken}` } : {};
+  };
 
   const sendRawToShop = async (file) => {
     if (!file) {
@@ -68,12 +73,15 @@ export default function UploadParchi({ onAddToCart }) {
       const formData = new FormData();
       formData.append("parchiImage", file);
       const savedUser = JSON.parse(localStorage.getItem("packitout_user") || "{}");
-      formData.append("customerName", savedUser.name || "Guest Customer");
-      formData.append("userId", savedUser._id || "guest_id");
-      const shopId = savedUser.primaryShop?._id || savedUser.primaryShop || "Master_Shop";
+      const shopId = savedUser.primaryShop?._id || savedUser.primaryShop || "";
+      if (!shopId) { toast("Pick a shop first.", 'warn'); setSendingToShop(false); return false; }
       formData.append("shopId", shopId);
 
-      const res = await fetch(`${BASE_URL}/upload-parchi`, { method: "POST", body: formData });
+      const res = await fetch(`${BASE_URL}/upload-parchi`, {
+        method: "POST",
+        headers: getAuthHeader(),
+        body: formData,
+      });
       const data = await res.json();
       setSendingToShop(false);
       if (res.ok && data.success) {
@@ -112,13 +120,12 @@ export default function UploadParchi({ onAddToCart }) {
       formData.append("parchiImage", compressedFile);
 
       const savedUser = JSON.parse(localStorage.getItem("packitout_user") || "{}");
-      formData.append("customerName", savedUser.name || "Guest Customer");
-      formData.append("userId", savedUser._id || "guest_id");
       const shopId = savedUser.primaryShop?._id || savedUser.primaryShop || "";
       formData.append("shopId", shopId);
 
       const res = await fetch(`${BASE_URL}/extract-parchi`, {
         method: "POST",
+        headers: getAuthHeader(),
         body: formData,
       });
 

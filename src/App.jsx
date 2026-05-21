@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, lazy, Suspense } from 'react';
 import { useToast } from './ui/DialogProvider.jsx';
-import { userFetch } from './utils/api.js';
+import { userFetch, clearAdminToken } from './utils/api.js';
 
 // Eagerly imported: rendered on the customer's first paint.
 import Header from './Header.jsx';
@@ -291,12 +291,14 @@ export default function App() {
     let cancelled = false;
     const refresh = async () => {
       try {
-        const res = await fetch(`${BASE_URL}/users/${userId}`);
+        const res = await userFetch(loggedInUser, `/users/${userId}`);
         if (!res.ok) return;
         const fresh = await res.json();
         if (cancelled || !fresh || !fresh._id) return;
-        localStorage.setItem("packitout_user", JSON.stringify(fresh));
-        setLoggedInUser(fresh);
+        // Server response omits sessionToken — preserve the in-memory one.
+        const next = { ...fresh, sessionToken: loggedInUser.sessionToken };
+        localStorage.setItem("packitout_user", JSON.stringify(next));
+        setLoggedInUser(next);
       } catch { /* offline / transient — keep cached copy */ }
     };
 
@@ -304,7 +306,9 @@ export default function App() {
 
     const onFocus = () => refresh();
     const onVisibility = () => { if (document.visibilityState === 'visible') refresh(); };
-    const onHashChange = () => { if (window.location.hash === '#account') refresh(); };
+    // Refresh on every route change — covers cases like returning from #cart to
+    // home where the user's primaryShop.isOpen / coins balance might be stale.
+    const onHashChange = () => refresh();
 
     window.addEventListener('focus', onFocus);
     document.addEventListener('visibilitychange', onVisibility);
@@ -319,6 +323,13 @@ export default function App() {
 
   const handleUserLogout = () => {
     localStorage.removeItem("packitout_user");
+    // Wipe admin + shop session blobs too — same device shouldn't carry over
+    // privileged credentials from a previous user. The admin token was the
+    // worst offender: it survived user logout and any later visit to /#admin
+    // would silently inherit the previous admin session.
+    clearAdminToken();
+    setIsAdminAuthenticated(false);
+    setIsShopAuthenticated(null);
     setLoggedInUser(null);
     setCart([]);
     // OneSignal.logout is driven by the loggedInUser._id effect above.
@@ -340,6 +351,10 @@ export default function App() {
 
   const handleShopLogout = () => {
     setIsShopAuthenticated(null);
+    // Drop any admin token still in localStorage so a logged-out shopkeeper
+    // can't pivot into the admin panel from the same device.
+    clearAdminToken();
+    setIsAdminAuthenticated(false);
     loadOneSignal()
       .then(OneSignal => OneSignal.logout())
       .catch(err => console.log("OneSignal Shop Logout Error", err));
@@ -387,7 +402,7 @@ export default function App() {
     if (currentView === "cart") {
       return (
         <CrashCatcher>
-          <Cart cart={cart} setCart={setCart} user={loggedInUser} onBack={() => window.location.hash = ""} onCheckoutSuccess={() => { setCart([]); window.location.hash = "#success"; }} />
+          <Cart cart={cart} setCart={setCart} user={loggedInUser} onUserUpdate={handleUserUpdate} onBack={() => window.location.hash = ""} onCheckoutSuccess={() => { setCart([]); window.location.hash = "#success"; }} />
         </CrashCatcher>
       );
     }

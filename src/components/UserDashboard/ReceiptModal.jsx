@@ -3,7 +3,7 @@ import ViewReviewModal from './ViewReviewModal';
 import OrderTimeline from './OrderTimeline';
 import { cdnImage } from '../../utils/cloudinaryUrl.js';
 
-export default function ReceiptModal({ selectedOrder, setSelectedOrder, onReorderItem }) {
+export default function ReceiptModal({ selectedOrder, setSelectedOrder, onReorderItem, user, onReviewsDeleted }) {
   const [isViewReviewModalOpen, setIsViewReviewModalOpen] = useState(false);
 
   if (!selectedOrder) return null;
@@ -173,10 +173,12 @@ export default function ReceiptModal({ selectedOrder, setSelectedOrder, onReorde
         </div>
       </div>
 
-      <ViewReviewModal 
-        isOpen={isViewReviewModalOpen} 
-        onClose={() => setIsViewReviewModalOpen(false)} 
-        order={selectedOrder} 
+      <ViewReviewModal
+        isOpen={isViewReviewModalOpen}
+        onClose={() => setIsViewReviewModalOpen(false)}
+        order={selectedOrder}
+        user={user}
+        onReviewsDeleted={onReviewsDeleted}
       />
     </>
   );
