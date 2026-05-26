@@ -246,6 +246,7 @@ export default function App() {
       else if (window.location.hash === "#cart") setCurrentView("cart");
       else if (window.location.hash === "#success") setCurrentView("success");
       else if (window.location.hash === "#nearby") setCurrentView("nearby");
+      else if (window.location.hash === "#/verify-done" || window.location.hash === "#verify-done") setCurrentView("verify-done");
       else {
         setCurrentView("customer");
         setSelectedCategory(null);
@@ -454,6 +455,18 @@ export default function App() {
       return <OrdersPage user={loggedInUser} onExit={() => window.location.hash = ""} onAddToCart={handleAddToCart} />;
     }
     if (currentView === "success") return <OrderSuccess />;
+    if (currentView === "verify-done") {
+      return (
+        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh', backgroundColor: '#f4f7f6', fontFamily: 'sans-serif', padding: '20px' }}>
+          <div style={{ backgroundColor: '#fff', padding: '40px 30px', borderRadius: '20px', maxWidth: '340px', width: '100%', textAlign: 'center', boxShadow: '0 10px 25px rgba(0,0,0,0.08)' }}>
+            <div style={{ fontSize: '3rem', marginBottom: '12px' }}>✅</div>
+            <h2 style={{ margin: '0 0 8px', color: '#16a34a' }}>Email Verified</h2>
+            <p style={{ margin: '0 0 20px', color: '#7f8fa6', fontSize: '0.9rem' }}>You can now log in to your account.</p>
+            <button onClick={() => { window.location.hash = "#account"; }} style={{ padding: '13px 26px', background: '#16a34a', color: '#fff', border: 'none', borderRadius: '8px', fontWeight: 700, cursor: 'pointer' }}>Log In</button>
+          </div>
+        </div>
+      );
+    }
     if (currentView === "cart") {
       return (
         <CrashCatcher>
