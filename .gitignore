@@ -10,3 +10,6 @@ dist/
 # Backend repo lives in its own git repo at packitout-api/
 # Don't commit it inside the frontend repo.
 packitout-api/
+
+# Local-only image staging folder for scripts/upload-to-cloudinary.mjs
+images-to-upload/

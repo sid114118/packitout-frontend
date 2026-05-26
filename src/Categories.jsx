@@ -30,14 +30,14 @@ export default function Categories({ onCategorySelect, searchQuery = "", onAddTo
     {
       sectionTitle: "Munchies & Refreshments",
       items: [
-        { name: "Chips & Namkeen", icon: "🥨", image: "https://res.cloudinary.com/dj48tkcsw/image/upload/v1775291160/namkeen_wqryy1.jpg", bgColor: "#fff7ed" },
-        { name: "Drinks & Juices", icon: "🥤", image: "https://res.cloudinary.com/dj48tkcsw/image/upload/v1775291160/colddrinks_mawune.jpg", bgColor: "#eff6ff" },     
-        { name: "Sweets & Chocolates", icon: "🍫", image: "https://res.cloudinary.com/dj48tkcsw/image/upload/v1775291159/chocolate_m3hdas.jpg", bgColor: "#fdf2f8" },
-        { name: "Ice Creams", icon: "🍦", image: "https://res.cloudinary.com/dj48tkcsw/image/upload/v1775291161/icecream_nqu7fv.jpg", bgColor: "#f0f9ff" },          
-        { name: "Tea & Coffee", icon: "☕", image: "https://res.cloudinary.com/dj48tkcsw/image/upload/v1775291160/tea_coffee_jdqypd.jpg", bgColor: "#fefce8" },
-        { name: "Instant Food", icon: "🍜", image: "https://res.cloudinary.com/dj48tkcsw/image/upload/v1775291159/noodles_ploez3.jpg", bgColor: "#fef2f2" },       
-        { name: "Bakery & Biscuits", icon: "🍪", image: "https://res.cloudinary.com/dj48tkcsw/image/upload/v1775291510/1000253503-removebg-preview_pqscbp.jpg", bgColor: "#fffbeb" }, 
-        { name: "Healthy & Diet Snacks", icon: "🥑", image: "", bgColor: "#f0fdf4" } 
+        { name: "Chips & Namkeen", icon: "🥨", image: "https://res.cloudinary.com/dj48tkcsw/image/upload/v1779707988/packitout/categories/chips_Namkeen.jpg", bgColor: "#fff7ed" },
+        { name: "Drinks & Juices", icon: "🥤", image: "https://res.cloudinary.com/dj48tkcsw/image/upload/v1779707990/packitout/categories/Drink_Juices.png", bgColor: "#eff6ff" },
+        { name: "Sweets & Chocolates", icon: "🍫", image: "https://res.cloudinary.com/dj48tkcsw/image/upload/v1779708000/packitout/categories/Sweets_Chocolates.jpg", bgColor: "#fdf2f8" },
+        { name: "Ice Creams", icon: "🍦", image: "https://res.cloudinary.com/dj48tkcsw/image/upload/v1779707995/packitout/categories/Ice_Creams.png", bgColor: "#f0f9ff" },
+        { name: "Tea & Coffee", icon: "☕", image: "https://res.cloudinary.com/dj48tkcsw/image/upload/v1779708002/packitout/categories/Tea_Coffee.png", bgColor: "#fefce8" },
+        { name: "Instant Food", icon: "🍜", image: "https://res.cloudinary.com/dj48tkcsw/image/upload/v1779707998/packitout/categories/Instant_Food.png", bgColor: "#fef2f2" },
+        { name: "Bakery & Biscuits", icon: "🍪", image: "https://res.cloudinary.com/dj48tkcsw/image/upload/v1779707987/packitout/categories/Bakery_Biscuits.png", bgColor: "#fffbeb" },
+        { name: "Healthy & Diet Snacks", icon: "🥑", image: "https://res.cloudinary.com/dj48tkcsw/image/upload/v1779707993/packitout/categories/Healthy_Diet_Snacks.png", bgColor: "#f0fdf4" }
       ]
     },
     {
@@ -62,7 +62,7 @@ export default function Categories({ onCategorySelect, searchQuery = "", onAddTo
 
   return (
     // 🚀 FIX 1: Removed the 20px bottom padding here so it pulls the Feed closer
-    <div style={{ backgroundColor: '#f4f6f8', paddingBottom: '0px', fontFamily: 'system-ui, -apple-system, sans-serif' }}>
+    <div style={{ backgroundColor: '#fafafa', paddingBottom: '0px', fontFamily: 'system-ui, -apple-system, sans-serif' }}>
       
       <div style={{ padding: '10px 15px' }}>
         
@@ -74,8 +74,8 @@ export default function Categories({ onCategorySelect, searchQuery = "", onAddTo
         {!searchQuery && (
           <div style={{ marginBottom: '24px' }}>
             <h3 style={{
-              margin: '0 0 12px 4px',
-              fontSize: '1rem',
+              margin: '0 0 10px 4px',
+              fontSize: '0.95rem',
               fontWeight: 800,
               color: '#0f172a',
               letterSpacing: '-0.2px',
@@ -104,13 +104,13 @@ export default function Categories({ onCategorySelect, searchQuery = "", onAddTo
                   style={{
                     display: 'inline-flex',
                     alignItems: 'center',
-                    gap: '8px',
-                    padding: '10px 16px',
+                    gap: '6px',
+                    padding: '7px 13px',
                     borderRadius: '999px',
                     border: '1px solid #e2e8f0',
                     background: 'white',
                     color: '#0f172a',
-                    fontSize: '0.85rem',
+                    fontSize: '0.78rem',
                     fontWeight: 700,
                     cursor: 'pointer',
                     whiteSpace: 'nowrap',
@@ -123,7 +123,7 @@ export default function Categories({ onCategorySelect, searchQuery = "", onAddTo
                   onMouseUp={e => e.currentTarget.style.transform = 'scale(1)'}
                   onMouseLeave={e => e.currentTarget.style.transform = 'scale(1)'}
                 >
-                  <span aria-hidden="true" style={{ fontSize: '1.05rem' }}>{pick.icon}</span>
+                  <span aria-hidden="true" style={{ fontSize: '0.95rem' }}>{pick.icon}</span>
                   <span>{pick.label}</span>
                 </button>
               ))}
@@ -139,50 +139,48 @@ export default function Categories({ onCategorySelect, searchQuery = "", onAddTo
           </div>
         ) : (
           filteredMenuData.map((section, sectionIndex) => (
-            // 🚀 FIX 2: Only adds a large bottom margin if it is NOT the last category block
             <div key={sectionIndex} style={{ marginBottom: sectionIndex === filteredMenuData.length - 1 ? '5px' : '30px' }}>
-              
-              <h3 style={{ 
-                margin: '0 0 16px 4px', 
-                fontSize: '1.1rem', 
-                fontWeight: '800', 
-                color: '#0f172a', 
-                letterSpacing: '-0.3px' 
+
+              <h3 style={{
+                margin: '0 0 18px 4px',
+                fontSize: '1.2rem',
+                fontWeight: '800',
+                color: '#0f172a',
+                letterSpacing: '-0.3px'
               }}>
                 {section.sectionTitle}
               </h3>
 
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '16px 10px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '14px 4px' }}>
                 {section.items.map((item, itemIndex) => (
-                  <div 
-                    key={itemIndex} 
-                    onClick={() => onCategorySelect && onCategorySelect(item.name)} 
+                  <div
+                    key={itemIndex}
+                    onClick={() => onCategorySelect && onCategorySelect(item.name)}
                     style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', cursor: 'pointer' }}
                   >
-                    
+
                     <div style={{
                       width: '100%',
-                      maxWidth: '72px', 
-                      aspectRatio: '1 / 1', 
-                      backgroundColor: item.bgColor,
-                      borderRadius: '20px', 
+                      maxWidth: '115px',
+                      aspectRatio: '1 / 1',
+                      backgroundColor: '#f0fdf4',
+                      borderRadius: '24px',
                       display: 'flex',
                       justifyContent: 'center',
                       alignItems: 'center',
-                      boxShadow: '0 4px 12px rgba(0,0,0,0.03)',
-                      overflow: 'hidden', 
-                      // 🚀 FIX 3: Restored the proper gap between the image and the text label
+                      boxShadow: '0 1px 3px rgba(0,0,0,0.06)',
+                      overflow: 'hidden',
                       marginBottom: '8px',
-                      border: '1px solid rgba(0,0,0,0.02)'
+                      border: '1px solid #dcfce7'
                     }}>
                       {item.image ? (
                         <img
-                          src={cdnImage(item.image, 200)}
+                          src={cdnImage(item.image, 280)}
                           alt={item.name}
                           loading="lazy"
                           decoding="async"
-                          width="72"
-                          height="72"
+                          width="100"
+                          height="100"
                           style={{
                             width: '100%',
                             height: '100%',
@@ -190,18 +188,18 @@ export default function Categories({ onCategorySelect, searchQuery = "", onAddTo
                           }}
                         />
                       ) : (
-                        <span style={{ fontSize: '1.8rem' }}>{item.icon}</span>
+                        <span style={{ fontSize: '2.5rem' }}>{item.icon}</span>
                       )}
                     </div>
 
                     <span style={{
-                      fontSize: '0.72rem',
+                      fontSize: '0.78rem',
                       fontWeight: '700',
                       color: '#334155',
                       textAlign: 'center',
                       lineHeight: '1.2',
                       display: '-webkit-box',
-                      WebkitLineClamp: 2, 
+                      WebkitLineClamp: 2,
                       WebkitBoxOrient: 'vertical',
                       overflow: 'hidden',
                       width: '100%'
