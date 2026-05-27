@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import Payment from './Payment.jsx';
 import PickupTimePicker from './PickupTimePicker.jsx';
+import PhoneCollectModal from './PhoneCollectModal.jsx';
 import useScrollToTop from './useScrollToTop';
 import { cdnImage } from './utils/cloudinaryUrl.js';
 
@@ -15,6 +16,18 @@ export default function Cart({ cart, setCart, user, onUserUpdate, onBack, onChec
   
   // 🚦 Checkout step: 'cart' → 'pickup' → 'payment'
   const [step, setStep] = useState('cart');
+
+  // Phone modal shows when user clicks "Choose Pickup Time" without a saved
+  // phone. Blocks the rest of checkout until a number is on file.
+  const [showPhoneModal, setShowPhoneModal] = useState(false);
+
+  const proceedToPickup = () => {
+    if (!user?.phone) {
+      setShowPhoneModal(true);
+      return;
+    }
+    setStep('pickup');
+  };
 
   // 🕒 Pickup-time selection (set on the PickupTimePicker step)
   const [pickup, setPickup] = useState({ pickupTime: null, isUrgent: false });
@@ -292,7 +305,7 @@ export default function Cart({ cart, setCart, user, onUserUpdate, onBack, onChec
       {/* Modern Floating Checkout Button */}
       <div style={{ position: 'fixed', bottom: '65px', left: 0, right: 0, backgroundColor: 'rgba(255, 255, 255, 0.9)', backdropFilter: 'blur(10px)', padding: '16px', borderTop: '1px solid rgba(0,0,0,0.05)', zIndex: 999 }}>
         <button
-          onClick={() => setStep('pickup')}
+          onClick={proceedToPickup}
           disabled={!targetShop}
           style={{ width: '100%', maxWidth: '800px', margin: '0 auto', display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '18px 24px', backgroundColor: targetShop ? '#16a34a' : '#cbd5e1', color: 'white', border: 'none', borderRadius: '16px', fontWeight: '900', fontSize: '1.15rem', cursor: targetShop ? 'pointer' : 'not-allowed', boxShadow: targetShop ? '0 8px 25px rgba(22, 163, 74, 0.35)' : 'none', transition: 'all 0.2s ease' }}
         >
@@ -300,6 +313,18 @@ export default function Cart({ cart, setCart, user, onUserUpdate, onBack, onChec
           <span>₹{finalBill.toFixed(2)} ›</span>
         </button>
       </div>
+
+      {showPhoneModal && (
+        <PhoneCollectModal
+          user={user}
+          onClose={() => setShowPhoneModal(false)}
+          onSaved={(updatedUser) => {
+            onUserUpdate(updatedUser);
+            setShowPhoneModal(false);
+            setStep('pickup');
+          }}
+        />
+      )}
 
     </div>
   );
