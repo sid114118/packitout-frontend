@@ -17,7 +17,7 @@ export default function Categories({ onCategorySelect, searchQuery = "", onAddTo
     {
       sectionTitle: "Daily Fresh & Staples",
       items: [
-        { name: "Breakfast Cereals", icon: "🍅", image: "", bgColor: "#fefce8" },
+        { name: "Breakfast Cereals", icon: "🍅", image: "https://res.cloudinary.com/dj48tkcsw/image/upload/v1779880955/packitout/categories/Breakfast_cereals.png", bgColor: "#fefce8" },
         { name: "Dairy, Bread & Eggs", icon: "🥛", image: "https://res.cloudinary.com/dj48tkcsw/image/upload/v1777423759/1000262144-removebg-preview_fel2fg.jpg", bgColor: "#f0f9ff" }, 
         { name: "Atta & Rice", icon: "🌾", image: "https://res.cloudinary.com/dj48tkcsw/image/upload/v1777538936/1000262762-removebg-preview_rwxmll.webp", bgColor: "#fefce8" },
         { name: "Dals & Pulses", icon: "🥣", image: "https://res.cloudinary.com/dj48tkcsw/image/upload/v1777538935/1000262801-removebg-preview_1_jksucv.jpg", bgColor: "#fef2f2" }, 
@@ -30,14 +30,14 @@ export default function Categories({ onCategorySelect, searchQuery = "", onAddTo
     {
       sectionTitle: "Munchies & Refreshments",
       items: [
-        { name: "Chips & Namkeen", icon: "🥨", image: "https://res.cloudinary.com/dj48tkcsw/image/upload/v1779707988/packitout/categories/chips_Namkeen.jpg", bgColor: "#fff7ed" },
-        { name: "Drinks & Juices", icon: "🥤", image: "https://res.cloudinary.com/dj48tkcsw/image/upload/v1779707990/packitout/categories/Drink_Juices.png", bgColor: "#eff6ff" },
-        { name: "Sweets & Chocolates", icon: "🍫", image: "https://res.cloudinary.com/dj48tkcsw/image/upload/v1779708000/packitout/categories/Sweets_Chocolates.jpg", bgColor: "#fdf2f8" },
-        { name: "Ice Creams", icon: "🍦", image: "https://res.cloudinary.com/dj48tkcsw/image/upload/v1779707995/packitout/categories/Ice_Creams.png", bgColor: "#f0f9ff" },
-        { name: "Tea & Coffee", icon: "☕", image: "https://res.cloudinary.com/dj48tkcsw/image/upload/v1779708002/packitout/categories/Tea_Coffee.png", bgColor: "#fefce8" },
-        { name: "Instant Food", icon: "🍜", image: "https://res.cloudinary.com/dj48tkcsw/image/upload/v1779707998/packitout/categories/Instant_Food.png", bgColor: "#fef2f2" },
-        { name: "Bakery & Biscuits", icon: "🍪", image: "https://res.cloudinary.com/dj48tkcsw/image/upload/v1779707987/packitout/categories/Bakery_Biscuits.png", bgColor: "#fffbeb" },
-        { name: "Healthy & Diet Snacks", icon: "🥑", image: "https://res.cloudinary.com/dj48tkcsw/image/upload/v1779707993/packitout/categories/Healthy_Diet_Snacks.png", bgColor: "#f0fdf4" }
+        { name: "Chips & Namkeen", icon: "🥨", image: "https://res.cloudinary.com/dj48tkcsw/image/upload/v1779880970/packitout/categories/chips_Namkeen.png", bgColor: "#fff7ed" },
+        { name: "Drinks & Juices", icon: "🥤", image: "https://res.cloudinary.com/dj48tkcsw/image/upload/v1779880979/packitout/categories/Drinks_Juices.png", bgColor: "#eff6ff" },
+        { name: "Sweets & Chocolates", icon: "🍫", image: "https://res.cloudinary.com/dj48tkcsw/image/upload/v1779881154/packitout/categories/Sweets_Chocolates.png", bgColor: "#fdf2f8" },
+        { name: "Ice Creams", icon: "🍦", image: "https://res.cloudinary.com/dj48tkcsw/image/upload/v1779881014/packitout/categories/Ice_Creams.png", bgColor: "#f0f9ff" },
+        { name: "Tea & Coffee", icon: "☕", image: "https://res.cloudinary.com/dj48tkcsw/image/upload/v1779887235/packitout/categories/Tea_Coffee.png", bgColor: "#fefce8" },
+        { name: "Instant Food", icon: "🍜", image: "https://res.cloudinary.com/dj48tkcsw/image/upload/v1779881027/packitout/categories/Instant_Food.png", bgColor: "#fef2f2" },
+        { name: "Bakery & Biscuits", icon: "🍪", image: "https://res.cloudinary.com/dj48tkcsw/image/upload/v1779880945/packitout/categories/Bakery_Biscuits.png", bgColor: "#fffbeb" },
+        { name: "Healthy & Diet Snacks", icon: "🥑", image: "https://res.cloudinary.com/dj48tkcsw/image/upload/v1779880989/packitout/categories/Healthy_Diet_Snacks.png", bgColor: "#f0fdf4" }
       ]
     },
     {
@@ -47,9 +47,9 @@ export default function Categories({ onCategorySelect, searchQuery = "", onAddTo
         { name: "Beauty & Grooming", icon: "🧴", image: "https://res.cloudinary.com/dj48tkcsw/image/upload/v1775292739/bodycare_iie0ql.jpg", bgColor: "#fdf2f8" }, 
         { name: "Health & Pharma", icon: "💊", image: "https://res.cloudinary.com/dj48tkcsw/image/upload/v1775292739/health_asi8e6.jpg", bgColor: "#f0fdf4" },
         { name: "Cleaners & Repellents", icon: "🧽", image: "https://res.cloudinary.com/dj48tkcsw/image/upload/v1775292738/housecleaners_dvrjvm.jpg", bgColor: "#fefce8" }, 
-        { name: "Baby Care", icon: "🍼", image: "", bgColor: "#fdf2f8" }, 
-        { name: "Pet Care", icon: "🐾", image: "", bgColor: "#fff7ed" }, 
-        { name: "Pooja Needs", icon: "🪔", image: "", bgColor: "#fffbeb" }, 
+        { name: "Baby Care", icon: "🍼", image: "https://res.cloudinary.com/dj48tkcsw/image/upload/v1779880927/packitout/categories/Baby_Care.png", bgColor: "#fdf2f8" },
+        { name: "Pet Care", icon: "🐾", image: "https://res.cloudinary.com/dj48tkcsw/image/upload/v1779881048/packitout/categories/Pet_Care.png", bgColor: "#fff7ed" },
+        { name: "Pooja Needs", icon: "🪔", image: "https://res.cloudinary.com/dj48tkcsw/image/upload/v1779881125/packitout/categories/Pooja_Needs.png", bgColor: "#fffbeb" },
         { name: "Home & Office", icon: "🔋", image: "https://res.cloudinary.com/dj48tkcsw/image/upload/v1775286372/1000253439-removebg-preview_r20l8d.jpg", bgColor: "#f1f5f9" } 
       ]
     }
