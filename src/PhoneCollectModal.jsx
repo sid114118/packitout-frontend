@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
-
-const BASE_URL = (import.meta.env.VITE_API_BASE || "https://darkslategrey-snail-415133.hostingersite.com");
+import { userFetch } from './utils/api.js';
 
 // Plain-input phone modal — no OTP. Backend /users/:id/phone validates the
 // Indian mobile format and rejects collisions with another account.
@@ -18,18 +17,15 @@ export default function PhoneCollectModal({ user, onSaved, onClose }) {
     }
     setBusy(true);
     try {
-      const token = localStorage.getItem("packitout_token");
-      const res = await fetch(`${BASE_URL}/users/${user._id}/phone`, {
+      const res = await userFetch(user, `/users/${user._id}/phone`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
         body: JSON.stringify({ phone: digits }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data?.error || "Could not save phone.");
-      onSaved(data);
+      // Backend response strips sessionToken — preserve the in-memory one so
+      // subsequent authed requests don't fail with the same error.
+      onSaved({ ...data, sessionToken: user.sessionToken });
     } catch (e) {
       setError(e.message || "Could not save phone.");
     } finally {
