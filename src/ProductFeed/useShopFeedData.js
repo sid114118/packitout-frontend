@@ -2,9 +2,7 @@ import { useState, useEffect } from 'react';
 
 const BASE_URL = (import.meta.env.VITE_API_BASE || "https://darkslategrey-snail-415133.hostingersite.com");
 
-// Don't paint prices/stock that are older than this from the cache.
-const FEED_CACHE_MAX_AGE_MS = 24 * 60 * 60 * 1000; // 24h
-// Master catalog rarely changes; safe to reuse across logins on the device.
+const FEED_CACHE_MAX_AGE_MS = 24 * 60 * 60 * 1000; 
 const MASTER_CACHE_KEY = 'packitout_master_products_v1';
 const MASTER_CACHE_MAX_AGE_MS = 24 * 60 * 60 * 1000;
 
@@ -19,10 +17,6 @@ const readMaster = () => {
 };
 
 export default function useShopFeedData(user) {
-
-  // ⚡ ZERO-FRAME CACHE: Read memory BEFORE React even draws the first pixel.
-  // Discards anything older than FEED_CACHE_MAX_AGE_MS so the user never sees
-  // month-old prices if the API has been down.
   const initialCache = (() => {
     if (!user || !user.primaryShop) return null;
     const shopId = typeof user.primaryShop === 'object' ? user.primaryShop._id : user.primaryShop;
@@ -35,10 +29,8 @@ export default function useShopFeedData(user) {
     } catch (e) { return null; }
   })();
 
-  // 🚀 Start loading as FALSE if we have cache! This kills the "Loading fresh products" screen forever.
   const [loading, setLoading] = useState(initialCache ? false : true);
   
-  // 🚀 Load all items instantly from memory on frame 1
   const [items, setItems] = useState(initialCache?.items || []);
   const [shopInfo, setShopInfo] = useState(initialCache?.shopInfo || null);
   const [nearbyShops, setNearbyShops] = useState(initialCache?.nearbyShops || []);
@@ -62,18 +54,14 @@ export default function useShopFeedData(user) {
     const fetchJson = (url) => fetch(url).then(r => r.ok ? r.json() : null).catch(() => null);
 
     const fetchShopProducts = async () => {
-      // Skip the master-products network call if we already have a fresh
-      // copy in localStorage — the master catalog rarely changes and is
-      // shared across all shops on the device.
       const cachedMaster = readMaster();
       const masterPromise = cachedMaster
         ? Promise.resolve(cachedMaster)
         : fetchJson(`${BASE_URL}/master-products`);
 
-      const [shopData, nearbyShopsData, userOrders, masterProducts] = await Promise.all([
+      // 🏎️ PHASE 1: CRITICAL PATH (Only fetch products to paint the screen instantly)
+      const [shopData, masterProducts] = await Promise.all([
         fetchJson(`${BASE_URL}/shops/${shopId}/menu/lean?t=${Date.now()}`),
-        user.pincode ? fetchJson(`${BASE_URL}/shops/all/${user.pincode}`) : Promise.resolve([]),
-        user._id ? fetchJson(`${BASE_URL}/orders/user/${user._id}`) : Promise.resolve([]),
         masterPromise,
       ]);
 
@@ -91,11 +79,6 @@ export default function useShopFeedData(user) {
       const newShopInfo = { name: shopData.name, isOpen: shopData.isOpen };
       setShopInfo(newShopInfo);
 
-      const newNearbyShops = Array.isArray(nearbyShopsData)
-        ? nearbyShopsData.filter(s => s._id !== shopId)
-        : [];
-      setNearbyShops(newNearbyShops);
-
       const masterMap = new Map();
       if (Array.isArray(masterProducts)) {
         masterProducts.forEach(mp => {
@@ -109,7 +92,6 @@ export default function useShopFeedData(user) {
       shopData.inventory?.filter(item => item && item.product).forEach(item => {
         const pid = String(item.product._id || '');
         const master = masterMap.get(pid) || {};
-        // Master fills gaps; shop's product wins where both define a value.
         const productMerged = { ...master, ...item.product };
 
         const mrp = Number(productMerged.mrp || 0);
@@ -145,20 +127,6 @@ export default function useShopFeedData(user) {
       setUnder99(newUnder99);
       setNewArrivals(newArrivalsList);
 
-      const pastBoughtIds = new Set();
-      if (Array.isArray(userOrders)) {
-        userOrders.forEach(order => {
-          order.items?.forEach(orderedItem => {
-            const pId = orderedItem.product?._id || orderedItem.product || orderedItem._id || orderedItem.productId;
-            if (pId) pastBoughtIds.add(pId.toString());
-          });
-        });
-      }
-
-      const realBuyItAgain = availableItems.filter(i => i.inStock && pastBoughtIds.has(i._id.toString()));
-      const finalBuyItAgain = realBuyItAgain.length > 0 ? realBuyItAgain.slice(0, 12) : availableItems.filter(i => i.inStock).sort(() => 0.5 - Math.random()).slice(0, 12);
-      setBuyItAgain(finalBuyItAgain);
-
       const hour = new Date().getHours();
       let timeTitle = ""; let timeSubtitle = ""; let keywords = [];
       if (hour >= 5 && hour < 11) { timeTitle = "🌤️ Breakfast & Dairy"; timeSubtitle = "Start your morning right"; keywords = ["dairy", "bread", "milk", "eggs", "breakfast"]; }
@@ -170,22 +138,62 @@ export default function useShopFeedData(user) {
       const finalTimeBased = { title: timeTitle, subtitle: timeSubtitle, items: matchedItems.length > 0 ? matchedItems.slice(0, 12) : availableItems.filter(i => i.inStock).slice(0, 12) };
       setTimeBased(finalTimeBased);
 
-      try {
-        localStorage.setItem(cacheKey, JSON.stringify({
-          cachedAt: Date.now(),
-          items: availableItems,
-          shopInfo: newShopInfo,
-          nearbyShops: newNearbyShops,
-          shopDeals: newShopDeals,
-          shopBestSellers: newBestSellers,
-          under99: newUnder99,
-          newArrivals: newArrivalsList,
-          buyItAgain: finalBuyItAgain,
-          timeBased: finalTimeBased,
-        }));
-      } catch (e) { /* quota or serialization error — non-fatal */ }
-
+      // ⚡⚡⚡ UI UNBLOCKS HERE: Drop the loading screen IMMEDIATELY!
       setLoading(false);
+
+      // 👻 PHASE 2: BACKGROUND FETCHES (Runs silently, does not block the user)
+      let finalNearbyShops = [];
+      let finalBuyItAgain = [];
+
+      const bgPromises = [];
+
+      if (user.pincode) {
+        bgPromises.push(
+          fetchJson(`${BASE_URL}/shops/all/${user.pincode}`).then(shopsData => {
+            if (cancelled || !Array.isArray(shopsData)) return;
+            finalNearbyShops = shopsData.filter(s => s._id !== shopId);
+            setNearbyShops(finalNearbyShops);
+          })
+        );
+      }
+
+      if (user._id) {
+        bgPromises.push(
+          fetchJson(`${BASE_URL}/orders/user/${user._id}`).then(userOrders => {
+            if (cancelled || !Array.isArray(userOrders)) return;
+            const pastBoughtIds = new Set();
+            userOrders.forEach(order => {
+              order.items?.forEach(orderedItem => {
+                const pId = orderedItem.product?._id || orderedItem.product || orderedItem._id || orderedItem.productId;
+                if (pId) pastBoughtIds.add(pId.toString());
+              });
+            });
+            const realBuyItAgain = availableItems.filter(i => i.inStock && pastBoughtIds.has(i._id.toString()));
+            finalBuyItAgain = realBuyItAgain.length > 0 ? realBuyItAgain.slice(0, 12) : availableItems.filter(i => i.inStock).sort(() => 0.5 - Math.random()).slice(0, 12);
+            setBuyItAgain(finalBuyItAgain);
+          })
+        );
+      }
+
+      // Once background data arrives, save the fully completed state to cache
+      Promise.all(bgPromises).then(() => {
+        if (cancelled) return;
+        try {
+          localStorage.setItem(cacheKey, JSON.stringify({
+            cachedAt: Date.now(),
+            items: availableItems,
+            shopInfo: newShopInfo,
+            nearbyShops: finalNearbyShops,
+            shopDeals: newShopDeals,
+            shopBestSellers: newBestSellers,
+            under99: newUnder99,
+            newArrivals: newArrivalsList,
+            buyItAgain: finalBuyItAgain,
+            timeBased: finalTimeBased,
+          }));
+        } catch (e) { }
+      });
+
     };
 
     fetchShopProducts().catch(err => {
@@ -197,6 +205,5 @@ export default function useShopFeedData(user) {
     return () => { cancelled = true; };
   }, [user]);
 
-  // Return all the calculated data back to the component!
   return { loading, items, shopInfo, nearbyShops, shopDeals, shopBestSellers, under99, timeBased, newArrivals, buyItAgain };
-    }
+}
