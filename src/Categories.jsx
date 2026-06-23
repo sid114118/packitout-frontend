@@ -18,13 +18,13 @@ export default function Categories({ onCategorySelect, searchQuery = "", onAddTo
       sectionTitle: "Daily Fresh & Staples",
       items: [
         { name: "Breakfast Cereals", icon: "🍅", image: "https://res.cloudinary.com/dj48tkcsw/image/upload/v1779880955/packitout/categories/Breakfast_cereals.png", bgColor: "#fefce8" },
-        { name: "Dairy, Bread & Eggs", icon: "🥛", image: "https://res.cloudinary.com/dj48tkcsw/image/upload/v1777423759/1000262144-removebg-preview_fel2fg.jpg", bgColor: "#f0f9ff" }, 
-        { name: "Atta & Rice", icon: "🌾", image: "https://res.cloudinary.com/dj48tkcsw/image/upload/v1777538936/1000262762-removebg-preview_rwxmll.webp", bgColor: "#fefce8" },
-        { name: "Dals & Pulses", icon: "🥣", image: "https://res.cloudinary.com/dj48tkcsw/image/upload/v1777538935/1000262801-removebg-preview_1_jksucv.jpg", bgColor: "#fef2f2" }, 
-        { name: "Oil, Ghee & Salt", icon: "🍶", image: "https://res.cloudinary.com/dj48tkcsw/image/upload/v1777538941/1000262800-removebg-preview_x9dpiy.jpg", bgColor:"#f0fdf4" },
-        { name: "Dry Fruits & Cereals", icon: "🥜", image: "https://res.cloudinary.com/dj48tkcsw/image/upload/v1777539613/1000262799-removebg-preview_kvf45w.jpg", bgColor: "#f0f9ff" },
-        { name: "Spices & Condiments", icon: "🌶️", image: "https://res.cloudinary.com/dj48tkcsw/image/upload/v1777538939/1000262801-removebg-preview_julon8.jpg", bgColor: "#fdf2f8" }, 
-        { name: "Sauces & Spreads", icon: "🍯", image: "https://res.cloudinary.com/dj48tkcsw/image/upload/v1777538934/1000262796-removebg-preview_f77xzz.jpg", bgColor: "#f0fdf4" } 
+        { name: "Dairy, Bread & Eggs", icon: "🥛", image: "https://res.cloudinary.com/dj48tkcsw/image/upload/v1782202789/packitout/categories/Dairy__Bread___Eggs.png", bgColor: "#f0f9ff" },
+        { name: "Atta & Rice", icon: "🌾", image: "https://res.cloudinary.com/dj48tkcsw/image/upload/v1782202730/packitout/categories/Atta___Rice.png", bgColor: "#fefce8" },
+        { name: "Dals & Pulses", icon: "🥣", image: "https://res.cloudinary.com/dj48tkcsw/image/upload/v1782202832/packitout/categories/Dals___Pulses.png", bgColor: "#fef2f2" },
+        { name: "Oil, Ghee & Salt", icon: "🍶", image: "https://res.cloudinary.com/dj48tkcsw/image/upload/v1782202857/packitout/categories/Oil__Ghee___Salt.png", bgColor:"#f0fdf4" },
+        { name: "Dry Fruits & Cereals", icon: "🥜", image: "https://res.cloudinary.com/dj48tkcsw/image/upload/v1782202840/packitout/categories/Dry_Fruits___Cereals.png", bgColor: "#f0f9ff" },
+        { name: "Spices & Condiments", icon: "🌶️", image: "https://res.cloudinary.com/dj48tkcsw/image/upload/v1782202881/packitout/categories/Spices___condiments.png", bgColor: "#fdf2f8" },
+        { name: "Sauces & Spreads", icon: "🍯", image: "https://res.cloudinary.com/dj48tkcsw/image/upload/v1782202873/packitout/categories/Sauces___Spreads.png", bgColor: "#f0fdf4" }
       ]
     },
     {
@@ -43,14 +43,14 @@ export default function Categories({ onCategorySelect, searchQuery = "", onAddTo
     {
       sectionTitle: "Home, Health & Utilities",
       items: [
-        { name: "Bath & Body", icon: "🧼", image: "https://res.cloudinary.com/dj48tkcsw/image/upload/v1775292737/bodywash_iacvvh.jpg", bgColor: "#f0f9ff" },
-        { name: "Beauty & Grooming", icon: "🧴", image: "https://res.cloudinary.com/dj48tkcsw/image/upload/v1775292739/bodycare_iie0ql.jpg", bgColor: "#fdf2f8" }, 
-        { name: "Health & Pharma", icon: "💊", image: "https://res.cloudinary.com/dj48tkcsw/image/upload/v1775292739/health_asi8e6.jpg", bgColor: "#f0fdf4" },
-        { name: "Cleaners & Repellents", icon: "🧽", image: "https://res.cloudinary.com/dj48tkcsw/image/upload/v1775292738/housecleaners_dvrjvm.jpg", bgColor: "#fefce8" }, 
+        { name: "Bath & Body", icon: "🧼", image: "https://res.cloudinary.com/dj48tkcsw/image/upload/v1782202739/packitout/categories/Bath___Body.png", bgColor: "#f0f9ff" },
+        { name: "Beauty & Grooming", icon: "🧴", image: "https://res.cloudinary.com/dj48tkcsw/image/upload/v1782202745/packitout/categories/Beauty___Grooming.png", bgColor: "#fdf2f8" },
+        { name: "Health & Pharma", icon: "💊", image: "https://res.cloudinary.com/dj48tkcsw/image/upload/v1782202845/packitout/categories/Health___Pharma.png", bgColor: "#f0fdf4" },
+        { name: "Cleaners & Repellents", icon: "🧽", image: "https://res.cloudinary.com/dj48tkcsw/image/upload/v1782202751/packitout/categories/Cleaners___Repellents.png", bgColor: "#fefce8" },
         { name: "Baby Care", icon: "🍼", image: "https://res.cloudinary.com/dj48tkcsw/image/upload/v1779880927/packitout/categories/Baby_Care.png", bgColor: "#fdf2f8" },
         { name: "Pet Care", icon: "🐾", image: "https://res.cloudinary.com/dj48tkcsw/image/upload/v1779881048/packitout/categories/Pet_Care.png", bgColor: "#fff7ed" },
         { name: "Pooja Needs", icon: "🪔", image: "https://res.cloudinary.com/dj48tkcsw/image/upload/v1779881125/packitout/categories/Pooja_Needs.png", bgColor: "#fffbeb" },
-        { name: "Home & Office", icon: "🔋", image: "https://res.cloudinary.com/dj48tkcsw/image/upload/v1775286372/1000253439-removebg-preview_r20l8d.jpg", bgColor: "#f1f5f9" } 
+        { name: "Home & Office", icon: "🔋", image: "https://res.cloudinary.com/dj48tkcsw/image/upload/v1782202850/packitout/categories/Home___Office.png", bgColor: "#f1f5f9" }
       ]
     }
   ];
@@ -163,7 +163,7 @@ export default function Categories({ onCategorySelect, searchQuery = "", onAddTo
                       width: '100%',
                       maxWidth: '115px',
                       aspectRatio: '1 / 1',
-                      backgroundColor: '#f0fdf4',
+                      backgroundColor: item.bgColor || '#f0fdf4',
                       borderRadius: '24px',
                       display: 'flex',
                       justifyContent: 'center',
@@ -171,7 +171,7 @@ export default function Categories({ onCategorySelect, searchQuery = "", onAddTo
                       boxShadow: '0 1px 3px rgba(0,0,0,0.06)',
                       overflow: 'hidden',
                       marginBottom: '8px',
-                      border: '1px solid #dcfce7'
+                      border: '1px solid rgba(0,0,0,0.05)'
                     }}>
                       {item.image ? (
                         <img
