@@ -16,6 +16,7 @@ export default function Categories({ onCategorySelect, searchQuery = "", onAddTo
   const menuData = [
     {
       sectionTitle: "Daily Fresh & Staples",
+      bgColor: "#f0fdf4",
       items: [
         { name: "Breakfast Cereals", icon: "🍅", image: "https://res.cloudinary.com/dj48tkcsw/image/upload/v1779880955/packitout/categories/Breakfast_cereals.png", bgColor: "#fefce8" },
         { name: "Dairy, Bread & Eggs", icon: "🥛", image: "https://res.cloudinary.com/dj48tkcsw/image/upload/v1782202789/packitout/categories/Dairy__Bread___Eggs.png", bgColor: "#f0f9ff" },
@@ -29,6 +30,7 @@ export default function Categories({ onCategorySelect, searchQuery = "", onAddTo
     },
     {
       sectionTitle: "Munchies & Refreshments",
+      bgColor: "#fff7ed",
       items: [
         { name: "Chips & Namkeen", icon: "🥨", image: "https://res.cloudinary.com/dj48tkcsw/image/upload/v1779880970/packitout/categories/chips_Namkeen.png", bgColor: "#fff7ed" },
         { name: "Drinks & Juices", icon: "🥤", image: "https://res.cloudinary.com/dj48tkcsw/image/upload/v1779880979/packitout/categories/Drinks_Juices.png", bgColor: "#eff6ff" },
@@ -42,6 +44,7 @@ export default function Categories({ onCategorySelect, searchQuery = "", onAddTo
     },
     {
       sectionTitle: "Home, Health & Utilities",
+      bgColor: "#f0f9ff",
       items: [
         { name: "Bath & Body", icon: "🧼", image: "https://res.cloudinary.com/dj48tkcsw/image/upload/v1782202739/packitout/categories/Bath___Body.png", bgColor: "#f0f9ff" },
         { name: "Beauty & Grooming", icon: "🧴", image: "https://res.cloudinary.com/dj48tkcsw/image/upload/v1782202745/packitout/categories/Beauty___Grooming.png", bgColor: "#fdf2f8" },
@@ -163,7 +166,7 @@ export default function Categories({ onCategorySelect, searchQuery = "", onAddTo
                       width: '100%',
                       maxWidth: '115px',
                       aspectRatio: '1 / 1',
-                      backgroundColor: item.bgColor || '#f0fdf4',
+                      backgroundColor: section.bgColor || '#f0fdf4',
                       borderRadius: '24px',
                       display: 'flex',
                       justifyContent: 'center',
