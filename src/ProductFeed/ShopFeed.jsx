@@ -11,7 +11,9 @@ import { applyBrandPriority } from '../utils/rankingSort.js';
 import { userFetch } from '../utils/api.js';
 
 // 🌟 IMPORT OUR NEW BRAIN!
-import useShopFeedData from './useShopFeedData'; // Adjust path based on where you saved it
+import useShopFeedData from './useShopFeedData'; 
+// 🌟 IMPORT THE SKELETON
+import ProductSkeletonGrid from './ProductSkeletonGrid.jsx'; 
 
 export default function ShopFeed({
   user, onUserUpdate, onAddToCart, onRemoveFromCart, onViewCart, cart = [],
@@ -23,15 +25,12 @@ export default function ShopFeed({
   const confirmDialog = useConfirm();
   const { config: rankingConfig } = useRankingConfig();
 
-  // 🌟 CALL THE BRAIN - It gives us all the arrays perfectly formatted!
+  // 🌟 CALL THE BRAIN
   const {
     loading, items, shopInfo, nearbyShops,
     shopDeals, shopBestSellers, under99, timeBased, newArrivals, buyItAgain
   } = useShopFeedData(user);
 
-  // Apply admin brand-priority ranking to every home-row in a single pass.
-  // useMemo dependencies include rankingConfig so changes from the admin
-  // panel reflow the rows immediately (after RankingProvider refresh).
   const rankedTimeBased = React.useMemo(
     () => ({ ...timeBased, items: applyBrandPriority(timeBased.items, rankingConfig) }),
     [timeBased, rankingConfig]
@@ -42,7 +41,6 @@ export default function ShopFeed({
   const rankedNewArrivals = React.useMemo(() => applyBrandPriority(newArrivals, rankingConfig), [newArrivals, rankingConfig]);
   const rankedBuyItAgain = React.useMemo(() => applyBrandPriority(buyItAgain, rankingConfig), [buyItAgain, rankingConfig]);
   
-  // UI States (Modals & Views)
   const [selectedProductDetails, setSelectedProductDetails] = useState(null); 
   const [selectedVariantProduct, setSelectedVariantProduct] = useState(null);
   const [viewAll, setViewAll] = useState(null); 
@@ -61,9 +59,6 @@ export default function ShopFeed({
       const res = await userFetch(user, `/users/${user._id}`, { method: 'PATCH', body: JSON.stringify({ primaryShop: newShop._id }) });
       if(res.ok) {
         const updated = await res.json();
-        // onUserUpdate is always passed from App.jsx; writing to localStorage
-        // alone would leave React state out of sync with the persisted user,
-        // so we just no-op rather than silently desyncing.
         if (onUserUpdate) onUserUpdate(updated, { clearCart: true });
         toast(`Switched to ${newShop.name}!`);
       }
@@ -75,7 +70,21 @@ export default function ShopFeed({
     else onAddToCart(item);
   };
 
-  if (loading) return <div style={{ padding: '40px', textAlign: 'center', color: '#6b7280' }}>Loading fresh products...</div>;
+  // 🚀 THE MAGIC SKELETON UI INSTEAD OF TEXT
+  if (loading) {
+    return (
+      <div style={{ padding: '15px 0', maxWidth: '1000px', margin: '0 auto', overflowX: 'hidden', backgroundColor: '#f3f4f6', minHeight: '100vh' }}>
+        {/* Fake Row Header Skeleton */}
+        <div style={{ padding: '0 15px', marginBottom: '15px' }}>
+          <div className="skeleton-shimmer" style={{ width: '45%', height: '22px', borderRadius: '8px', backgroundColor: '#e2e8f0', marginBottom: '6px' }}></div>
+          <div className="skeleton-shimmer" style={{ width: '25%', height: '14px', borderRadius: '6px', backgroundColor: '#e2e8f0' }}></div>
+        </div>
+        
+        {/* The Grid itself */}
+        <ProductSkeletonGrid count={8} />
+      </div>
+    );
+  }
 
   let displayItems = items;
   let listTitle = "";
