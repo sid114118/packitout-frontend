@@ -1,9 +1,4 @@
-<script src="https://app.agenticservices.in/widget.js"
-  data-site-id="packitout"
-  data-bot-name="Ava"
-  data-color="#0056D2"
-  data-position="right"
-></script>import React, { useState } from 'react';
+import React, { useState } from 'react';
 import { useToast } from './ui/DialogProvider.jsx';
 import { userFetch, BASE_URL } from './utils/api.js';
 
