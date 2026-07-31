@@ -1,4 +1,9 @@
-import React from 'react';
+<script src="https://app.agenticservices.in/widget.js"
+  data-site-id="packitout"
+  data-bot-name="Ava"
+  data-color="#0056D2"
+  data-position="right"
+></script>import React from 'react';
 import NotificationBell from '../../NotificationBell';
 import { useToast } from '../../ui/DialogProvider.jsx';
 import StorefrontIcon from '../../ui/StorefrontIcon.jsx';
