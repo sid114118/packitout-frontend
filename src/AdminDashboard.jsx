@@ -128,13 +128,21 @@ export default function AdminDashboard({ onExit }) {
           method: "PATCH",
           body: JSON.stringify(payload),
         });
-        if (res.ok) toast("Product updated!");
+        if (!res.ok) {
+          const errData = await res.json().catch(() => ({}));
+          return toast(errData.error || "Failed to update product", 'error');
+        }
+        toast("Product updated!");
       } else {
         const res = await adminFetch(`/master-products`, {
           method: "POST",
           body: JSON.stringify(payload),
         });
-        if (res.ok) toast("New product added to master catalog!");
+        if (!res.ok) {
+          const errData = await res.json().catch(() => ({}));
+          return toast(errData.error || "Failed to create product", 'error');
+        }
+        toast("New product added to master catalog!");
       }
 
       setForm(initialProductForm);
@@ -181,14 +189,22 @@ export default function AdminDashboard({ onExit }) {
     e.preventDefault();
     try {
       if (editingShopId) {
-        await adminFetch(`/shops/${editingShopId}/admin-edit`, {
+        const res = await adminFetch(`/shops/${editingShopId}/admin-edit`, {
           method: "PATCH", body: JSON.stringify(shopForm),
         });
+        if (!res.ok) {
+          const errData = await res.json().catch(() => ({}));
+          return toast(errData.error || "Failed to update shop", 'error');
+        }
         toast("Shop updated!");
       } else {
-        await adminFetch(`/shops`, {
+        const res = await adminFetch(`/shops`, {
           method: "POST", body: JSON.stringify(shopForm),
         });
+        if (!res.ok) {
+          const errData = await res.json().catch(() => ({}));
+          return toast(errData.error || "Failed to create shop", 'error');
+        }
         toast("Shop partner registered!");
       }
       setShopForm(initialShopForm);

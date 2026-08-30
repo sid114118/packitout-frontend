@@ -38,11 +38,19 @@ export default function ShopDashboard({ user, onExit }) {
     };
     fetchAllData();
 
-    const interval = setInterval(() => {
-      fetchOrders();
-      fetchParchis();
-    }, 10000);
-    return () => clearInterval(interval);
+    // Setup Server-Sent Events for real-time updates instead of polling
+    // Native EventSource doesn't support custom headers, so we pass the token in the query string
+    const sseUrl = `${BASE_URL}/shop-events/${shopData._id}?token=${shopData.sessionToken || ''}`;
+    const eventSource = new EventSource(sseUrl);
+
+    eventSource.addEventListener('refresh_orders', () => fetchOrders());
+    eventSource.addEventListener('refresh_parchis', () => fetchParchis());
+
+    eventSource.onerror = (err) => {
+      console.error("SSE connection error, browser will auto-reconnect.", err);
+    };
+
+    return () => eventSource.close();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [shopData._id]);
 
