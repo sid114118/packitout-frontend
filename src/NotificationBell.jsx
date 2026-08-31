@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
-import { userFetch, shopFetch } from './utils/api.js';
+import { userFetch, shopFetch, BASE_URL } from './utils/api.js';
 
 // Convert a date-ish value into "just now" / "5 min ago" / "2 hr ago" / "3 d ago" / fallback date.
 function relativeTime(ts) {
