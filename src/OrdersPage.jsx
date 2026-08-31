@@ -49,11 +49,16 @@ export default function OrdersPage({ user, onExit, onAddToCart }) {
   const initialCache = (() => {
     try {
       const raw = localStorage.getItem(cacheKey);
-      return raw ? JSON.parse(raw) : null;
+      if (!raw) return null;
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed)) {
+        return parsed.filter(o => o && typeof o === 'object');
+      }
+      return null;
     } catch { return null; }
   })();
 
-  const [orders, setOrders] = useState(Array.isArray(initialCache) ? initialCache : []);
+  const [orders, setOrders] = useState(initialCache || []);
   const [loading, setLoading] = useState(initialCache ? false : true);
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [orderToReview, setOrderToReview] = useState(null);
