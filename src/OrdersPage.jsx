@@ -83,7 +83,22 @@ export default function OrdersPage({ user, onExit, onAddToCart }) {
       .catch(() => setLoading(false));
   };
 
-  useEffect(() => { fetchOrders(); }, [user._id]);
+  useEffect(() => {
+    fetchOrders();
+    
+    // Connect to SSE for real-time updates when the shop accepts/packs orders
+    if (!user || !user.sessionToken) return;
+    const sseUrl = `${BASE_URL.replace(/\/api$/, '')}/user-events/${user._id}?token=${user.sessionToken}`;
+    const eventSource = new EventSource(sseUrl);
+    
+    eventSource.addEventListener('refresh_orders', () => {
+      fetchOrders();
+    });
+    
+    return () => {
+      eventSource.close();
+    };
+  }, [user._id, user.sessionToken]);
 
   const initiateCancel = async (orderId) => {
     const ok = await askConfirm({
