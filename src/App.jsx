@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, lazy, Suspense } from 'react';
-import { useToast } from './ui/DialogProvider.jsx';
+import { useToast, useConfirm } from './ui/DialogProvider.jsx';
 import { userFetch, clearAdminToken } from './utils/api.js';
 
 // Eagerly imported: rendered on the customer's first paint.
@@ -107,6 +107,7 @@ class CrashCatcher extends React.Component {
 
 export default function App() {
   const toast = useToast();
+  const confirm = useConfirm();
   const [currentView, setCurrentView] = useState("customer");
   const [isAdminAuthenticated, setIsAdminAuthenticated] = useState(false);
   const [isShopAuthenticated, setIsShopAuthenticated] = useState(null);
@@ -260,13 +261,44 @@ export default function App() {
     return () => window.removeEventListener("hashchange", checkUrl);
   }, []);
 
-  const handleAddToCart = (product) => {
+  const handleAddToCart = async (product) => {
     if (!loggedInUser) {
       toast("Please log in first! 🛒", 'info');
       window.location.hash = "#account";
       return;
     }
     if (!product || !product._id) return;
+
+    const currentShopId = viewingShop?._id || (typeof loggedInUser.primaryShop === 'object' ? loggedInUser.primaryShop?._id : loggedInUser.primaryShop);
+
+    // Cross-shop check: if cart is not empty and belongs to a different shop, prompt to clear
+    if (cart.length > 0) {
+      const cartShopId = cart[0].shopId;
+      if (cartShopId && currentShopId && String(cartShopId) !== String(currentShopId)) {
+        const ok = await confirm({
+          title: "Different Shop",
+          message: "Your cart contains items from another shop. Do you want to clear your cart and add this item?",
+          confirmText: "Clear Cart",
+          cancelText: "Cancel"
+        });
+        if (!ok) return;
+        
+        // If they confirmed, clear the cart and proceed to add the new item.
+        const lightProduct = {
+          _id: product._id,
+          name: product.name,
+          brand: product.brand,
+          image: product.image,
+          emoji: product.emoji,
+          qnty: product.qnty,
+          mrp: Number(product.mrp || 0),
+          sellingPrice: Number(product.sellingPrice || product.mrp || 0),
+          shopId: currentShopId
+        };
+        setCart([{ ...lightProduct, qty: 1 }]);
+        return;
+      }
+    }
 
     const lightProduct = {
       _id: product._id,
@@ -276,7 +308,8 @@ export default function App() {
       emoji: product.emoji,
       qnty: product.qnty,
       mrp: Number(product.mrp || 0),
-      sellingPrice: Number(product.sellingPrice || product.mrp || 0)
+      sellingPrice: Number(product.sellingPrice || product.mrp || 0),
+      shopId: currentShopId
     };
 
     setCart((prevCart) => {
