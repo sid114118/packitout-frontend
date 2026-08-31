@@ -106,7 +106,7 @@ export default function OrdersTab({ orders, updateOrderStatus, markOrderPaid }) 
           ) : (
             <div style={{ fontSize: '0.85rem', color: '#94a3b8', fontStyle: 'italic' }}>Custom Parchi Order</div>
           )}
-          
+
           {/* Parchi Image Link */}
           {order.imageUrl && (
             <a href={order.imageUrl} target="_blank" rel="noreferrer" style={{ display: 'inline-block', marginTop: '8px', fontSize: '0.85rem', color: '#3b82f6', fontWeight: '600', textDecoration: 'none' }}>
@@ -120,7 +120,7 @@ export default function OrdersTab({ orders, updateOrderStatus, markOrderPaid }) 
           <div style={{ fontSize: '1.3rem', fontWeight: '900', color: '#0f172a' }}>
             ₹{order.totalAmount}
           </div>
-          
+
           {/* 💳 PAYMENT BADGE */}
           <div style={{ padding: '6px 12px', borderRadius: '8px', fontSize: '0.85rem', fontWeight: '800', backgroundColor: payBadge.bg, color: payBadge.fg, border: `1px solid ${payBadge.border}` }}>
             {payBadge.label}
@@ -251,25 +251,29 @@ export default function OrdersTab({ orders, updateOrderStatus, markOrderPaid }) 
         </div>
       )}
 
-      {/* 🔓 AUDIO UNLOCK BANNER (Shown when no orders but audio is blocked) */}
-      {needsUnlock && pendingCount === 0 && !muted && (
+      {/* 🔓 AUDIO UNLOCK & TEST BANNER (Shown when no orders) */}
+      {pendingCount === 0 && !muted && (
         <div style={{
-          backgroundColor: '#fef9c3', border: '1px solid #fde68a', color: '#854d0e',
+          backgroundColor: needsUnlock ? '#fef9c3' : '#f0fdf4', border: needsUnlock ? '1px solid #fde68a' : '1px solid #bbf7d0', color: needsUnlock ? '#854d0e' : '#166534',
           padding: '12px 16px', borderRadius: '12px', marginBottom: '15px',
           display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px'
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <span style={{ fontSize: '1.2rem' }}>🔇</span>
+            <span style={{ fontSize: '1.2rem' }}>{needsUnlock ? '🔇' : '🔊'}</span>
             <div>
-              <div style={{ fontWeight: 'bold', fontSize: '0.95rem' }}>Alarms are muted by your browser</div>
-              <div style={{ fontSize: '0.8rem' }}>Tap to unlock so you hear new orders when they arrive.</div>
+              <div style={{ fontWeight: 'bold', fontSize: '0.95rem' }}>
+                {needsUnlock ? 'Alarms are muted by your browser' : 'Audio Alarm is active'}
+              </div>
+              <div style={{ fontSize: '0.8rem' }}>
+                {needsUnlock ? 'Tap to unlock so you hear new orders.' : 'You will hear a chime when an order arrives.'}
+              </div>
             </div>
           </div>
           <button
             onClick={unlock}
-            style={{ background: '#ca8a04', color: '#fff', border: 'none', padding: '8px 16px', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer', whiteSpace: 'nowrap' }}
+            style={{ background: needsUnlock ? '#ca8a04' : '#16a34a', color: '#fff', border: 'none', padding: '8px 16px', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer', whiteSpace: 'nowrap' }}
           >
-            🔊 Enable Alarms
+            {needsUnlock ? '🔊 Enable Alarms' : '🎵 Test Alarm'}
           </button>
         </div>
       )}
@@ -278,7 +282,7 @@ export default function OrdersTab({ orders, updateOrderStatus, markOrderPaid }) 
       <h3 style={{ color: '#0f172a', fontSize: '1.2rem', marginBottom: '15px', display: 'flex', justifyContent: 'space-between' }}>
         Live Orders <span>{activeOrders.length}</span>
       </h3>
-      
+
       {activeOrders.length === 0 ? (
         <div style={{ textAlign: 'center', padding: '40px 20px', backgroundColor: 'white', borderRadius: '16px', border: '1px dashed #cbd5e1', color: '#94a3b8', marginBottom: '30px' }}>
           <div style={{ fontSize: '2rem', marginBottom: '10px' }}>☕</div>
@@ -292,7 +296,7 @@ export default function OrdersTab({ orders, updateOrderStatus, markOrderPaid }) 
       )}
 
       {/* 📜 PAST ORDERS (COLLAPSIBLE) */}
-      <div 
+      <div
         onClick={() => setShowPastOrders(!showPastOrders)}
         style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer', backgroundColor: 'white', padding: '15px 20px', borderRadius: '12px', boxShadow: '0 2px 5px rgba(0,0,0,0.02)', border: '1px solid #e2e8f0', marginBottom: '15px' }}
       >
@@ -306,7 +310,7 @@ export default function OrdersTab({ orders, updateOrderStatus, markOrderPaid }) 
         <div style={{ animation: 'fadeIn 0.3s ease-in-out' }}>
           <style>{`@keyframes fadeIn { from { opacity: 0; transform: translateY(-5px); } to { opacity: 1; transform: translateY(0); } }`}</style>
           {pastOrders.length === 0 ? (
-             <div style={{ textAlign: 'center', padding: '20px', color: '#94a3b8' }}>No completed orders yet.</div>
+            <div style={{ textAlign: 'center', padding: '20px', color: '#94a3b8' }}>No completed orders yet.</div>
           ) : (
             pastOrders.map(order => <OrderCard key={order._id} order={order} isActive={false} />)
           )}
@@ -314,4 +318,4 @@ export default function OrdersTab({ orders, updateOrderStatus, markOrderPaid }) 
       )}
     </div>
   );
-          }
+}
