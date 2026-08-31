@@ -48,13 +48,6 @@ export default function NotificationBell({ ownerType, owner, ownerId }) {
   const intervalRef = useRef(null);
 
   useEffect(() => {
-    // Tear down any previous interval before we start a new one. Without this,
-    // switching ownerId (rare but possible — e.g. logout then re-login as a
-    // different user without unmounting the bell) stacked up parallel polls.
-    if (intervalRef.current) {
-      clearInterval(intervalRef.current);
-      intervalRef.current = null;
-    }
     if (!effectiveId) return;
 
     const doFetch = ownerType === 'shop' ? shopFetch : userFetch;
@@ -72,12 +65,21 @@ export default function NotificationBell({ ownerType, owner, ownerId }) {
     };
 
     fetchNotifications();
-    intervalRef.current = setInterval(fetchNotifications, 5000);
+    
+    // Connect to SSE for real-time notifications
+    const token = effectiveOwner?.token || effectiveOwner?.sessionToken || (effectiveOwner?.sessionTokens && effectiveOwner.sessionTokens[0]?.token);
+    if (!token) return;
+    
+    const endpoint = ownerType === 'shop' ? `/shop-events/${effectiveId}` : `/user-events/${effectiveId}`;
+    const sseUrl = `${BASE_URL.replace(/\/api$/, '')}${endpoint}?token=${token}`;
+    const eventSource = new EventSource(sseUrl);
+    
+    eventSource.addEventListener('new_notification', () => {
+      fetchNotifications();
+    });
+
     return () => {
-      if (intervalRef.current) {
-        clearInterval(intervalRef.current);
-        intervalRef.current = null;
-      }
+      eventSource.close();
     };
   }, [effectiveId, ownerType, effectiveOwner]);
 
