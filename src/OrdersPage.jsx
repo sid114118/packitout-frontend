@@ -17,7 +17,7 @@ const stageOf = (status) => {
 };
 
 const isLive = (o) => {
-  const st = stageOf(o.status);
+  const st = stageOf(o?.status);
   return st !== "delivered" && st !== "cancelled";
 };
 
@@ -75,6 +75,7 @@ export default function OrdersPage({ user, onExit, onAddToCart }) {
           return;
         }
         const myOrders = (Array.isArray(data) ? data : [])
+          .filter(o => o && typeof o === 'object')
           .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
         setOrders(myOrders);
         setLoading(false);
@@ -148,19 +149,19 @@ export default function OrdersPage({ user, onExit, onAddToCart }) {
   // ── DERIVED ──────────────────────────────────────────────
   const counts = useMemo(() => {
     const live = orders.filter(isLive).length;
-    const delivered = orders.filter(o => stageOf(o.status) === 'delivered').length;
-    const cancelled = orders.filter(o => stageOf(o.status) === 'cancelled').length;
+    const delivered = orders.filter(o => stageOf(o?.status) === 'delivered').length;
+    const cancelled = orders.filter(o => stageOf(o?.status) === 'cancelled').length;
     return { all: orders.length, live, delivered, cancelled };
   }, [orders]);
 
   const stats = useMemo(() => {
     const totalSpent = orders
-      .filter(o => stageOf(o.status) !== 'cancelled')
-      .reduce((sum, o) => sum + Number(o.totalAmount || 0), 0);
+      .filter(o => stageOf(o?.status) !== 'cancelled')
+      .reduce((sum, o) => sum + Number(o?.totalAmount || 0), 0);
 
     const shopFreq = new Map();
     orders.forEach(o => {
-      const name = o.shopId?.name;
+      const name = o?.shopId?.name;
       if (!name) return;
       shopFreq.set(name, (shopFreq.get(name) || 0) + 1);
     });
@@ -174,8 +175,9 @@ export default function OrdersPage({ user, onExit, onAddToCart }) {
   const frequentItems = useMemo(() => {
     const map = new Map();
     orders.forEach(o => {
-      if (stageOf(o.status) === 'cancelled') return;
-      (o.items || []).forEach(item => {
+      if (stageOf(o?.status) === 'cancelled') return;
+      (o?.items || []).forEach(item => {
+        if (!item) return;
         const id = item.productId?._id || item.productId || item._id;
         if (!id) return;
         const key = String(id);
@@ -195,15 +197,15 @@ export default function OrdersPage({ user, onExit, onAddToCart }) {
   const filtered = useMemo(() => {
     let list = orders;
     if (activeTab === 'live') list = list.filter(isLive);
-    else if (activeTab === 'delivered') list = list.filter(o => stageOf(o.status) === 'delivered');
-    else if (activeTab === 'cancelled') list = list.filter(o => stageOf(o.status) === 'cancelled');
+    else if (activeTab === 'delivered') list = list.filter(o => stageOf(o?.status) === 'delivered');
+    else if (activeTab === 'cancelled') list = list.filter(o => stageOf(o?.status) === 'cancelled');
 
     const q = searchQ.trim().toLowerCase();
     if (!q) return list;
     return list.filter(o => {
-      const shopMatch = (o.shopId?.name || '').toLowerCase().includes(q);
-      const itemMatch = (o.items || []).some(it => (it.name || '').toLowerCase().includes(q));
-      const idMatch = (o._id || '').toLowerCase().includes(q);
+      const shopMatch = (o?.shopId?.name || '').toLowerCase().includes(q);
+      const itemMatch = (o?.items || []).some(it => (it?.name || '').toLowerCase().includes(q));
+      const idMatch = (o?._id || '').toLowerCase().includes(q);
       return shopMatch || itemMatch || idMatch;
     });
   }, [orders, activeTab, searchQ]);
@@ -552,10 +554,10 @@ function OrderCard({ order, onOpen, onCancel, onReview, onReorderItem }) {
   const badgeFg = isCancelled ? '#64748b' : isDelivered ? '#15803d' : isReady ? '#10b981' : '#ef4444';
   const badgeBorder = isCancelled ? '#e2e8f0' : isDelivered ? '#d1fae5' : isReady ? '#d1fae5' : '#fee2e2';
 
-  const items = Array.isArray(order.items) ? order.items : [];
+  const items = Array.isArray(order?.items) ? order.items.filter(Boolean) : [];
   const previewItems = items.slice(0, 3);
   const extraCount = items.length - previewItems.length;
-  const createdAt = order.createdAt ? new Date(order.createdAt) : null;
+  const createdAt = order?.createdAt ? new Date(order.createdAt) : null;
 
   // 🕒 Pickup time chosen at checkout — only relevant while order is live.
   const isUrgent = Boolean(order.isUrgent);
