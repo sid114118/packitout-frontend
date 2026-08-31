@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { useToast } from '../../ui/DialogProvider.jsx';
-import { userFetch } from '../../utils/api.js';
+import { userFetch, BASE_URL } from '../../utils/api.js';
 import { cdnImage } from '../../utils/cloudinaryUrl.js';
 
 // Lists the user's parchis (status: quoted = bill waiting, accepted = paid /
@@ -28,7 +28,24 @@ export default function ParchiBillModal({ open, onClose, user }) {
     finally { setLoading(false); }
   }, [user]);
 
-  useEffect(() => { if (open) refresh(); }, [open, refresh]);
+  useEffect(() => { 
+    if (!open || !user?._id) return;
+    refresh(); 
+    
+    // Connect to SSE while modal is open so it auto-refreshes when shop sends the bill
+    const token = user.token || user.sessionToken || (user.sessionTokens && user.sessionTokens[0]?.token);
+    if (!token) return;
+    
+    const sseUrl = `${BASE_URL.replace(/\/api$/, '')}/user-events/${user._id}?token=${token}`;
+    const eventSource = new EventSource(sseUrl);
+    
+    // The shop sending a bill creates a Notification, which fires this event
+    eventSource.addEventListener('new_notification', () => refresh());
+    // Also listen for any explicit parchi refresh events just in case
+    eventSource.addEventListener('refresh_parchis', () => refresh());
+    
+    return () => eventSource.close();
+  }, [open, refresh, user]);
 
   if (!open) return null;
 
