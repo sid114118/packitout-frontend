@@ -251,6 +251,29 @@ export default function OrdersTab({ orders, updateOrderStatus, markOrderPaid }) 
         </div>
       )}
 
+      {/* 🔓 AUDIO UNLOCK BANNER (Shown when no orders but audio is blocked) */}
+      {needsUnlock && pendingCount === 0 && !muted && (
+        <div style={{
+          backgroundColor: '#fef9c3', border: '1px solid #fde68a', color: '#854d0e',
+          padding: '12px 16px', borderRadius: '12px', marginBottom: '15px',
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <span style={{ fontSize: '1.2rem' }}>🔇</span>
+            <div>
+              <div style={{ fontWeight: 'bold', fontSize: '0.95rem' }}>Alarms are muted by your browser</div>
+              <div style={{ fontSize: '0.8rem' }}>Tap to unlock so you hear new orders when they arrive.</div>
+            </div>
+          </div>
+          <button
+            onClick={unlock}
+            style={{ background: '#ca8a04', color: '#fff', border: 'none', padding: '8px 16px', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer', whiteSpace: 'nowrap' }}
+          >
+            🔊 Enable Alarms
+          </button>
+        </div>
+      )}
+
       {/* 🚀 ACTIVE ORDERS */}
       <h3 style={{ color: '#0f172a', fontSize: '1.2rem', marginBottom: '15px', display: 'flex', justifyContent: 'space-between' }}>
         Live Orders <span>{activeOrders.length}</span>
