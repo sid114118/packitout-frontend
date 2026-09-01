@@ -24,11 +24,15 @@ jobs:
           distribution: 'zulu'
           java-version: '21'
 
-      - name: Install Dependencies and Build Web Assets
+      -       - name: Install Dependencies and Build Web Assets
+        env:
+          ENV_FILE: ${{ secrets.ENV_FILE }}
         run: |
+          echo "$ENV_FILE" > .env
           npm install
           npm run build
           npx cap sync android
+          
 
       - name: Build Debug APK with Gradle
         run: |
