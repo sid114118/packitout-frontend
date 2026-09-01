@@ -132,9 +132,7 @@ export default function UserAuth({ onLoginSuccess }) {
       if (!auth.currentUser) {
         await signInWithEmailAndPassword(auth, email.trim(), password);
       }
-      await sendEmailVerification(auth.currentUser, {
-        url: `${window.location.origin}/#/verify-done`,
-      });
+      await sendEmailVerification(auth.currentUser);
       setStatus("✅ Verification email sent. Check your inbox.");
       setBusy(false);
     } catch (err) {
@@ -154,9 +152,7 @@ export default function UserAuth({ onLoginSuccess }) {
     try {
       const { user } = await createUserWithEmailAndPassword(auth, email.trim(), password);
       await updateProfile(user, { displayName: name.trim() });
-      await sendEmailVerification(user, {
-        url: `${window.location.origin}/#/verify-done`,
-      });
+      await sendEmailVerification(user);
       // Sign out so the user can't bypass the verify step by just refreshing.
       await signOut(auth);
       setMode("verify-sent");
@@ -267,9 +263,7 @@ export default function UserAuth({ onLoginSuccess }) {
     try {
       const credential = EmailAuthProvider.credential(email.trim(), password);
       await linkWithCredential(auth.currentUser, credential);
-      await sendEmailVerification(auth.currentUser, {
-        url: `${window.location.origin}/#/verify-done`,
-      });
+      await sendEmailVerification(auth.currentUser);
       // Tell the backend: this Firebase uid (phone) now also owns this email.
       const idToken = await auth.currentUser.getIdToken(true);
       const res = await fetch(`${API_BASE}/auth/add-email`, {
