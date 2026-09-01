@@ -24,7 +24,7 @@ jobs:
           distribution: 'zulu'
           java-version: '21'
 
-      -       - name: Install Dependencies and Build Web Assets
+      - name: Install Dependencies and Build Web Assets
         env:
           ENV_FILE: ${{ secrets.ENV_FILE }}
         run: |
