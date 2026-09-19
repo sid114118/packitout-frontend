@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useOrderAlarm } from '../../utils/orderAlarm.js';
+import { cdnImage } from '../../utils/cloudinaryUrl.js';
 
 export default function OrdersTab({ orders, updateOrderStatus, markOrderPaid }) {
   const [showPastOrders, setShowPastOrders] = useState(false);
@@ -98,9 +99,16 @@ export default function OrdersTab({ orders, updateOrderStatus, markOrderPaid }) 
           <h4 style={{ margin: '0 0 8px 0', fontSize: '0.9rem', color: '#334155' }}>Items:</h4>
           {order.items && order.items.length > 0 ? (
             order.items.map((item, idx) => (
-              <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', color: '#475569', marginBottom: '4px' }}>
-                <span>{item.qty}x {item.name}</span>
-                <span style={{ fontWeight: '600' }}>₹{(item.price || item.sellingPrice || item.mrp || 0) * item.qty}</span>
+              <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.85rem', color: '#475569', marginBottom: '8px', paddingBottom: '8px', borderBottom: '1px solid #f1f5f9' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  {(item.image || item.product?.image) ? (
+                    <img src={cdnImage(item.image || item.product?.image, 100)} alt={item.name} style={{ width: '40px', height: '40px', objectFit: 'cover', borderRadius: '6px', backgroundColor: '#f8fafc' }} />
+                  ) : (
+                    <div style={{ width: '40px', height: '40px', borderRadius: '6px', backgroundColor: '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.2rem' }}>📦</div>
+                  )}
+                  <span style={{ fontWeight: '500', color: '#1e293b' }}>{item.qty}x {item.name}</span>
+                </div>
+                <span style={{ fontWeight: '700', color: '#0f172a' }}>₹{(item.price || item.sellingPrice || item.mrp || 0) * item.qty}</span>
               </div>
             ))
           ) : (

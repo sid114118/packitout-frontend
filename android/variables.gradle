@@ -1,4 +1,6 @@
 ext {
+    rgcfaIncludeGoogle = true
+    androidxCredentialsVersion = '1.3.0-rc01'
     minSdkVersion = 24
     compileSdkVersion = 34
     targetSdkVersion = 34
