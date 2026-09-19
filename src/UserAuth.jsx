@@ -14,6 +14,9 @@ import {
   PhoneAuthProvider,
 } from 'firebase/auth';
 import { auth, googleProvider, isStandalonePWA, isIOS } from './utils/firebase';
+import { Capacitor } from '@capacitor/core';
+import { FirebaseAuthentication } from '@capacitor-firebase/authentication';
+import { GoogleAuthProvider, signInWithCredential } from 'firebase/auth';
 
 const API_BASE = (import.meta.env.VITE_API_BASE || "https://darkslategrey-snail-415133.hostingersite.com");
 
@@ -169,8 +172,24 @@ export default function UserAuth({ onLoginSuccess }) {
     setStatus("⏳ Opening Google...");
     setBusy(true);
     try {
-      const { user } = await signInWithPopup(auth, googleProvider);
-      const idToken = await user.getIdToken();
+      let idToken;
+      
+      if (Capacitor.isNativePlatform()) {
+        // Mobile: Use native Google Sign-In popup
+        const result = await FirebaseAuthentication.signInWithGoogle();
+        idToken = result.credential?.idToken;
+        
+        // Also sign into the local JS Firebase SDK so the rest of the app works identically
+        if (idToken) {
+           const credential = GoogleAuthProvider.credential(idToken);
+           await signInWithCredential(auth, credential);
+        }
+      } else {
+        // Web: Use standard browser popup
+        const { user } = await signInWithPopup(auth, googleProvider);
+        idToken = await user.getIdToken();
+      }
+
       const data = await exchangeIdTokenForSession(idToken);
       setStatus("✅ Welcome!");
       setTimeout(() => onLoginSuccess(data), 600);
@@ -192,9 +211,7 @@ export default function UserAuth({ onLoginSuccess }) {
     setStatus("⏳ Sending reset link...");
     setBusy(true);
     try {
-      await sendPasswordResetEmail(auth, email.trim(), {
-        url: `${window.location.origin}/#/`,
-      });
+      await sendPasswordResetEmail(auth, email.trim());
       setStatus("✅ Reset link sent. Check your inbox.");
       setBusy(false);
     } catch (err) {

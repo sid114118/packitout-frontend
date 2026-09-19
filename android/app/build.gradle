@@ -4,7 +4,7 @@ android {
     namespace = "com.packitout.shop"
     compileSdk = rootProject.ext.compileSdkVersion
     defaultConfig {
-        applicationId "com.packitout.shop"
+        applicationId "com.packitout.app"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode 1
