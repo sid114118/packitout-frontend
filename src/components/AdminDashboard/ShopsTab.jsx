@@ -43,6 +43,15 @@ export default function ShopsTab({ shops, shopForm, setShopForm, handleShopSubmi
             <option value="manual">Inventory Mode: Manual Toggle (In/Out of Stock)</option>
             <option value="stock_count">Inventory Mode: Strict Number Counting (SaaS Mode)</option>
           </select>
+          <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', ...inputStyle, gridColumn: '1 / -1' }}>
+            <input 
+              type="checkbox" 
+              checked={shopForm.canAddMasterProducts || false} 
+              onChange={e => setShopForm({...shopForm, canAddMasterProducts: e.target.checked})} 
+              style={{ transform: 'scale(1.2)' }}
+            />
+            <span style={{ fontWeight: 'bold', color: '#475569' }}>Allow this shop to add custom products to the Master Catalog</span>
+          </label>
         </div>
 
         <button type="submit" style={{ width: '100%', padding: '15px', marginTop: '15px', backgroundColor: editingShopId ? '#3b82f6' : '#10b981', color: 'white', border: 'none', borderRadius: '8px', fontWeight: 'bold', fontSize: '1.1rem', cursor: 'pointer' }}>
@@ -62,6 +71,9 @@ export default function ShopsTab({ shops, shopForm, setShopForm, handleShopSubmi
               <div style={{ margin: '10px 0', padding: '8px', backgroundColor: '#f8fafc', borderRadius: '6px', fontSize: '0.8rem', color: '#475569' }}>
                 <div><strong>FSSAI:</strong> {shop.fssai || 'Not Provided'}</div>
                 <div><strong>Inventory:</strong> {shop.inventoryMode === 'stock_count' ? '📊 Strict Count' : '🔘 Manual Toggle'}</div>
+                {shop.canAddMasterProducts && (
+                  <div style={{ marginTop: '5px', color: '#16a34a', fontWeight: 'bold' }}>✅ Can Add Master Products</div>
+                )}
               </div>
             </div>
             <button onClick={() => startEditingShop(shop)} style={{ width: '100%', padding: '8px', backgroundColor: '#f1f5f9', color: '#334155', border: '1px solid #cbd5e1', borderRadius: '6px', fontWeight: 'bold', cursor: 'pointer' }}>

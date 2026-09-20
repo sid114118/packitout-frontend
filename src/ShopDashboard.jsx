@@ -310,7 +310,7 @@ export default function ShopDashboard({ user, onExit }) {
       <div style={{ padding: '15px', maxWidth: '800px', margin: '0 auto' }}>
         {activeTab === "orders" && <OrdersTab orders={orders} updateOrderStatus={updateOrderStatus} markOrderPaid={markOrderPaid} />}
         {activeTab === "parchis" && <ParchiTab parchiRequests={parchiRequests} selectedParchi={selectedParchi} setSelectedParchi={setSelectedParchi} parchiBill={parchiBill} setParchiBill={setParchiBill} handleAddToBill={handleAddToBill} handleSendBill={handleSendBill} shopData={shopData} />}
-        {activeTab === "inventory" && <InventoryTab shopData={shopData} masterCatalog={masterCatalog} handleInventoryUpdate={handleInventoryUpdate} onInventoryRefresh={refreshShopData} />}
+        {activeTab === "inventory" && <InventoryTab shopData={shopData} masterCatalog={masterCatalog} handleInventoryUpdate={handleInventoryUpdate} onInventoryRefresh={refreshShopData} fetchMasterCatalog={fetchMasterCatalog} />}
         {activeTab === "reviews" && <ShopReviews shopId={shopData._id} shopRating={shopData.rating} totalReviews={shopData.totalReviews} />}
         {activeTab === "complaints" && <ComplaintsTab shop={shopData} />}
       </div>

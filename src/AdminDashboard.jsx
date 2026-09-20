@@ -33,7 +33,7 @@ export default function AdminDashboard({ onExit }) {
   const initialShopForm = { 
     name: "", phone: "", password: "", pincode: "",
     ownerName: "", fullAddress: "", operatingHours: "", shopImage: "",
-    fssai: "", gst: "", panNumber: "", inventoryMode: "manual"
+    fssai: "", gst: "", panNumber: "", inventoryMode: "manual", canAddMasterProducts: false
   };
   const [shopForm, setShopForm] = useState(initialShopForm);
   const [editingShopId, setEditingShopId] = useState(null);
@@ -218,7 +218,7 @@ export default function AdminDashboard({ onExit }) {
       name: shop.name || "", phone: shop.phone || "", password: shop.password || "", pincode: shop.pincode || "",
       ownerName: shop.ownerName || "", fullAddress: shop.fullAddress || "", operatingHours: shop.operatingHours || "", 
       shopImage: shop.shopImage || "", fssai: shop.fssai || "", gst: shop.gst || "", panNumber: shop.panNumber || "", 
-      inventoryMode: shop.inventoryMode || "manual"
+      inventoryMode: shop.inventoryMode || "manual", canAddMasterProducts: shop.canAddMasterProducts || false
     });
     setEditingShopId(shop._id);
     window.scrollTo({ top: 0, behavior: 'smooth' });

@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
 import { useToast, useConfirm, usePrompt } from '../../ui/DialogProvider.jsx';
 import { cdnImage } from '../../utils/cloudinaryUrl.js';
+import { shopFetch } from '../../utils/api.js';
 
 const BASE_URL = (import.meta.env.VITE_API_BASE || "https://darkslategrey-snail-415133.hostingersite.com");
 
-export default function InventoryTab({ shopData, masterCatalog, handleInventoryUpdate, onInventoryRefresh }) {
+export default function InventoryTab({ shopData, masterCatalog, handleInventoryUpdate, onInventoryRefresh, fetchMasterCatalog }) {
   const toast = useToast();
   const confirmDialog = useConfirm();
   const askForValue = usePrompt();
@@ -19,6 +20,41 @@ export default function InventoryTab({ shopData, masterCatalog, handleInventoryU
 
   // 🚀 STATE FOR BULK IMPORT
   const [isImporting, setIsImporting] = useState(false);
+
+  // 📝 STATE FOR CUSTOM PRODUCT
+  const CATEGORIES = ["Dairy, Bread & Eggs", "Fruits & Veg", "Atta, Rice & Dal", "Chips & Namkeen", "Drinks & Juices", "Sweets & Chocolates", "Ice Creams", "Instant Food", "Bath & Body", "Health & Pharma"];
+  const initialProductForm = { name: "", brand: "", category: "", mrp: "", qnty: "", emoji: "", image: "" };
+  const [newProductForm, setNewProductForm] = useState(initialProductForm);
+  const [isCreatingProduct, setIsCreatingProduct] = useState(false);
+
+  const handleCreateMasterProduct = async (e) => {
+    e.preventDefault();
+    try {
+      const res = await shopFetch(shopData, `/master-products`, {
+        method: "POST",
+        body: JSON.stringify(newProductForm),
+      });
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        return toast(errData.error || "Failed to create custom product", 'error');
+      }
+      
+      const createdProduct = await res.json();
+      toast("Custom product added to Master Catalog and your Store!");
+      setNewProductForm(initialProductForm);
+      setIsCreatingProduct(false);
+
+      if (fetchMasterCatalog) await fetchMasterCatalog();
+      
+      // Auto-add to inventory
+      if (createdProduct && createdProduct._id) {
+        await handleInventoryUpdate(createdProduct._id, createdProduct.mrp, true);
+      }
+    } catch (err) {
+      console.error(err);
+      toast("Failed to save custom product.", 'error');
+    }
+  };
 
   // 🛡️ SAFETY NETS
   const safeInventory = shopData?.inventory || [];
@@ -104,6 +140,43 @@ export default function InventoryTab({ shopData, masterCatalog, handleInventoryU
           {filteredInventory.length} Items Live
         </div>
       </div>
+
+      {/* ========================================= */}
+      {/* 🛠️ CREATE CUSTOM PRODUCT SECTION            */}
+      {/* ========================================= */}
+      {shopData?.canAddMasterProducts && (
+        <div style={{ marginBottom: '25px', padding: '15px', backgroundColor: '#fdf4ff', borderRadius: '16px', border: '1px solid #f5d0fe' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
+            <h4 style={{ margin: 0, color: '#a21caf', fontSize: '1.1rem', fontWeight: '800' }}>✨ Create Custom Product</h4>
+            <button 
+              onClick={() => setIsCreatingProduct(!isCreatingProduct)}
+              style={{ backgroundColor: '#a21caf', color: '#fff', padding: '6px 12px', borderRadius: '8px', border: 'none', fontWeight: '800', cursor: 'pointer' }}
+            >
+              {isCreatingProduct ? "Cancel" : "+ New Product"}
+            </button>
+          </div>
+
+          {isCreatingProduct && (
+            <form onSubmit={handleCreateMasterProduct} style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: '10px' }}>
+                <input required type="text" placeholder="Name (e.g. Local Bread)" value={newProductForm.name} onChange={e => setNewProductForm({...newProductForm, name: e.target.value})} style={searchInputStyle} />
+                <input required type="text" placeholder="Brand" value={newProductForm.brand} onChange={e => setNewProductForm({...newProductForm, brand: e.target.value})} style={searchInputStyle} />
+                <select required value={newProductForm.category} onChange={e => setNewProductForm({...newProductForm, category: e.target.value})} style={searchInputStyle}>
+                  <option value="">Select Category</option>
+                  {CATEGORIES.map(cat => <option key={cat} value={cat}>{cat}</option>)}
+                </select>
+                <input required type="number" placeholder="MRP (₹)" value={newProductForm.mrp} onChange={e => setNewProductForm({...newProductForm, mrp: e.target.value})} style={searchInputStyle} />
+                <input required type="text" placeholder="Quantity (e.g. 1 unit)" value={newProductForm.qnty} onChange={e => setNewProductForm({...newProductForm, qnty: e.target.value})} style={searchInputStyle} />
+                <input type="text" placeholder="Emoji (e.g. 🍞)" value={newProductForm.emoji} onChange={e => setNewProductForm({...newProductForm, emoji: e.target.value})} style={searchInputStyle} />
+                <input type="text" placeholder="Image URL (Optional)" value={newProductForm.image} onChange={e => setNewProductForm({...newProductForm, image: e.target.value})} style={searchInputStyle} />
+              </div>
+              <button type="submit" style={{ padding: '12px', backgroundColor: '#a21caf', color: 'white', border: 'none', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer', marginTop: '5px' }}>
+                Save & Auto-Add to Store
+              </button>
+            </form>
+          )}
+        </div>
+      )}
 
       {/* ========================================= */}
       {/* 🚀 ADD NEW PRODUCTS SECTION               */}
