@@ -26,6 +26,36 @@ export default function InventoryTab({ shopData, masterCatalog, handleInventoryU
   const initialProductForm = { name: "", brand: "", category: "", mrp: "", qnty: "", emoji: "", image: "" };
   const [newProductForm, setNewProductForm] = useState(initialProductForm);
   const [isCreatingProduct, setIsCreatingProduct] = useState(false);
+  const [isUploadingImage, setIsUploadingImage] = useState(false);
+
+  const handleImageUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setIsUploadingImage(true);
+    
+    const formData = new FormData();
+    formData.append("image", file);
+    
+    try {
+      const res = await shopFetch(shopData, "/master-products/upload-image", {
+        method: "POST",
+        body: formData
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.error || "Upload failed");
+      }
+      const data = await res.json();
+      setNewProductForm(prev => ({ ...prev, image: data.url }));
+      toast("Image uploaded successfully!");
+    } catch (err) {
+      console.error(err);
+      toast(err.message, "error");
+    } finally {
+      setIsUploadingImage(false);
+      e.target.value = null;
+    }
+  };
 
   const handleCreateMasterProduct = async (e) => {
     e.preventDefault();
@@ -168,7 +198,13 @@ export default function InventoryTab({ shopData, masterCatalog, handleInventoryU
                 <input required type="number" placeholder="MRP (₹)" value={newProductForm.mrp} onChange={e => setNewProductForm({...newProductForm, mrp: e.target.value})} style={searchInputStyle} />
                 <input required type="text" placeholder="Quantity (e.g. 1 unit)" value={newProductForm.qnty} onChange={e => setNewProductForm({...newProductForm, qnty: e.target.value})} style={searchInputStyle} />
                 <input type="text" placeholder="Emoji (e.g. 🍞)" value={newProductForm.emoji} onChange={e => setNewProductForm({...newProductForm, emoji: e.target.value})} style={searchInputStyle} />
-                <input type="text" placeholder="Image URL (Optional)" value={newProductForm.image} onChange={e => setNewProductForm({...newProductForm, image: e.target.value})} style={searchInputStyle} />
+                <div style={{ display: 'flex', gap: '5px', alignItems: 'center' }}>
+                  <input type="text" placeholder="Image URL (Optional)" value={newProductForm.image} onChange={e => setNewProductForm({...newProductForm, image: e.target.value})} style={{ ...searchInputStyle, flex: 1, marginBottom: 0 }} />
+                  <label style={{ cursor: isUploadingImage ? 'wait' : 'pointer', padding: '12px 10px', backgroundColor: '#e879f9', color: 'white', borderRadius: '8px', fontSize: '0.8rem', fontWeight: 'bold', whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', height: '100%' }}>
+                    {isUploadingImage ? '⏳' : '📁 Upload'}
+                    <input type="file" accept="image/*" onChange={handleImageUpload} style={{ display: 'none' }} disabled={isUploadingImage} />
+                  </label>
+                </div>
               </div>
               <button type="submit" style={{ padding: '12px', backgroundColor: '#a21caf', color: 'white', border: 'none', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer', marginTop: '5px' }}>
                 Save & Auto-Add to Store
