@@ -43,14 +43,6 @@ export default function ShopsTab({ shops, shopForm, setShopForm, handleShopSubmi
             <option value="manual">Inventory Mode: Manual Toggle (In/Out of Stock)</option>
             <option value="stock_count">Inventory Mode: Strict Number Counting (SaaS Mode)</option>
           </select>
-          <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.9rem', color: '#334155' }}>
-            <input 
-              type="checkbox" 
-              checked={!!shopForm.canCreateCustomProducts} 
-              onChange={e => setShopForm({...shopForm, canCreateCustomProducts: e.target.checked})} 
-            />
-            Allow Custom Product Uploads
-          </label>
         </div>
 
         <button type="submit" style={{ width: '100%', padding: '15px', marginTop: '15px', backgroundColor: editingShopId ? '#3b82f6' : '#10b981', color: 'white', border: 'none', borderRadius: '8px', fontWeight: 'bold', fontSize: '1.1rem', cursor: 'pointer' }}>

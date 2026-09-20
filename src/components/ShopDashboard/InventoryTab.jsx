@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { useToast, useConfirm, usePrompt } from '../../ui/DialogProvider.jsx';
 import { cdnImage } from '../../utils/cloudinaryUrl.js';
-import { shopFetch } from '../../utils/api.js';
 
 const BASE_URL = (import.meta.env.VITE_API_BASE || "https://darkslategrey-snail-415133.hostingersite.com");
 
@@ -20,8 +19,6 @@ export default function InventoryTab({ shopData, masterCatalog, handleInventoryU
 
   // 🚀 STATE FOR BULK IMPORT
   const [isImporting, setIsImporting] = useState(false);
-  const [showCustomModal, setShowCustomModal] = useState(false);
-  const [customProduct, setCustomProduct] = useState({ name: '', category: 'Groceries', mrp: '', sellingPrice: '' });
 
   // 🛡️ SAFETY NETS
   const safeInventory = shopData?.inventory || [];
@@ -99,32 +96,6 @@ export default function InventoryTab({ shopData, masterCatalog, handleInventoryU
     }
   };
 
-  const handleCreateCustomProduct = async () => {
-    if (!customProduct.name || !customProduct.mrp || !customProduct.sellingPrice) {
-      toast("Please fill all required fields", "warn");
-      return;
-    }
-    const shopId = shopData?._id;
-    try {
-      const response = await shopFetch(`/shops/${shopId}/custom-products`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(customProduct)
-      });
-      if (response.ok) {
-        toast("Custom product added successfully!");
-        setShowCustomModal(false);
-        setCustomProduct({ name: '', category: 'Groceries', mrp: '', sellingPrice: '' });
-        if (onInventoryRefresh) await onInventoryRefresh();
-      } else {
-        const err = await response.json();
-        toast(err.error || 'Failed to create product', 'error');
-      }
-    } catch (err) {
-      toast("Network error. Could not reach server.", 'error');
-    }
-  };
-
   return (
     <div style={{ paddingBottom: '30px', fontFamily: 'system-ui, -apple-system, sans-serif' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
@@ -142,49 +113,26 @@ export default function InventoryTab({ shopData, masterCatalog, handleInventoryU
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
           <h4 style={{ margin: 0, color: '#0369a1', fontSize: '1.1rem', fontWeight: '800' }}>➕ Add New Products</h4>
           
-          <div style={{ display: 'flex', gap: '10px' }}>
-            {shopData?.canCreateCustomProducts && (
-              <button 
-                onClick={() => setShowCustomModal(true)}
-                style={{ 
-                  backgroundColor: '#10b981', 
-                  color: '#fff', 
-                  padding: '8px 12px', 
-                  borderRadius: '8px', 
-                  fontWeight: '800', 
-                  fontSize: '0.8rem',
-                  border: 'none', 
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  boxShadow: '0 4px 10px rgba(0,0,0,0.1)'
-                }}
-              >
-                🛠️ Custom Product
-              </button>
-            )}
-            
-            {/* ⚡ THE BULK IMPORT BUTTON ⚡ */}
-            <button 
-              onClick={handleBulkImport} 
-              disabled={isImporting}
-              style={{ 
-                backgroundColor: '#0f172a', 
-                color: '#fff', 
-                padding: '8px 12px', 
-                borderRadius: '8px', 
-                fontWeight: '800', 
-                fontSize: '0.8rem',
-                border: 'none', 
-                cursor: isImporting ? 'wait' : 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                boxShadow: '0 4px 10px rgba(0,0,0,0.1)'
-              }}
-            >
-              {isImporting ? '⏳ Importing...' : '⚡ Bulk Import Catalog'}
-            </button>
-          </div>
+          {/* ⚡ THE BULK IMPORT BUTTON ⚡ */}
+          <button 
+            onClick={handleBulkImport} 
+            disabled={isImporting}
+            style={{ 
+              backgroundColor: '#0f172a', 
+              color: '#fff', 
+              padding: '8px 12px', 
+              borderRadius: '8px', 
+              fontWeight: '800', 
+              fontSize: '0.8rem',
+              border: 'none', 
+              cursor: isImporting ? 'wait' : 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              boxShadow: '0 4px 10px rgba(0,0,0,0.1)'
+            }}
+          >
+            {isImporting ? '⏳ Importing...' : '⚡ Bulk Import Catalog'}
+          </button>
         </div>
         
         {/* Search Master Catalog */}
@@ -321,32 +269,6 @@ export default function InventoryTab({ shopData, masterCatalog, handleInventoryU
               </div>
             );
           })}
-        </div>
-      )}
-
-      {/* ========================================= */}
-      {/* 🛠️ CUSTOM PRODUCT MODAL                   */}
-      {/* ========================================= */}
-      {showCustomModal && (
-        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
-          <div style={{ backgroundColor: 'white', padding: '20px', borderRadius: '16px', width: '90%', maxWidth: '400px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
-            <h3 style={{ margin: '0 0 10px 0', color: '#0f172a' }}>🛠️ Create Custom Product</h3>
-            <input placeholder="Product Name (e.g., Local Bread)" style={searchInputStyle} value={customProduct.name} onChange={e => setCustomProduct({...customProduct, name: e.target.value})} />
-            <select style={searchInputStyle} value={customProduct.category} onChange={e => setCustomProduct({...customProduct, category: e.target.value})}>
-              <option value="Groceries">Groceries</option>
-              <option value="Snacks">Snacks</option>
-              <option value="Dairy">Dairy</option>
-              <option value="Vegetables">Vegetables</option>
-              <option value="Beverages">Beverages</option>
-              <option value="Personal Care">Personal Care</option>
-            </select>
-            <input placeholder="M.R.P. (₹)" type="number" style={searchInputStyle} value={customProduct.mrp} onChange={e => setCustomProduct({...customProduct, mrp: e.target.value})} />
-            <input placeholder="Your Selling Price (₹)" type="number" style={searchInputStyle} value={customProduct.sellingPrice} onChange={e => setCustomProduct({...customProduct, sellingPrice: e.target.value})} />
-            <div style={{ display: 'flex', gap: '10px', marginTop: '10px' }}>
-              <button onClick={() => setShowCustomModal(false)} style={{ flex: 1, padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', backgroundColor: '#f8fafc', fontWeight: 'bold', cursor: 'pointer' }}>Cancel</button>
-              <button onClick={handleCreateCustomProduct} style={{ flex: 1, padding: '10px', borderRadius: '8px', border: 'none', backgroundColor: '#0284c7', color: 'white', fontWeight: 'bold', cursor: 'pointer' }}>Create & Add</button>
-            </div>
-          </div>
         </div>
       )}
     </div>
