@@ -57,6 +57,7 @@ export default function ShopsTab({ shops, shopForm, setShopForm, handleShopSubmi
           <div key={shop._id} style={{ backgroundColor: 'white', padding: '15px', borderRadius: '10px', boxShadow: '0 2px 4px rgba(0,0,0,0.05)', border: '1px solid #e2e8f0', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
             <div>
               <strong style={{ fontSize: '1.1rem', color: '#0f172a' }}>{shop.name}</strong>
+              <div style={{ fontSize: '0.75rem', color: '#94a3b8', marginTop: '2px', fontFamily: 'monospace' }}>ID: {shop._id}</div>
               <div style={{ fontSize: '0.85rem', color: '#64748b', marginTop: '4px' }}>📍 {shop.pincode} | 📞 {shop.phone}</div>
               <div style={{ margin: '10px 0', padding: '8px', backgroundColor: '#f8fafc', borderRadius: '6px', fontSize: '0.8rem', color: '#475569' }}>
                 <div><strong>FSSAI:</strong> {shop.fssai || 'Not Provided'}</div>
