@@ -182,7 +182,8 @@ export default function UserAuth({ onLoginSuccess }) {
         // Also sign into the local JS Firebase SDK so the rest of the app works identically
         if (idToken) {
            const credential = GoogleAuthProvider.credential(idToken);
-           await signInWithCredential(auth, credential);
+           const userCred = await signInWithCredential(auth, credential);
+           idToken = await userCred.user.getIdToken(); // Override with Firebase token
         }
       } else {
         // Web: Use standard browser popup
