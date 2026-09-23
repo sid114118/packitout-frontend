@@ -4,6 +4,7 @@ import PickupTimePicker from './PickupTimePicker.jsx';
 import PhoneCollectModal from './PhoneCollectModal.jsx';
 import useScrollToTop from './useScrollToTop';
 import { cdnImage } from './utils/cloudinaryUrl.js';
+import { trackEvent } from './utils/analyticsEngine.js';
 
 const BASE_URL = (import.meta.env.VITE_API_BASE || "https://darkslategrey-snail-415133.hostingersite.com");
 
@@ -26,6 +27,7 @@ export default function Cart({ cart, setCart, user, onUserUpdate, onBack, onChec
       setShowPhoneModal(true);
       return;
     }
+    trackEvent('BEGIN_CHECKOUT', { cartValue: finalBill, itemsCount: cart.length });
     setStep('pickup');
   };
 

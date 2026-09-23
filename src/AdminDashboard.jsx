@@ -10,6 +10,7 @@ import AdminParchiManager from './components/AdminDashboard/AdminParchiManager';
 import ComplaintsTab from './components/AdminDashboard/ComplaintsTab';
 import MissedSearchesTab from './components/AdminDashboard/MissedSearchesTab';
 import BrandRankingTab from './components/AdminDashboard/BrandRankingTab';
+import AnalyticsTab from './components/AdminDashboard/AnalyticsTab';
 
 export default function AdminDashboard({ onExit }) {
   const toast = useToast();
@@ -244,6 +245,7 @@ export default function AdminDashboard({ onExit }) {
           <button onClick={() => setActiveTab("complaints")} style={tabButtonStyle(activeTab === "complaints")}>📣 Complaints</button>
           <button onClick={() => setActiveTab("missed")} style={tabButtonStyle(activeTab === "missed")}>🔎 Missed Searches</button>
           <button onClick={() => setActiveTab("ranking")} style={tabButtonStyle(activeTab === "ranking")}>🎯 Ranking</button>
+          <button onClick={() => setActiveTab("analytics")} style={tabButtonStyle(activeTab === "analytics")}>📈 Analytics</button>
         </div>
       </nav>
 
@@ -269,6 +271,8 @@ export default function AdminDashboard({ onExit }) {
             {activeTab === "missed" && <MissedSearchesTab />}
 
             {activeTab === "ranking" && <BrandRankingTab />}
+            
+            {activeTab === "analytics" && <AnalyticsTab />}
           </>
         )}
       </div>

@@ -1,6 +1,8 @@
 import React, { memo } from 'react';
 import { createPortal } from 'react-dom';
 import { cdnImage } from '../utils/cloudinaryUrl.js';
+import ImpressionTracker from '../components/ui/ImpressionTracker.jsx';
+import { trackEvent } from '../utils/analyticsEngine.js';
 
 // 📋 1. FIXED VARIANT SELECTION SHEET (Premium Native Redesign)
 export function VariantBottomSheet({ product, onClose, onAddToCart }) {
@@ -91,7 +93,10 @@ const ModernProductCardBase = ({ item, isCarousel, shopClosed, onOpenDetails, on
 
   return (
     <div 
-      onClick={() => onOpenDetails(item)} 
+      onClick={() => {
+        trackEvent('PRODUCT_CLICKED', { productId: item._id, productName: item.name });
+        onOpenDetails(item);
+      }} 
       style={{ 
         minWidth: isCarousel ? '145px' : 'auto', 
         maxWidth: isCarousel ? '155px' : 'auto', 
@@ -146,13 +151,13 @@ const ModernProductCardBase = ({ item, isCarousel, shopClosed, onOpenDetails, on
             {!isOutOfStock && !shopClosed && (
               cartCount > 0 ? (
                 <div style={{ display: 'flex', alignItems: 'center', backgroundColor: '#ef4444', borderRadius: '8px', height: '32px', width: '70px', boxShadow: '0 4px 10px rgba(239, 68, 68, 0.25)' }}>
-                  <button onClick={() => onRemoveFromCart(item)} style={{ flex: 1, height: '100%', border: 'none', background: 'transparent', color: '#fff', fontSize: '1.2rem', fontWeight: 'bold', cursor: 'pointer' }}>−</button>
+                  <button onClick={() => { trackEvent('REMOVE_FROM_CART', { productId: item._id }); onRemoveFromCart(item); }} style={{ flex: 1, height: '100%', border: 'none', background: 'transparent', color: '#fff', fontSize: '1.2rem', fontWeight: 'bold', cursor: 'pointer' }}>−</button>
                   <span style={{ color: '#fff', fontSize: '0.85rem', fontWeight: '800', minWidth: '16px', textAlign: 'center' }}>{cartCount}</span>
-                  <button onClick={() => onQuickAdd(item)} style={{ flex: 1, height: '100%', border: 'none', background: 'transparent', color: '#fff', fontSize: '1.2rem', fontWeight: 'bold', cursor: 'pointer' }}>+</button>
+                  <button onClick={() => { trackEvent('ADD_TO_CART', { productId: item._id }); onQuickAdd(item); }} style={{ flex: 1, height: '100%', border: 'none', background: 'transparent', color: '#fff', fontSize: '1.2rem', fontWeight: 'bold', cursor: 'pointer' }}>+</button>
                 </div>
               ) : (
                 <button 
-                  onClick={() => onQuickAdd(item)} 
+                  onClick={() => { trackEvent('ADD_TO_CART', { productId: item._id }); onQuickAdd(item); }} 
                   style={{ backgroundColor: '#fff', color: '#ef4444', border: '1px solid #fca5a5', borderRadius: '8px', padding: '6px 12px', fontSize: '0.75rem', fontWeight: '800', cursor: 'pointer', boxShadow: '0 2px 4px rgba(0,0,0,0.04)', textTransform: 'uppercase' }}
                 >
                   {isMultiVariant ? "SELECT" : "ADD"}
@@ -217,17 +222,18 @@ export function ProductRow({ title, subtitle, items, onViewAll, shopClosed, onOp
       
       <div className="premium-hide-scroll" style={{ display: 'flex', overflowX: 'auto', gap: '16px', padding: '0 16px 10px 16px', scrollSnapType: 'x mandatory' }}>
         {flattenedItems.map((item, index) => (
-          <ModernProductCard
-            key={`${item._id}-${index}`}
-            item={item}
-            isCarousel={true}
-            shopClosed={shopClosed}
-            onOpenDetails={onOpenDetails}
-            onQuickAdd={onQuickAdd}
-            cart={cart}
-            onRemoveFromCart={onRemoveFromCart}
-            hideBrandPrefix={hideBrandPrefix}
-          />
+          <ImpressionTracker key={`${item._id}-${index}`} product={item} listPosition={index} category={title}>
+            <ModernProductCard
+              item={item}
+              isCarousel={true}
+              shopClosed={shopClosed}
+              onOpenDetails={onOpenDetails}
+              onQuickAdd={onQuickAdd}
+              cart={cart}
+              onRemoveFromCart={onRemoveFromCart}
+              hideBrandPrefix={hideBrandPrefix}
+            />
+          </ImpressionTracker>
         ))}
       </div>
     </div>

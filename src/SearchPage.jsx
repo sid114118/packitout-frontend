@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import { ModernProductCard } from './ProductFeed/FeedComponents.jsx';
 import { useRankingConfig } from './ui/RankingProvider.jsx';
 import { applyBrandPriority } from './utils/rankingSort.js';
+import { trackEvent } from './utils/analyticsEngine.js';
 
 const BASE_URL = (import.meta.env.VITE_API_BASE || "https://darkslategrey-snail-415133.hostingersite.com");
 
@@ -148,10 +149,20 @@ export default function SearchPage({
   useEffect(() => {
     const term = debouncedQuery.trim().toLowerCase();
     if (term.length < 3) return;
-    if (displayItems.length > 0) return;
+
+    if (displayItems.length > 0) {
+       if (!loggedMissedTermsRef.current.has(term + '_hit')) {
+         loggedMissedTermsRef.current.add(term + '_hit');
+         trackEvent('SEARCH_QUERY', { query: term, resultsCount: displayItems.length });
+       }
+       return;
+    }
+
     // We only log if the user actually settled on this term (debounced).
     if (loggedMissedTermsRef.current.has(term)) return;
     loggedMissedTermsRef.current.add(term);
+
+    trackEvent('ZERO_RESULT_SEARCH', { query: term });
 
     let cancelled = false;
     const savedUser = (() => {

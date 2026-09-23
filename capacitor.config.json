@@ -1,6 +1,6 @@
 {
-  "appId": "com.packitout.app",
-  "appName": "PackItShop",
+  "appId": "com.packitout.partner",
+  "appName": "PackItOut Partner",
   "webDir": "dist",
   "plugins": {
     "FirebaseAuthentication": {

@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, lazy, Suspense } from 'react';
 import { useToast, useConfirm } from './ui/DialogProvider.jsx';
 import { userFetch, clearAdminToken } from './utils/api.js';
+import { initAnalytics } from './utils/analyticsEngine.js';
 
 // Eagerly imported: rendered on the customer's first paint.
 import Header from './Header.jsx';
@@ -108,7 +109,8 @@ class CrashCatcher extends React.Component {
 export default function App() {
   const toast = useToast();
   const confirm = useConfirm();
-  const [currentView, setCurrentView] = useState("customer");
+  const isShopApp = import.meta.env.VITE_APP_MODE === "shop";
+  const [currentView, setCurrentView] = useState(isShopApp ? "shop" : "customer");
   const [isAdminAuthenticated, setIsAdminAuthenticated] = useState(false);
   const [isShopAuthenticated, setIsShopAuthenticated] = useState(null);
   const [viewingShop, setViewingShop] = useState(null);
@@ -220,6 +222,9 @@ export default function App() {
   const previousUserIdRef = useRef(loggedInUser?._id || null);
   useEffect(() => {
     const nextId = loggedInUser?._id || null;
+
+    initAnalytics(loggedInUser);
+
     if (nextId === previousUserIdRef.current) return;
     previousUserIdRef.current = nextId;
     setCart(loadCartFor(nextId));
@@ -249,7 +254,7 @@ export default function App() {
       else if (window.location.hash === "#nearby") setCurrentView("nearby");
       else if (window.location.hash === "#/verify-done" || window.location.hash === "#verify-done") setCurrentView("verify-done");
       else {
-        setCurrentView("customer");
+        setCurrentView(isShopApp ? "shop" : "customer");
         setSelectedCategory(null);
         setSelectedBrand(null); // 🛡️ Clears brand view on navigation change
         setIsSearchOpen(false);
