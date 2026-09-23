@@ -23,14 +23,7 @@ export default function ImpressionTracker({ product, category, listPosition, chi
           // Element just came into view. Start a 1 second timer.
           // We don't want to track items the user just scrolled past really fast.
           timerRef.current = setTimeout(() => {
-            trackEvent('PRODUCT_VIEWED', {
-              productId: product._id,
-              productName: product.name,
-              category: category || product.category,
-              mrp: product.mrp,
-              sellingPrice: product.sellingPrice,
-              positionInList: listPosition
-            });
+            // trackEvent('PRODUCT_VIEWED', { ... }); // Disabled to save PostHog data quota
             setHasFired(true); // Ensure it only fires once
           }, 1000); 
         } else {

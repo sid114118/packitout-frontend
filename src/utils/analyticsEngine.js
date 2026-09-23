@@ -48,7 +48,7 @@ export const trackEvent = (eventName, properties = {}) => {
   } catch(e) {}
   
   try {
-    const shop = JSON.parse(localStorage.getItem('packitout_shop'));
+    const shop = JSON.parse(localStorage.getItem('packitout_shop')) || JSON.parse(localStorage.getItem('packitout_active_shop'));
     shopId = shop?._id;
     shopName = shop?.name;
     shopPincode = shop?.pincode;
