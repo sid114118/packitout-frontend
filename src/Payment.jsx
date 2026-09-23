@@ -103,7 +103,15 @@ export default function Payment({ user, cart, targetShop, finalBill, useCoins, c
     setStatus('⏳ Placing order…');
     try {
       await placeOrder('POP');
-      trackEvent('PURCHASE_COMPLETED', { method: 'POP', amount: safeFinalBill, itemsCount: cart.length });
+      trackEvent('PURCHASE_COMPLETED', { 
+        method: 'POP', 
+        amount: safeFinalBill, 
+        itemsCount: cart.length,
+        products: cart.filter(i=>i).map(i => i.name),
+        shopName: targetShop?.name,
+        shopPincode: targetShop?.pincode,
+        customerPincode: user?.pincode
+      });
       setStatus('✅ Order Placed Successfully!');
       setTimeout(() => onCheckoutSuccess(), 1200);
     } catch (err) {
@@ -136,7 +144,15 @@ export default function Payment({ user, cart, targetShop, finalBill, useCoins, c
     setStatus('⏳ Placing order…');
     try {
       await placeOrder('UPI');
-      trackEvent('PURCHASE_COMPLETED', { method: 'UPI', amount: safeFinalBill, itemsCount: cart.length });
+      trackEvent('PURCHASE_COMPLETED', { 
+        method: 'UPI', 
+        amount: safeFinalBill, 
+        itemsCount: cart.length,
+        products: cart.filter(i=>i).map(i => i.name),
+        shopName: targetShop?.name,
+        shopPincode: targetShop?.pincode,
+        customerPincode: user?.pincode
+      });
       setStatus('✅ Order placed — the shop will confirm your UPI payment shortly.');
       setTimeout(() => onCheckoutSuccess(), 1500);
     } catch (err) {
