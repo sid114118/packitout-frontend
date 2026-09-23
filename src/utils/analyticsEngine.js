@@ -14,6 +14,7 @@ export const initAnalytics = (user) => {
   try {
     posthog.init(POSTHOG_KEY, {
       api_host: POSTHOG_HOST,
+      capture_pageleave: false, // 🔋 PERFORMANCE: Disabled to save quota
       // Respect user's offline state (caches events in localStorage)
       persistence: 'localStorage+cookie', 
       loaded: (ph) => {
@@ -30,13 +31,16 @@ export const initAnalytics = (user) => {
 export const identifyUser = (user) => {
   if (!user) return;
   
-  // Link the user's ID to their session
+  // Disabled to save data quota and reduce clutter in the PostHog live feed.
+  // We already inject customerPincode manually into all events anyway.
+  /*
   posthog.identify(user._id, {
     name: user.name,
     phone: user.phone,
     pincode: user.pincode,
     role: user.role // Admin, Shop, User
   });
+  */
 };
 
 export const trackEvent = (eventName, properties = {}) => {
