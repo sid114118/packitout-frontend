@@ -1,6 +1,7 @@
 import React, { useRef, useState } from 'react';
 import useScrollToTop from './useScrollToTop';
 import { userFetch } from './utils/api';
+import { trackEvent } from './utils/analyticsEngine.js';
 
 // Payment flow (post-Razorpay refactor):
 //   'UPI' — customer transfers directly to the shop's UPI ID. We open a
@@ -102,6 +103,7 @@ export default function Payment({ user, cart, targetShop, finalBill, useCoins, c
     setStatus('⏳ Placing order…');
     try {
       await placeOrder('POP');
+      trackEvent('PURCHASE_COMPLETED', { method: 'POP', amount: safeFinalBill, itemsCount: cart.length });
       setStatus('✅ Order Placed Successfully!');
       setTimeout(() => onCheckoutSuccess(), 1200);
     } catch (err) {
@@ -134,6 +136,7 @@ export default function Payment({ user, cart, targetShop, finalBill, useCoins, c
     setStatus('⏳ Placing order…');
     try {
       await placeOrder('UPI');
+      trackEvent('PURCHASE_COMPLETED', { method: 'UPI', amount: safeFinalBill, itemsCount: cart.length });
       setStatus('✅ Order placed — the shop will confirm your UPI payment shortly.');
       setTimeout(() => onCheckoutSuccess(), 1500);
     } catch (err) {

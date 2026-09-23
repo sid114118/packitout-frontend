@@ -5,20 +5,18 @@ import posthog from 'posthog-js';
 const POSTHOG_KEY = import.meta.env.VITE_POSTHOG_KEY || 'phc_dummy_key_replace_me';
 const POSTHOG_HOST = import.meta.env.VITE_POSTHOG_HOST || 'https://app.posthog.com';
 
-let isInitialized = false;
+let hasCalledInit = false;
 
 export const initAnalytics = (user) => {
-  if (isInitialized) return;
+  if (hasCalledInit) return;
+  hasCalledInit = true;
 
   try {
     posthog.init(POSTHOG_KEY, {
       api_host: POSTHOG_HOST,
-      // 🔋 PERFORMANCE: Batch events to save battery and network requests
-      batch_requests: true, 
       // Respect user's offline state (caches events in localStorage)
       persistence: 'localStorage+cookie', 
       loaded: (ph) => {
-        isInitialized = true;
         if (user) {
           identifyUser(user);
         }
@@ -30,7 +28,7 @@ export const initAnalytics = (user) => {
 };
 
 export const identifyUser = (user) => {
-  if (!isInitialized || !user) return;
+  if (!user) return;
   
   // Link the user's ID to their session
   posthog.identify(user._id, {
@@ -42,8 +40,6 @@ export const identifyUser = (user) => {
 };
 
 export const trackEvent = (eventName, properties = {}) => {
-  if (!isInitialized) return;
-
   // We automatically attach the timestamp and let PostHog handle the rest
   posthog.capture(eventName, properties);
 };
@@ -51,8 +47,6 @@ export const trackEvent = (eventName, properties = {}) => {
 // Advanced: Try to get precise GPS coordinates for heatmaps, but fail silently
 // so we don't annoy the user if they denied permissions.
 export const trackEventWithLocation = (eventName, properties = {}) => {
-  if (!isInitialized) return;
-
   if ('geolocation' in navigator) {
     navigator.geolocation.getCurrentPosition(
       (position) => {
