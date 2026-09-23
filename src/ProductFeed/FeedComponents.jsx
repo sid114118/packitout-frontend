@@ -91,10 +91,19 @@ const ModernProductCardBase = ({ item, isCarousel, shopClosed, onOpenDetails, on
     ? `${safeBrand} ${safeName}`
     : safeName;
 
+  const getEventPayload = () => ({
+    productId: item._id,
+    productName: item.name,
+    brand: item.brand,
+    category: item.category,
+    price: item.sellingPrice || item.mrp,
+    isOutOfStock: isOutOfStock
+  });
+
   return (
     <div 
       onClick={() => {
-        trackEvent('PRODUCT_CLICKED', { productId: item._id, productName: item.name });
+        trackEvent('PRODUCT_CLICKED', getEventPayload());
         onOpenDetails(item);
       }} 
       style={{ 
@@ -151,13 +160,13 @@ const ModernProductCardBase = ({ item, isCarousel, shopClosed, onOpenDetails, on
             {!isOutOfStock && !shopClosed && (
               cartCount > 0 ? (
                 <div style={{ display: 'flex', alignItems: 'center', backgroundColor: '#ef4444', borderRadius: '8px', height: '32px', width: '70px', boxShadow: '0 4px 10px rgba(239, 68, 68, 0.25)' }}>
-                  <button onClick={() => { trackEvent('REMOVE_FROM_CART', { productId: item._id }); onRemoveFromCart(item); }} style={{ flex: 1, height: '100%', border: 'none', background: 'transparent', color: '#fff', fontSize: '1.2rem', fontWeight: 'bold', cursor: 'pointer' }}>−</button>
+                  <button onClick={() => { trackEvent('REMOVE_FROM_CART', getEventPayload()); onRemoveFromCart(item); }} style={{ flex: 1, height: '100%', border: 'none', background: 'transparent', color: '#fff', fontSize: '1.2rem', fontWeight: 'bold', cursor: 'pointer' }}>−</button>
                   <span style={{ color: '#fff', fontSize: '0.85rem', fontWeight: '800', minWidth: '16px', textAlign: 'center' }}>{cartCount}</span>
-                  <button onClick={() => { trackEvent('ADD_TO_CART', { productId: item._id }); onQuickAdd(item); }} style={{ flex: 1, height: '100%', border: 'none', background: 'transparent', color: '#fff', fontSize: '1.2rem', fontWeight: 'bold', cursor: 'pointer' }}>+</button>
+                  <button onClick={() => { trackEvent('ADD_TO_CART', getEventPayload()); onQuickAdd(item); }} style={{ flex: 1, height: '100%', border: 'none', background: 'transparent', color: '#fff', fontSize: '1.2rem', fontWeight: 'bold', cursor: 'pointer' }}>+</button>
                 </div>
               ) : (
                 <button 
-                  onClick={() => { trackEvent('ADD_TO_CART', { productId: item._id }); onQuickAdd(item); }} 
+                  onClick={() => { trackEvent('ADD_TO_CART', getEventPayload()); onQuickAdd(item); }} 
                   style={{ backgroundColor: '#fff', color: '#ef4444', border: '1px solid #fca5a5', borderRadius: '8px', padding: '6px 12px', fontSize: '0.75rem', fontWeight: '800', cursor: 'pointer', boxShadow: '0 2px 4px rgba(0,0,0,0.04)', textTransform: 'uppercase' }}
                 >
                   {isMultiVariant ? "SELECT" : "ADD"}

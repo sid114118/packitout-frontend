@@ -40,8 +40,28 @@ export const identifyUser = (user) => {
 };
 
 export const trackEvent = (eventName, properties = {}) => {
+  // Automatically inject global context (User Location & Shop Data)
+  let customerPincode, shopId, shopName, shopPincode;
+  try {
+    const user = JSON.parse(localStorage.getItem('packitout_user'));
+    customerPincode = user?.pincode;
+  } catch(e) {}
+  
+  try {
+    const shop = JSON.parse(localStorage.getItem('packitout_shop'));
+    shopId = shop?._id;
+    shopName = shop?.name;
+    shopPincode = shop?.pincode;
+  } catch(e) {}
+
   // We automatically attach the timestamp and let PostHog handle the rest
-  posthog.capture(eventName, properties);
+  posthog.capture(eventName, {
+    customerPincode,
+    shopId,
+    shopName,
+    shopPincode,
+    ...properties
+  });
 };
 
 // Advanced: Try to get precise GPS coordinates for heatmaps, but fail silently
