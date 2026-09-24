@@ -5,6 +5,8 @@ import {
   sendEmailVerification,
   sendPasswordResetEmail,
   signInWithPopup,
+  signInWithRedirect,
+  getRedirectResult,
   signOut,
   updateProfile,
   EmailAuthProvider,
@@ -87,6 +89,26 @@ export default function UserAuth({ onLoginSuccess }) {
 
   // Hide Google button inside iOS PWA — popups are broken there.
   const showGoogleButton = !(isStandalonePWA() && isIOS());
+
+  React.useEffect(() => {
+    const checkRedirect = async () => {
+      try {
+        const result = await getRedirectResult(auth);
+        if (result && result.user) {
+          setStatus("⏳ Finishing Google login...");
+          setBusy(true);
+          const idToken = await result.user.getIdToken();
+          const data = await exchangeIdTokenForSession(idToken);
+          setStatus("✅ Welcome!");
+          setTimeout(() => onLoginSuccess(data), 600);
+        }
+      } catch (err) {
+        setStatus(`❌ ${friendlyError(err)}`);
+        setBusy(false);
+      }
+    };
+    checkRedirect();
+  }, [onLoginSuccess]);
 
   const reset = (nextMode = mode) => {
     setMode(nextMode);
@@ -186,9 +208,15 @@ export default function UserAuth({ onLoginSuccess }) {
            idToken = await userCred.user.getIdToken(); // Override with Firebase token
         }
       } else {
-        // Web: Use standard browser popup
-        const { user } = await signInWithPopup(auth, googleProvider);
-        idToken = await user.getIdToken();
+        // Web: Check if iOS Safari or mobile web, use redirect to avoid popup blockers
+        const isMobileWeb = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+        if (isMobileWeb) {
+          await signInWithRedirect(auth, googleProvider);
+          return; // The page will reload and be caught by the useEffect
+        } else {
+          const { user } = await signInWithPopup(auth, googleProvider);
+          idToken = await user.getIdToken();
+        }
       }
 
       const data = await exchangeIdTokenForSession(idToken);
