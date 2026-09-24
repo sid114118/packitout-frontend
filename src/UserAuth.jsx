@@ -55,19 +55,7 @@ const friendlyError = (err) => {
   }
 };
 
-// POST a Firebase ID token to our backend in exchange for a session token +
-// user record. Handles both new signups (backend creates the user row) and
-// returning logins (backend finds existing user by uid / email).
-const exchangeIdTokenForSession = async (idToken) => {
-  const res = await fetch(`${API_BASE}/auth/oauth-login`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ idToken }),
-  });
-  const data = await res.json();
-  if (!res.ok) throw new Error(data.error || "Login failed.");
-  return data;
-};
+import { exchangeIdTokenForSession } from './utils/api.js';
 
 export default function UserAuth({ onLoginSuccess }) {
   // mode: "login" | "signup" | "forgot" | "verify-sent" | "migrate-phone" | "migrate-email"
@@ -89,26 +77,6 @@ export default function UserAuth({ onLoginSuccess }) {
 
   // Hide Google button inside iOS PWA — popups are broken there.
   const showGoogleButton = !(isStandalonePWA() && isIOS());
-
-  React.useEffect(() => {
-    const checkRedirect = async () => {
-      try {
-        const result = await getRedirectResult(auth);
-        if (result && result.user) {
-          setStatus("⏳ Finishing Google login...");
-          setBusy(true);
-          const idToken = await result.user.getIdToken();
-          const data = await exchangeIdTokenForSession(idToken);
-          setStatus("✅ Welcome!");
-          setTimeout(() => onLoginSuccess(data), 600);
-        }
-      } catch (err) {
-        setStatus(`❌ ${friendlyError(err)}`);
-        setBusy(false);
-      }
-    };
-    checkRedirect();
-  }, [onLoginSuccess]);
 
   const reset = (nextMode = mode) => {
     setMode(nextMode);

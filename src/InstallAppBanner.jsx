@@ -81,7 +81,7 @@ export default function InstallAppBanner({ show = true }) {
   const handleDismiss = useCallback(() => {
     try {
       const until = Date.now() + DISMISS_DAYS * 24 * 60 * 60 * 1000;
-      localStorage.setItem(DISMISS_KEY, String(until));
+      try { localStorage.setItem(DISMISS_KEY, String(until)); } catch (e) {}
     } catch { /* localStorage blocked in some incognito modes — ignore */ }
     setCanShow(false);
   }, []);

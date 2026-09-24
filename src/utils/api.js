@@ -17,6 +17,17 @@ const mergeHeaders = (extra, init) => {
   return headers;
 };
 
+export const exchangeIdTokenForSession = async (idToken) => {
+  const res = await fetch(`${BASE_URL}/auth/oauth-login`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ idToken }),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || "Login failed.");
+  return data;
+};
+
 export const userFetch = (user, path, init = {}) => {
   const headers = mergeHeaders(
     user?.sessionToken ? { Authorization: `Bearer ${user.sessionToken}` } : {},

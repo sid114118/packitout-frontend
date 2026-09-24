@@ -78,7 +78,7 @@ export default function useShopFeedData(user) {
 
       const newShopInfo = { name: shopData.name, isOpen: shopData.isOpen };
       setShopInfo(newShopInfo);
-      localStorage.setItem('packitout_active_shop', JSON.stringify({ _id: shopData._id, name: shopData.name, pincode: shopData.pincode }));
+      try { localStorage.setItem('packitout_active_shop', JSON.stringify({ _id: shopData._id, name: shopData.name, pincode: shopData.pincode })); } catch (e) {}
 
       const masterMap = new Map();
       if (Array.isArray(masterProducts)) {

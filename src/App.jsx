@@ -1,7 +1,9 @@
 import React, { useState, useEffect, useRef, lazy, Suspense } from 'react';
 import { useToast, useConfirm } from './ui/DialogProvider.jsx';
-import { userFetch, clearAdminToken } from './utils/api.js';
+import { userFetch, clearAdminToken, exchangeIdTokenForSession } from './utils/api.js';
 import { initAnalytics } from './utils/analyticsEngine.js';
+import { auth } from './utils/firebase.js';
+import { getRedirectResult } from 'firebase/auth';
 
 // Eagerly imported: rendered on the customer's first paint.
 import Header from './Header.jsx';
@@ -149,7 +151,7 @@ export default function App() {
           try {
             const parsedLegacy = JSON.parse(legacy);
             if (Array.isArray(parsedLegacy)) {
-              localStorage.setItem(key, legacy);
+              try { localStorage.setItem(key, legacy); } catch (e) {}
               raw = legacy;
             }
           } catch { /* ignore */ }
@@ -210,7 +212,7 @@ export default function App() {
     const uid = loggedInUser?._id;
     if (!uid) return;
     try {
-      localStorage.setItem(`packitout_cart_${uid}`, JSON.stringify(cart));
+      try { localStorage.setItem(`packitout_cart_${uid}`, JSON.stringify(cart)); } catch (e) {}
     } catch (e) {
       console.error("Cart Save Error", e);
     }
@@ -264,6 +266,26 @@ export default function App() {
     checkUrl();
     window.addEventListener("hashchange", checkUrl);
     return () => window.removeEventListener("hashchange", checkUrl);
+  }, []);
+
+  // 🛡️ GLOBAL REDIRECT HANDLER for Google Auth on Mobile
+  useEffect(() => {
+    const handleRedirect = async () => {
+      try {
+        const result = await getRedirectResult(auth);
+        if (result && result.user) {
+          toast("⏳ Finishing login...", 'info');
+          const idToken = await result.user.getIdToken();
+          const data = await exchangeIdTokenForSession(idToken);
+          handleUserLogin(data);
+          toast("✅ Welcome!", 'success');
+        }
+      } catch (err) {
+        toast("❌ Google Login Failed.", 'error');
+        console.error(err);
+      }
+    };
+    handleRedirect();
   }, []);
 
   const handleAddToCart = async (product) => {
@@ -346,7 +368,7 @@ export default function App() {
   };
 
   const handleUserLogin = (userData) => {
-    localStorage.setItem("packitout_user", JSON.stringify(userData));
+    try { localStorage.setItem("packitout_user", JSON.stringify(userData)); } catch (e) { console.warn("Storage blocked"); }
     setLoggedInUser(userData);
     // OneSignal.login is driven by the loggedInUser._id effect above so fresh
     // logins, page reloads, and returning customers all bind identically.
@@ -355,7 +377,7 @@ export default function App() {
 
   const handleUserUpdate = (updatedUser, { clearCart = false } = {}) => {
     if (!updatedUser) return;
-    localStorage.setItem("packitout_user", JSON.stringify(updatedUser));
+    try { localStorage.setItem("packitout_user", JSON.stringify(updatedUser)); } catch (e) {}
     setLoggedInUser(updatedUser);
     if (clearCart) {
       setCart([]);
@@ -383,7 +405,7 @@ export default function App() {
         if (cancelled || !fresh || !fresh._id) return;
         // Server response omits sessionToken — preserve the in-memory one.
         const next = { ...fresh, sessionToken: loggedInUser.sessionToken };
-        localStorage.setItem("packitout_user", JSON.stringify(next));
+        try { localStorage.setItem("packitout_user", JSON.stringify(next)); } catch (e) {}
         setLoggedInUser(next);
       } catch { /* offline / transient — keep cached copy */ }
     };
@@ -466,7 +488,7 @@ export default function App() {
         // server response strips sessionToken — preserve in-memory.
         const next = { ...updatedUser, sessionToken: loggedInUser.sessionToken };
         setLoggedInUser(next);
-        localStorage.setItem("packitout_user", JSON.stringify(next));
+        try { localStorage.setItem("packitout_user", JSON.stringify(next)); } catch (e) {}
         toast("Primary shop updated");
         window.location.hash = "";
       } else {
