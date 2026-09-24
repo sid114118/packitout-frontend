@@ -198,6 +198,18 @@ export default function Cart({ cart, setCart, user, onUserUpdate, onBack, onChec
         <div style={{ backgroundColor: '#fff', borderRadius: '20px', padding: '20px 16px', marginBottom: '20px', boxShadow: '0 4px 15px rgba(0,0,0,0.03)' }}>
           <div style={{ fontWeight: '800', fontSize: '1.1rem', marginBottom: '20px', color: '#0f172a' }}>Review Items</div>
           
+          {targetShop && !targetShop.isOpen && (
+            <div style={{ backgroundColor: '#fef3c7', padding: '14px', borderRadius: '12px', border: '1px solid #fde68a', marginBottom: '20px', display: 'flex', gap: '12px', alignItems: 'flex-start' }}>
+              <div style={{ fontSize: '1.5rem' }}>🌙</div>
+              <div>
+                <strong style={{ color: '#92400e', display: 'block', marginBottom: '4px' }}>Shop is currently closed</strong>
+                <span style={{ color: '#b45309', fontSize: '0.85rem', lineHeight: '1.4', display: 'block' }}>
+                  You can still place your order now as a <strong>Pre-Order</strong>. The shop will process it first thing when they open!
+                </span>
+              </div>
+            </div>
+          )}
+
           {cart.map((item, index) => {
             if (!item) return null; 
             

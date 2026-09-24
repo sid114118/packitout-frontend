@@ -70,10 +70,19 @@ export default function ReceiptModal({ selectedOrder, setSelectedOrder, onReorde
 
               <div className="dashed-line"></div>
 
-              {/* 🕐 ORDER TIMELINE */}
-              {selectedOrder._id && selectedOrder.status && (
-                <OrderTimeline order={selectedOrder} />
+              {/* 🏆 VERIFIED / PAID WATERMARK STAMP */}
+              {isDelivered && (
+                <div style={{ position: 'absolute', top: '25%', left: '50%', transform: 'translate(-50%, -50%) rotate(-20deg)', color: 'rgba(22, 163, 74, 0.15)', border: '6px solid rgba(22, 163, 74, 0.15)', padding: '10px 20px', borderRadius: '12px', fontSize: '2.5rem', fontWeight: '900', letterSpacing: '6px', zIndex: 0, pointerEvents: 'none', textTransform: 'uppercase' }}>
+                  VERIFIED<br/><span style={{ fontSize: '1.2rem', display: 'block', textAlign: 'center', letterSpacing: '2px', marginTop: '4px' }}>PAID</span>
+                </div>
               )}
+
+              {/* 🕐 ORDER TIMELINE */}
+              <div style={{ position: 'relative', zIndex: 1 }}>
+                {selectedOrder._id && selectedOrder.status && (
+                  <OrderTimeline order={selectedOrder} />
+                )}
+              </div>
 
               {/* UPLOADED PARCHI (If exists) */}
               {(selectedOrder.imageUrl || selectedOrder.parchiImage || selectedOrder.image) && (

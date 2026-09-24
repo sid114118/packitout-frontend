@@ -157,7 +157,7 @@ const ModernProductCardBase = ({ item, isCarousel, shopClosed, onOpenDetails, on
           </div>
 
           <div onClick={(e) => e.stopPropagation()}>
-            {!isOutOfStock && !shopClosed && (
+            {!isOutOfStock && (
               cartCount > 0 ? (
                 <div style={{ display: 'flex', alignItems: 'center', backgroundColor: '#ef4444', borderRadius: '8px', height: '32px', width: '70px', boxShadow: '0 4px 10px rgba(239, 68, 68, 0.25)' }}>
                   <button onClick={() => { trackEvent('REMOVE_FROM_CART', getEventPayload()); onRemoveFromCart(item); }} style={{ flex: 1, height: '100%', border: 'none', background: 'transparent', color: '#fff', fontSize: '1.2rem', fontWeight: 'bold', cursor: 'pointer' }}>−</button>

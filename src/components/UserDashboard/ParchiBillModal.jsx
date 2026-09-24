@@ -201,12 +201,18 @@ function RecentParchiRow({ parchi }) {
     : parchi.status === 'pending' ? 'Awaiting shop quote'
     : parchi.status;
   return (
-    <div style={{ background: 'white', border: '1px solid #e2e8f0', borderRadius: 12, padding: 12, marginBottom: 8, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-      <div>
+    <div style={{ position: 'relative', overflow: 'hidden', background: 'white', border: '1px solid #e2e8f0', borderRadius: 12, padding: 12, marginBottom: 8, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+      <div style={{ position: 'relative', zIndex: 1 }}>
         <div style={{ fontWeight: 700, color: '#0f172a', fontSize: '0.9rem' }}>{bill.shopName || 'Shop'}</div>
         <div style={{ color: '#64748b', fontSize: '0.78rem' }}>{label}</div>
       </div>
-      {bill.totalAmount ? <div style={{ fontWeight: 800, color: '#16a34a' }}>₹{bill.totalAmount}</div> : null}
+      {bill.totalAmount ? <div style={{ fontWeight: 800, color: '#16a34a', position: 'relative', zIndex: 1 }}>₹{bill.totalAmount}</div> : null}
+      
+      {parchi.status === 'accepted' && (
+        <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%) rotate(-15deg)', color: 'rgba(22, 163, 74, 0.1)', border: '3px solid rgba(22, 163, 74, 0.1)', padding: '4px 10px', borderRadius: '8px', fontSize: '1.2rem', fontWeight: '900', letterSpacing: '2px', zIndex: 0, pointerEvents: 'none', textTransform: 'uppercase' }}>
+          VERIFIED
+        </div>
+      )}
     </div>
   );
 }
