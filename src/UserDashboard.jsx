@@ -8,7 +8,7 @@ import TermsModal from './components/UserDashboard/TermsModal';
 import ComplaintModal from './components/UserDashboard/ComplaintModal';
 import MyComplaintsModal from './components/UserDashboard/MyComplaintsModal';
 import ParchiBillModal from './components/UserDashboard/ParchiBillModal';
-
+import RequestItemModal from './components/UserDashboard/RequestItemModal.jsx';
 export default function UserDashboard({ user, onExit, onLogout, onUserUpdate }) {
   const triggerToast = useToast();
 
@@ -249,6 +249,7 @@ export default function UserDashboard({ user, onExit, onLogout, onUserUpdate }) 
       <ComplaintModal open={showComplaint} onClose={() => setShowComplaint(false)} user={user} />
       <MyComplaintsModal open={showMyComplaints} onClose={() => setShowMyComplaints(false)} user={user} />
       <ParchiBillModal open={showParchiBills} onClose={() => setShowParchiBills(false)} user={user} />
+      {showRequestItem && <RequestItemModal user={user} onClose={() => setShowRequestItem(false)} />}
     </div>
   );
 }
