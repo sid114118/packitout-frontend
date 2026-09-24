@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import OneSignal from 'react-onesignal';
 import { useToast } from './ui/DialogProvider.jsx';
 
 // 🔗 IMPORTING YOUR WORKERS!
@@ -29,6 +30,24 @@ export default function ShopDashboard({ user, onExit }) {
   const [parchiBill, setParchiBill] = useState([]);
   const [photoModalOpen, setPhotoModalOpen] = useState(false);
   const [profileModalOpen, setProfileModalOpen] = useState(false);
+
+  const [pushEnabled, setPushEnabled] = useState(
+    typeof window !== 'undefined' && window.Notification && window.Notification.permission === 'granted'
+  );
+
+  const handleEnablePush = () => {
+    try {
+      OneSignal.Slidedown.promptPush();
+      setTimeout(() => {
+        if (window.Notification && window.Notification.permission === 'granted') {
+          setPushEnabled(true);
+          toast("Notifications enabled!");
+        }
+      }, 3000);
+    } catch (e) {
+      console.error(e);
+    }
+  };
 
   // --- DATA FETCHING ---
   useEffect(() => {
@@ -347,6 +366,34 @@ export default function ShopDashboard({ user, onExit }) {
       </div>
 
       <ShopLocationBanner shopData={shopData} onShopUpdated={setShopData} />
+
+      {!pushEnabled && (
+        <div style={{ maxWidth: '800px', margin: '15px auto 0', padding: '0 15px' }}>
+          <div style={{
+            background: '#fff', borderRadius: '12px', padding: '12px 16px', 
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+            border: '1px solid #e2e8f0', boxShadow: '0 4px 10px rgba(0,0,0,0.05)'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <span style={{ fontSize: '1.4rem' }}>🔔</span>
+              <div>
+                <div style={{ fontWeight: 800, fontSize: '0.95rem', color: '#0f172a' }}>Enable Order Alerts</div>
+                <div style={{ fontSize: '0.8rem', color: '#64748b', fontWeight: 600 }}>Get notified instantly for new orders</div>
+              </div>
+            </div>
+            <button
+              onClick={handleEnablePush}
+              style={{
+                background: '#10b981', color: '#fff', border: 'none', padding: '8px 16px',
+                borderRadius: '8px', fontSize: '0.85rem', fontWeight: 800, cursor: 'pointer',
+                boxShadow: '0 4px 10px rgba(16,185,129,0.2)'
+              }}
+            >
+              Allow
+            </button>
+          </div>
+        </div>
+      )}
 
       <div style={{ padding: '15px', maxWidth: '800px', margin: '0 auto' }}>
         {activeTab === "orders" && <OrdersTab orders={orders} updateOrderStatus={updateOrderStatus} markOrderPaid={markOrderPaid} />}
