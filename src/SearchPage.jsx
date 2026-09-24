@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
+import Fuse from 'fuse.js';
 import { createPortal } from 'react-dom';
 import { ModernProductCard } from './ProductFeed/FeedComponents.jsx';
 import { useRankingConfig } from './ui/RankingProvider.jsx';
@@ -97,21 +98,24 @@ export default function SearchPage({
     })
   ), [items]);
 
-  const matchesQuery = (item, q) => {
-    if (!item) return false;
-    const nameMatch = (item.name || "").toLowerCase().includes(q);
-    const brandMatch = (item.brand || "").toLowerCase().includes(q);
-    const tagMatch = item.searchTags && Array.isArray(item.searchTags) &&
-      item.searchTags.some(tag => tag.toLowerCase().includes(q));
-    return nameMatch || brandMatch || tagMatch;
-  };
+  const fuse = useMemo(() => {
+    return new Fuse(flatItems, {
+      keys: [
+        { name: 'name', weight: 0.6 },
+        { name: 'brand', weight: 0.2 },
+        { name: 'searchTags', weight: 0.2 }
+      ],
+      threshold: 0.4, // allows some typos
+      ignoreLocation: true,
+    });
+  }, [flatItems]);
 
   const displayItems = useMemo(() => {
     if (debouncedQuery.trim().length === 0) return [];
-    const q = debouncedQuery.toLowerCase();
-    const matches = flatItems.filter(item => matchesQuery(item, q));
+    const results = fuse.search(debouncedQuery.trim());
+    const matches = results.map(r => r.item);
     return applyBrandPriority(matches, rankingConfig);
-  }, [debouncedQuery, flatItems, rankingConfig]);
+  }, [debouncedQuery, fuse, rankingConfig]);
 
   // Type-ahead chips while typing. Pulls unique product names/brands that
   // start with or contain the live (un-debounced) query so it feels instant.

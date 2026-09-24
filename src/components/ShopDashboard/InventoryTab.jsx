@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
+import Fuse from 'fuse.js';
 import { useToast, useConfirm, usePrompt } from '../../ui/DialogProvider.jsx';
 import { cdnImage } from '../../utils/cloudinaryUrl.js';
 import { shopFetch } from '../../utils/api.js';
@@ -94,14 +95,26 @@ export default function InventoryTab({ shopData, masterCatalog, handleInventoryU
   const shopProductIds = safeInventory.filter(i => i?.product).map(i => i.product._id); 
   const availableToAdd = safeCatalog.filter(m => !shopProductIds.includes(m._id));
 
-  // Apply Search Filters safely
-  const filteredAvailable = availableToAdd.filter(item => 
-    item?.name?.toLowerCase().includes(searchMaster.toLowerCase())
-  );
+  const masterFuse = useMemo(() => new Fuse(availableToAdd, {
+    keys: ['name', 'brand', 'searchTags'],
+    threshold: 0.4,
+    ignoreLocation: true
+  }), [availableToAdd]);
+
+  const inventoryFuse = useMemo(() => new Fuse(safeInventory, {
+    keys: ['product.name', 'product.brand', 'product.searchTags'],
+    threshold: 0.4,
+    ignoreLocation: true
+  }), [safeInventory]);
+
+  // Apply Search Filters safely using Fuse
+  const filteredAvailable = searchMaster.trim() 
+    ? masterFuse.search(searchMaster.trim()).map(r => r.item)
+    : availableToAdd;
   
-  const filteredInventory = safeInventory.filter(item => 
-    item?.product?.name?.toLowerCase().includes(searchInventory.toLowerCase())
-  );
+  const filteredInventory = searchInventory.trim()
+    ? inventoryFuse.search(searchInventory.trim()).map(r => r.item)
+    : safeInventory;
 
   // ==========================================
   // ⚡ DYNAMIC BULK IMPORT FUNCTION
