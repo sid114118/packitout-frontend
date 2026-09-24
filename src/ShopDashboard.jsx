@@ -92,16 +92,10 @@ export default function ShopDashboard({ user, onExit }) {
   // --- LOGIC ---
   const toggleShopStatus = async () => {
     const newStatus = !shopData.isOpen;
-    let acceptsPreOrders = true;
-
-    if (!newStatus) {
-      acceptsPreOrders = window.confirm("Do you want to accept Pre-Orders while the shop is closed?\n\nClick OK to accept pre-orders. Click Cancel to completely stop all orders.");
-    }
-
     try {
       const res = await shopFetch(shopData, `/shops/${shopData._id}`, {
         method: "PATCH",
-        body: JSON.stringify({ isOpen: newStatus, acceptsPreOrders })
+        body: JSON.stringify({ isOpen: newStatus })
       });
       if (res.ok) {
         const updated = await res.json();
@@ -293,9 +287,32 @@ export default function ShopDashboard({ user, onExit }) {
             ⚙️
           </button>
 
-          <button onClick={toggleShopStatus} style={{ padding: '6px 12px', borderRadius: '20px', fontWeight: 'bold', border: 'none', cursor: 'pointer', backgroundColor: shopData.isOpen ? '#d1fae5' : '#fee2e2', color: shopData.isOpen ? '#059669' : '#b91c1c' }} >
-            {shopData.isOpen ? '🟢 OPEN' : '🔴 CLOSED'}
-          </button>
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
+            <button onClick={toggleShopStatus} style={{ padding: '6px 12px', borderRadius: '20px', fontWeight: 'bold', border: 'none', cursor: 'pointer', backgroundColor: shopData.isOpen ? '#d1fae5' : '#fee2e2', color: shopData.isOpen ? '#059669' : '#b91c1c' }} >
+              {shopData.isOpen ? '🟢 OPEN' : '🔴 CLOSED'}
+            </button>
+            {!shopData.isOpen && (
+              <label style={{ fontSize: '0.65rem', color: '#94a3b8', display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer' }}>
+                <input 
+                  type="checkbox" 
+                  checked={shopData.acceptsPreOrders !== false} 
+                  onChange={async (e) => {
+                    const accepts = e.target.checked;
+                    const res = await shopFetch(shopData, `/shops/${shopData._id}`, {
+                      method: "PATCH",
+                      body: JSON.stringify({ acceptsPreOrders: accepts })
+                    });
+                    if (res.ok) {
+                      const updated = await res.json();
+                      setShopData({ ...updated, sessionToken: shopData.sessionToken });
+                    }
+                  }}
+                  style={{ accentColor: '#10b981', cursor: 'pointer' }}
+                />
+                Accept Pre-Orders
+              </label>
+            )}
+          </div>
           <button onClick={onExit} style={{ background: '#ef4444', color: 'white', border: 'none', padding: '6px 12px', borderRadius: '6px', fontWeight: 'bold', cursor: 'pointer' }}>
             Logout
           </button>
