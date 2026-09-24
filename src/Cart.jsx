@@ -21,6 +21,7 @@ export default function Cart({ cart, setCart, user, onUserUpdate, onBack, onChec
   // Phone modal shows when user clicks "Choose Pickup Time" without a saved
   // phone. Blocks the rest of checkout until a number is on file.
   const [showPhoneModal, setShowPhoneModal] = useState(false);
+  const [preOrderChecked, setPreOrderChecked] = useState(false);
 
   const proceedToPickup = () => {
     if (!user?.phone) {
@@ -201,11 +202,29 @@ export default function Cart({ cart, setCart, user, onUserUpdate, onBack, onChec
           {targetShop && !targetShop.isOpen && (
             <div style={{ backgroundColor: '#fef3c7', padding: '14px', borderRadius: '12px', border: '1px solid #fde68a', marginBottom: '20px', display: 'flex', gap: '12px', alignItems: 'flex-start' }}>
               <div style={{ fontSize: '1.5rem' }}>🌙</div>
-              <div>
+              <div style={{ flex: 1 }}>
                 <strong style={{ color: '#92400e', display: 'block', marginBottom: '4px' }}>Shop is currently closed</strong>
-                <span style={{ color: '#b45309', fontSize: '0.85rem', lineHeight: '1.4', display: 'block' }}>
-                  You can still place your order now as a <strong>Pre-Order</strong>. The shop will process it first thing when they open!
-                </span>
+                
+                {targetShop.acceptsPreOrders === false ? (
+                  <span style={{ color: '#b45309', fontSize: '0.85rem', lineHeight: '1.4', display: 'block' }}>
+                    This shop is <strong>not</strong> accepting pre-orders right now. Please check back when they are open.
+                  </span>
+                ) : (
+                  <>
+                    <span style={{ color: '#b45309', fontSize: '0.85rem', lineHeight: '1.4', display: 'block', marginBottom: '10px' }}>
+                      You can place your order now as a <strong>Pre-Order</strong>. They will process it first thing when they open!
+                    </span>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', backgroundColor: 'rgba(255,255,255,0.5)', padding: '8px 12px', borderRadius: '8px', border: '1px solid rgba(0,0,0,0.05)' }}>
+                      <input 
+                        type="checkbox" 
+                        checked={preOrderChecked} 
+                        onChange={(e) => setPreOrderChecked(e.target.checked)}
+                        style={{ width: '18px', height: '18px', accentColor: '#d97706', cursor: 'pointer' }}
+                      />
+                      <span style={{ fontSize: '0.8rem', fontWeight: '800', color: '#92400e' }}>I understand this is a Pre-Order</span>
+                    </label>
+                  </>
+                )}
               </div>
             </div>
           )}
@@ -316,10 +335,10 @@ export default function Cart({ cart, setCart, user, onUserUpdate, onBack, onChec
       <div style={{ position: 'fixed', bottom: '65px', left: 0, right: 0, backgroundColor: 'rgba(255, 255, 255, 0.9)', backdropFilter: 'blur(10px)', padding: '16px', borderTop: '1px solid rgba(0,0,0,0.05)', zIndex: 999 }}>
         <button
           onClick={proceedToPickup}
-          disabled={!targetShop}
-          style={{ width: '100%', maxWidth: '800px', margin: '0 auto', display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '18px 24px', backgroundColor: targetShop ? '#16a34a' : '#cbd5e1', color: 'white', border: 'none', borderRadius: '16px', fontWeight: '900', fontSize: '1.15rem', cursor: targetShop ? 'pointer' : 'not-allowed', boxShadow: targetShop ? '0 8px 25px rgba(22, 163, 74, 0.35)' : 'none', transition: 'all 0.2s ease' }}
+          disabled={!targetShop || (targetShop && !targetShop.isOpen && targetShop.acceptsPreOrders === false) || (targetShop && !targetShop.isOpen && !preOrderChecked)}
+          style={{ width: '100%', maxWidth: '800px', margin: '0 auto', display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '18px 24px', backgroundColor: (targetShop && (targetShop.isOpen || preOrderChecked)) ? '#16a34a' : '#cbd5e1', color: 'white', border: 'none', borderRadius: '16px', fontWeight: '900', fontSize: '1.15rem', cursor: (targetShop && (targetShop.isOpen || preOrderChecked)) ? 'pointer' : 'not-allowed', boxShadow: (targetShop && (targetShop.isOpen || preOrderChecked)) ? '0 8px 25px rgba(22, 163, 74, 0.35)' : 'none', transition: 'all 0.2s ease' }}
         >
-          <span>Choose Pickup Time</span>
+          <span>{targetShop && !targetShop.isOpen ? 'Place Pre-Order' : 'Choose Pickup Time'}</span>
           <span>₹{finalBill.toFixed(2)} ›</span>
         </button>
       </div>

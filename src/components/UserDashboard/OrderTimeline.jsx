@@ -61,19 +61,30 @@ export default function OrderTimeline({ order }) {
     );
   }
 
+  const [isExpanded, setIsExpanded] = React.useState(false);
+
   return (
     <div style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: '14px', padding: '16px', marginBottom: '18px' }}>
 
       {/* Header: current stage */}
-      <div style={{ marginBottom: '14px' }}>
-        <div style={{ fontSize: '0.7rem', color: '#94a3b8', fontWeight: '800', letterSpacing: '0.5px' }}>STATUS</div>
-        <div style={{ color: '#0f172a', fontSize: '1.05rem', fontWeight: '900', marginTop: '2px' }}>
-          {STAGES[currentIdx]?.label || "Order Placed"}
+      <div 
+        onClick={() => setIsExpanded(!isExpanded)}
+        style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer', marginBottom: isExpanded ? '14px' : '0' }}
+      >
+        <div>
+          <div style={{ fontSize: '0.7rem', color: '#94a3b8', fontWeight: '800', letterSpacing: '0.5px' }}>STATUS</div>
+          <div style={{ color: '#0f172a', fontSize: '1.05rem', fontWeight: '900', marginTop: '2px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+            {STAGES[currentIdx]?.icon} {STAGES[currentIdx]?.label || "Order Placed"}
+          </div>
+        </div>
+        <div style={{ fontSize: '1.2rem', color: '#64748b', transform: isExpanded ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s ease' }}>
+          ▼
         </div>
       </div>
 
-      {/* Vertical timeline */}
-      <div style={{ position: 'relative', paddingLeft: '6px' }}>
+      {/* Vertical timeline (Collapsed by default) */}
+      {isExpanded && (
+        <div style={{ position: 'relative', paddingLeft: '6px', animation: 'fadeIn 0.2s ease-in' }}>
         {STAGES.map((stage, i) => {
           const reached = i <= currentIdx;
           const isCurrent = i === currentIdx;
@@ -127,7 +138,8 @@ export default function OrderTimeline({ order }) {
             </div>
           );
         })}
-      </div>
+        </div>
+      )}
     </div>
   );
 }

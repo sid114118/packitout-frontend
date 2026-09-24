@@ -92,10 +92,16 @@ export default function ShopDashboard({ user, onExit }) {
   // --- LOGIC ---
   const toggleShopStatus = async () => {
     const newStatus = !shopData.isOpen;
+    let acceptsPreOrders = true;
+
+    if (!newStatus) {
+      acceptsPreOrders = window.confirm("Do you want to accept Pre-Orders while the shop is closed?\n\nClick OK to accept pre-orders. Click Cancel to completely stop all orders.");
+    }
+
     try {
       const res = await shopFetch(shopData, `/shops/${shopData._id}`, {
         method: "PATCH",
-        body: JSON.stringify({ isOpen: newStatus })
+        body: JSON.stringify({ isOpen: newStatus, acceptsPreOrders })
       });
       if (res.ok) {
         const updated = await res.json();
