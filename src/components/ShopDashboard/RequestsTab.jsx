@@ -53,6 +53,11 @@ export default function RequestsTab({ shopData }) {
                     Brand: <span style={{ color: '#334155' }}>{req.brand}</span>
                   </div>
                 )}
+                {req.userId && (
+                  <div style={{ color: '#64748b', fontSize: '0.8rem', fontWeight: '600', marginTop: '4px' }}>
+                    👤 {req.userId.name || "Customer"} {req.userId.phone && `(${req.userId.phone})`}
+                  </div>
+                )}
                 <div style={{ color: '#94a3b8', fontSize: '0.75rem', marginTop: '8px' }}>
                   Requested on {new Date(req.createdAt).toLocaleDateString()}
                 </div>

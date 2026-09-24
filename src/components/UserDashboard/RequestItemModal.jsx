@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useToast } from '../../ui/DialogProvider.jsx';
 
 const BASE_URL = (import.meta.env.VITE_API_BASE || "https://darkslategrey-snail-415133.hostingersite.com");
@@ -6,9 +6,21 @@ const BASE_URL = (import.meta.env.VITE_API_BASE || "https://darkslategrey-snail-
 export default function RequestItemModal({ user, onClose }) {
   const toast = useToast();
   const [loading, setLoading] = useState(false);
+  const [shops, setShops] = useState([]);
+  
+  useEffect(() => {
+    fetch(`${BASE_URL}/shops/all/${user.pincode}`)
+      .then(res => res.json())
+      .then(data => {
+        if (Array.isArray(data)) setShops(data);
+      })
+      .catch(console.error);
+  }, [user.pincode]);
+
   const [formData, setFormData] = useState({
     productName: '',
-    brand: ''
+    brand: '',
+    shopId: ''
   });
 
   const handleSubmit = async (e) => {
@@ -83,8 +95,23 @@ export default function RequestItemModal({ user, onClose }) {
             />
           </div>
 
+          <div>
+            <label style={{ display: 'block', marginBottom: '6px', fontSize: '0.85rem', fontWeight: '800', color: '#334155' }}>Which Shop? (Optional)</label>
+            <select
+              value={formData.shopId}
+              onChange={e => setFormData({ ...formData, shopId: e.target.value })}
+              style={{ width: '100%', padding: '14px', borderRadius: '12px', border: '1px solid #e2e8f0', backgroundColor: '#f8fafc', fontSize: '1rem', outline: 'none' }}
+              disabled={loading}
+            >
+              <option value="">Any shop in {user.pincode}</option>
+              {shops.map(shop => (
+                <option key={shop._id} value={shop._id}>{shop.name}</option>
+              ))}
+            </select>
+          </div>
+
           <div style={{ backgroundColor: '#f0fdf4', padding: '12px', borderRadius: '12px', border: '1px solid #bbf7d0', color: '#166534', fontSize: '0.85rem', fontWeight: '600' }}>
-            📍 This request will be sent to shops near {user.pincode}. You will be notified when it's added.
+            📍 This request will be sent to {formData.shopId ? "the selected shop" : `shops near ${user.pincode}`}. You will be notified when it's added.
           </div>
 
           <button 
