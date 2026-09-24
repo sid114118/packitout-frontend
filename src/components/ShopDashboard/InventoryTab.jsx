@@ -5,7 +5,7 @@ import { shopFetch } from '../../utils/api.js';
 
 const BASE_URL = (import.meta.env.VITE_API_BASE || "https://darkslategrey-snail-415133.hostingersite.com");
 
-export default function InventoryTab({ shopData, masterCatalog, handleInventoryUpdate, onInventoryRefresh, fetchMasterCatalog }) {
+export default function InventoryTab({ shopData, masterCatalog, handleInventoryUpdate, handleInventoryRemove, onInventoryRefresh, fetchMasterCatalog }) {
   const toast = useToast();
   const confirmDialog = useConfirm();
   const askForValue = usePrompt();
@@ -351,29 +351,52 @@ export default function InventoryTab({ shopData, masterCatalog, handleInventoryU
                 </div>
 
                 {/* 🔴🟢 MASSIVE OUT OF STOCK TOGGLE */}
-                <button 
-                  onClick={() => handleInventoryUpdate(item.product._id, item.sellingPrice, !item.inStock)}
-                  style={{ 
-                    width: '100%', 
-                    marginTop: '15px', 
-                    padding: '14px', 
-                    borderRadius: '10px', 
-                    fontWeight: '800', 
-                    fontSize: '0.9rem', 
-                    cursor: 'pointer', 
-                    display: 'flex', 
-                    justifyContent: 'center', 
-                    alignItems: 'center', 
-                    gap: '8px', 
-                    backgroundColor: item.inStock ? '#f0fdf4' : '#fef2f2', 
-                    color: item.inStock ? '#16a34a' : '#dc2626', 
-                    border: item.inStock ? '1px solid #bbf7d0' : '1px solid #fecaca', 
-                    transition: '0.2s',
-                    boxShadow: item.inStock ? '0 4px 6px rgba(22, 163, 74, 0.05)' : 'none'
-                  }}
-                >
-                  {item.inStock ? "🟢 IN STOCK (Tap to Disable)" : "🔴 OUT OF STOCK (Tap to Enable)"}
-                </button>
+                <div style={{ display: 'flex', gap: '10px', marginTop: '15px' }}>
+                  <button 
+                    onClick={() => handleInventoryUpdate(item.product._id, item.sellingPrice, !item.inStock)}
+                    style={{ 
+                      flex: 1, 
+                      padding: '14px', 
+                      borderRadius: '10px', 
+                      fontWeight: '800', 
+                      fontSize: '0.9rem', 
+                      cursor: 'pointer', 
+                      display: 'flex', 
+                      justifyContent: 'center', 
+                      alignItems: 'center', 
+                      gap: '8px', 
+                      backgroundColor: item.inStock ? '#f0fdf4' : '#fef2f2', 
+                      color: item.inStock ? '#16a34a' : '#dc2626', 
+                      border: item.inStock ? '1px solid #bbf7d0' : '1px solid #fecaca', 
+                      transition: '0.2s',
+                      boxShadow: item.inStock ? '0 4px 6px rgba(22, 163, 74, 0.05)' : 'none'
+                    }}
+                  >
+                    {item.inStock ? "🟢 IN STOCK" : "🔴 OUT OF STOCK"}
+                  </button>
+                  <button
+                    onClick={async () => {
+                      if (await confirmDialog({ title: 'Remove Item?', message: 'Are you sure you want to remove this item from your store?', confirmText: 'Yes, Remove', danger: true })) {
+                        handleInventoryRemove(item.product._id);
+                      }
+                    }}
+                    style={{
+                      padding: '14px 20px',
+                      borderRadius: '10px',
+                      fontWeight: '800',
+                      fontSize: '0.9rem',
+                      cursor: 'pointer',
+                      backgroundColor: '#fff1f2',
+                      color: '#e11d48',
+                      border: '1px solid #fecdd3',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                    }}
+                  >
+                    🗑️ Remove
+                  </button>
+                </div>
 
               </div>
             );

@@ -67,7 +67,7 @@ export default function Cart({ cart, setCart, user, onUserUpdate, onBack, onChec
   const discount = coinsUsed / 10;                                  // exact rupees
   const maxUsableDiscount = maxCoinsConsumable / 10;                // for display
 
-  const finalBill = Number((itemTotal - discount).toFixed(2));
+  const finalBill = Number((itemTotal - discount).toFixed(2));\n\n  const outOfStockItems = cart.filter(item => {\n    if (!targetShop || !targetShop.inventory) return false;\n    const inv = targetShop.inventory.find(i => i.product?._id === item._id || i.product === item._id);\n    return !inv || inv.inStock === false;\n  });\n  const hasOutOfStock = outOfStockItems.length > 0;
   const totalSavings = totalProductDiscount + discount;
 
   // --- 🛒 ADD/REMOVE ITEM LOGIC ---
@@ -236,14 +236,20 @@ export default function Cart({ cart, setCart, user, onUserUpdate, onBack, onChec
             const safePrice = item.sellingPrice !== undefined ? item.sellingPrice : (item.mrp || 0);
             const originalPrice = (item.mrp && item.mrp > 0) ? item.mrp : safePrice;
             const isDiscounted = originalPrice > safePrice;
+            let isOutOfStock = false;
+            if (targetShop && targetShop.inventory) {
+              const inv = targetShop.inventory.find(i => i.product?._id === item._id || i.product === item._id);
+              if (!inv || inv.inStock === false) isOutOfStock = true;
+            }
             
             return (
               <div key={item._id} style={{ display: 'flex', gap: '15px', alignItems: 'center', paddingBottom: '20px', marginBottom: '20px', borderBottom: index === cart.length - 1 ? 'none' : '1px solid #f1f5f9' }}>
                 
                 {/* Product Image Squircle */}
                 <div style={{ width: '65px', height: '65px', backgroundColor: '#f8fafc', borderRadius: '16px', display: 'flex', justifyContent: 'center', alignItems: 'center', border: '1px solid rgba(0,0,0,0.02)', position: 'relative', flexShrink: 0 }}>
-                  {isDiscounted && <span style={{ position: 'absolute', top: '-6px', left: '-6px', backgroundColor: '#ef4444', color: '#fff', fontSize: '0.55rem', fontWeight: '900', padding: '3px 6px', borderRadius: '6px', zIndex: 1 }}>OFFER</span>}
-                  {item.image ? <img src={cdnImage(item.image, 200)} loading="lazy" decoding="async" style={{ maxWidth: '80%', maxHeight: '80%', objectFit: 'contain', mixBlendMode: 'multiply' }} alt={item.name} /> : <span style={{ fontSize: '30px' }}>{item.emoji}</span>}
+                  {isDiscounted && !isOutOfStock && <span style={{ position: 'absolute', top: '-6px', left: '-6px', backgroundColor: '#ef4444', color: '#fff', fontSize: '0.55rem', fontWeight: '900', padding: '3px 6px', borderRadius: '6px', zIndex: 1 }}>OFFER</span>}
+                  {isOutOfStock && <span style={{ position: 'absolute', top: '-6px', left: '-6px', backgroundColor: '#64748b', color: '#fff', fontSize: '0.55rem', fontWeight: '900', padding: '3px 6px', borderRadius: '6px', zIndex: 1 }}>OUT OF STOCK</span>}
+                  {item.image ? <img src={cdnImage(item.image, 200)} loading="lazy" decoding="async" style={{ maxWidth: '80%', maxHeight: '80%', objectFit: 'contain', mixBlendMode: 'multiply', opacity: isOutOfStock ? 0.3 : 1, filter: isOutOfStock ? 'grayscale(100%)' : 'none' }} alt={item.name} /> : <span style={{ fontSize: '30px', opacity: isOutOfStock ? 0.3 : 1 }}>{item.emoji}</span>}
                 </div>
 
                 <div style={{ flex: 1 }}>
@@ -335,10 +341,10 @@ export default function Cart({ cart, setCart, user, onUserUpdate, onBack, onChec
       <div style={{ position: 'fixed', bottom: '65px', left: 0, right: 0, backgroundColor: 'rgba(255, 255, 255, 0.9)', backdropFilter: 'blur(10px)', padding: '16px', borderTop: '1px solid rgba(0,0,0,0.05)', zIndex: 999 }}>
         <button
           onClick={proceedToPickup}
-          disabled={!targetShop || (targetShop && !targetShop.isOpen && targetShop.acceptsPreOrders === false) || (targetShop && !targetShop.isOpen && !preOrderChecked)}
+          disabled={hasOutOfStock || !targetShop || (targetShop && !targetShop.isOpen && targetShop.acceptsPreOrders === false) || (targetShop && !targetShop.isOpen && !preOrderChecked)}
           style={{ width: '100%', maxWidth: '800px', margin: '0 auto', display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '18px 24px', backgroundColor: (targetShop && (targetShop.isOpen || preOrderChecked)) ? '#16a34a' : '#cbd5e1', color: 'white', border: 'none', borderRadius: '16px', fontWeight: '900', fontSize: '1.15rem', cursor: (targetShop && (targetShop.isOpen || preOrderChecked)) ? 'pointer' : 'not-allowed', boxShadow: (targetShop && (targetShop.isOpen || preOrderChecked)) ? '0 8px 25px rgba(22, 163, 74, 0.35)' : 'none', transition: 'all 0.2s ease' }}
         >
-          <span>{targetShop && !targetShop.isOpen ? 'Place Pre-Order' : 'Choose Pickup Time'}</span>
+          <span>{hasOutOfStock ? 'Remove out-of-stock items' : (targetShop && !targetShop.isOpen ? 'Place Pre-Order' : 'Choose Pickup Time')}</span>
           <span>₹{finalBill.toFixed(2)} ›</span>
         </button>
       </div>

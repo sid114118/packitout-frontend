@@ -183,6 +183,22 @@ export default function ShopDashboard({ user, onExit }) {
     } catch (err) { console.log(err); }
   };
 
+  const handleInventoryRemove = async (productId) => {
+    try {
+      const res = await shopFetch(shopData, `/shops/${shopData._id}/inventory/${productId}`, {
+        method: "DELETE"
+      });
+      if (res.ok) {
+        const updated = await res.json();
+        setShopData({ ...updated, sessionToken: shopData.sessionToken });
+        toast("Item removed from store!");
+      } else {
+        const errorData = await res.json().catch(() => ({}));
+        toast(errorData.error || "Failed to remove item", 'error');
+      }
+    } catch (err) { console.log(err); }
+  };
+
   const handleAddToBill = (item) => {
     setParchiBill(prev => {
       const exists = prev.find(i => i._id === item.product._id);
@@ -333,7 +349,7 @@ export default function ShopDashboard({ user, onExit }) {
       <div style={{ padding: '15px', maxWidth: '800px', margin: '0 auto' }}>
         {activeTab === "orders" && <OrdersTab orders={orders} updateOrderStatus={updateOrderStatus} markOrderPaid={markOrderPaid} />}
         {activeTab === "parchis" && <ParchiTab parchiRequests={parchiRequests} selectedParchi={selectedParchi} setSelectedParchi={setSelectedParchi} parchiBill={parchiBill} setParchiBill={setParchiBill} handleAddToBill={handleAddToBill} handleSendBill={handleSendBill} shopData={shopData} />}
-        {activeTab === "inventory" && <InventoryTab shopData={shopData} masterCatalog={masterCatalog} handleInventoryUpdate={handleInventoryUpdate} onInventoryRefresh={refreshShopData} fetchMasterCatalog={fetchMasterCatalog} />}
+        {activeTab === "inventory" && <InventoryTab shopData={shopData} masterCatalog={masterCatalog} handleInventoryUpdate={handleInventoryUpdate} handleInventoryRemove={handleInventoryRemove} onInventoryRefresh={refreshShopData} fetchMasterCatalog={fetchMasterCatalog} />}
         {activeTab === "reviews" && <ShopReviews shopId={shopData._id} shopRating={shopData.rating} totalReviews={shopData.totalReviews} />}
         {activeTab === "complaints" && <ComplaintsTab shop={shopData} />}
       </div>
