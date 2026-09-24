@@ -67,7 +67,14 @@ export default function Cart({ cart, setCart, user, onUserUpdate, onBack, onChec
   const discount = coinsUsed / 10;                                  // exact rupees
   const maxUsableDiscount = maxCoinsConsumable / 10;                // for display
 
-  const finalBill = Number((itemTotal - discount).toFixed(2));\n\n  const outOfStockItems = cart.filter(item => {\n    if (!targetShop || !targetShop.inventory) return false;\n    const inv = targetShop.inventory.find(i => i.product?._id === item._id || i.product === item._id);\n    return !inv || inv.inStock === false;\n  });\n  const hasOutOfStock = outOfStockItems.length > 0;
+  const finalBill = Number((itemTotal - discount).toFixed(2));
+
+  const outOfStockItems = cart.filter(item => {
+    if (!targetShop || !targetShop.inventory) return false;
+    const inv = targetShop.inventory.find(i => i.product?._id === item._id || i.product === item._id);
+    return !inv || inv.inStock === false;
+  });
+  const hasOutOfStock = outOfStockItems.length > 0;
   const totalSavings = totalProductDiscount + discount;
 
   // --- 🛒 ADD/REMOVE ITEM LOGIC ---
