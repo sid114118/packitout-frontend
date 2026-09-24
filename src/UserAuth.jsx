@@ -176,15 +176,9 @@ export default function UserAuth({ onLoginSuccess }) {
            idToken = await userCred.user.getIdToken(); // Override with Firebase token
         }
       } else {
-        // Web: Check if iOS Safari or mobile web, use redirect to avoid popup blockers
-        const isMobileWeb = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
-        if (isMobileWeb) {
-          await signInWithRedirect(auth, googleProvider);
-          return; // The page will reload and be caught by the useEffect
-        } else {
-          const { user } = await signInWithPopup(auth, googleProvider);
-          idToken = await user.getIdToken();
-        }
+        // Web: Use popup (iOS PWA hides the button entirely, so this is safe)
+        const { user } = await signInWithPopup(auth, googleProvider);
+        idToken = await user.getIdToken();
       }
 
       const data = await exchangeIdTokenForSession(idToken);
