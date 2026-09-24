@@ -41,7 +41,7 @@ export default function SearchPage({
   const loggedMissedTermsRef = useRef(new Set());
 
   const inputRef = useRef(null);
-  const BOTTOM_NAV_HEIGHT = '56px';
+  const BOTTOM_NAV_HEIGHT = '75px';
 
   useEffect(() => {
     try {

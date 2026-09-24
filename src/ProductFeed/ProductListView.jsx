@@ -17,7 +17,7 @@ export default function ProductListView({
   onViewCart,     
   onSearchClick   
 }) {
-  const BOTTOM_NAV_HEIGHT = '56px';
+  const BOTTOM_NAV_HEIGHT = '75px';
   const { config: rankingConfig } = useRankingConfig();
   const [selectedSub, setSelectedSub] = useState("All");
   const [selectedBrand, setSelectedBrand] = useState("All Brands");

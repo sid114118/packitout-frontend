@@ -48,7 +48,7 @@ export default function ProductModal({ product, isOpen, onClose, onAddToCart, on
   const [exploreCount, setExploreCount] = useState(12);
 
   const BASE_URL = (import.meta.env.VITE_API_BASE || "https://darkslategrey-snail-415133.hostingersite.com");
-  const BOTTOM_NAV_HEIGHT = '56px';
+  const BOTTOM_NAV_HEIGHT = '75px';
 
   const onCloseRef = useRef(onClose);
   useEffect(() => {
