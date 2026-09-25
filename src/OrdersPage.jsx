@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import OneSignal from 'react-onesignal';
 import { useToast, useConfirm } from './ui/DialogProvider.jsx';
 import NotificationBell from './NotificationBell';
 import ReceiptModal from './components/UserDashboard/ReceiptModal';
@@ -65,6 +66,34 @@ export default function OrdersPage({ user, onExit, onAddToCart }) {
   const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
   const [activeTab, setActiveTab] = useState('all');
   const [searchQ, setSearchQ] = useState('');
+  
+  const [pushEnabled, setPushEnabled] = useState(
+    typeof window !== 'undefined' && window.Notification && window.Notification.permission === 'granted'
+  );
+
+  const handleEnablePush = async () => {
+    try {
+      if (typeof window !== 'undefined' && window.Capacitor && window.Capacitor.isNativePlatform()) {
+        const { default: OneSignalPlugin } = await import('@onesignal/capacitor-plugin');
+        const granted = await OneSignalPlugin.Notifications.requestPermission(true);
+        if (granted) {
+          setPushEnabled(true);
+          triggerToast("Notifications enabled!");
+        }
+      } else {
+        OneSignal.Slidedown.promptPush();
+        // Check again after a short delay to see if they accepted
+        setTimeout(() => {
+          if (window.Notification && window.Notification.permission === 'granted') {
+            setPushEnabled(true);
+            triggerToast("Notifications enabled!");
+          }
+        }, 3000);
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  };
 
   const fetchOrders = () => {
     // Only show the skeleton on first-ever load. Returning visits paint
@@ -277,11 +306,37 @@ export default function OrdersPage({ user, onExit, onAddToCart }) {
               You've spent <span style={{ color: '#fff', fontWeight: 800 }}>{fmtINR(stats.totalSpent)}</span> with PackItOut
             </div>
           )}
+          {!pushEnabled && (
+            <div style={{
+              marginTop: '16px', background: 'rgba(255,255,255,0.15)', borderRadius: '12px',
+              padding: '12px 14px', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+              border: '1px solid rgba(255,255,255,0.2)'
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <span style={{ fontSize: '1.4rem' }}>🔔</span>
+                <div>
+                  <div style={{ fontWeight: 800, fontSize: '0.9rem', color: '#fff' }}>Get Live Updates</div>
+                  <div style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.85)', fontWeight: 600 }}>Track your orders instantly</div>
+                </div>
+              </div>
+              <button
+                onClick={handleEnablePush}
+                className="op-press"
+                style={{
+                  background: '#fff', color: '#ff4757', border: 'none', padding: '6px 12px',
+                  borderRadius: '999px', fontSize: '0.85rem', fontWeight: 800, cursor: 'pointer',
+                  boxShadow: '0 4px 10px rgba(0,0,0,0.1)'
+                }}
+              >
+                Enable
+              </button>
+            </div>
+          )}
         </div>
       </div>
 
       {/* ── CONTENT PULLED UP ───────────────────────────── */}
-      <div style={{ padding: '0 14px', maxWidth: '600px', margin: '0 auto', marginTop: '-36px', position: 'relative', zIndex: 2 }}>
+      <div style={{ padding: '0 14px', maxWidth: '600px', margin: '0 auto', marginTop: pushEnabled ? '-36px' : '-20px', position: 'relative', zIndex: 2 }}>
 
         {/* STATS STRIP */}
         {orders.length > 0 && (

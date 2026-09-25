@@ -11,6 +11,7 @@
     "@capacitor/android": "^6.2.2",
     "@capacitor/core": "^6.2.2",
     "@firebase/auth": "^1.13.1",
+    "@onesignal/capacitor-plugin": "^1.2.0",
     "firebase": "^12.13.0",
     "fuse.js": "^7.5.0",
     "posthog-js": "^1.434.11",

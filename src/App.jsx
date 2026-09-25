@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, lazy, Suspense } from 'react';
+import { Capacitor } from '@capacitor/core';
 import { useToast, useConfirm } from './ui/DialogProvider.jsx';
 import { userFetch, clearAdminToken, exchangeIdTokenForSession } from './utils/api.js';
 import { initAnalytics } from './utils/analyticsEngine.js';
@@ -44,14 +45,22 @@ const ONESIGNAL_APP_ID = (import.meta.env.VITE_ONESIGNAL_APP_ID || "1da2e78d-087
 let onesignalPromise;
 const loadOneSignal = () => {
   if (!onesignalPromise) {
-    onesignalPromise = import('react-onesignal').then(async (m) => {
-      const OneSignal = m.default;
-      await OneSignal.init({
-        appId: ONESIGNAL_APP_ID,
-        allowLocalhostAsSecureOrigin: import.meta.env.DEV,
+    if (Capacitor.isNativePlatform()) {
+      onesignalPromise = import('@onesignal/capacitor-plugin').then(async (m) => {
+        const OneSignal = m.default;
+        OneSignal.initialize(ONESIGNAL_APP_ID);
+        return OneSignal;
       });
-      return OneSignal;
-    });
+    } else {
+      onesignalPromise = import('react-onesignal').then(async (m) => {
+        const OneSignal = m.default;
+        await OneSignal.init({
+          appId: ONESIGNAL_APP_ID,
+          allowLocalhostAsSecureOrigin: import.meta.env.DEV,
+        });
+        return OneSignal;
+      });
+    }
   }
   return onesignalPromise;
 };
@@ -173,7 +182,9 @@ export default function App() {
     const runOneSignal = async () => {
       try {
         const OneSignal = await loadOneSignal();
-        OneSignal.Slidedown.promptPush();
+        if (!Capacitor.isNativePlatform()) {
+          OneSignal.Slidedown.promptPush();
+        }
       } catch (error) {
         console.error("OneSignal Initialization Error:", error);
       }

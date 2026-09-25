@@ -35,15 +35,24 @@ export default function ShopDashboard({ user, onExit }) {
     typeof window !== 'undefined' && window.Notification && window.Notification.permission === 'granted'
   );
 
-  const handleEnablePush = () => {
+  const handleEnablePush = async () => {
     try {
-      OneSignal.Slidedown.promptPush();
-      setTimeout(() => {
-        if (window.Notification && window.Notification.permission === 'granted') {
+      if (typeof window !== 'undefined' && window.Capacitor && window.Capacitor.isNativePlatform()) {
+        const { default: OneSignalPlugin } = await import('@onesignal/capacitor-plugin');
+        const granted = await OneSignalPlugin.Notifications.requestPermission(true);
+        if (granted) {
           setPushEnabled(true);
           toast("Notifications enabled!");
         }
-      }, 3000);
+      } else {
+        OneSignal.Slidedown.promptPush();
+        setTimeout(() => {
+          if (window.Notification && window.Notification.permission === 'granted') {
+            setPushEnabled(true);
+            toast("Notifications enabled!");
+          }
+        }, 3000);
+      }
     } catch (e) {
       console.error(e);
     }
