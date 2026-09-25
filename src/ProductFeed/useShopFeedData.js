@@ -51,6 +51,32 @@ export default function useShopFeedData(user) {
     const cacheKey = `packitout_feed_cache_v2_${shopId}`;
     let cancelled = false;
 
+    // 🚀 FIX: Instantly swap to the new shop's cache when pincode changes!
+    try {
+      const raw = localStorage.getItem(cacheKey);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (parsed?.cachedAt && Date.now() - parsed.cachedAt <= FEED_CACHE_MAX_AGE_MS) {
+          setItems(parsed.items || []);
+          setShopInfo(parsed.shopInfo || null);
+          setNearbyShops(parsed.nearbyShops || []);
+          setShopDeals(parsed.shopDeals || []);
+          setShopBestSellers(parsed.shopBestSellers || []);
+          setUnder99(parsed.under99 || []);
+          setTimeBased(parsed.timeBased || { title: "", subtitle: "", items: [] });
+          setNewArrivals(parsed.newArrivals || []);
+          setBuyItAgain(parsed.buyItAgain || []);
+          setLoading(false);
+        } else {
+          setLoading(true);
+          setItems([]);
+        }
+      } else {
+        setLoading(true);
+        setItems([]);
+      }
+    } catch (e) {}
+
     const fetchJson = (url) => fetch(url).then(r => r.ok ? r.json() : null).catch(() => null);
 
     const fetchShopProducts = async () => {

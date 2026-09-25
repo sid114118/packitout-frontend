@@ -79,7 +79,20 @@ export default function ShopDashboard({ user, onExit }) {
       console.error("SSE connection error, browser will auto-reconnect.", err);
     };
 
-    return () => eventSource.close();
+    // 🚀 FIX: When the app is minimized and opened again, instantly refresh!
+    // This prevents missing orders if the SSE connection dropped in the background.
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        fetchOrders();
+        fetchParchis();
+      }
+    };
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+
+    return () => {
+      eventSource.close();
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [shopData._id]);
 
