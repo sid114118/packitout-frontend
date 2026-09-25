@@ -87,20 +87,13 @@ export default function InventoryTab({ shopData, masterCatalog, handleInventoryU
     }
   };
 
-  // 🛡️ SAFETY NETS & MEMOIZATION
-  // Without useMemo here, these arrays recreate on every single keystroke,
-  // causing Fuse.js to completely rebuild its index and freeze the search.
-  const safeInventory = useMemo(() => shopData?.inventory || [], [shopData?.inventory]);
-  const safeCatalog = useMemo(() => masterCatalog || [], [masterCatalog]);
+  // 🛡️ SAFETY NETS
+  const safeInventory = shopData?.inventory || [];
+  const safeCatalog = masterCatalog || [];
 
   // --- DATA CALCULATIONS ---
-  const shopProductIds = useMemo(() => 
-    safeInventory.filter(i => i?.product).map(i => i.product._id), 
-  [safeInventory]);
-  
-  const availableToAdd = useMemo(() => 
-    safeCatalog.filter(m => !shopProductIds.includes(m._id)), 
-  [safeCatalog, shopProductIds]);
+  const shopProductIds = safeInventory.filter(i => i?.product).map(i => i.product._id); 
+  const availableToAdd = safeCatalog.filter(m => !shopProductIds.includes(m._id));
 
   const masterFuse = useMemo(() => new Fuse(availableToAdd, {
     keys: ['name', 'brand', 'searchTags'],
