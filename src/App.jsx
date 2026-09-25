@@ -403,19 +403,30 @@ export default function App() {
   // when the user opens the account page. Without this, server-side changes
   // like admin coin updates never reach the cached localStorage copy and the
   // UI shows a stale balance until the next login.
+  const loggedInUserRef = useRef(loggedInUser);
+  useEffect(() => {
+    loggedInUserRef.current = loggedInUser;
+  }, [loggedInUser]);
+
+  // Rehydrate the logged-in user from the server on mount, on tab focus, and
+  // when the user opens the account page. Without this, server-side changes
+  // like admin coin updates never reach the cached localStorage copy and the
+  // UI shows a stale balance until the next login.
   useEffect(() => {
     const userId = loggedInUser?._id;
     if (!userId) return;
 
     let cancelled = false;
     const refresh = async () => {
+      const currentUser = loggedInUserRef.current;
+      if (!currentUser) return;
       try {
-        const res = await userFetch(loggedInUser, `/users/${userId}`);
+        const res = await userFetch(currentUser, `/users/${userId}`, { cache: 'no-store' });
         if (!res.ok) return;
         const fresh = await res.json();
         if (cancelled || !fresh || !fresh._id) return;
         // Server response omits sessionToken — preserve the in-memory one.
-        const next = { ...fresh, sessionToken: loggedInUser.sessionToken };
+        const next = { ...fresh, sessionToken: currentUser.sessionToken };
         try { localStorage.setItem("packitout_user", JSON.stringify(next)); } catch (e) {}
         setLoggedInUser(next);
       } catch { /* offline / transient — keep cached copy */ }
