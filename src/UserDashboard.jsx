@@ -63,8 +63,11 @@ export default function UserDashboard({ user, onExit, onLogout, onUserUpdate }) 
       });
       if (res.ok) {
         const updated = await res.json();
+        // Server response strips sessionToken — preserve the in-memory one
+        // so the next authenticated API call doesn't fail with 401.
+        const next = { ...updated, sessionToken: user.sessionToken };
         // Push the new user up to App so the header/orders/etc. all refresh.
-        if (onUserUpdate) onUserUpdate(updated);
+        if (onUserUpdate) onUserUpdate(next);
         setPrimaryShop(updated.primaryShop && typeof updated.primaryShop === 'object' ? updated.primaryShop : nearbyShops.find(s => s._id === updated.primaryShop) || null);
         setIsEditingProfile(false);
         triggerToast("Profile updated!");

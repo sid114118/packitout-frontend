@@ -269,7 +269,15 @@ export default function App() {
   }, []);
 
   // 🛡️ GLOBAL REDIRECT HANDLER for Google Auth on Mobile
+  // Only process if there's no cached user (a cached user means we're
+  // reloading the app, not returning from an OAuth redirect). On some phones,
+  // calling getRedirectResult() unconditionally on every mount triggered slow
+  // Firebase network calls and race conditions with the cached session.
   useEffect(() => {
+    // If we already have a logged-in user from localStorage, skip the
+    // redirect check — this is a normal page load, not an OAuth return.
+    if (loggedInUser) return;
+
     const handleRedirect = async () => {
       try {
         const result = await getRedirectResult(auth);
@@ -281,11 +289,16 @@ export default function App() {
           toast("✅ Welcome!", 'success');
         }
       } catch (err) {
-        toast("❌ Google Login Failed.", 'error');
+        // Only show error toast if this was a real redirect attempt that failed,
+        // not just an empty getRedirectResult on normal page load.
+        if (err?.code && err.code !== 'auth/popup-closed-by-user') {
+          toast("❌ Google Login Failed.", 'error');
+        }
         console.error(err);
       }
     };
     handleRedirect();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handleAddToCart = async (product) => {
@@ -392,6 +405,13 @@ export default function App() {
   // when the user opens the account page. Without this, server-side changes
   // like admin coin updates never reach the cached localStorage copy and the
   // UI shows a stale balance until the next login.
+  //
+  // 🔑 We use a ref so the refresh closure always reads the latest sessionToken
+  // and user data without adding the entire user object to the effect deps
+  // (which would cause an infinite loop: refresh → setLoggedInUser → re-run).
+  const loggedInUserRef = useRef(loggedInUser);
+  loggedInUserRef.current = loggedInUser;
+
   useEffect(() => {
     const userId = loggedInUser?._id;
     if (!userId) return;
@@ -399,14 +419,30 @@ export default function App() {
     let cancelled = false;
     const refresh = async () => {
       try {
-        const res = await userFetch(loggedInUser, `/users/${userId}`);
+        const current = loggedInUserRef.current;
+        if (!current) return;
+        const res = await userFetch(current, `/users/${userId}`);
         if (!res.ok) return;
         const fresh = await res.json();
         if (cancelled || !fresh || !fresh._id) return;
         // Server response omits sessionToken — preserve the in-memory one.
-        const next = { ...fresh, sessionToken: loggedInUser.sessionToken };
-        try { localStorage.setItem("packitout_user", JSON.stringify(next)); } catch (e) {}
-        setLoggedInUser(next);
+        const next = { ...fresh, sessionToken: current.sessionToken };
+
+        // 🔑 Only update state if something actually changed. Without this
+        // check, every tab focus / visibility change / hash change created a
+        // brand-new user object reference, cascading unnecessary re-renders
+        // through the entire app (Header, ProductFeed, Cart, etc.).
+        const prev = loggedInUserRef.current;
+        const changed = !prev || prev.name !== next.name || prev.pincode !== next.pincode
+          || prev.coins !== next.coins || prev.address !== next.address
+          || (typeof prev.primaryShop === 'object' ? prev.primaryShop?._id : prev.primaryShop)
+             !== (typeof next.primaryShop === 'object' ? next.primaryShop?._id : next.primaryShop)
+          || prev.primaryShop?.isOpen !== next.primaryShop?.isOpen;
+
+        if (changed) {
+          try { localStorage.setItem("packitout_user", JSON.stringify(next)); } catch (e) {}
+          setLoggedInUser(next);
+        }
       } catch { /* offline / transient — keep cached copy */ }
     };
 

@@ -1,10 +1,13 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 
 const BASE_URL = (import.meta.env.VITE_API_BASE || "https://darkslategrey-snail-415133.hostingersite.com");
 
-const FEED_CACHE_MAX_AGE_MS = 24 * 60 * 60 * 1000; 
+// ⏱️ Reduced from 24 hours → 10 minutes. Old 24h cache meant customers saw
+// stale prices/stock for an entire day after a shopkeeper updated inventory.
+const FEED_CACHE_MAX_AGE_MS = 10 * 60 * 1000; 
 const MASTER_CACHE_KEY = 'packitout_master_products_v1';
-const MASTER_CACHE_MAX_AGE_MS = 24 * 60 * 60 * 1000;
+// Master catalog changes less often so 2 hours is reasonable.
+const MASTER_CACHE_MAX_AGE_MS = 2 * 60 * 60 * 1000;
 
 const readMaster = () => {
   try {
@@ -17,9 +20,24 @@ const readMaster = () => {
 };
 
 export default function useShopFeedData(user) {
-  const initialCache = (() => {
+  // 🔑 Extract STABLE PRIMITIVES from the user object. These are the only
+  // values the effect actually needs. Using the whole `user` object as a
+  // dependency caused the feed to re-fetch on every object-reference change
+  // (which happened on tab focus, visibility change, hash change, etc.).
+  const shopId = (() => {
     if (!user || !user.primaryShop) return null;
-    const shopId = typeof user.primaryShop === 'object' ? user.primaryShop._id : user.primaryShop;
+    return typeof user.primaryShop === 'object' ? user.primaryShop._id : user.primaryShop;
+  })();
+  const userId = user?._id || null;
+  const userPincode = user?.pincode || null;
+
+  // Keep a ref to the latest user so the async callbacks inside the effect
+  // can read fresh values (sessionToken etc.) without adding `user` to deps.
+  const userRef = useRef(user);
+  userRef.current = user;
+
+  const initialCache = (() => {
+    if (!shopId) return null;
     try {
       const raw = localStorage.getItem(`packitout_feed_cache_v2_${shopId}`);
       if (!raw) return null;
@@ -42,12 +60,11 @@ export default function useShopFeedData(user) {
   const [buyItAgain, setBuyItAgain] = useState(initialCache?.buyItAgain || []);
 
   useEffect(() => {
-    if (!user || !user.primaryShop) {
+    if (!shopId) {
       setLoading(false);
       return;
     }
 
-    const shopId = typeof user.primaryShop === 'object' ? user.primaryShop._id : user.primaryShop;
     const cacheKey = `packitout_feed_cache_v2_${shopId}`;
     let cancelled = false;
 
@@ -148,9 +165,14 @@ export default function useShopFeedData(user) {
 
       const bgPromises = [];
 
-      if (user.pincode) {
+      // Read pincode from the ref so we always have the latest value
+      // without adding the whole user object to the dependency array.
+      const currentPincode = userRef.current?.pincode;
+      const currentUserId = userRef.current?._id;
+
+      if (currentPincode) {
         bgPromises.push(
-          fetchJson(`${BASE_URL}/shops/all/${user.pincode}`).then(shopsData => {
+          fetchJson(`${BASE_URL}/shops/all/${currentPincode}`).then(shopsData => {
             if (cancelled || !Array.isArray(shopsData)) return;
             finalNearbyShops = shopsData.filter(s => s._id !== shopId);
             setNearbyShops(finalNearbyShops);
@@ -158,9 +180,9 @@ export default function useShopFeedData(user) {
         );
       }
 
-      if (user._id) {
+      if (currentUserId) {
         bgPromises.push(
-          fetchJson(`${BASE_URL}/orders/user/${user._id}`).then(userOrders => {
+          fetchJson(`${BASE_URL}/orders/user/${currentUserId}`).then(userOrders => {
             if (cancelled || !Array.isArray(userOrders)) return;
             const pastBoughtIds = new Set();
             userOrders.forEach(order => {
@@ -204,7 +226,9 @@ export default function useShopFeedData(user) {
     });
 
     return () => { cancelled = true; };
-  }, [user]);
+    // 🔑 STABLE DEPS: Only re-fetch when the actual shop, user, or pincode
+    // changes — NOT on every user object reference change.
+  }, [shopId, userId, userPincode]);
 
   return { loading, items, shopInfo, nearbyShops, shopDeals, shopBestSellers, under99, timeBased, newArrivals, buyItAgain };
 }
