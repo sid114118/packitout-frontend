@@ -11,21 +11,24 @@ export const initAnalytics = (user) => {
   if (hasCalledInit) return;
   hasCalledInit = true;
 
-  try {
-    posthog.init(POSTHOG_KEY, {
-      api_host: POSTHOG_HOST,
-      capture_pageleave: false, // 🔋 PERFORMANCE: Disabled to save quota
-      // Respect user's offline state (caches events in localStorage)
-      persistence: 'localStorage+cookie', 
-      loaded: (ph) => {
-        if (user) {
-          identifyUser(user);
+  // 🔋 PERFORMANCE: Delay analytics init so it doesn't block critical render path
+  setTimeout(() => {
+    try {
+      posthog.init(POSTHOG_KEY, {
+        api_host: POSTHOG_HOST,
+        capture_pageleave: false, // 🔋 PERFORMANCE: Disabled to save quota
+        // Respect user's offline state (caches events in localStorage)
+        persistence: 'localStorage+cookie', 
+        loaded: (ph) => {
+          if (user) {
+            identifyUser(user);
+          }
         }
-      }
-    });
-  } catch (error) {
-    console.error("Analytics initialization failed:", error);
-  }
+      });
+    } catch (error) {
+      console.error("Analytics initialization failed:", error);
+    }
+  }, 2500);
 };
 
 export const identifyUser = (user) => {
