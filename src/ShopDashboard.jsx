@@ -44,15 +44,27 @@ export default function ShopDashboard({ user, onExit }) {
     const sseUrl = `${BASE_URL}/shop-events/${shopData._id}?token=${shopData.sessionToken || ''}`;
     const eventSource = new EventSource(sseUrl);
 
-    eventSource.addEventListener('refresh_orders', () => fetchOrders());
-    eventSource.addEventListener('refresh_parchis', () => fetchParchis());
+    let ordersTimeout;
+    let parchisTimeout;
+
+    eventSource.addEventListener('refresh_orders', () => {
+      clearTimeout(ordersTimeout);
+      ordersTimeout = setTimeout(fetchOrders, 500);
+    });
+    eventSource.addEventListener('refresh_parchis', () => {
+      clearTimeout(parchisTimeout);
+      parchisTimeout = setTimeout(fetchParchis, 500);
+    });
 
     eventSource.onerror = (err) => {
       console.error("SSE connection error, browser will auto-reconnect.", err);
     };
 
-    return () => eventSource.close();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    return () => {
+      clearTimeout(ordersTimeout);
+      clearTimeout(parchisTimeout);
+      eventSource.close();
+    };
   }, [shopData._id]);
 
   // Shop-scoped fetch — was pulling every order on the platform every 10s and

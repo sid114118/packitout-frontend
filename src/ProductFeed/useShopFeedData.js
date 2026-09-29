@@ -17,7 +17,7 @@ const readMaster = () => {
 };
 
 export default function useShopFeedData(user) {
-  const initialCache = (() => {
+  const [initialCache] = useState(() => {
     if (!user || !user.primaryShop) return null;
     const shopId = typeof user.primaryShop === 'object' ? user.primaryShop._id : user.primaryShop;
     try {
@@ -27,7 +27,7 @@ export default function useShopFeedData(user) {
       if (parsed?.cachedAt && Date.now() - parsed.cachedAt > FEED_CACHE_MAX_AGE_MS) return null;
       return parsed;
     } catch (e) { return null; }
-  })();
+  });
 
   const [loading, setLoading] = useState(initialCache ? false : true);
   

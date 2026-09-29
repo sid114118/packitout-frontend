@@ -74,11 +74,16 @@ export default function NotificationBell({ ownerType, owner, ownerId }) {
     const sseUrl = `${BASE_URL.replace(/\/api$/, '')}${endpoint}?token=${token}`;
     const eventSource = new EventSource(sseUrl);
     
+    let sseTimeout;
     eventSource.addEventListener('new_notification', () => {
-      fetchNotifications();
+      clearTimeout(sseTimeout);
+      sseTimeout = setTimeout(() => {
+        fetchNotifications();
+      }, 500);
     });
 
     return () => {
+      clearTimeout(sseTimeout);
       eventSource.close();
     };
   }, [effectiveId, ownerType, effectiveOwner]);

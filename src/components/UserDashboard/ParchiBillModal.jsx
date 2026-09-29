@@ -39,12 +39,21 @@ export default function ParchiBillModal({ open, onClose, user }) {
     const sseUrl = `${BASE_URL.replace(/\/api$/, '')}/user-events/${user._id}?token=${token}`;
     const eventSource = new EventSource(sseUrl);
     
+    let sseTimeout;
+    const debouncedRefresh = () => {
+      clearTimeout(sseTimeout);
+      sseTimeout = setTimeout(refresh, 500);
+    };
+
     // The shop sending a bill creates a Notification, which fires this event
-    eventSource.addEventListener('new_notification', () => refresh());
+    eventSource.addEventListener('new_notification', debouncedRefresh);
     // Also listen for any explicit parchi refresh events just in case
-    eventSource.addEventListener('refresh_parchis', () => refresh());
+    eventSource.addEventListener('refresh_parchis', debouncedRefresh);
     
-    return () => eventSource.close();
+    return () => {
+      clearTimeout(sseTimeout);
+      eventSource.close();
+    };
   }, [open, refresh, user]);
 
   if (!open) return null;
