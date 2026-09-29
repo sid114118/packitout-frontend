@@ -243,11 +243,7 @@ export default function Cart({ cart, setCart, user, onUserUpdate, onBack, onChec
             const safePrice = item.sellingPrice !== undefined ? item.sellingPrice : (item.mrp || 0);
             const originalPrice = (item.mrp && item.mrp > 0) ? item.mrp : safePrice;
             const isDiscounted = originalPrice > safePrice;
-            let isOutOfStock = false;
-            if (targetShop && targetShop.inventory) {
-              const inv = targetShop.inventory.find(i => i.product?._id === item._id || i.product === item._id);
-              if (!inv || inv.inStock === false) isOutOfStock = true;
-            }
+            const isOutOfStock = outOfStockIds.has(String(item._id));
             
             return (
               <div key={item._id} style={{ display: 'flex', gap: '15px', alignItems: 'center', paddingBottom: '20px', marginBottom: '20px', borderBottom: index === cart.length - 1 ? 'none' : '1px solid #f1f5f9' }}>

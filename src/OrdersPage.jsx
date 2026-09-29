@@ -46,20 +46,25 @@ export default function OrdersPage({ user, onExit, onAddToCart }) {
   const askConfirm = useConfirm();
 
   const cacheKey = `packitout_orders_cache_v1_${user._id}`;
-  const initialCache = (() => {
+  const [initialCacheLoaded] = useState(() => {
+    try {
+      return localStorage.getItem(cacheKey) !== null;
+    } catch { return false; }
+  });
+
+  const [orders, setOrders] = useState(() => {
     try {
       const raw = localStorage.getItem(cacheKey);
-      if (!raw) return null;
-      const parsed = JSON.parse(raw);
-      if (Array.isArray(parsed)) {
-        return parsed.filter(o => o && typeof o === 'object');
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed)) {
+          return parsed.filter(o => o && typeof o === 'object');
+        }
       }
-      return null;
-    } catch { return null; }
-  })();
-
-  const [orders, setOrders] = useState(initialCache || []);
-  const [loading, setLoading] = useState(initialCache ? false : true);
+    } catch {}
+    return [];
+  });
+  const [loading, setLoading] = useState(!initialCacheLoaded);
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [orderToReview, setOrderToReview] = useState(null);
   const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
@@ -69,7 +74,7 @@ export default function OrdersPage({ user, onExit, onAddToCart }) {
   const fetchOrders = () => {
     // Only show the skeleton on first-ever load. Returning visits paint
     // instantly from cache and refresh silently in the background.
-    if (!initialCache) setLoading(true);
+    if (!initialCacheLoaded) setLoading(true);
     userFetch(user, `/orders/user/${user._id}`)
       .then(res => res.ok ? res.json().then(d => ({ ok: true, data: d })) : { ok: false, data: null })
       .then(({ ok, data }) => {
@@ -97,11 +102,16 @@ export default function OrdersPage({ user, onExit, onAddToCart }) {
     const sseUrl = `${BASE_URL.replace(/\/api$/, '')}/user-events/${user._id}?token=${user.sessionToken}`;
     const eventSource = new EventSource(sseUrl);
     
+    let sseTimeout;
     eventSource.addEventListener('refresh_orders', () => {
-      fetchOrders();
+      clearTimeout(sseTimeout);
+      sseTimeout = setTimeout(() => {
+        fetchOrders();
+      }, 500);
     });
     
     return () => {
+      clearTimeout(sseTimeout);
       eventSource.close();
     };
   }, [user._id, user.sessionToken]);

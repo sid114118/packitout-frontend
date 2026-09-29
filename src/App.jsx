@@ -410,19 +410,26 @@ export default function App() {
       } catch { /* offline / transient — keep cached copy */ }
     };
 
+    let refreshTimeout;
+    const debouncedRefresh = () => {
+      clearTimeout(refreshTimeout);
+      refreshTimeout = setTimeout(refresh, 500);
+    };
+
     refresh();
 
-    const onFocus = () => refresh();
-    const onVisibility = () => { if (document.visibilityState === 'visible') refresh(); };
+    const onFocus = () => debouncedRefresh();
+    const onVisibility = () => { if (document.visibilityState === 'visible') debouncedRefresh(); };
     // Refresh on every route change — covers cases like returning from #cart to
     // home where the user's primaryShop.isOpen / coins balance might be stale.
-    const onHashChange = () => refresh();
+    const onHashChange = () => debouncedRefresh();
 
     window.addEventListener('focus', onFocus);
     document.addEventListener('visibilitychange', onVisibility);
     window.addEventListener('hashchange', onHashChange);
     return () => {
       cancelled = true;
+      clearTimeout(refreshTimeout);
       window.removeEventListener('focus', onFocus);
       document.removeEventListener('visibilitychange', onVisibility);
       window.removeEventListener('hashchange', onHashChange);
