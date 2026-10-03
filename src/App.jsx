@@ -121,43 +121,6 @@ export default function App() {
   // 🏷️ NEW: Brand State
   const [selectedBrand, setSelectedBrand] = useState(null); 
 
-  // 🏷️ NEW: Guest Shop ID (from QR code)
-  const [guestShopId, setGuestShopId] = useState(() => {
-    try {
-      const params = new URLSearchParams(window.location.search);
-      const shopFromUrl = params.get('shop');
-      if (shopFromUrl) {
-        localStorage.setItem('packitout_guest_shop', shopFromUrl);
-        window.history.replaceState({}, document.title, window.location.pathname + window.location.hash);
-        return shopFromUrl;
-      }
-      return localStorage.getItem('packitout_guest_shop') || null;
-    } catch { return null; }
-  });
-
-  useEffect(() => {
-    if (loggedInUser && guestShopId) {
-      const currentShop = typeof loggedInUser.primaryShop === 'object' ? loggedInUser.primaryShop?._id : loggedInUser.primaryShop;
-      if (currentShop !== guestShopId) {
-        userFetch(loggedInUser, `/users/${loggedInUser._id}`, {
-          method: 'PATCH',
-          body: JSON.stringify({ primaryShop: guestShopId })
-        }).then(res => res.ok ? res.json() : null)
-          .then(updated => {
-            if (updated) {
-              handleUserUpdate(updated, { clearCart: true });
-              localStorage.removeItem('packitout_guest_shop');
-              setGuestShopId(null);
-              toast("Welcome to the shop!", 'success');
-            }
-          }).catch(err => console.log(err));
-      } else {
-        localStorage.removeItem('packitout_guest_shop');
-        setGuestShopId(null);
-      }
-    }
-  }, [loggedInUser, guestShopId]);
-
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isHeaderVisible, setIsHeaderVisible] = useState(true);
   // ref instead of state so the scroll listener doesn't re-bind every event
@@ -629,7 +592,6 @@ export default function App() {
           <CrashCatcher>
             <ProductFeed
               user={loggedInUser}
-              guestShopId={guestShopId}
               onUserUpdate={handleUserUpdate}
               cart={cart}
               onAddToCart={handleAddToCart}
