@@ -75,6 +75,7 @@ export default function Cart({ cart, setCart, user, onUserUpdate, onBack, onChec
     return !inv || inv.inStock === false;
   });
   const hasOutOfStock = outOfStockItems.length > 0;
+  const outOfStockIds = new Set(outOfStockItems.map(item => String(item._id)));
   const totalSavings = totalProductDiscount + discount;
 
   // --- 🛒 ADD/REMOVE ITEM LOGIC ---
