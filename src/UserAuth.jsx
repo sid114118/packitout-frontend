@@ -348,9 +348,6 @@ export default function UserAuth({ onLoginSuccess }) {
             <p style={footerStyle}>
               Don't have an account? <span onClick={() => reset("signup")} style={linkStyle}>Sign Up</span>
             </p>
-            <p style={{ ...footerStyle, marginTop: '6px', fontSize: '0.75rem' }}>
-              Existing user with phone+password? <span onClick={() => reset("migrate-phone")} style={linkStyle}>Migrate to email</span>
-            </p>
           </>
         )}
 
