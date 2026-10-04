@@ -97,13 +97,13 @@ export default function InventoryTab({ shopData, masterCatalog, handleInventoryU
 
   const masterFuse = useMemo(() => new Fuse(availableToAdd, {
     keys: ['name', 'brand', 'searchTags'],
-    threshold: 0.4,
+    threshold: 0.15,
     ignoreLocation: true
   }), [availableToAdd]);
 
   const inventoryFuse = useMemo(() => new Fuse(safeInventory, {
     keys: ['product.name', 'product.brand', 'product.searchTags'],
-    threshold: 0.4,
+    threshold: 0.15,
     ignoreLocation: true
   }), [safeInventory]);
 
