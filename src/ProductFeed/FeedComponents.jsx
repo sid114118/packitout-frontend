@@ -167,6 +167,7 @@ const ModernProductCardBase = ({ item, isCarousel, shopClosed, onOpenDetails, on
               ) : (
                 <button 
                   onClick={() => { trackEvent('ADD_TO_CART', getEventPayload()); onQuickAdd(item); }} 
+                  className="pio-product-add-btn"
                   style={{ backgroundColor: '#fff', color: '#ef4444', border: '1px solid #fca5a5', borderRadius: '8px', padding: '6px 12px', fontSize: '0.75rem', fontWeight: '800', cursor: 'pointer', boxShadow: '0 2px 4px rgba(0,0,0,0.04)', textTransform: 'uppercase' }}
                 >
                   {isMultiVariant ? "SELECT" : "ADD"}

@@ -55,6 +55,15 @@ export default function ShopFeed({
       danger: true,
     });
     if (!ok) return;
+
+    // Handle guest shop switching instantly without hitting DB
+    if (!user?._id) {
+      localStorage.setItem("packitout_guest_shop_id", newShop._id);
+      toast(`Switched to ${newShop.name}!`);
+      setTimeout(() => window.location.reload(), 300); // Reload to pull new shop data
+      return;
+    }
+
     try {
       const res = await userFetch(user, `/users/${user._id}`, { method: 'PATCH', body: JSON.stringify({ primaryShop: newShop._id }) });
       if(res.ok) {

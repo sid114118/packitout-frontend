@@ -224,12 +224,19 @@ export default function App() {
   const previousUserIdRef = useRef(loggedInUser?._id || null);
   useEffect(() => {
     const nextId = loggedInUser?._id || null;
-
     initAnalytics(loggedInUser);
 
     if (nextId === previousUserIdRef.current) return;
+    
+    // If they were a guest and had items in their cart, KEEP those items when they log in!
+    // Otherwise, load their saved cart from storage.
+    if (previousUserIdRef.current === null && cart.length > 0) {
+       // We keep the current in-memory cart! The other useEffect will save it to their new ID shortly.
+    } else {
+       setCart(loadCartFor(nextId));
+    }
+    
     previousUserIdRef.current = nextId;
-    setCart(loadCartFor(nextId));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [loggedInUser?._id]);
 
@@ -247,14 +254,40 @@ export default function App() {
 
   useEffect(() => {
     const checkUrl = () => {
-      if (window.location.hash === "#admin") setCurrentView("admin");
-      else if (window.location.hash === "#shop") setCurrentView("shop");
-      else if (window.location.hash === "#account") setCurrentView("account");
-      else if (window.location.hash === "#orders") setCurrentView("orders");
-      else if (window.location.hash === "#cart") setCurrentView("cart");
-      else if (window.location.hash === "#success") setCurrentView("success");
-      else if (window.location.hash === "#nearby") setCurrentView("nearby");
-      else if (window.location.hash === "#/verify-done" || window.location.hash === "#verify-done") setCurrentView("verify-done");
+      const hash = window.location.hash;
+      
+      // 🌟 MAGIC QR CODE ROUTE! 🌟
+      // Example: https://app.packitout.com/#/s/12345abcd?pin=110001
+      if (hash.startsWith("#/s/")) {
+        const [pathPart, queryPart] = hash.replace("#/s/", "").split("?");
+        const shopId = pathPart;
+        
+        if (shopId) {
+          localStorage.setItem("packitout_guest_shop_id", shopId);
+          
+          if (queryPart) {
+            const params = new URLSearchParams(queryPart);
+            const pin = params.get("pin");
+            if (pin) localStorage.setItem("packitout_guest_pincode", pin);
+          }
+          
+          if (loggedInUser) {
+            handleSetPrimaryShop(shopId);
+          }
+          window.history.replaceState(null, "", window.location.pathname + "#");
+          setCurrentView(isShopApp ? "shop" : "customer");
+          return;
+        }
+      }
+
+      if (hash === "#admin") setCurrentView("admin");
+      else if (hash === "#shop") setCurrentView("shop");
+      else if (hash === "#account") setCurrentView("account");
+      else if (hash === "#orders") setCurrentView("orders");
+      else if (hash === "#cart") setCurrentView("cart");
+      else if (hash === "#success") setCurrentView("success");
+      else if (hash === "#nearby") setCurrentView("nearby");
+      else if (hash === "#/verify-done" || hash === "#verify-done") setCurrentView("verify-done");
       else {
         setCurrentView(isShopApp ? "shop" : "customer");
         setSelectedCategory(null);
@@ -289,14 +322,12 @@ export default function App() {
   }, []);
 
   const handleAddToCart = async (product) => {
-    if (!loggedInUser) {
-      toast("Please log in first! 🛒", 'info');
-      window.location.hash = "#account";
-      return;
-    }
     if (!product || !product._id) return;
 
-    const currentShopId = viewingShop?._id || (typeof loggedInUser.primaryShop === 'object' ? loggedInUser.primaryShop?._id : loggedInUser.primaryShop);
+    const guestShopId = localStorage.getItem("packitout_guest_shop_id");
+    const userShop = loggedInUser?.primaryShop;
+    const userShopId = typeof userShop === 'object' ? userShop?._id : userShop;
+    const currentShopId = viewingShop?._id || userShopId || guestShopId;
 
     // Cross-shop check: if cart is not empty and belongs to a different shop, prompt to clear
     if (cart.length > 0) {
@@ -485,6 +516,16 @@ export default function App() {
   };
 
   const handleSetPrimaryShop = async (shopId) => {
+    if (!loggedInUser) {
+      localStorage.setItem("packitout_guest_shop_id", shopId);
+      if (viewingShop?.name) {
+        localStorage.setItem("packitout_guest_shop_name", viewingShop.name);
+      }
+      toast("Shop selected! Let's start shopping.", 'success');
+      window.location.hash = "";
+      return;
+    }
+
     try {
       const response = await userFetch(loggedInUser, `/users/${loggedInUser._id}`, {
         method: "PATCH",
@@ -585,13 +626,25 @@ export default function App() {
           </div>
         </div>
 
+        <style>{`
+          @keyframes pio-subtle-glow {
+            0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4); transform: scale(1); }
+            50% { box-shadow: 0 0 0 8px rgba(239, 68, 68, 0); transform: scale(1.03); }
+            100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); transform: scale(1); }
+          }
+          .pio-product-add-btn {
+            animation: pio-subtle-glow 2s ease-in-out 3;
+            animation-delay: 1s;
+          }
+        `}</style>
+
         {/* 🛡️ Hides Categories if viewing a Brand */}
         {!selectedCategory && !selectedBrand && !isSearchOpen && <Categories onCategorySelect={setSelectedCategory} onAddToCart={handleAddToCart} />}
         
         <main style={{ flex: 1, padding: '1rem 0' }}>
           <CrashCatcher>
             <ProductFeed
-              user={loggedInUser}
+              user={loggedInUser || (localStorage.getItem("packitout_guest_shop_id") ? { primaryShop: localStorage.getItem("packitout_guest_shop_id"), pincode: localStorage.getItem("packitout_guest_pincode") } : null)}
               onUserUpdate={handleUserUpdate}
               cart={cart}
               onAddToCart={handleAddToCart}

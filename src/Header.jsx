@@ -10,7 +10,7 @@ export default function Header({ user, onUserUpdate }) {
   const [loadingShops, setLoadingShops] = useState(false);
   const [selectedShopId, setSelectedShopId] = useState("");
   const [hasSearched, setHasSearched] = useState(false); 
-  const [activeShopName, setActiveShopName] = useState(user?.primaryShop?.name || "");
+  const [activeShopName, setActiveShopName] = useState(user?.primaryShop?.name || localStorage.getItem("packitout_guest_shop_name") || "");
   
   // 🟢 Check if shop is open
   const isShopOpen = user?.primaryShop?.isOpen !== false; 
@@ -36,12 +36,17 @@ export default function Header({ user, onUserUpdate }) {
   };
 
   const handleSaveShop = async () => {
+    if (!selectedShopId) return;
+
     if (!user) {
-      toast("Please log in to save your preferred shop!", 'info');
-      window.location.hash = "#account";
+      localStorage.setItem("packitout_guest_shop_id", selectedShopId);
+      localStorage.setItem("packitout_guest_pincode", pincode);
+      const shopName = shops.find(s => s._id === selectedShopId)?.name || "Guest Shop";
+      localStorage.setItem("packitout_guest_shop_name", shopName);
+      toast("Shop selected! Let's start shopping.", 'success');
+      window.location.reload(); // Reload to let App.jsx pick up the new guest shop
       return;
     }
-    if (!selectedShopId) return;
 
     try {
       const res = await userFetch(user, `/users/${user._id}`, {

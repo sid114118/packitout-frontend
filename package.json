@@ -14,9 +14,11 @@
     "@onesignal/capacitor-plugin": "^1.2.0",
     "firebase": "^12.13.0",
     "fuse.js": "^7.5.0",
+    "lucide-react": "^1.52.0",
     "posthog-js": "^1.434.11",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
+    "react-joyride": "^3.2.0",
     "react-onesignal": "^3.0.0"
   },
   "devDependencies": {

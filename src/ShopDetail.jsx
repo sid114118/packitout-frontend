@@ -34,7 +34,7 @@ export default function ShopDetail({ shop, onBack, onSetPrimary }) {
       </div>
 
       {/* Detail Content */}
-      <div style={{ marginTop: '-30px', backgroundColor: 'white', borderRadius: '30px 30px 0 0', padding: '24px', position: 'relative', boxShadow: '0 -10px 30px rgba(0,0,0,0.05)' }}>
+      <div style={{ marginTop: '-30px', backgroundColor: 'white', borderRadius: '30px 30px 0 0', padding: '24px 24px 100px 24px', position: 'relative', boxShadow: '0 -10px 30px rgba(0,0,0,0.05)' }}>
         <h1 style={{ fontSize: '1.8rem', fontWeight: '900', color: '#0f172a', margin: '0 0 10px 0' }}>{shop.name}</h1>
         
         <div style={{ display: 'flex', gap: '10px', marginBottom: '20px' }}>

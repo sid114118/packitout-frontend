@@ -9,7 +9,8 @@ export default function Nearby({ user, onSelectShop }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!user?.pincode) {
+    const activePincode = user?.pincode || localStorage.getItem("packitout_guest_pincode");
+    if (!activePincode) {
       setLoading(false);
       return;
     }
@@ -20,7 +21,7 @@ export default function Nearby({ user, onSelectShop }) {
     // shops by distance and attach a distanceKm field. If denied or absent,
     // we fall back to the pincode-only listing (no distance shown).
     const fetchShops = (qs = '') => {
-      fetch(`${BASE_URL}/shops/all/${user.pincode}${qs}`)
+      fetch(`${BASE_URL}/shops/all/${activePincode}${qs}`)
         .then(res => res.json())
         .then(data => {
           if (cancelled) return;
@@ -57,15 +58,76 @@ export default function Nearby({ user, onSelectShop }) {
     return `${distLabel} · ~${walkMin} min walk`;
   };
 
+  const activePincode = user?.pincode || localStorage.getItem("packitout_guest_pincode");
+  const [guestInput, setGuestInput] = useState("");
+
   if (loading) return <div style={{ padding: '20px', textAlign: 'center' }}>Searching for local shops...</div>;
-  if (!user?.pincode) return <div style={{ padding: '24px', textAlign: 'center', color: '#64748b', fontWeight: 600 }}>Add your pincode in Profile to see nearby shops.</div>;
+  if (!activePincode) return (
+    <div style={{ padding: '40px 24px', textAlign: 'center', minHeight: '100vh', backgroundColor: '#f8fafc' }}>
+      <style>{`
+        @keyframes pio-pincode-pulse {
+          0% { box-shadow: 0 0 0 0 rgba(22, 163, 74, 0.4); border-color: #16a34a; }
+          70% { box-shadow: 0 0 0 10px rgba(22, 163, 74, 0); border-color: #cbd5e1; }
+          100% { box-shadow: 0 0 0 0 rgba(22, 163, 74, 0); border-color: #cbd5e1; }
+        }
+        .pio-guide-pulse {
+          animation: pio-pincode-pulse 2s infinite;
+          transition: border-color 0.3s;
+        }
+        .pio-guide-pulse:focus {
+          animation: none;
+          border-color: #16a34a !important;
+          box-shadow: 0 0 0 3px rgba(22, 163, 74, 0.2) !important;
+        }
+      `}</style>
+      <div style={{ backgroundColor: '#fff', padding: '30px', borderRadius: '24px', boxShadow: '0 10px 30px rgba(0,0,0,0.05)' }}>
+        <h2 style={{ margin: '0 0 10px 0', color: '#0f172a', fontSize: '1.4rem' }}>Find Shops Near You</h2>
+        <p style={{ margin: '0 0 20px 0', color: '#64748b', fontSize: '0.9rem' }}>Enter your pincode to see available stores.</p>
+        <style>{`
+          @keyframes pio-bounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-5px); }
+          }
+          .pio-guide-arrow {
+            animation: pio-bounce 1.5s infinite;
+          }
+        `}</style>
+        <div className="pio-guide-arrow" style={{ textAlign: 'center', marginBottom: '8px', color: '#16a34a', fontWeight: '800', fontSize: '0.85rem' }}>
+          Start here! 👇
+        </div>
+        <div style={{ position: 'relative' }}>
+          <input 
+            type="text" 
+            placeholder="e.g. 110001" 
+            className="pio-guide-pulse"
+            value={guestInput}
+            onChange={(e) => setGuestInput(e.target.value)}
+            style={{ width: '100%', padding: '16px', borderRadius: '12px', border: '2px solid #cbd5e1', fontSize: '1.1rem', textAlign: 'center', marginBottom: '16px', outline: 'none', boxSizing: 'border-box' }}
+          />
+        </div>
+        <button 
+          onClick={() => {
+            if(guestInput.trim().length >= 5) {
+              localStorage.setItem("packitout_guest_pincode", guestInput.trim());
+              window.location.reload();
+            }
+          }}
+          style={{ width: '100%', padding: '16px', backgroundColor: '#16a34a', color: '#fff', border: 'none', borderRadius: '12px', fontSize: '1.05rem', fontWeight: '800', cursor: 'pointer', transition: 'transform 0.1s' }}
+          onMouseDown={(e) => e.currentTarget.style.transform = 'scale(0.98)'}
+          onMouseUp={(e) => e.currentTarget.style.transform = 'scale(1)'}
+        >
+          View Shops
+        </button>
+      </div>
+    </div>
+  );
 
   return (
     <div style={{ padding: '16px 14px 28px', background: 'linear-gradient(180deg, #f8fafc 0%, #f3f4f6 220px)', minHeight: '100vh' }}>
       {/* Header */}
       <div style={{ marginBottom: '14px' }}>
         <div style={{ fontSize: '0.72rem', fontWeight: 800, color: '#16a34a', letterSpacing: '0.6px', textTransform: 'uppercase', marginBottom: '2px' }}>
-          Near you · {user?.pincode}
+          Near you · {activePincode}
         </div>
         <h2 style={{ fontSize: '1.45rem', fontWeight: 900, color: '#0f172a', margin: 0, letterSpacing: '-0.4px' }}>
           Shops around the corner
@@ -88,6 +150,7 @@ export default function Nearby({ user, onSelectShop }) {
           return (
             <button
               key={shop._id}
+              className="pio-joyride-shop"
               onClick={() => onSelectShop(shop)}
               style={{
                 appearance: 'none',
@@ -239,7 +302,7 @@ export default function Nearby({ user, onSelectShop }) {
             <StorefrontIcon size={32} color="#16a34a" />
           </div>
           <div style={{ fontWeight: 800, color: '#0f172a', marginBottom: '4px' }}>No shops yet in your area</div>
-          <div style={{ fontSize: '0.85rem', fontWeight: 600 }}>We're onboarding stores near {user?.pincode}. Check back soon!</div>
+          <div style={{ fontSize: '0.85rem', fontWeight: 600 }}>We're onboarding stores near {activePincode}. Check back soon!</div>
         </div>
       )}
     </div>

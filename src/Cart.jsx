@@ -24,7 +24,11 @@ export default function Cart({ cart, setCart, user, onUserUpdate, onBack, onChec
   const [preOrderChecked, setPreOrderChecked] = useState(false);
 
   const proceedToPickup = () => {
-    if (!user?.phone) {
+    if (!user) {
+      window.location.hash = "#account";
+      return;
+    }
+    if (!user.phone) {
       setShowPhoneModal(true);
       return;
     }
