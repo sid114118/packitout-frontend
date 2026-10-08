@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useToast } from './ui/DialogProvider.jsx';
 import { userFetch, BASE_URL } from './utils/api.js';
 
@@ -76,9 +76,27 @@ export default function Header({ user, onUserUpdate }) {
     }
   };
 
-  const hasLocation = activeShopName || user?.pincode;
+  useEffect(() => {
+    // If we have a guest shop ID but no name (like after a QR code scan), fetch it!
+    const guestShopId = localStorage.getItem("packitout_guest_shop_id");
+    const guestShopName = localStorage.getItem("packitout_guest_shop_name");
+    if (!user && guestShopId && !guestShopName) {
+      fetch(`${BASE_URL}/shops/profile/${guestShopId}`)
+        .then(res => res.json())
+        .then(data => {
+          if (data && data.name) {
+            localStorage.setItem("packitout_guest_shop_name", data.name);
+            setActiveShopName(data.name);
+          }
+        })
+        .catch(console.error);
+    }
+  }, [user]);
+
+  const activePincode = user?.pincode || localStorage.getItem("packitout_guest_pincode");
+  const hasLocation = activeShopName || activePincode;
   const topText = hasLocation ? "Shopping from" : "No location";
-  const bottomText = activeShopName ? activeShopName : user?.pincode ? `Pincode: ${user.pincode}` : "Select a shop";
+  const bottomText = activeShopName ? activeShopName : activePincode ? `Pincode: ${activePincode}` : "Select a shop";
 
   // Removed position: 'sticky' and top: 0 so App.jsx can control the animation!
   return (
