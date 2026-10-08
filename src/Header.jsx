@@ -100,7 +100,7 @@ export default function Header({ user, onUserUpdate }) {
     }
 
     if (targetShopId) {
-      fetch(`${BASE_URL}/shops/profile/${targetShopId}`)
+      fetch(`${BASE_URL}/shops/${targetShopId}/menu/lean?t=${Date.now()}`)
         .then(res => res.json())
         .then(data => {
           if (data && data.name) {
