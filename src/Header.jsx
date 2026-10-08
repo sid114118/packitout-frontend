@@ -9,9 +9,7 @@ export default function Header({ user, onUserUpdate }) {
   const [shops, setShops] = useState([]);
   const [loadingShops, setLoadingShops] = useState(false);
   const [selectedShopId, setSelectedShopId] = useState("");
-  const [hasSearched, setHasSearched] = useState(false); 
-  const [activeShopName, setActiveShopName] = useState(user?.primaryShop?.name || localStorage.getItem("packitout_guest_shop_name") || "");
-  
+  const [hasSearched, setHasSearched] = useState(false);
   // 🟢 Check if shop is open
   const isShopOpen = user?.primaryShop?.isOpen !== false; 
 
@@ -76,16 +74,37 @@ export default function Header({ user, onUserUpdate }) {
     }
   };
 
+  const [activeShopName, setActiveShopName] = useState("");
+
   useEffect(() => {
-    // If we have a guest shop ID but no name (like after a QR code scan), fetch it!
-    const guestShopId = localStorage.getItem("packitout_guest_shop_id");
-    const guestShopName = localStorage.getItem("packitout_guest_shop_name");
-    if (!user && guestShopId && !guestShopName) {
-      fetch(`${BASE_URL}/shops/profile/${guestShopId}`)
+    // 1. Determine the name if we already have it
+    let resolvedName = "";
+    if (user && user.primaryShop && typeof user.primaryShop === 'object' && user.primaryShop.name) {
+      resolvedName = user.primaryShop.name;
+    } else if (!user) {
+      resolvedName = localStorage.getItem("packitout_guest_shop_name") || "";
+    }
+    
+    // 2. If we have the name, set it and we are done.
+    if (resolvedName) {
+      setActiveShopName(resolvedName);
+      return;
+    }
+
+    // 3. If we DON'T have the name, but we have an ID, fetch it!
+    let targetShopId = null;
+    if (user && user.primaryShop) {
+      targetShopId = typeof user.primaryShop === 'object' ? user.primaryShop._id : user.primaryShop;
+    } else {
+      targetShopId = localStorage.getItem("packitout_guest_shop_id");
+    }
+
+    if (targetShopId) {
+      fetch(`${BASE_URL}/shops/profile/${targetShopId}`)
         .then(res => res.json())
         .then(data => {
           if (data && data.name) {
-            localStorage.setItem("packitout_guest_shop_name", data.name);
+            if (!user) localStorage.setItem("packitout_guest_shop_name", data.name);
             setActiveShopName(data.name);
           }
         })
