@@ -1,5 +1,6 @@
 import React, { memo } from 'react';
 import { createPortal } from 'react-dom';
+import { useBaskets } from '../utils/useBaskets.js';
 import { cdnImage } from '../utils/cloudinaryUrl.js';
 import ImpressionTracker from '../components/ui/ImpressionTracker.jsx';
 import { trackEvent } from '../utils/analyticsEngine.js';
@@ -131,6 +132,7 @@ const ModernProductCardBase = ({ item, isCarousel, shopClosed, onOpenDetails, on
             {item.discountPercent}% OFF
           </span>
         )}
+        <HeartButton item={item} />
         {item.image ? <img src={cdnImage(item.image, 300)} alt={safeName} loading="lazy" decoding="async" style={{ maxHeight: '85%', maxWidth: '85%', objectFit: 'contain', mixBlendMode: 'multiply' }} /> : <span style={{fontSize: '40px'}}>{item.emoji}</span>}
       </div>
       
@@ -249,4 +251,22 @@ export function ProductRow({ title, subtitle, items, onViewAll, shopClosed, onOp
     </div>
   );
   }
+
+export function HeartButton({ item }) {
+  const { isFavourite, toggleFavourite } = useBaskets();
+  const fav = isFavourite(item._id);
+
+  return (
+    <button
+      onClick={(e) => {
+        e.stopPropagation();
+        window.dispatchEvent(new CustomEvent('OPEN_BASKET_DRAWER', { detail: item }));
+      }}
+      style={{ position: 'absolute', top: '4px', right: '4px', background: '#fff', border: fav ? '1px solid #fecaca' : '1px solid #e2e8f0', width: '28px', height: '28px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', zIndex: 2, boxShadow: '0 2px 6px rgba(0,0,0,0.05)' }}
+      aria-label="Save to basket"
+    >
+      <svg width="14" height="14" viewBox="0 0 24 24" fill={fav ? "#ef4444" : "none"} stroke={fav ? "#ef4444" : "#64748b"} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg>
+    </button>
+  );
+}
                   

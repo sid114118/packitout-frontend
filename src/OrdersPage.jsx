@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { useBaskets } from './utils/useBaskets.js';
 import { useToast, useConfirm } from './ui/DialogProvider.jsx';
 import NotificationBell from './NotificationBell';
 import ReceiptModal from './components/UserDashboard/ReceiptModal';
@@ -41,7 +42,7 @@ const TABS = [
   { key: 'cancelled', label: 'Cancelled' },
 ];
 
-export default function OrdersPage({ user, onExit, onAddToCart }) {
+export default function OrdersPage({ user, onExit, onAddToCart, cart, setCart }) {
   const triggerToast = useToast();
   const askConfirm = useConfirm();
 
@@ -70,6 +71,58 @@ export default function OrdersPage({ user, onExit, onAddToCart }) {
   const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
   const [activeTab, setActiveTab] = useState('all');
   const [searchQ, setSearchQ] = useState('');
+  const { baskets, saveBaskets } = useBaskets();
+  const [checkoutBasketId, setCheckoutBasketId] = useState(null);
+
+  const processCheckout = (basket, replaceCart) => {
+    setCart(prev => {
+      let newCart = replaceCart ? [] : [...prev];
+      basket.items.forEach(item => {
+        const qtyToAdd = item.qty || 1;
+        const existing = newCart.find(i => i._id === item._id);
+        if (existing) {
+          existing.qty = (Number(existing.qty) || 0) + qtyToAdd;
+        } else {
+          newCart.push({
+            _id: item._id,
+            name: item.name,
+            brand: item.brand,
+            image: item.image,
+            emoji: item.emoji,
+            qnty: item.qnty,
+            mrp: Number(item.mrp || 0),
+            sellingPrice: Number(item.sellingPrice || item.mrp || 0),
+            shopId: item.shopId || (newCart.length > 0 ? newCart[0].shopId : null),
+            qty: qtyToAdd
+          });
+        }
+      });
+      return newCart;
+    });
+
+    const newBaskets = baskets.map(b => b.id === basket.id ? { ...b, lastOrderedAt: Date.now() } : b);
+    saveBaskets(newBaskets);
+    
+    triggerToast(`Added ${basket.items.length} items to cart!`, "success");
+    setCheckoutBasketId(null);
+    window.location.hash = "#cart";
+  };
+
+  const handleOpenBasket = (basketId) => {
+    localStorage.setItem('packitout_focus_basket', basketId);
+    window.location.hash = "#baskets";
+  };
+
+  const handleCheckoutBasket = (basket) => {
+    if (basket.items.length === 0) return;
+    if (cart && cart.length > 0) {
+      setCheckoutBasketId(basket.id);
+    } else {
+      processCheckout(basket, false);
+    }
+  };
+
+  const checkoutBasketObj = checkoutBasketId ? baskets.find(b => b.id === checkoutBasketId) : null;
 
   const fetchOrders = () => {
     // Only show the skeleton on first-ever load. Returning visits paint
@@ -225,9 +278,34 @@ export default function OrdersPage({ user, onExit, onAddToCart }) {
     });
   }, [orders, activeTab, searchQ]);
 
+  const liveFiltered = useMemo(() => filtered.filter(isLive), [filtered]);
+  const pastFiltered = useMemo(() => filtered.filter(o => !isLive(o)), [filtered]);
+
   // ── RENDER ───────────────────────────────────────────────
   return (
     <div style={{ backgroundColor: '#f8fafc', minHeight: '100vh', paddingBottom: '90px', fontFamily: 'system-ui, -apple-system, sans-serif' }}>
+      
+      {checkoutBasketId && checkoutBasketObj && (
+        <>
+          <div onClick={() => setCheckoutBasketId(null)} style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(15,23,42,0.6)', zIndex: 99999, backdropFilter: 'blur(4px)' }} />
+          <div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, backgroundColor: '#fff', borderTopLeftRadius: '24px', borderTopRightRadius: '24px', padding: '24px', zIndex: 100000, animation: 'slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1)' }}>
+            <h3 style={{ margin: '0 0 12px', fontSize: '1.25rem', fontWeight: 900, color: '#0f172a' }}>You have items in your cart</h3>
+            <p style={{ margin: '0 0 24px', fontSize: '0.9rem', color: '#64748b', lineHeight: 1.5 }}>Would you like to replace your current cart with this basket, or extend your current cart?</p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              <button onClick={() => processCheckout(checkoutBasketObj, true)} style={{ width: '100%', padding: '16px', backgroundColor: '#ef4444', color: '#fff', border: 'none', borderRadius: '16px', fontSize: '1rem', fontWeight: 800, cursor: 'pointer' }}>
+                Replace Cart ({checkoutBasketObj.items.length} items)
+              </button>
+              <button onClick={() => processCheckout(checkoutBasketObj, false)} style={{ width: '100%', padding: '16px', backgroundColor: '#16a34a', color: '#fff', border: 'none', borderRadius: '16px', fontSize: '1rem', fontWeight: 800, cursor: 'pointer' }}>
+                Add to Current Cart
+              </button>
+              <button onClick={() => setCheckoutBasketId(null)} style={{ width: '100%', padding: '16px', backgroundColor: '#f1f5f9', color: '#475569', border: 'none', borderRadius: '16px', fontSize: '1rem', fontWeight: 800, cursor: 'pointer' }}>
+                Cancel
+              </button>
+            </div>
+          </div>
+        </>
+      )}
+
       <style>{`
         @keyframes opShimmer { 0% { background-position: -200px 0; } 100% { background-position: 200px 0; } }
         .op-skel { background: linear-gradient(90deg, #f1f5f9 0px, #e2e8f0 40px, #f1f5f9 80px); background-size: 400px 100%; animation: opShimmer 1.2s linear infinite; border-radius: 10px; }
@@ -472,7 +550,63 @@ export default function OrdersPage({ user, onExit, onAddToCart }) {
           </div>
         ) : (
           <div className="op-fade" style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-            {filtered.map((order) => (
+            {liveFiltered.map((order) => (
+              <OrderCard
+                key={order._id}
+                order={order}
+                onOpen={() => setSelectedOrder(order)}
+                onCancel={() => initiateCancel(order._id)}
+                onReview={() => { setOrderToReview(order); setIsReviewModalOpen(true); }}
+                onReorderItem={handleReorderItem}
+              />
+            ))}
+            
+            {/* SAVED BASKETS INJECTED HERE (Option 1) */}
+            {activeTab === 'all' && !searchQ && (
+              <div style={{ marginTop: liveFiltered.length > 0 ? '12px' : '0', marginBottom: '12px', animation: 'opFade 0.4s ease-out' }}>
+                <h3 style={{ fontSize: '1.3rem', fontWeight: 800, color: '#0f172a', marginBottom: '12px', paddingLeft: '4px', display: 'flex', alignItems: 'center', gap: '8px', letterSpacing: '-0.3px' }}>
+                  Your Saved Baskets
+                </h3>
+                <div className="op-hide-scroll" style={{ display: 'flex', gap: '12px', overflowX: 'auto', padding: '4px 4px 12px 4px', margin: '0 -4px' }}>
+                  
+                  {baskets.map((basket, i) => {
+                    const price = basket.items.reduce((sum, item) => sum + (Number(item.sellingPrice || item.mrp) * (item.qty || 1)), 0);
+                    const colors = i % 2 === 0 ? { bg: 'linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%)', border: 'rgba(34, 197, 94, 0.15)', text: '#14532d', subtext: '#166534', btn: '#16a34a', shadow: 'rgba(22, 163, 74, 0.3)' } : { bg: 'linear-gradient(135deg, #ffedd5 0%, #fed7aa 100%)', border: 'rgba(249, 115, 22, 0.15)', text: '#7c2d12', subtext: '#9a3412', btn: '#ea580c', shadow: 'rgba(234, 88, 12, 0.3)' };
+                    return (
+                      <div 
+                        key={basket.id} 
+                        className="op-press" 
+                        onClick={() => handleOpenBasket(basket.id)}
+                        style={{ cursor: 'pointer', flexShrink: 0, width: '220px', background: colors.bg, borderRadius: '20px', padding: '16px', border: '1px solid rgba(255,255,255,0.4)', boxShadow: `0 8px 20px ${colors.border}`, display: 'flex', flexDirection: 'column', gap: '14px', position: 'relative', overflow: 'hidden' }}
+                      >
+                        <div aria-hidden="true" style={{ position: 'absolute', top: '-10px', right: '-10px', fontSize: '4rem', opacity: 0.1, transform: 'rotate(15deg)' }}>{basket.emoji || '🛒'}</div>
+                        <div style={{ fontSize: '1.8rem', position: 'relative', zIndex: 1 }}>{basket.emoji || '🛒'}</div>
+                        <div style={{ position: 'relative', zIndex: 1 }}>
+                          <div style={{ fontSize: '1.05rem', fontWeight: 800, color: colors.text, marginBottom: '2px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{basket.name}</div>
+                          <div style={{ fontSize: '0.85rem', color: colors.subtext, fontWeight: 600 }}>{basket.items.length} Items • ₹{price.toLocaleString()}</div>
+                        </div>
+                        <button 
+                          onClick={(e) => { e.stopPropagation(); handleCheckoutBasket(basket); }} 
+                          style={{ width: '100%', padding: '12px', background: colors.btn, color: '#fff', borderRadius: '14px', border: 'none', fontWeight: 800, fontSize: '0.9rem', cursor: 'pointer', boxShadow: `0 4px 12px ${colors.shadow}`, position: 'relative', zIndex: 1, textShadow: '0 1px 2px rgba(0,0,0,0.1)' }}
+                        >
+                          Add to Cart
+                        </button>
+                      </div>
+                    );
+                  })}
+                  
+                  <div onClick={() => window.location.hash = "#baskets"} className="op-press" style={{ flexShrink: 0, width: '140px', background: '#fff', borderRadius: '20px', padding: '16px', border: '2px dashed #cbd5e1', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '10px', cursor: 'pointer' }}>
+                    <div style={{ width: '44px', height: '44px', borderRadius: '50%', background: '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#475569' }}>
+                      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+                    </div>
+                    <div style={{ fontSize: '0.85rem', fontWeight: 700, color: '#475569', textAlign: 'center', lineHeight: 1.2 }}>View &<br/>Manage</div>
+                  </div>
+
+                </div>
+              </div>
+            )}
+
+            {pastFiltered.map((order) => (
               <OrderCard
                 key={order._id}
                 order={order}

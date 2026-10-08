@@ -122,9 +122,18 @@ export default function Cart({ cart, setCart, user, onUserUpdate, onBack, onChec
         <div style={{ fontSize: '5rem', marginBottom: '15px', filter: 'drop-shadow(0 10px 15px rgba(0,0,0,0.1))' }}>🛒</div>
         <h2 style={{ color: '#0f172a', marginBottom: '8px', fontWeight: '900', fontSize: '1.4rem' }}>Your cart is empty</h2>
         <p style={{ color: '#64748b', marginBottom: '30px', fontWeight: '500' }}>Looks like you haven't added anything yet.</p>
-        <button onClick={onBack} style={{ padding: '14px 32px', backgroundColor: '#16a34a', color: 'white', border: 'none', borderRadius: '12px', fontWeight: '800', fontSize: '1.05rem', cursor: 'pointer', boxShadow: '0 8px 20px rgba(22, 163, 74, 0.3)', transition: 'transform 0.2s' }}>
+        
+        <button onClick={onBack} style={{ width: '100%', maxWidth: '300px', padding: '14px 32px', backgroundColor: '#16a34a', color: 'white', border: 'none', borderRadius: '12px', fontWeight: '800', fontSize: '1.05rem', cursor: 'pointer', boxShadow: '0 8px 20px rgba(22, 163, 74, 0.3)', transition: 'transform 0.2s', marginBottom: '24px' }}>
           Browse Products
         </button>
+
+        <div onClick={() => { window.location.hash = "#baskets"; }} style={{ width: '100%', maxWidth: '300px', backgroundColor: '#fff', padding: '20px', borderRadius: '16px', border: '1px solid #e2e8f0', boxShadow: '0 10px 30px rgba(15,23,42,0.06)', display: 'flex', flexDirection: 'column', gap: '10px', alignItems: 'center', cursor: 'pointer' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '48px', height: '48px', backgroundColor: '#f0fdf4', borderRadius: '12px', color: '#16a34a' }}>
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+          </div>
+          <div style={{ fontWeight: 800, color: '#0f172a', fontSize: '1.1rem' }}>Short on time?</div>
+          <div style={{ fontSize: '0.85rem', color: '#64748b', lineHeight: 1.4 }}>Build your cart instantly from your Saved Baskets!</div>
+        </div>
       </div>
     );
   }

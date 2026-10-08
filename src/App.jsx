@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef, lazy, Suspense } from 'react';
 import { useToast, useConfirm } from './ui/DialogProvider.jsx';
+import { useBaskets } from './utils/useBaskets.js';
 import { userFetch, clearAdminToken, exchangeIdTokenForSession } from './utils/api.js';
 import { initAnalytics } from './utils/analyticsEngine.js';
 import { auth } from './utils/firebase.js';
@@ -25,6 +26,8 @@ const Cart = lazy(() => import('./Cart.jsx'));
 const OrderSuccess = lazy(() => import('./OrderSuccess.jsx'));
 const Nearby = lazy(() => import('./Nearby.jsx'));
 const ShopDetail = lazy(() => import('./ShopDetail.jsx'));
+const ManageBaskets = lazy(() => import('./ManageBaskets.jsx'));
+import BasketDrawer from './components/BasketDrawer.jsx';
 
 const BASE_URL = (import.meta.env.VITE_API_BASE || "https://darkslategrey-snail-415133.hostingersite.com");
 
@@ -133,6 +136,28 @@ export default function App() {
       return saved ? JSON.parse(saved) : null;
     } catch { return null; }
   });
+
+  const { baskets } = useBaskets();
+
+  // 🔔 BASKET REMINDER CHECK
+  useEffect(() => {
+    const notified = JSON.parse(sessionStorage.getItem('packitout_notified_baskets') || '[]');
+    let newlyNotified = [...notified];
+
+    baskets.forEach(basket => {
+      if (basket.reminderDays > 0 && basket.lastOrderedAt) {
+        const daysSinceOrder = (Date.now() - basket.lastOrderedAt) / (1000 * 60 * 60 * 24);
+        if (daysSinceOrder >= basket.reminderDays && !notified.includes(basket.id)) {
+          toast(`Reminder: Time to reorder your "${basket.name}" basket! 🛒`, "info", 5000);
+          newlyNotified.push(basket.id);
+        }
+      }
+    });
+
+    if (newlyNotified.length > notified.length) {
+      sessionStorage.setItem('packitout_notified_baskets', JSON.stringify(newlyNotified));
+    }
+  }, [baskets]);
 
   // Cart is namespaced per-user as `packitout_cart_<userId>`. The legacy
   // `packitout_cart` key was global — logging out of account A and into
@@ -287,6 +312,7 @@ export default function App() {
       else if (hash === "#cart") setCurrentView("cart");
       else if (hash === "#success") setCurrentView("success");
       else if (hash === "#nearby") setCurrentView("nearby");
+      else if (hash === "#baskets") setCurrentView("baskets");
       else if (hash === "#/verify-done" || hash === "#verify-done") setCurrentView("verify-done");
       else {
         setCurrentView(isShopApp ? "shop" : "customer");
@@ -560,7 +586,7 @@ export default function App() {
     }
     if (currentView === "orders") {
       if (!loggedInUser) return <UserAuth onLoginSuccess={handleUserLogin} />;
-      return <OrdersPage user={loggedInUser} onExit={() => window.location.hash = ""} onAddToCart={handleAddToCart} />;
+      return <OrdersPage user={loggedInUser} onExit={() => window.location.hash = ""} onAddToCart={handleAddToCart} cart={cart} setCart={setCart} />;
     }
     if (currentView === "success") return <OrderSuccess />;
     if (currentView === "verify-done") {
@@ -579,6 +605,13 @@ export default function App() {
       return (
         <CrashCatcher>
           <Cart cart={cart} setCart={setCart} user={loggedInUser} onUserUpdate={handleUserUpdate} onBack={() => window.location.hash = ""} onCheckoutSuccess={() => { setCart([]); window.location.hash = "#success"; }} />
+        </CrashCatcher>
+      );
+    }
+    if (currentView === "baskets") {
+      return (
+        <CrashCatcher>
+          <ManageBaskets onBack={() => window.history.back()} onAddToCart={handleAddToCart} cart={cart} setCart={setCart} />
         </CrashCatcher>
       );
     }
@@ -733,6 +766,7 @@ export default function App() {
       </Suspense>
       {showBottomNav && <BottomNav currentView={currentView} cartCount={navCartCount} />}
       <InstallAppBanner show={showInstallBanner} />
+      <BasketDrawer />
     </CrashCatcher>
   );
                }
