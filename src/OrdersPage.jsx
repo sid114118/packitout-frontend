@@ -571,7 +571,7 @@ export default function OrdersPage({ user, onExit, onAddToCart, cart, setCart })
                   
                   {baskets.map((basket, i) => {
                     const price = basket.items.reduce((sum, item) => sum + (Number(item.sellingPrice || item.mrp) * (item.qty || 1)), 0);
-                    const colors = i % 2 === 0 ? { bg: 'linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%)', border: 'rgba(34, 197, 94, 0.15)', text: '#14532d', subtext: '#166534', btn: '#16a34a', shadow: 'rgba(22, 163, 74, 0.3)' } : { bg: 'linear-gradient(135deg, #ffedd5 0%, #fed7aa 100%)', border: 'rgba(249, 115, 22, 0.15)', text: '#7c2d12', subtext: '#9a3412', btn: '#ea580c', shadow: 'rgba(234, 88, 12, 0.3)' };
+                    const colors = i % 2 === 0 ? { bg: 'linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%)', border: 'rgba(34, 197, 94, 0.15)', text: '#14532d', subtext: '#166534', btn: '#16a34a', shadow: 'rgba(22, 163, 74, 0.3)' } : { bg: 'linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%)', border: 'rgba(239, 68, 68, 0.15)', text: '#7f1d1d', subtext: '#991b1b', btn: '#ef4444', shadow: 'rgba(239, 68, 68, 0.3)' };
                     return (
                       <div 
                         key={basket.id} 

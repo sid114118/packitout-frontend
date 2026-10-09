@@ -25,6 +25,8 @@ export default function ManageBaskets({ onBack, onAddToCart, cart, setCart }) {
   const [editEmoji, setEditEmoji] = useState('');
 
   const [checkoutBasketId, setCheckoutBasketId] = useState(null);
+  const [showCustomReminder, setShowCustomReminder] = useState(false);
+  const [customReminderDays, setCustomReminderDays] = useState('');
 
   const handleCreateNew = () => {
     const id = Date.now().toString();
@@ -251,13 +253,46 @@ export default function ManageBaskets({ onBack, onAddToCart, cart, setCart }) {
                         {[{d:0, l:'Off'}, {d:7, l:'Weekly'}, {d:14, l:'Bi-weekly'}, {d:30, l:'Monthly'}].map(opt => (
                           <button 
                             key={opt.d}
-                            onClick={() => handleSetReminder(viewingBasketObj.id, opt.d)}
-                            style={{ flexShrink: 0, padding: '8px 16px', background: viewingBasketObj.reminderDays === opt.d ? '#16a34a' : '#fff', color: viewingBasketObj.reminderDays === opt.d ? '#fff' : '#64748b', border: viewingBasketObj.reminderDays === opt.d ? 'none' : '1px solid #cbd5e1', borderRadius: '999px', fontSize: '0.85rem', fontWeight: 800, cursor: 'pointer' }}
+                            onClick={() => { handleSetReminder(viewingBasketObj.id, opt.d); setShowCustomReminder(false); }}
+                            style={{ flexShrink: 0, padding: '8px 16px', background: viewingBasketObj.reminderDays === opt.d && !showCustomReminder ? '#16a34a' : '#fff', color: viewingBasketObj.reminderDays === opt.d && !showCustomReminder ? '#fff' : '#64748b', border: viewingBasketObj.reminderDays === opt.d && !showCustomReminder ? 'none' : '1px solid #cbd5e1', borderRadius: '999px', fontSize: '0.85rem', fontWeight: 800, cursor: 'pointer' }}
                           >
                             {opt.l}
                           </button>
                         ))}
+                        <button 
+                          onClick={() => setShowCustomReminder(true)}
+                          style={{ flexShrink: 0, padding: '8px 16px', background: showCustomReminder || (viewingBasketObj.reminderDays > 0 && ![7,14,30].includes(viewingBasketObj.reminderDays)) ? '#16a34a' : '#fff', color: showCustomReminder || (viewingBasketObj.reminderDays > 0 && ![7,14,30].includes(viewingBasketObj.reminderDays)) ? '#fff' : '#64748b', border: showCustomReminder || (viewingBasketObj.reminderDays > 0 && ![7,14,30].includes(viewingBasketObj.reminderDays)) ? 'none' : '1px solid #cbd5e1', borderRadius: '999px', fontSize: '0.85rem', fontWeight: 800, cursor: 'pointer' }}
+                        >
+                          {viewingBasketObj.reminderDays > 0 && ![7,14,30].includes(viewingBasketObj.reminderDays) && !showCustomReminder ? `${viewingBasketObj.reminderDays} Days` : 'Custom'}
+                        </button>
                       </div>
+                      
+                      {showCustomReminder && (
+                        <div style={{ display: 'flex', gap: '8px', marginTop: '12px', animation: 'fadeIn 0.2s ease' }}>
+                          <input 
+                            type="number" 
+                            placeholder="Enter days (e.g. 45)" 
+                            value={customReminderDays}
+                            onChange={e => setCustomReminderDays(e.target.value)}
+                            style={{ flex: 1, padding: '10px 16px', border: '1px solid #cbd5e1', borderRadius: '12px', fontSize: '0.95rem', outline: 'none' }}
+                          />
+                          <button 
+                            onClick={() => {
+                              const d = parseInt(customReminderDays);
+                              if (!isNaN(d) && d > 0) {
+                                handleSetReminder(viewingBasketObj.id, d);
+                                setShowCustomReminder(false);
+                                setCustomReminderDays('');
+                              } else {
+                                toast("Please enter a valid number of days", "error");
+                              }
+                            }}
+                            style={{ padding: '10px 20px', backgroundColor: '#0f172a', color: '#fff', border: 'none', borderRadius: '12px', fontWeight: 800, cursor: 'pointer' }}
+                          >
+                            Set
+                          </button>
+                        </div>
+                      )}
                     </div>
                   )}
                 </>
