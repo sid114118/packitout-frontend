@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useBaskets } from './utils/useBaskets';
-import { cdnImage } from './utils/cdn';
+import { cdnImage } from './utils/cloudinaryUrl';
 import { useToast } from './ui/DialogProvider';
 
 export default function SharedBasketView({ basketId }) {
