@@ -10,11 +10,15 @@ export default function ManageBaskets({ onBack, onAddToCart, cart, setCart }) {
   const confirmDialog = useConfirm();
   const { baskets, saveBaskets } = useBaskets();
   
-  const [viewingBasketId, setViewingBasketId] = useState(() => {
+  const [viewingBasketId, setViewingBasketId] = useState(null);
+
+  useEffect(() => {
     const focus = localStorage.getItem('packitout_focus_basket');
-    localStorage.removeItem('packitout_focus_basket');
-    return focus || null;
-  });
+    if (focus) {
+      setViewingBasketId(focus);
+      localStorage.removeItem('packitout_focus_basket');
+    }
+  }, []);
 
   const [isEditing, setIsEditing] = useState(false);
   const [editName, setEditName] = useState('');

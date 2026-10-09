@@ -321,6 +321,7 @@ export default function App() {
         setIsSearchOpen(false);
       }
       setViewingShop(null);
+      window.scrollTo(0, 0);
     };
     checkUrl();
     window.addEventListener("hashchange", checkUrl);

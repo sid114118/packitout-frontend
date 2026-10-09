@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import ReviewSection from './ReviewSection.jsx';
 import CrossSellSlider from './CrossSell.jsx';
-import { ModernProductCard } from './FeedComponents.jsx';
+import { ModernProductCard, HeartButton } from './FeedComponents.jsx';
 import { cdnImage } from '../utils/cloudinaryUrl.js';
 
 // ── Highlight Row Component ──
@@ -210,6 +210,9 @@ export default function ProductModal({ product, isOpen, onClose, onAddToCart, on
             </div>
           )}
           {selectedVariant.image ? <img src={cdnImage(selectedVariant.image, 600)} alt={selectedVariant.name} decoding="async" style={{ maxHeight: '85%', maxWidth: '85%', objectFit: 'contain', mixBlendMode: 'multiply' }} /> : <span style={{ fontSize: '80px' }}>{selectedVariant.emoji}</span>}
+          <div style={{ position: 'absolute', top: '15px', right: '15px', zIndex: 10 }}>
+            <HeartButton item={selectedVariant} />
+          </div>
         </div>
 
         <div style={{ padding: '0 20px' }}>
