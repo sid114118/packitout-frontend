@@ -27,6 +27,7 @@ const OrderSuccess = lazy(() => import('./OrderSuccess.jsx'));
 const Nearby = lazy(() => import('./Nearby.jsx'));
 const ShopDetail = lazy(() => import('./ShopDetail.jsx'));
 const ManageBaskets = lazy(() => import('./ManageBaskets.jsx'));
+const SharedBasketView = lazy(() => import('./SharedBasketView.jsx'));
 import BasketDrawer from './components/BasketDrawer.jsx';
 
 const BASE_URL = (import.meta.env.VITE_API_BASE || "https://darkslategrey-snail-415133.hostingersite.com");
@@ -313,6 +314,10 @@ export default function App() {
       else if (hash === "#success") setCurrentView("success");
       else if (hash === "#nearby") setCurrentView("nearby");
       else if (hash === "#baskets") setCurrentView("baskets");
+      else if (hash.startsWith("#/shared-basket/")) {
+        const id = hash.split("/")[2];
+        setCurrentView(`shared-basket:${id}`);
+      }
       else if (hash === "#/verify-done" || hash === "#verify-done") setCurrentView("verify-done");
       else {
         setCurrentView(isShopApp ? "shop" : "customer");
@@ -590,6 +595,18 @@ export default function App() {
       return <OrdersPage user={loggedInUser} onExit={() => window.location.hash = ""} onAddToCart={handleAddToCart} cart={cart} setCart={setCart} />;
     }
     if (currentView === "success") return <OrderSuccess />;
+    if (currentView.startsWith("shared-basket:")) {
+      const basketId = currentView.split(":")[1];
+      return (
+        <>
+          {isHeaderVisible && <Header user={loggedInUser} onUserUpdate={handleUserUpdate} />}
+          <div style={{ paddingTop: '80px', paddingBottom: '90px', minHeight: '100vh', backgroundColor: '#f8fafc' }}>
+            <SharedBasketView basketId={basketId} />
+          </div>
+        </>
+      );
+    }
+
     if (currentView === "verify-done") {
       return (
         <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh', backgroundColor: '#f4f7f6', fontFamily: 'sans-serif', padding: '20px' }}>

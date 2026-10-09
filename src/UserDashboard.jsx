@@ -77,6 +77,24 @@ export default function UserDashboard({ user, onExit, onLogout, onUserUpdate }) 
     } catch (err) { triggerToast("Failed to update profile", "error"); }
   };
 
+  const handleShareApp = async () => {
+    const shareData = {
+      title: 'PackItOut',
+      text: 'Check out PackItOut - The easiest way to order from your local shops!',
+      url: window.location.origin
+    };
+    try {
+      if (navigator.share) {
+        await navigator.share(shareData);
+      } else {
+        const text = encodeURIComponent(`${shareData.text} ${shareData.url}`);
+        window.open(`https://wa.me/?text=${text}`, '_blank');
+      }
+    } catch (err) {
+      console.log('Error sharing:', err);
+    }
+  };
+
   return (
     <div style={{ backgroundColor: '#f8fafc', minHeight: '100vh', fontFamily: 'system-ui, -apple-system, sans-serif', paddingBottom: '90px' }}>
 
@@ -133,6 +151,31 @@ export default function UserDashboard({ user, onExit, onLogout, onUserUpdate }) 
             <span style={{ display: 'inline-flex', flexDirection: 'column', alignItems: 'flex-start' }}>
               <span style={{ fontWeight: 800, color: '#0f172a', fontSize: '0.95rem' }}>My Parchi Bills</span>
               <span style={{ fontSize: '0.74rem', color: '#64748b', fontWeight: 600 }}>Pay UPI or pickup, see past bills</span>
+            </span>
+          </span>
+          <span style={{ color: '#94a3b8', fontSize: '1.2rem' }}>›</span>
+        </button>
+
+        <button
+          onClick={handleShareApp}
+          style={{
+            width: '100%', marginBottom: '15px',
+            padding: '16px',
+            background: '#fff', border: '1px solid #e2e8f0', borderRadius: '16px',
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+            cursor: 'pointer', boxShadow: '0 4px 14px rgba(15,23,42,0.04)',
+          }}
+        >
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '12px' }}>
+            <span style={{
+              width: '38px', height: '38px', borderRadius: '12px',
+              background: 'linear-gradient(135deg, #dbeafe, #bfdbfe)',
+              display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+              fontSize: '1.1rem',
+            }}>🚀</span>
+            <span style={{ display: 'inline-flex', flexDirection: 'column', alignItems: 'flex-start' }}>
+              <span style={{ fontWeight: 800, color: '#0f172a', fontSize: '0.95rem' }}>Share App</span>
+              <span style={{ fontSize: '0.74rem', color: '#64748b', fontWeight: 600 }}>Invite friends to PackItOut</span>
             </span>
           </span>
           <span style={{ color: '#94a3b8', fontSize: '1.2rem' }}>›</span>

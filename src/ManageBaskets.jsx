@@ -28,6 +28,39 @@ export default function ManageBaskets({ onBack, onAddToCart, cart, setCart }) {
   const [showCustomReminder, setShowCustomReminder] = useState(false);
   const [customReminderDays, setCustomReminderDays] = useState('');
 
+  const handleShareBasket = async (basket) => {
+    try {
+      const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+      const token = localStorage.getItem('packitout_session');
+      if (!token) return toast("Please log in to share baskets.", "error");
+      
+      toast("Preparing share link...");
+      const res = await fetch(`${BASE_URL}/shared-baskets`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify({ name: basket.name, emoji: basket.emoji, items: basket.items })
+      });
+      if (!res.ok) throw new Error();
+      const data = await res.json();
+      
+      const shareUrl = `${window.location.origin}/#/shared-basket/${data.id}`;
+      const shareData = {
+        title: `PackItOut Basket: ${basket.name}`,
+        text: `Check out my ${basket.name} basket on PackItOut!`,
+        url: shareUrl
+      };
+      
+      if (navigator.share) {
+        await navigator.share(shareData);
+      } else {
+        const text = encodeURIComponent(`${shareData.text} ${shareData.url}`);
+        window.open(`https://wa.me/?text=${text}`, '_blank');
+      }
+    } catch (err) {
+      toast("Failed to share basket.", "error");
+    }
+  };
+
   const handleCreateNew = () => {
     const id = Date.now().toString();
     const newBaskets = [...baskets, { id, name: 'New Basket', emoji: '🛒', items: [], reminderDays: 0, lastOrderedAt: null }];
@@ -238,9 +271,14 @@ export default function ManageBaskets({ onBack, onAddToCart, cart, setCart }) {
                         </div>
                       </div>
                     </div>
-                    <button onClick={() => startEditing(viewingBasketObj)} style={{ background: '#f8fafc', border: '1px solid #e2e8f0', color: '#0f172a', padding: '8px', borderRadius: '50%', cursor: 'pointer' }}>
-                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>
-                    </button>
+                    <div style={{ display: 'flex', gap: '8px' }}>
+                      <button onClick={() => handleShareBasket(viewingBasketObj)} style={{ background: '#dbeafe', border: '1px solid #bfdbfe', color: '#1e3a8a', padding: '8px', borderRadius: '50%', cursor: 'pointer' }}>
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"></path><polyline points="16 6 12 2 8 6"></polyline><line x1="12" y1="2" x2="12" y2="15"></line></svg>
+                      </button>
+                      <button onClick={() => startEditing(viewingBasketObj)} style={{ background: '#f8fafc', border: '1px solid #e2e8f0', color: '#0f172a', padding: '8px', borderRadius: '50%', cursor: 'pointer' }}>
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>
+                      </button>
+                    </div>
                   </div>
 
                   {viewingBasketObj.id !== 'favourites' && (
