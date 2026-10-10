@@ -76,7 +76,6 @@ export default function OrdersPage({ user, onExit, onAddToCart, cart, setCart })
 
   const handleShareBasket = async (basket) => {
     try {
-      const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
       const userRaw = localStorage.getItem('packitout_user');
       const u = userRaw ? JSON.parse(userRaw) : null;
       if (!u || !u.sessionToken) return triggerToast("Please log in to share baskets.", "error");
@@ -619,7 +618,7 @@ export default function OrdersPage({ user, onExit, onAddToCart, cart, setCart })
                           <div style={{ fontSize: '1.8rem' }}>{basket.emoji || '🛒'}</div>
                           <button 
                             onClick={(e) => { e.stopPropagation(); handleShareBasket(basket); }}
-                            style={{ background: 'rgba(255,255,255,0.3)', border: 'none', borderRadius: '50%', padding: '6px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: colors.text }}
+                            style={{ background: 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)', border: 'none', borderRadius: '12px', padding: '8px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', boxShadow: '0 4px 12px rgba(37, 99, 235, 0.3)' }}
                           >
                             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 17 20 12 15 7"></polyline><path d="M4 18v-2a4 4 0 0 1 4-4h12"></path></svg>
                           </button>

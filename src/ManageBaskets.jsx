@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useToast, useConfirm } from './ui/DialogProvider.jsx';
 import { useBaskets } from './utils/useBaskets.js';
 import { cdnImage } from './utils/cloudinaryUrl.js';
+import { BASE_URL } from './utils/api.js';
 
 const EMOJIS = ['❤️','🛒','🌶️','🥛','🍞','🍗','🧼','🍪','🍎','🥦'];
 
@@ -30,7 +31,6 @@ export default function ManageBaskets({ onBack, onAddToCart, cart, setCart }) {
 
   const handleShareBasket = async (basket) => {
     try {
-      const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
       const userRaw = localStorage.getItem('packitout_user');
       const user = userRaw ? JSON.parse(userRaw) : null;
       if (!user || !user.sessionToken) return toast("Please log in to share baskets.", "error");
@@ -273,11 +273,11 @@ export default function ManageBaskets({ onBack, onAddToCart, cart, setCart }) {
                         </div>
                       </div>
                     </div>
-                    <div style={{ display: 'flex', gap: '8px' }}>
-                      <button onClick={() => handleShareBasket(viewingBasketObj)} style={{ background: '#dbeafe', border: '1px solid #bfdbfe', color: '#1e3a8a', padding: '8px', borderRadius: '50%', cursor: 'pointer' }}>
+                    <div style={{ display: 'flex', gap: '10px' }}>
+                      <button onClick={() => handleShareBasket(viewingBasketObj)} style={{ background: 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)', border: 'none', color: '#fff', padding: '10px', borderRadius: '12px', cursor: 'pointer', boxShadow: '0 4px 12px rgba(37, 99, 235, 0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 17 20 12 15 7"></polyline><path d="M4 18v-2a4 4 0 0 1 4-4h12"></path></svg>
                       </button>
-                      <button onClick={() => startEditing(viewingBasketObj)} style={{ background: '#f8fafc', border: '1px solid #e2e8f0', color: '#0f172a', padding: '8px', borderRadius: '50%', cursor: 'pointer' }}>
+                      <button onClick={() => startEditing(viewingBasketObj)} style={{ background: '#f8fafc', border: '1px solid #e2e8f0', color: '#0f172a', padding: '10px', borderRadius: '12px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>
                       </button>
                     </div>
