@@ -31,8 +31,10 @@ export default function ManageBaskets({ onBack, onAddToCart, cart, setCart }) {
   const handleShareBasket = async (basket) => {
     try {
       const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
-      const token = localStorage.getItem('packitout_session');
-      if (!token) return toast("Please log in to share baskets.", "error");
+      const userRaw = localStorage.getItem('packitout_user');
+      const user = userRaw ? JSON.parse(userRaw) : null;
+      if (!user || !user.sessionToken) return toast("Please log in to share baskets.", "error");
+      const token = user.sessionToken;
       
       toast("Preparing share link...");
       const res = await fetch(`${BASE_URL}/shared-baskets`, {
@@ -273,7 +275,7 @@ export default function ManageBaskets({ onBack, onAddToCart, cart, setCart }) {
                     </div>
                     <div style={{ display: 'flex', gap: '8px' }}>
                       <button onClick={() => handleShareBasket(viewingBasketObj)} style={{ background: '#dbeafe', border: '1px solid #bfdbfe', color: '#1e3a8a', padding: '8px', borderRadius: '50%', cursor: 'pointer' }}>
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"></path><polyline points="16 6 12 2 8 6"></polyline><line x1="12" y1="2" x2="12" y2="15"></line></svg>
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 17 20 12 15 7"></polyline><path d="M4 18v-2a4 4 0 0 1 4-4h12"></path></svg>
                       </button>
                       <button onClick={() => startEditing(viewingBasketObj)} style={{ background: '#f8fafc', border: '1px solid #e2e8f0', color: '#0f172a', padding: '8px', borderRadius: '50%', cursor: 'pointer' }}>
                         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>

@@ -74,6 +74,41 @@ export default function OrdersPage({ user, onExit, onAddToCart, cart, setCart })
   const { baskets, saveBaskets } = useBaskets();
   const [checkoutBasketId, setCheckoutBasketId] = useState(null);
 
+  const handleShareBasket = async (basket) => {
+    try {
+      const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+      const userRaw = localStorage.getItem('packitout_user');
+      const u = userRaw ? JSON.parse(userRaw) : null;
+      if (!u || !u.sessionToken) return triggerToast("Please log in to share baskets.", "error");
+      const token = u.sessionToken;
+      
+      triggerToast("Preparing share link...");
+      const res = await fetch(`${BASE_URL}/shared-baskets`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify({ name: basket.name, emoji: basket.emoji, items: basket.items })
+      });
+      if (!res.ok) throw new Error();
+      const data = await res.json();
+      
+      const shareUrl = `${window.location.origin}/#/shared-basket/${data.id}`;
+      const shareData = {
+        title: `PackItOut Basket: ${basket.name}`,
+        text: `Check out my ${basket.name} basket on PackItOut!`,
+        url: shareUrl
+      };
+      
+      if (navigator.share) {
+        await navigator.share(shareData);
+      } else {
+        const text = encodeURIComponent(`${shareData.text} ${shareData.url}`);
+        window.open(`https://wa.me/?text=${text}`, '_blank');
+      }
+    } catch (err) {
+      triggerToast("Failed to share basket.", "error");
+    }
+  };
+
   const processCheckout = (basket, replaceCart) => {
     setCart(prev => {
       let newCart = replaceCart ? [] : [...prev];
@@ -580,7 +615,15 @@ export default function OrdersPage({ user, onExit, onAddToCart, cart, setCart })
                         style={{ cursor: 'pointer', flexShrink: 0, width: '220px', background: colors.bg, borderRadius: '20px', padding: '16px', border: '1px solid rgba(255,255,255,0.4)', boxShadow: `0 8px 20px ${colors.border}`, display: 'flex', flexDirection: 'column', gap: '14px', position: 'relative', overflow: 'hidden' }}
                       >
                         <div aria-hidden="true" style={{ position: 'absolute', top: '-10px', right: '-10px', fontSize: '4rem', opacity: 0.1, transform: 'rotate(15deg)' }}>{basket.emoji || '🛒'}</div>
-                        <div style={{ fontSize: '1.8rem', position: 'relative', zIndex: 1 }}>{basket.emoji || '🛒'}</div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', position: 'relative', zIndex: 1 }}>
+                          <div style={{ fontSize: '1.8rem' }}>{basket.emoji || '🛒'}</div>
+                          <button 
+                            onClick={(e) => { e.stopPropagation(); handleShareBasket(basket); }}
+                            style={{ background: 'rgba(255,255,255,0.3)', border: 'none', borderRadius: '50%', padding: '6px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: colors.text }}
+                          >
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 17 20 12 15 7"></polyline><path d="M4 18v-2a4 4 0 0 1 4-4h12"></path></svg>
+                          </button>
+                        </div>
                         <div style={{ position: 'relative', zIndex: 1 }}>
                           <div style={{ fontSize: '1.05rem', fontWeight: 800, color: colors.text, marginBottom: '2px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{basket.name}</div>
                           <div style={{ fontSize: '0.85rem', color: colors.subtext, fontWeight: 600 }}>{basket.items.length} Items • ₹{price.toLocaleString()}</div>
