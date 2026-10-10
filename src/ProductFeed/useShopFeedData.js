@@ -16,6 +16,15 @@ const readMaster = () => {
   } catch { return null; }
 };
 
+const shuffleArray = (array) => {
+  const arr = [...array];
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  return arr;
+};
+
 export default function useShopFeedData(user) {
   const [initialCache] = useState(() => {
     if (!user || !user.primaryShop) return null;
@@ -35,12 +44,12 @@ export default function useShopFeedData(user) {
   const [shopInfo, setShopInfo] = useState(initialCache?.shopInfo || null);
   const [nearbyShops, setNearbyShops] = useState(initialCache?.nearbyShops || []);
   const [shopRecommendations, setShopRecommendations] = useState(initialCache?.shopRecommendations || []);
-  const [shopDeals, setShopDeals] = useState(initialCache?.shopDeals || []);
-  const [shopBestSellers, setShopBestSellers] = useState(initialCache?.shopBestSellers || []);
-  const [under99, setUnder99] = useState(initialCache?.under99 || []);
+  const [shopDeals, setShopDeals] = useState(() => initialCache?.shopDeals ? shuffleArray(initialCache.shopDeals) : []);
+  const [shopBestSellers, setShopBestSellers] = useState(() => initialCache?.shopBestSellers ? shuffleArray(initialCache.shopBestSellers) : []);
+  const [under99, setUnder99] = useState(() => initialCache?.under99 ? shuffleArray(initialCache.under99) : []);
   const [timeBased, setTimeBased] = useState(initialCache?.timeBased || { title: "", subtitle: "", items: [] });
   const [newArrivals, setNewArrivals] = useState(initialCache?.newArrivals || []);
-  const [buyItAgain, setBuyItAgain] = useState(initialCache?.buyItAgain || []);
+  const [buyItAgain, setBuyItAgain] = useState(() => initialCache?.buyItAgain ? shuffleArray(initialCache.buyItAgain) : []);
 
   useEffect(() => {
     if (!user || !user.primaryShop) {
@@ -121,9 +130,12 @@ export default function useShopFeedData(user) {
       setItems(availableItems);
 
       const newShopRecommendations = availableItems.filter(i => i.isFeatured && i.inStock);
-      const newShopDeals = availableItems.filter(i => i.isDiscounted && i.inStock).sort((a, b) => b.discountPercent - a.discountPercent).slice(0, 12);
-      const newBestSellers = availableItems.filter(i => i.inStock).slice(0, 12);
-      const newUnder99 = availableItems.filter(i => i.sellingPrice > 0 && i.sellingPrice < 100 && i.inStock).slice(0, 12);
+      // Take top 30 deals and shuffle them, then pick 12
+      const topDeals = availableItems.filter(i => i.isDiscounted && i.inStock).sort((a, b) => b.discountPercent - a.discountPercent).slice(0, 30);
+      const newShopDeals = shuffleArray(topDeals).slice(0, 12);
+      // Top picks and under 99 are completely randomized from inventory to keep it fresh
+      const newBestSellers = shuffleArray(availableItems.filter(i => i.inStock)).slice(0, 12);
+      const newUnder99 = shuffleArray(availableItems.filter(i => i.sellingPrice > 0 && i.sellingPrice < 100 && i.inStock)).slice(0, 12);
       const newArrivalsList = [...availableItems].reverse().filter(i => i.inStock).slice(0, 12);
 
       setShopRecommendations(newShopRecommendations);
@@ -170,14 +182,15 @@ export default function useShopFeedData(user) {
           .then(userOrders => {
             if (cancelled || !Array.isArray(userOrders)) return;
             const pastBoughtIds = new Set();
-            userOrders.forEach(order => {
+            for (const order of userOrders) {
               order.items?.forEach(orderedItem => {
                 const pId = orderedItem.product?._id || orderedItem.product || orderedItem._id || orderedItem.productId;
                 if (pId) pastBoughtIds.add(pId.toString());
               });
-            });
+              if (pastBoughtIds.size >= 15) break; // Only take most recent unique items
+            }
             const realBuyItAgain = availableItems.filter(i => i.inStock && pastBoughtIds.has(i._id.toString()));
-            finalBuyItAgain = realBuyItAgain.length > 0 ? realBuyItAgain.slice(0, 12) : availableItems.filter(i => i.inStock).sort(() => 0.5 - Math.random()).slice(0, 12);
+            finalBuyItAgain = realBuyItAgain.length > 0 ? shuffleArray(realBuyItAgain).slice(0, 12) : shuffleArray(availableItems.filter(i => i.inStock)).slice(0, 12);
             setBuyItAgain(finalBuyItAgain);
           }).catch(() => null)
         );
