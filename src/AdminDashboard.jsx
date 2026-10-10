@@ -12,6 +12,7 @@ import MissedSearchesTab from './components/AdminDashboard/MissedSearchesTab';
 import BrandRankingTab from './components/AdminDashboard/BrandRankingTab';
 import AnalyticsTab from './components/AdminDashboard/AnalyticsTab';
 import AdminRequestsTab from './components/AdminDashboard/AdminRequestsTab.jsx';
+import CampaignsTab from './components/AdminDashboard/CampaignsTab.jsx';
 
 export default function AdminDashboard({ onExit }) {
   const toast = useToast();
@@ -245,6 +246,7 @@ export default function AdminDashboard({ onExit }) {
           <button onClick={() => setActiveTab("parchis")} style={tabButtonStyle(activeTab === "parchis")}>🧾 Master POS</button>
           <button onClick={() => setActiveTab("complaints")} style={tabButtonStyle(activeTab === "complaints")}>📣 Complaints</button>
           <button onClick={() => setActiveTab("requests")} style={tabButtonStyle(activeTab === "requests")}>🛎️ Requests</button>
+          <button onClick={() => setActiveTab("campaigns")} style={tabButtonStyle(activeTab === "campaigns")}>🌍 Campaigns</button>
           <button onClick={() => setActiveTab("missed")} style={tabButtonStyle(activeTab === "missed")}>🔎 Missed Searches</button>
           <button onClick={() => setActiveTab("ranking")} style={tabButtonStyle(activeTab === "ranking")}>🎯 Ranking</button>
           <button onClick={() => setActiveTab("analytics")} style={tabButtonStyle(activeTab === "analytics")}>📈 Analytics</button>
@@ -271,7 +273,7 @@ export default function AdminDashboard({ onExit }) {
             {activeTab === "complaints" && <ComplaintsTab />}
 
             {activeTab === "requests" && <AdminRequestsTab />}
-
+            {activeTab === "campaigns" && <CampaignsTab adminToken={localStorage.getItem("packitout_admin_token")} />}
             {activeTab === "missed" && <MissedSearchesTab />}
 
             {activeTab === "ranking" && <BrandRankingTab />}

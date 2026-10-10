@@ -13,6 +13,7 @@ import ShopPhotoModal from './components/ShopDashboard/ShopPhotoModal';
 import ShopProfileModal from './components/ShopDashboard/ShopProfileModal';
 import ShopLocationBanner from './components/ShopDashboard/ShopLocationBanner';
 import RequestsTab from './components/ShopDashboard/RequestsTab.jsx';
+import CombosTab from './components/ShopDashboard/CombosTab.jsx';
 import { cdnImage } from './utils/cloudinaryUrl.js';
 import { shopFetch, BASE_URL } from './utils/api.js';
 
@@ -357,6 +358,7 @@ export default function ShopDashboard({ user, onExit }) {
         <button onClick={() => setActiveTab("parchis")} style={tabStyle(activeTab === "parchis")}>🧾 Parchis {parchiRequests.length > 0 && <span style={badgeStyle}>{parchiRequests.length}</span>}</button>
         <button onClick={() => setActiveTab("inventory")} style={tabStyle(activeTab === "inventory")}>📊 Manage Inventory</button>
         <button onClick={() => setActiveTab("requests")} style={tabStyle(activeTab === "requests")}>🛎️ Product Requests</button>
+        <button onClick={() => setActiveTab("combos")} style={tabStyle(activeTab === "combos")}>🎁 Combos</button>
         <button onClick={() => setActiveTab("reviews")} style={tabStyle(activeTab === "reviews")}>⭐ Reviews</button>
         <button onClick={() => setActiveTab("complaints")} style={tabStyle(activeTab === "complaints")}>📣 Complaints</button>
       </div>
@@ -368,6 +370,7 @@ export default function ShopDashboard({ user, onExit }) {
         {activeTab === "parchis" && <ParchiTab parchiRequests={parchiRequests} selectedParchi={selectedParchi} setSelectedParchi={setSelectedParchi} parchiBill={parchiBill} setParchiBill={setParchiBill} handleAddToBill={handleAddToBill} handleSendBill={handleSendBill} shopData={shopData} />}
         {activeTab === "inventory" && <InventoryTab shopData={shopData} masterCatalog={masterCatalog} handleInventoryUpdate={handleInventoryUpdate} handleInventoryRemove={handleInventoryRemove} onInventoryRefresh={refreshShopData} fetchMasterCatalog={fetchMasterCatalog} />}
         {activeTab === "requests" && <RequestsTab shopData={shopData} />}
+        {activeTab === "combos" && <CombosTab shopData={shopData} onComboRefresh={refreshShopData} />}
         {activeTab === "reviews" && <ShopReviews shopId={shopData._id} shopRating={shopData.rating} totalReviews={shopData.totalReviews} />}
         {activeTab === "complaints" && <ComplaintsTab shop={shopData} />}
       </div>

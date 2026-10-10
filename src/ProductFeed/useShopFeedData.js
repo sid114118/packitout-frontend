@@ -44,6 +44,8 @@ export default function useShopFeedData(user) {
   const [shopInfo, setShopInfo] = useState(initialCache?.shopInfo || null);
   const [nearbyShops, setNearbyShops] = useState(initialCache?.nearbyShops || []);
   const [shopRecommendations, setShopRecommendations] = useState(initialCache?.shopRecommendations || []);
+  const [shopCombos, setShopCombos] = useState(initialCache?.shopCombos || []);
+  const [campaigns, setCampaigns] = useState(initialCache?.campaigns || []);
   const [shopDeals, setShopDeals] = useState(() => initialCache?.shopDeals ? shuffleArray(initialCache.shopDeals) : []);
   const [shopBestSellers, setShopBestSellers] = useState(() => initialCache?.shopBestSellers ? shuffleArray(initialCache.shopBestSellers) : []);
   const [under99, setUnder99] = useState(() => initialCache?.under99 ? shuffleArray(initialCache.under99) : []);
@@ -138,7 +140,10 @@ export default function useShopFeedData(user) {
       const newUnder99 = shuffleArray(availableItems.filter(i => i.sellingPrice > 0 && i.sellingPrice < 100 && i.inStock)).slice(0, 12);
       const newArrivalsList = [...availableItems].reverse().filter(i => i.inStock).slice(0, 12);
 
+      const newShopCombos = newShopInfo.combos ? newShopInfo.combos.filter(c => c.isActive) : [];
+
       setShopRecommendations(newShopRecommendations);
+      setShopCombos(newShopCombos);
       setShopDeals(newShopDeals);
       setShopBestSellers(newBestSellers);
       setUnder99(newUnder99);
@@ -161,8 +166,17 @@ export default function useShopFeedData(user) {
       // 👻 PHASE 2: BACKGROUND FETCHES (Runs silently, does not block the user)
       let finalNearbyShops = [];
       let finalBuyItAgain = [];
+      let finalCampaigns = [];
 
       const bgPromises = [];
+
+      bgPromises.push(
+        fetchJson(`${BASE_URL}/campaigns`).then(data => {
+          if (cancelled || !Array.isArray(data)) return;
+          finalCampaigns = data;
+          setCampaigns(finalCampaigns);
+        }).catch(() => null)
+      );
 
       if (user.pincode) {
         bgPromises.push(
@@ -206,6 +220,8 @@ export default function useShopFeedData(user) {
             shopInfo: newShopInfo,
             nearbyShops: finalNearbyShops,
             shopRecommendations: newShopRecommendations,
+            shopCombos: newShopCombos,
+            campaigns: finalCampaigns,
             shopDeals: newShopDeals,
             shopBestSellers: newBestSellers,
             under99: newUnder99,
@@ -227,5 +243,5 @@ export default function useShopFeedData(user) {
     return () => { cancelled = true; };
   }, [user]);
 
-  return { loading, items, shopInfo, nearbyShops, shopRecommendations, shopDeals, shopBestSellers, under99, timeBased, newArrivals, buyItAgain };
+  return { loading, items, shopInfo, nearbyShops, shopRecommendations, shopCombos, campaigns, shopDeals, shopBestSellers, under99, timeBased, newArrivals, buyItAgain };
 }

@@ -29,7 +29,7 @@ export default function ShopFeed({
   // 🌟 CALL THE BRAIN
   const {
     loading, items, shopInfo, nearbyShops,
-    shopRecommendations, shopDeals, shopBestSellers, under99, timeBased, newArrivals, buyItAgain
+    shopRecommendations, shopCombos, campaigns, shopDeals, shopBestSellers, under99, timeBased, newArrivals, buyItAgain
   } = useShopFeedData(user);
 
   // Get favorites basket
@@ -53,6 +53,7 @@ export default function ShopFeed({
   const [selectedProductDetails, setSelectedProductDetails] = useState(null); 
   const [selectedVariantProduct, setSelectedVariantProduct] = useState(null);
   const [viewAll, setViewAll] = useState(null); 
+  const [selectedCampaign, setSelectedCampaign] = useState(null);
 
   const BASE_URL = (import.meta.env.VITE_API_BASE || "https://darkslategrey-snail-415133.hostingersite.com");
 
@@ -110,9 +111,13 @@ export default function ShopFeed({
   if (viewAll) { displayItems = viewAll.items; listTitle = viewAll.title; } 
   else if (selectedCategory) { displayItems = items.filter(i => (i.category || "").toLowerCase().includes(selectedCategory.toLowerCase())); listTitle = selectedCategory; } 
   else if (selectedBrand) { displayItems = items.filter(i => i.brand === selectedBrand); listTitle = `Explore ${selectedBrand}`; }
+  else if (selectedCampaign) { 
+    displayItems = items.filter(i => i.inStock && selectedCampaign.keywords.some(kw => (i.name||"").toLowerCase().includes(kw.toLowerCase()) || (i.category||"").toLowerCase().includes(kw.toLowerCase()))); 
+    listTitle = selectedCampaign.title; 
+  }
 
   const shopClosed = shopInfo && !shopInfo.isOpen;
-  const isListViewActive = viewAll || selectedCategory || selectedBrand;
+  const isListViewActive = viewAll || selectedCategory || selectedBrand || selectedCampaign;
 
   return (
     <div style={{ padding: '0', maxWidth: '1000px', margin: '0 auto', overflowX: 'hidden', backgroundColor: '#f3f4f6' }}>
@@ -124,14 +129,66 @@ export default function ShopFeed({
       {isListViewActive && !isSearchOpen && (
         <ProductListView
           title={listTitle} items={displayItems}
-          onBack={() => { if (selectedCategory) onClearCategory(); if (selectedBrand && onClearBrand) onClearBrand(); setViewAll(null); }}
+          onBack={() => { if (selectedCategory) onClearCategory(); if (selectedBrand && onClearBrand) onClearBrand(); setViewAll(null); setSelectedCampaign(null); }}
           shopClosed={shopClosed} onOpenDetails={setSelectedProductDetails} onQuickAdd={handleQuickAdd} cart={cart} onRemoveFromCart={onRemoveFromCart} onViewCart={onViewCart}
-          onSearchClick={() => { if (selectedCategory) onClearCategory(); if (selectedBrand && onClearBrand) onClearBrand(); setViewAll(null); onOpenSearch(); }}
+          onSearchClick={() => { if (selectedCategory) onClearCategory(); if (selectedBrand && onClearBrand) onClearBrand(); setViewAll(null); setSelectedCampaign(null); onOpenSearch(); }}
         />
       )}
 
       {!isSearchOpen && !isListViewActive && (
         <>
+          {/* 🌍 GLOBAL CAMPAIGNS */}
+          {campaigns?.length > 0 && (
+            <div className="hide-scroll" style={{ display: 'flex', gap: '15px', padding: '15px', overflowX: 'auto' }}>
+              <style>{`.hide-scroll::-webkit-scrollbar { display: none; }`}</style>
+              {campaigns.map(camp => (
+                <div key={camp._id} onClick={() => setSelectedCampaign(camp)} style={{ minWidth: '280px', flex: 1, padding: '20px', borderRadius: '16px', background: camp.bannerColor, color: 'white', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '15px', boxShadow: '0 4px 10px rgba(0,0,0,0.1)' }}>
+                  <span style={{ fontSize: '2.5rem', background: 'rgba(255,255,255,0.2)', padding: '10px', borderRadius: '50%' }}>{camp.emoji}</span>
+                  <div>
+                    <h3 style={{ margin: '0 0 5px 0', fontSize: '1.2rem', fontWeight: '800' }}>{camp.title}</h3>
+                    <p style={{ margin: 0, fontSize: '0.85rem', opacity: 0.9 }}>{camp.subtitle}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* 🎁 SHOP COMBOS */}
+          {shopCombos?.length > 0 && (
+            <div style={{ padding: '10px 15px' }}>
+              <h3 style={{ margin: '0 0 10px 0', color: '#0f172a', display: 'flex', alignItems: 'center', gap: '8px' }}>📦 Special Combos <span style={{ fontSize: '0.75rem', background: '#fef08a', color: '#854d0e', padding: '2px 8px', borderRadius: '10px' }}>HOT</span></h3>
+              <div className="hide-scroll" style={{ display: 'flex', gap: '15px', overflowX: 'auto', paddingBottom: '10px' }}>
+                {shopCombos.map(combo => {
+                  const comboItems = combo.productIds.map(pid => items.find(i => i._id === pid)).filter(Boolean);
+                  const totalPrice = comboItems.reduce((sum, item) => sum + (item.sellingPrice || item.mrp), 0);
+                  return (
+                    <div key={combo._id} style={{ minWidth: '240px', border: '1px solid #e2e8f0', borderRadius: '16px', padding: '15px', backgroundColor: '#fff', display: 'flex', flexDirection: 'column' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+                        <h4 style={{ margin: 0, fontSize: '1.1rem', color: '#1e293b' }}>{combo.emoji} {combo.name}</h4>
+                        <span style={{ fontWeight: '800', color: '#16a34a' }}>₹{totalPrice}</span>
+                      </div>
+                      <div style={{ display: 'flex', gap: '5px', overflowX: 'hidden', marginBottom: '15px' }}>
+                        {comboItems.map((ci, idx) => (
+                          <div key={idx} style={{ width: '40px', height: '40px', borderRadius: '8px', border: '1px solid #f1f5f9', overflow: 'hidden', display: 'flex', justifyContent: 'center', alignItems: 'center', backgroundColor: '#f8fafc' }}>
+                            {ci.image ? <img src={ci.image} alt={ci.name} style={{ width: '100%', height: '100%', objectFit: 'contain' }} /> : <span style={{ fontSize: '1.2rem' }}>{ci.emoji}</span>}
+                          </div>
+                        ))}
+                      </div>
+                      <button 
+                        onClick={() => {
+                          comboItems.forEach(item => handleQuickAdd(item, 1));
+                          toast.success('Combo added to cart! 🎁');
+                        }}
+                        style={{ marginTop: 'auto', padding: '10px', backgroundColor: '#f59e0b', color: '#fff', border: 'none', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer', width: '100%' }}
+                      >
+                        Add Box To Cart
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
           {shopRecommendations?.length > 0 && (
             <ProductRow title="Shopkeeper's Picks" subtitle="🔥 Featured for you" items={shopRecommendations} onViewAll={setViewAll} shopClosed={shopClosed} onOpenDetails={setSelectedProductDetails} onQuickAdd={handleQuickAdd} cart={cart} onRemoveFromCart={onRemoveFromCart} />
           )}
