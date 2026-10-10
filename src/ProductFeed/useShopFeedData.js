@@ -34,6 +34,7 @@ export default function useShopFeedData(user) {
   const [items, setItems] = useState(initialCache?.items || []);
   const [shopInfo, setShopInfo] = useState(initialCache?.shopInfo || null);
   const [nearbyShops, setNearbyShops] = useState(initialCache?.nearbyShops || []);
+  const [shopRecommendations, setShopRecommendations] = useState(initialCache?.shopRecommendations || []);
   const [shopDeals, setShopDeals] = useState(initialCache?.shopDeals || []);
   const [shopBestSellers, setShopBestSellers] = useState(initialCache?.shopBestSellers || []);
   const [under99, setUnder99] = useState(initialCache?.under99 || []);
@@ -101,7 +102,7 @@ export default function useShopFeedData(user) {
         const isDiscounted = mrp > 0 && sellingPrice < mrp;
         const discountPercent = (isDiscounted && mrp > 0) ? Math.round(((mrp - sellingPrice) / mrp) * 100) : 0;
 
-        const formattedItem = { ...productMerged, sellingPrice, mrp, inStock: item.inStock, isDiscounted, discountPercent };
+        const formattedItem = { ...productMerged, sellingPrice, mrp, inStock: item.inStock, isFeatured: item.isFeatured, isDiscounted, discountPercent };
 
         if (formattedItem.itemGroupId && formattedItem.itemGroupId.trim() !== "") {
           const groupId = String(formattedItem.itemGroupId).trim().toUpperCase();
@@ -119,11 +120,13 @@ export default function useShopFeedData(user) {
 
       setItems(availableItems);
 
+      const newShopRecommendations = availableItems.filter(i => i.isFeatured && i.inStock);
       const newShopDeals = availableItems.filter(i => i.isDiscounted && i.inStock).sort((a, b) => b.discountPercent - a.discountPercent).slice(0, 12);
       const newBestSellers = availableItems.filter(i => i.inStock).slice(0, 12);
       const newUnder99 = availableItems.filter(i => i.sellingPrice > 0 && i.sellingPrice < 100 && i.inStock).slice(0, 12);
       const newArrivalsList = [...availableItems].reverse().filter(i => i.inStock).slice(0, 12);
 
+      setShopRecommendations(newShopRecommendations);
       setShopDeals(newShopDeals);
       setShopBestSellers(newBestSellers);
       setUnder99(newUnder99);
@@ -189,6 +192,7 @@ export default function useShopFeedData(user) {
             items: availableItems,
             shopInfo: newShopInfo,
             nearbyShops: finalNearbyShops,
+            shopRecommendations: newShopRecommendations,
             shopDeals: newShopDeals,
             shopBestSellers: newBestSellers,
             under99: newUnder99,
@@ -210,5 +214,5 @@ export default function useShopFeedData(user) {
     return () => { cancelled = true; };
   }, [user]);
 
-  return { loading, items, shopInfo, nearbyShops, shopDeals, shopBestSellers, under99, timeBased, newArrivals, buyItAgain };
+  return { loading, items, shopInfo, nearbyShops, shopRecommendations, shopDeals, shopBestSellers, under99, timeBased, newArrivals, buyItAgain };
 }

@@ -179,11 +179,14 @@ export default function ShopDashboard({ user, onExit }) {
     }
   };
 
-  const handleInventoryUpdate = async (productId, sellingPrice, inStock = true) => {
+  const handleInventoryUpdate = async (productId, sellingPrice, inStock = true, isFeatured = undefined) => {
     try {
+      const payload = { productId, sellingPrice: Number(sellingPrice), inStock };
+      if (isFeatured !== undefined) payload.isFeatured = isFeatured;
+
       const res = await shopFetch(shopData, `/shops/${shopData._id}/inventory`, {
         method: "POST",
-        body: JSON.stringify({ productId, sellingPrice: Number(sellingPrice), inStock })
+        body: JSON.stringify(payload)
       });
       if (res.ok) {
         const updated = await res.json();

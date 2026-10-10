@@ -9,6 +9,7 @@ import HomeFooter from '../components/HomeFooter.jsx';
 import { useRankingConfig } from '../ui/RankingProvider.jsx';
 import { applyBrandPriority } from '../utils/rankingSort.js';
 import { userFetch } from '../utils/api.js';
+import { useBaskets } from '../utils/useBaskets.js';
 
 // 🌟 IMPORT OUR NEW BRAIN!
 import useShopFeedData from './useShopFeedData'; 
@@ -28,8 +29,16 @@ export default function ShopFeed({
   // 🌟 CALL THE BRAIN
   const {
     loading, items, shopInfo, nearbyShops,
-    shopDeals, shopBestSellers, under99, timeBased, newArrivals, buyItAgain
+    shopRecommendations, shopDeals, shopBestSellers, under99, timeBased, newArrivals, buyItAgain
   } = useShopFeedData(user);
+
+  // Get favorites basket
+  const { baskets } = useBaskets();
+  const favBasket = baskets.find(b => b.id === 'favourites');
+  const favItems = React.useMemo(() => {
+    if (!favBasket || !favBasket.items.length || items.length === 0) return [];
+    return favBasket.items.map(favItem => items.find(i => i._id === favItem._id)).filter(Boolean);
+  }, [favBasket, items]);
 
   const rankedTimeBased = React.useMemo(
     () => ({ ...timeBased, items: applyBrandPriority(timeBased.items, rankingConfig) }),
@@ -123,6 +132,12 @@ export default function ShopFeed({
 
       {!isSearchOpen && !isListViewActive && (
         <>
+          {shopRecommendations?.length > 0 && (
+            <ProductRow title="Shopkeeper's Picks" subtitle="🔥 Featured for you" items={shopRecommendations} onViewAll={setViewAll} shopClosed={shopClosed} onOpenDetails={setSelectedProductDetails} onQuickAdd={handleQuickAdd} cart={cart} onRemoveFromCart={onRemoveFromCart} />
+          )}
+          {favItems?.length > 0 && (
+            <ProductRow title="Your Favorites ❤️" subtitle="Handpicked by you" items={favItems} onViewAll={setViewAll} shopClosed={shopClosed} onOpenDetails={setSelectedProductDetails} onQuickAdd={handleQuickAdd} cart={cart} onRemoveFromCart={onRemoveFromCart} />
+          )}
           <ProductRow title="Freshly Restocked" subtitle="Back on shelves" items={rankedNewArrivals} onViewAll={setViewAll} shopClosed={shopClosed} onOpenDetails={setSelectedProductDetails} onQuickAdd={handleQuickAdd} cart={cart} onRemoveFromCart={onRemoveFromCart} hideBrandPrefix />
           <ProductRow title={rankedTimeBased.title} subtitle={rankedTimeBased.subtitle} items={rankedTimeBased.items} onViewAll={setViewAll} shopClosed={shopClosed} onOpenDetails={setSelectedProductDetails} onQuickAdd={handleQuickAdd} cart={cart} onRemoveFromCart={onRemoveFromCart} />
           <ProductRow title="Price Crash" subtitle="Extra Savings" items={rankedShopDeals} onViewAll={setViewAll} shopClosed={shopClosed} onOpenDetails={setSelectedProductDetails} onQuickAdd={handleQuickAdd} cart={cart} onRemoveFromCart={onRemoveFromCart} />

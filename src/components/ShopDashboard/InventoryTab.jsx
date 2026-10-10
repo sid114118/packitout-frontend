@@ -369,15 +369,15 @@ export default function InventoryTab({ shopData, masterCatalog, handleInventoryU
                     onClick={() => handleInventoryUpdate(item.product._id, item.sellingPrice, !item.inStock)}
                     style={{ 
                       flex: 1, 
-                      padding: '14px', 
+                      padding: '12px', 
                       borderRadius: '10px', 
                       fontWeight: '800', 
-                      fontSize: '0.9rem', 
+                      fontSize: '0.85rem', 
                       cursor: 'pointer', 
                       display: 'flex', 
                       justifyContent: 'center', 
                       alignItems: 'center', 
-                      gap: '8px', 
+                      gap: '4px', 
                       backgroundColor: item.inStock ? '#f0fdf4' : '#fef2f2', 
                       color: item.inStock ? '#16a34a' : '#dc2626', 
                       border: item.inStock ? '1px solid #bbf7d0' : '1px solid #fecaca', 
@@ -386,6 +386,27 @@ export default function InventoryTab({ shopData, masterCatalog, handleInventoryU
                     }}
                   >
                     {item.inStock ? "🟢 IN STOCK" : "🔴 OUT OF STOCK"}
+                  </button>
+                  <button 
+                    onClick={() => handleInventoryUpdate(item.product._id, item.sellingPrice, item.inStock, !item.isFeatured)}
+                    style={{ 
+                      flex: 1, 
+                      padding: '12px', 
+                      borderRadius: '10px', 
+                      fontWeight: '800', 
+                      fontSize: '0.85rem', 
+                      cursor: 'pointer', 
+                      display: 'flex', 
+                      justifyContent: 'center', 
+                      alignItems: 'center', 
+                      gap: '4px', 
+                      backgroundColor: item.isFeatured ? '#fffbeb' : '#f8fafc', 
+                      color: item.isFeatured ? '#d97706' : '#64748b', 
+                      border: item.isFeatured ? '1px solid #fde68a' : '1px solid #e2e8f0', 
+                      transition: '0.2s',
+                    }}
+                  >
+                    {item.isFeatured ? "⭐ FEATURED" : "☆ FEATURE ITEM"}
                   </button>
                   <button
                     onClick={async () => {
