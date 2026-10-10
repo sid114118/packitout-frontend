@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useBaskets } from './utils/useBaskets';
 import { cdnImage } from './utils/cloudinaryUrl';
 import { useToast } from './ui/DialogProvider';
+import { BASE_URL } from './utils/api';
 
 export default function SharedBasketView({ basketId }) {
   const [basket, setBasket] = useState(null);
@@ -13,7 +14,6 @@ export default function SharedBasketView({ basketId }) {
   useEffect(() => {
     const fetchBasket = async () => {
       try {
-        const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
         const res = await fetch(`${BASE_URL}/shared-baskets/${basketId}`);
         if (!res.ok) throw new Error();
         const data = await res.json();
