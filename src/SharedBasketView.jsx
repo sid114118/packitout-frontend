@@ -8,7 +8,7 @@ export default function SharedBasketView({ basketId }) {
   const [basket, setBasket] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
-  const { baskets, setBaskets } = useBaskets();
+  const { baskets, saveBaskets } = useBaskets();
   const toast = useToast();
 
   useEffect(() => {
@@ -37,7 +37,7 @@ export default function SharedBasketView({ basketId }) {
       reminderDays: 0,
       lastOrderedAt: null
     };
-    setBaskets([...baskets, newBasket]);
+    saveBaskets([...baskets, newBasket]);
     toast(`"${newBasket.name}" saved to your baskets!`, "success");
     window.location.hash = "#baskets";
   };
