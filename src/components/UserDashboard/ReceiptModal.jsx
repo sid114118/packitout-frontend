@@ -3,7 +3,7 @@ import ViewReviewModal from './ViewReviewModal';
 import OrderTimeline from './OrderTimeline';
 import { cdnImage } from '../../utils/cloudinaryUrl.js';
 
-export default function ReceiptModal({ selectedOrder, setSelectedOrder, onReorderItem, user, onReviewsDeleted }) {
+export default function ReceiptModal({ selectedOrder, setSelectedOrder, onReorderItem, user, onReviewsDeleted, onCustomerArrived }) {
   const [isViewReviewModalOpen, setIsViewReviewModalOpen] = useState(false);
 
   if (!selectedOrder) return null;
@@ -63,8 +63,20 @@ export default function ReceiptModal({ selectedOrder, setSelectedOrder, onReorde
                 <div style={{ fontSize: '0.8rem', color: '#64748b', fontWeight: '500' }}>
                   {new Date(selectedOrder.createdAt).toLocaleDateString()} • {new Date(selectedOrder.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                 </div>
-                <div style={{ fontSize: '0.8rem', color: '#64748b', fontWeight: '500', marginTop: '2px' }}>
-                  Order #{selectedOrder._id?.slice(-6).toUpperCase()}
+
+                {/* 🏷️ COUNTER PICKUP TOKEN */}
+                <div style={{
+                  marginTop: '10px',
+                  display: 'inline-block',
+                  background: '#f8fafc',
+                  border: '2px dashed #0f172a',
+                  borderRadius: '10px',
+                  padding: '6px 18px',
+                }}>
+                  <div style={{ fontSize: '0.66rem', color: '#64748b', fontWeight: 800, letterSpacing: '1px' }}>PICKUP TOKEN</div>
+                  <div style={{ fontSize: '1.45rem', color: '#0f172a', fontWeight: 900, letterSpacing: '1.5px' }}>
+                    #{selectedOrder._id?.slice(-5).toUpperCase()}
+                  </div>
                 </div>
               </div>
 
@@ -164,8 +176,57 @@ export default function ReceiptModal({ selectedOrder, setSelectedOrder, onReorde
           </div>
 
           {/* 🌟 FLOATING ACTIONS BELOW THE RECEIPT */}
-          <div style={{ marginTop: '35px', width: '100%', display: 'flex', flexDirection: 'column', gap: '12px', alignItems: 'center' }}>
+          <div style={{ marginTop: '25px', width: '100%', display: 'flex', flexDirection: 'column', gap: '10px', alignItems: 'center' }}>
              
+             {/* 📍 "I'm at the Shop" counter arrival button / banner */}
+             {!isDelivered && !isCancelled && (
+               selectedOrder.customerArrivedAt ? (
+                 <div style={{
+                   width: '100%',
+                   padding: '12px 14px',
+                   background: 'linear-gradient(135deg, #fef3c7 0%, #fde68a 100%)',
+                   border: '2px solid #f59e0b',
+                   borderRadius: '12px',
+                   color: '#92400e',
+                   textAlign: 'center',
+                   boxShadow: '0 4px 15px rgba(245, 158, 11, 0.25)',
+                   display: 'flex',
+                   flexDirection: 'column',
+                   alignItems: 'center',
+                   gap: '2px'
+                 }}>
+                   <div style={{ fontSize: '0.92rem', fontWeight: 900, display: 'flex', alignItems: 'center', gap: '6px' }}>
+                     <span>🔔</span> Shopkeeper Alerted!
+                   </div>
+                   <div style={{ fontSize: '0.78rem', color: '#b45309', fontWeight: 700 }}>
+                     Show Token <strong>#{selectedOrder._id?.slice(-5).toUpperCase()}</strong> at counter
+                   </div>
+                 </div>
+               ) : (
+                 <button
+                   onClick={() => onCustomerArrived && onCustomerArrived(selectedOrder._id)}
+                   style={{
+                     width: '100%',
+                     padding: '13px',
+                     background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
+                     color: '#fff',
+                     border: 'none',
+                     borderRadius: '12px',
+                     fontSize: '0.95rem',
+                     fontWeight: '800',
+                     cursor: 'pointer',
+                     display: 'flex',
+                     alignItems: 'center',
+                     justifyContent: 'center',
+                     gap: '8px',
+                     boxShadow: '0 4px 16px rgba(245, 158, 11, 0.35)'
+                   }}
+                 >
+                   <span style={{ fontSize: '1.2rem' }}>📍</span> I'm at the Shop (दुकान पर पहुँच गए)
+                 </button>
+               )
+             )}
+
              {isDelivered && isAlreadyReviewed && (
                <button onClick={() => setIsViewReviewModalOpen(true)} style={{ width: '100%', padding: '14px', backgroundColor: '#fff', color: '#ef4444', border: 'none', borderRadius: '12px', fontSize: '1rem', fontWeight: '800', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', boxShadow: '0 4px 15px rgba(0,0,0,0.2)' }}>
                  <span style={{ fontSize: '1.2rem' }}>⭐</span> View Your Rating

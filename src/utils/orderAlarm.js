@@ -35,6 +35,21 @@ const chirp = () => {
   beep(1320, 0.18, 0.2);
 };
 
+// 🔔 Pleasant "Ding-Dong" counter arrival bell when customer reaches the shop
+export const playArrivalBell = () => {
+  const ctx = getCtx();
+  if (!ctx) return;
+  if (ctx.state === 'suspended') {
+    ctx.resume().catch(() => {});
+  }
+  // Ding: E5 (659Hz) -> Dong: C5 (523Hz)
+  beep(659.25, 0.45, 0);
+  beep(523.25, 0.65, 0.25);
+  if (typeof navigator !== 'undefined' && navigator.vibrate) {
+    try { navigator.vibrate([150, 80, 250]); } catch (e) {}
+  }
+};
+
 export function useOrderAlarm(active, opts = {}) {
   const { intervalMs = 2500 } = opts;
   const [muted, setMuted] = useState(false);

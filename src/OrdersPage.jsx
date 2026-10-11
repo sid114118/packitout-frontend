@@ -237,6 +237,43 @@ export default function OrdersPage({ user, onExit, onAddToCart, cart, setCart })
     }
   };
 
+  const handleCustomerArrived = async (orderId) => {
+    const order = orders.find(o => o._id === orderId);
+    const shopName = order?.shopId?.name || "the shop";
+    const shortId = (orderId || '').slice(-5).toUpperCase();
+
+    const ok = await askConfirm({
+      title: "I'm at the shop counter 📍",
+      message: `Are you at ${shopName}? We will ring the counter bell and alert the shopkeeper to keep your order ready for pickup!`,
+      confirmText: "Yes, I'm here! 🔔",
+      cancelText: "Not yet",
+    });
+    if (!ok) return;
+
+    try {
+      const res = await userFetch(user, `/orders/${orderId}/customer-arrived`, {
+        method: "POST",
+      });
+      if (res.ok) {
+        const data = await res.json().catch(() => ({}));
+        const arrivedAt = data.customerArrivedAt || new Date().toISOString();
+        setOrders(prev => prev.map(o => o._id === orderId ? { ...o, customerArrivedAt: arrivedAt } : o));
+        if (selectedOrder && selectedOrder._id === orderId) {
+          setSelectedOrder(prev => ({ ...prev, customerArrivedAt: arrivedAt }));
+        }
+        triggerToast(`🔔 Shopkeeper alerted! Show Token #${shortId} at the counter.`, "success");
+        if (typeof navigator !== 'undefined' && navigator.vibrate) {
+          try { navigator.vibrate([120, 60, 180]); } catch (e) {}
+        }
+      } else {
+        const err = await res.json().catch(() => ({}));
+        triggerToast(err.error || "Could not notify shopkeeper.", "error");
+      }
+    } catch (err) {
+      triggerToast("Network error. Try again.", "error");
+    }
+  };
+
   const handleReorderItem = (item) => {
     if (!onAddToCart) return;
     const product = itemToCartProduct(item);
@@ -592,6 +629,7 @@ export default function OrdersPage({ user, onExit, onAddToCart, cart, setCart })
                 onCancel={() => initiateCancel(order._id)}
                 onReview={() => { setOrderToReview(order); setIsReviewModalOpen(true); }}
                 onReorderItem={handleReorderItem}
+                onCustomerArrived={handleCustomerArrived}
               />
             ))}
             
@@ -656,6 +694,7 @@ export default function OrdersPage({ user, onExit, onAddToCart, cart, setCart })
                 onCancel={() => initiateCancel(order._id)}
                 onReview={() => { setOrderToReview(order); setIsReviewModalOpen(true); }}
                 onReorderItem={handleReorderItem}
+                onCustomerArrived={handleCustomerArrived}
               />
             ))}
           </div>
@@ -668,6 +707,7 @@ export default function OrdersPage({ user, onExit, onAddToCart, cart, setCart })
         setSelectedOrder={setSelectedOrder}
         onReorderItem={handleReorderItem}
         user={user}
+        onCustomerArrived={handleCustomerArrived}
         onReviewsDeleted={(orderId) => {
           setOrders(prev => prev.map(o => o._id === orderId ? { ...o, isReviewed: false } : o));
           // Close the receipt modal too — the order just became review-able again,
@@ -732,13 +772,15 @@ function Stat({ label, value, icon, small, ellipsis }) {
 }
 
 // ─────────────────────────────────────────────────────────
-function OrderCard({ order, onOpen, onCancel, onReview, onReorderItem }) {
+function OrderCard({ order, onOpen, onCancel, onReview, onReorderItem, onCustomerArrived }) {
   const stage = stageOf(order.status);
   const live = stage !== 'delivered' && stage !== 'cancelled';
   const isPending = stage === 'pending';
   const isDelivered = stage === 'delivered';
   const isCancelled = stage === 'cancelled';
   const isReady = stage === 'ready';
+  const isArrived = Boolean(order.customerArrivedAt);
+  const shortId = (order._id || '').slice(-5).toUpperCase();
 
   const accentColor = isCancelled ? '#94a3b8' : isDelivered ? '#16a34a' : isReady ? '#10b981' : '#ef4444';
   const badgeBg = isCancelled ? '#f1f5f9' : isDelivered ? '#ecfdf5' : isReady ? '#ecfdf5' : '#fef2f2';
@@ -865,6 +907,63 @@ function OrderCard({ order, onOpen, onCancel, onReview, onReorderItem }) {
             <div style={{ fontSize: '0.78rem', color: '#64748b', fontWeight: 700, paddingLeft: '44px' }}>
               + {extraCount} more item{extraCount === 1 ? '' : 's'}
             </div>
+          )}
+        </div>
+      )}
+
+      {/* 📍 "I'M AT THE SHOP" / COUNTER ARRIVAL BANNER */}
+      {live && !isCancelled && !isDelivered && (
+        <div style={{ marginTop: '12px' }}>
+          {isArrived ? (
+            <div style={{
+              background: 'linear-gradient(135deg, #fef3c7 0%, #fde68a 100%)',
+              border: '1.5px solid #f59e0b',
+              borderRadius: '12px',
+              padding: '9px 12px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              gap: '8px',
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0 }}>
+                <span style={{ fontSize: '1.2rem' }}>🔔</span>
+                <div style={{ minWidth: 0 }}>
+                  <div style={{ fontSize: '0.8rem', fontWeight: 800, color: '#92400e' }}>
+                    Shopkeeper Alerted! Stand at counter
+                  </div>
+                  <div style={{ fontSize: '0.74rem', color: '#b45309', fontWeight: 600, marginTop: '1px' }}>
+                    Pickup Token: <strong style={{ color: '#78350f', fontSize: '0.85rem' }}>#{shortId}</strong>
+                  </div>
+                </div>
+              </div>
+              <span style={{ background: '#f59e0b', color: '#fff', fontSize: '0.68rem', fontWeight: 900, padding: '3px 7px', borderRadius: '6px', flexShrink: 0 }}>
+                AT SHOP 📍
+              </span>
+            </div>
+          ) : (
+            <button
+              onClick={(e) => { e.stopPropagation(); onCustomerArrived && onCustomerArrived(order._id); }}
+              className="op-press"
+              style={{
+                width: '100%',
+                padding: '9px 12px',
+                background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
+                color: '#fff',
+                border: 'none',
+                borderRadius: '11px',
+                fontSize: '0.82rem',
+                fontWeight: 800,
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '6px',
+                boxShadow: '0 4px 12px rgba(245, 158, 11, 0.28)',
+                letterSpacing: '0.2px'
+              }}
+            >
+              <span>📍</span> I'm at the Shop (दुकान पर पहुँच गए)
+            </button>
           )}
         </div>
       )}

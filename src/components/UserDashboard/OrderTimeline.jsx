@@ -76,6 +76,11 @@ export default function OrderTimeline({ order }) {
           <div style={{ color: '#0f172a', fontSize: '1.05rem', fontWeight: '900', marginTop: '2px', display: 'flex', alignItems: 'center', gap: '6px' }}>
             {STAGES[currentIdx]?.icon} {STAGES[currentIdx]?.label || "Order Placed"}
           </div>
+          {order.customerArrivedAt && currentStage !== 'delivered' && (
+            <div style={{ marginTop: '6px', display: 'inline-flex', alignItems: 'center', gap: '5px', background: '#fef3c7', color: '#92400e', border: '1px solid #fde68a', borderRadius: '6px', padding: '2px 8px', fontSize: '0.72rem', fontWeight: 800 }}>
+              <span>📍</span> At counter · {fmtTime(order.customerArrivedAt)}
+            </div>
+          )}
         </div>
         <div style={{ fontSize: '1.2rem', color: '#64748b', transform: isExpanded ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s ease' }}>
           ▼

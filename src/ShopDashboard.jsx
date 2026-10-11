@@ -16,6 +16,7 @@ import RequestsTab from './components/ShopDashboard/RequestsTab.jsx';
 import CombosTab from './components/ShopDashboard/CombosTab.jsx';
 import { cdnImage } from './utils/cloudinaryUrl.js';
 import { shopFetch, BASE_URL } from './utils/api.js';
+import { playArrivalBell } from './utils/orderAlarm.js';
 
 export default function ShopDashboard({ user, onExit }) {
   const toast = useToast();
@@ -51,6 +52,12 @@ export default function ShopDashboard({ user, onExit }) {
     eventSource.addEventListener('refresh_orders', () => {
       clearTimeout(ordersTimeout);
       ordersTimeout = setTimeout(fetchOrders, 500);
+    });
+    eventSource.addEventListener('customer_arrived', () => {
+      playArrivalBell();
+      toast("🚨 Customer has reached the counter!", "info");
+      clearTimeout(ordersTimeout);
+      ordersTimeout = setTimeout(fetchOrders, 200);
     });
     eventSource.addEventListener('refresh_parchis', () => {
       clearTimeout(parchisTimeout);

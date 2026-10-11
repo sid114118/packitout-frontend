@@ -2,17 +2,30 @@ import React, { useState } from 'react';
 import { useOrderAlarm } from '../../utils/orderAlarm.js';
 import { cdnImage } from '../../utils/cloudinaryUrl.js';
 
+const formatArrivedAgo = (isoDate) => {
+  if (!isoDate) return '';
+  const diffMs = Date.now() - new Date(isoDate).getTime();
+  const diffMins = Math.floor(diffMs / 60000);
+  if (diffMins < 1) return 'Just now';
+  if (diffMins === 1) return '1 min ago';
+  return `${diffMins}m ago`;
+};
+
 export default function OrdersTab({ orders, updateOrderStatus, markOrderPaid }) {
   const [showPastOrders, setShowPastOrders] = useState(false);
 
   // Split orders into Active and Past based on their status. Active orders are
-  // sorted so URGENT pickups float to the top regardless of when they were
-  // placed — without this, an urgent order placed after several scheduled ones
-  // would be buried by chronological order and the red banner alone wouldn't
-  // catch the shop's eye fast enough during a busy period.
+  // sorted so customers physically waiting at the counter float to the very top,
+  // followed by urgent pickups, and finally chronological order.
   const activeOrders = orders
     .filter(o => !o.status?.includes('✅') && !o.status?.includes('❌'))
     .sort((a, b) => {
+      // 📍 1. Customer physically arrived at counter takes absolute top priority
+      const aArr = a.customerArrivedAt ? 0 : 1;
+      const bArr = b.customerArrivedAt ? 0 : 1;
+      if (aArr !== bArr) return aArr - bArr;
+
+      // ⚡ 2. Urgent orders next
       const au = a.isUrgent ? 0 : 1;
       const bu = b.isUrgent ? 0 : 1;
       if (au !== bu) return au - bu;
@@ -46,15 +59,58 @@ export default function OrdersTab({ orders, updateOrderStatus, markOrderPaid }) 
 
     // 🕒 Pickup time (set by customer at checkout)
     const isUrgent = Boolean(order.isUrgent);
+    const isArrived = Boolean(order.customerArrivedAt) && isActive;
+    const shortId = (order._id || '').slice(-5).toUpperCase();
     const pickupAt = order.pickupTime ? new Date(order.pickupTime) : null;
     const pickupValid = pickupAt && !Number.isNaN(pickupAt.getTime());
     const pickupClock = pickupValid ? pickupAt.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }) : null;
 
     return (
-      <div style={{ backgroundColor: 'white', padding: '20px', borderRadius: '16px', boxShadow: '0 4px 15px rgba(0,0,0,0.05)', border: isUrgent && isActive ? '2px solid #ef4444' : isActive ? '2px solid #10b981' : '1px solid #e2e8f0', marginBottom: '15px' }}>
+      <div style={{
+        backgroundColor: 'white',
+        padding: '20px',
+        borderRadius: '16px',
+        boxShadow: isArrived ? '0 8px 24px rgba(245, 158, 11, 0.22)' : '0 4px 15px rgba(0,0,0,0.05)',
+        border: isArrived ? '2.5px solid #f59e0b' : (isUrgent && isActive ? '2px solid #ef4444' : isActive ? '2px solid #10b981' : '1px solid #e2e8f0'),
+        marginBottom: '15px',
+        position: 'relative'
+      }}>
 
-        {/* 🚨 URGENT banner — only for active urgent orders */}
-        {isUrgent && isActive && (
+        {/* 📍 CUSTOMER AT COUNTER BANNER */}
+        {isArrived && (
+          <div style={{
+            background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
+            color: '#fff',
+            padding: '11px 14px',
+            borderRadius: '12px',
+            fontWeight: 900,
+            fontSize: '0.92rem',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            marginBottom: '12px',
+            boxShadow: '0 6px 16px rgba(217, 119, 6, 0.32)',
+            border: '1px solid #fbbf24',
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <span style={{ fontSize: '1.3rem' }}>📍</span>
+              <div>
+                <div style={{ fontSize: '0.92rem', letterSpacing: '0.3px', textTransform: 'uppercase' }}>
+                  Customer Waiting at Counter
+                </div>
+                <div style={{ fontSize: '0.8rem', fontWeight: 600, opacity: 0.95, marginTop: '2px' }}>
+                  Pickup Token: <span style={{ background: '#fff', color: '#b45309', padding: '2px 8px', borderRadius: '6px', fontWeight: 900, fontSize: '0.95rem' }}>#{shortId}</span>
+                </div>
+              </div>
+            </div>
+            <span style={{ background: 'rgba(0,0,0,0.22)', padding: '4px 8px', borderRadius: '6px', fontSize: '0.74rem', fontWeight: 800 }}>
+              {formatArrivedAgo(order.customerArrivedAt)}
+            </span>
+          </div>
+        )}
+
+        {/* 🚨 URGENT banner — only for active urgent orders (when not arrived) */}
+        {!isArrived && isUrgent && isActive && (
           <div style={{ background: 'linear-gradient(90deg, #ef4444, #dc2626)', color: '#fff', padding: '10px 12px', borderRadius: '10px', fontWeight: 900, fontSize: '0.9rem', letterSpacing: '0.5px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px', boxShadow: '0 6px 16px rgba(239, 68, 68, 0.25)' }}>
             <span>⚡ URGENT — Customer wants this ASAP</span>
             <span style={{ background: 'rgba(255,255,255,0.2)', padding: '3px 8px', borderRadius: '6px', fontSize: '0.75rem' }}>~15 min</span>
@@ -197,9 +253,29 @@ export default function OrdersTab({ orders, updateOrderStatus, markOrderPaid }) 
 
                   <button
                     onClick={() => updateOrderStatus(order._id, 'Picked Up ✅')}
-                    style={{ flex: '1 1 100%', padding: '12px', backgroundColor: '#0c831f', color: 'white', border: 'none', borderRadius: '8px', fontWeight: '800', cursor: 'pointer', fontSize: '1rem', boxShadow: '0 4px 10px rgba(12, 131, 31, 0.2)', marginTop: '4px' }}
+                    style={{
+                      flex: '1 1 100%',
+                      padding: isArrived ? '14px' : '12px',
+                      backgroundColor: isArrived ? (!isPaid && order.paymentMethod === 'POP' ? '#ea580c' : '#16a34a') : '#0c831f',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '8px',
+                      fontWeight: '800',
+                      cursor: 'pointer',
+                      fontSize: isArrived ? '1.02rem' : '1rem',
+                      boxShadow: isArrived ? '0 6px 16px rgba(234, 88, 12, 0.3)' : '0 4px 10px rgba(12, 131, 31, 0.2)',
+                      marginTop: '4px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '8px'
+                    }}
                   >
-                    ✅ Mark as Picked Up
+                    {isArrived
+                      ? (!isPaid && order.paymentMethod === 'POP'
+                          ? `💵 Collect ₹${order.totalAmount} & Hand Over (Token #${shortId}) ✅`
+                          : `📦 Hand Over Order (Token #${shortId}) ✅`)
+                      : '✅ Mark as Picked Up'}
                   </button>
 
                   <button
