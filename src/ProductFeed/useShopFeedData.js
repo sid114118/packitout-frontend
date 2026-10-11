@@ -99,6 +99,25 @@ export default function useShopFeedData(user) {
         });
       }
 
+      // 🧬 SMART VARIANT GROUPING KEY
+      // Automatically clusters variants (e.g. Amul Lassi 250ml, 200ml, 1L) into one family card
+      const getVariantGroupingKey = (prod) => {
+        if (prod.itemGroupId && String(prod.itemGroupId).trim() !== "") {
+          return 'GRP_' + String(prod.itemGroupId).trim().toUpperCase();
+        }
+        const rawName = String(prod.name || '').toLowerCase();
+        const rawBrand = String(prod.brand || '').toLowerCase().trim();
+        const baseName = rawName
+          .replace(/\b\d+(\.\d+)?\s*(ml|l|ltr|litres?|liter|g|gm|gms|kg|kgs|pcs?|pieces?|pack|units?)\b/gi, '')
+          .replace(/[([{\-].*?[)\]}]/g, '')
+          .replace(/[^a-z0-9]/g, ' ')
+          .trim()
+          .replace(/\s+/g, ' ');
+
+        if (!baseName || baseName.length < 3) return 'SINGLE_' + (prod._id || Math.random());
+        return `FAMILY_${rawBrand}_${baseName}`;
+      };
+
       const groupedMap = new Map();
       const availableItems = [];
 
@@ -107,31 +126,47 @@ export default function useShopFeedData(user) {
         const master = masterMap.get(pid) || {};
         const productMerged = typeof item.product === 'object' && item.product._id ? { ...master, ...item.product } : { ...master, _id: pid };
 
-
         const mrp = Number(productMerged.mrp || 0);
         const sellingPrice = (item.sellingPrice !== undefined && item.sellingPrice !== null) ? Number(item.sellingPrice) : mrp;
         const isDiscounted = mrp > 0 && sellingPrice < mrp;
         const discountPercent = (isDiscounted && mrp > 0) ? Math.round(((mrp - sellingPrice) / mrp) * 100) : 0;
 
-        const formattedItem = { ...productMerged, sellingPrice, mrp, inStock: item.inStock, isFeatured: item.isFeatured, isDiscounted, discountPercent };
+        const formattedItem = {
+          ...productMerged,
+          sellingPrice,
+          mrp,
+          inStock: item.inStock,
+          isFeatured: item.isFeatured,
+          featuredRank: item.featuredRank !== undefined ? Number(item.featuredRank) : 999,
+          isDiscounted,
+          discountPercent
+        };
 
-        if (formattedItem.itemGroupId && formattedItem.itemGroupId.trim() !== "") {
-          const groupId = String(formattedItem.itemGroupId).trim().toUpperCase();
-          if (!groupedMap.has(groupId)) {
-            formattedItem.variants = [{ ...formattedItem }];
-            groupedMap.set(groupId, formattedItem);
-            availableItems.push(formattedItem);
-          } else {
-            groupedMap.get(groupId).variants.push({ ...formattedItem });
-          }
-        } else {
+        const groupKey = getVariantGroupingKey(formattedItem);
+        if (!groupedMap.has(groupKey)) {
+          formattedItem.variants = [{ ...formattedItem }];
+          groupedMap.set(groupKey, formattedItem);
           availableItems.push(formattedItem);
+        } else {
+          const parent = groupedMap.get(groupKey);
+          parent.variants.push({ ...formattedItem });
+          // If any variant is in stock, mark parent as in stock
+          if (formattedItem.inStock) parent.inStock = true;
+          // Inherit featured status and lowest rank
+          if (formattedItem.isFeatured) {
+            parent.isFeatured = true;
+            parent.featuredRank = Math.min(parent.featuredRank ?? 999, formattedItem.featuredRank ?? 999);
+          }
         }
       });
 
       setItems(availableItems);
 
-      const newShopRecommendations = availableItems.filter(i => i.isFeatured && i.inStock);
+      // ⭐ SHOPKEEPER'S PICKS: Sort strictly by shopkeeper's assigned featuredRank (#1, #2, #3...)
+      const newShopRecommendations = availableItems
+        .filter(i => i.isFeatured && i.inStock)
+        .sort((a, b) => (Number(a.featuredRank ?? 999)) - (Number(b.featuredRank ?? 999)));
+
       // Take top 30 deals and shuffle them, then pick 12
       const topDeals = availableItems.filter(i => i.isDiscounted && i.inStock).sort((a, b) => b.discountPercent - a.discountPercent).slice(0, 30);
       const newShopDeals = shuffleArray(topDeals).slice(0, 12);

@@ -63,18 +63,9 @@ export default function ProductListView({
     setVisibleCount(16);
   }, [selectedBrand]);
 
-  // 🚀 FLATTEN THE VARIANTS FOR THE LIST VIEW
-  const flattenedItems = useMemo(() => {
-    return items.flatMap(item => {
-      if (item.variants && item.variants.length > 0) {
-        return item.variants.map(variant => ({
-          ...item, 
-          ...variant, 
-          variants: item.variants
-        }));
-      }
-      return item;
-    });
+  // 🚀 KEEP VARIANTS GROUPED FOR THE LIST / CATEGORY VIEW
+  const sourceItems = useMemo(() => {
+    return Array.isArray(items) ? items : [];
   }, [items]);
 
   // 🧠 SMART EXTRACTOR — prefers subCategory, falls back to brand so the
@@ -87,7 +78,7 @@ export default function ProductListView({
     };
 
     const subs = new Set();
-    flattenedItems.forEach(item => {
+    sourceItems.forEach(item => {
       if (isValid(item.subCategory)) subs.add(String(item.subCategory).trim());
     });
     if (subs.size > 0) {
@@ -95,7 +86,7 @@ export default function ProductListView({
     }
 
     const brands = new Set();
-    flattenedItems.forEach(item => {
+    sourceItems.forEach(item => {
       if (isValid(item.brand)) brands.add(String(item.brand).trim());
     });
     if (brands.size > 1) {
@@ -103,7 +94,7 @@ export default function ProductListView({
     }
 
     return { subcategories: ["All"], groupingKey: "subCategory" };
-  }, [flattenedItems]);
+  }, [sourceItems]);
 
   const hasSubcategories = subcategories.length > 1;
 
@@ -115,8 +106,8 @@ export default function ProductListView({
     if (subcategories.length === 0) return map;
 
     const buckets = new Map();
-    buckets.set("All", flattenedItems);
-    flattenedItems.forEach(item => {
+    buckets.set("All", sourceItems);
+    sourceItems.forEach(item => {
       const key = String(item[groupingKey] || "").trim();
       if (!key) return;
       if (!buckets.has(key)) buckets.set(key, []);
@@ -145,13 +136,13 @@ export default function ProductListView({
     });
 
     return map;
-  }, [flattenedItems, subcategories, groupingKey]);
+  }, [sourceItems, subcategories, groupingKey]);
 
   // 🎯 FILTER LOGIC
   const filteredItems = useMemo(() => {
-    if (selectedSub === "All") return flattenedItems;
-    return flattenedItems.filter(item => String(item[groupingKey] || "").trim() === selectedSub);
-  }, [flattenedItems, selectedSub, groupingKey]);
+    if (selectedSub === "All") return sourceItems;
+    return sourceItems.filter(item => String(item[groupingKey] || "").trim() === selectedSub);
+  }, [sourceItems, selectedSub, groupingKey]);
 
   // 🏷️ BRAND CHIPS — derived from items in the current subcategory.
   // Only show when sidebar isn't already grouping by brand AND there are 2+ brands.

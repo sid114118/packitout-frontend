@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import Fuse from 'fuse.js';
 import { useToast, useConfirm, usePrompt } from '../../ui/DialogProvider.jsx';
 import { cdnImage } from '../../utils/cloudinaryUrl.js';
@@ -13,6 +13,23 @@ export default function InventoryTab({ shopData, masterCatalog, handleInventoryU
   // --- STATES FOR SEARCH & EDITING ---
   const [searchMaster, setSearchMaster] = useState("");
   const [searchInventory, setSearchInventory] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+  const [inventoryFilter, setInventoryFilter] = useState("all"); // 'all' | 'featured' | 'outOfStock'
+  const [visibleCount, setVisibleCount] = useState(30);
+  const [isUpdatingRank, setIsUpdatingRank] = useState(false);
+
+  // Debounce search input to keep the browser responsive
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedSearch(searchInventory);
+      setVisibleCount(30);
+    }, 150);
+    return () => clearTimeout(handler);
+  }, [searchInventory]);
+
+  useEffect(() => {
+    setVisibleCount(30);
+  }, [inventoryFilter]);
   
   // States for Inline Price Editing
   const [editingId, setEditingId] = useState(null);
@@ -88,33 +105,86 @@ export default function InventoryTab({ shopData, masterCatalog, handleInventoryU
   };
 
   // 🛡️ SAFETY NETS
-  const safeInventory = shopData?.inventory || [];
+  const rawInventory = shopData?.inventory || [];
+  const safeInventory = useMemo(() => {
+    return rawInventory.filter(i => i && i.product && typeof i.product === 'object' && i.product._id);
+  }, [rawInventory]);
   const safeCatalog = masterCatalog || [];
 
   // --- DATA CALCULATIONS ---
-  const shopProductIds = safeInventory.filter(i => i?.product).map(i => i.product._id); 
+  const shopProductIds = safeInventory.map(i => i.product._id); 
   const availableToAdd = safeCatalog.filter(m => !shopProductIds.includes(m._id));
 
-  const masterFuse = useMemo(() => new Fuse(availableToAdd, {
-    keys: ['name', 'brand', 'searchTags'],
-    threshold: 0.15,
-    ignoreLocation: true
-  }), [availableToAdd]);
+  // ⚡ FAST TOKENIZED MASTER CATALOG SEARCH
+  const filteredAvailable = useMemo(() => {
+    if (!searchMaster.trim()) return availableToAdd;
+    const tokens = searchMaster.toLowerCase().trim().split(/\s+/);
+    return availableToAdd.filter(m => {
+      const text = `${m.name || ''} ${m.brand || ''} ${m.category || ''} ${Array.isArray(m.searchTags) ? m.searchTags.join(' ') : (m.searchTags || '')}`.toLowerCase();
+      return tokens.every(t => text.includes(t));
+    });
+  }, [availableToAdd, searchMaster]);
 
-  const inventoryFuse = useMemo(() => new Fuse(safeInventory, {
-    keys: ['product.name', 'product.brand', 'product.searchTags'],
-    threshold: 0.15,
-    ignoreLocation: true
-  }), [safeInventory]);
+  // ⚡ FAST TOKENIZED INVENTORY SEARCH WITH FILTER TABS
+  const filteredInventory = useMemo(() => {
+    let list = safeInventory;
+    if (inventoryFilter === 'featured') {
+      list = list.filter(i => i.isFeatured);
+      // Sort featured items by featuredRank (lowest rank first, e.g. 1, 2, 3...)
+      list = [...list].sort((a, b) => (Number(a.featuredRank ?? 999)) - (Number(b.featuredRank ?? 999)));
+    } else if (inventoryFilter === 'outOfStock') {
+      list = list.filter(i => !i.inStock);
+    }
 
-  // Apply Search Filters safely using Fuse
-  const filteredAvailable = searchMaster.trim() 
-    ? masterFuse.search(searchMaster.trim()).map(r => r.item)
-    : availableToAdd;
-  
-  const filteredInventory = searchInventory.trim()
-    ? inventoryFuse.search(searchInventory.trim()).map(r => r.item)
-    : safeInventory;
+    if (!debouncedSearch.trim()) return list;
+
+    const tokens = debouncedSearch.toLowerCase().trim().split(/\s+/);
+    return list.filter(item => {
+      const p = item.product;
+      const text = `${p.name || ''} ${p.brand || ''} ${p.category || ''} ${Array.isArray(p.searchTags) ? p.searchTags.join(' ') : (p.searchTags || '')}`.toLowerCase();
+      return tokens.every(t => text.includes(t));
+    });
+  }, [safeInventory, inventoryFilter, debouncedSearch]);
+
+  const featuredCount = useMemo(() => safeInventory.filter(i => i.isFeatured).length, [safeInventory]);
+  const outOfStockCount = useMemo(() => safeInventory.filter(i => !i.inStock).length, [safeInventory]);
+
+  // ⭐ FEATURED RANK REORDER HANDLER
+  const handleMoveRank = async (item, direction) => {
+    const featuredList = [...safeInventory.filter(i => i.isFeatured)].sort((a, b) => (Number(a.featuredRank ?? 999)) - (Number(b.featuredRank ?? 999)));
+    const currentIndex = featuredList.findIndex(f => f.product._id === item.product._id);
+    if (currentIndex === -1) return;
+    const targetIndex = direction === 'up' ? currentIndex - 1 : currentIndex + 1;
+    if (targetIndex < 0 || targetIndex >= featuredList.length) return;
+
+    // Swap items in featuredList
+    const [moved] = featuredList.splice(currentIndex, 1);
+    featuredList.splice(targetIndex, 0, moved);
+
+    // Re-assign ranks 1..N
+    const ranksPayload = featuredList.map((f, idx) => ({
+      productId: f.product._id,
+      featuredRank: idx + 1
+    }));
+
+    setIsUpdatingRank(true);
+    try {
+      const res = await shopFetch(shopData, `/shops/${shopData._id}/inventory/featured-ranks`, {
+        method: 'POST',
+        body: JSON.stringify({ ranks: ranksPayload })
+      });
+      if (res.ok) {
+        toast(`Moved "${item.product.name}" to Rank #${targetIndex + 1}! ⭐`);
+        if (onInventoryRefresh) await onInventoryRefresh();
+      } else {
+        toast('Failed to update rank', 'error');
+      }
+    } catch (e) {
+      toast('Network error', 'error');
+    } finally {
+      setIsUpdatingRank(false);
+    }
+  };
 
   // ==========================================
   // ⚡ DYNAMIC BULK IMPORT FUNCTION
@@ -311,28 +381,164 @@ export default function InventoryTab({ shopData, masterCatalog, handleInventoryU
       {/* ========================================= */}
       {/* 📦 EXISTING INVENTORY SECTION             */}
       {/* ========================================= */}
-      <h4 style={{ margin: '0 0 10px 0', color: '#0f172a', fontSize: '1.1rem', fontWeight: '800' }}>Active Store Inventory</h4>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', margin: '0 0 12px 0', flexWrap: 'wrap', gap: '10px' }}>
+        <h4 style={{ margin: 0, color: '#0f172a', fontSize: '1.15rem', fontWeight: '800' }}>Active Store Inventory</h4>
+        <div style={{ fontSize: '0.8rem', color: '#64748b', fontWeight: '600' }}>
+          Showing {Math.min(visibleCount, filteredInventory.length)} of {filteredInventory.length}
+        </div>
+      </div>
+
+      {/* 🏷️ FILTER PILLS FOR FAST GROUPING & FEATURED OVERVIEW */}
+      <div style={{ display: 'flex', gap: '8px', marginBottom: '15px', overflowX: 'auto', paddingBottom: '4px' }}>
+        <button
+          onClick={() => setInventoryFilter('all')}
+          style={{
+            padding: '8px 14px',
+            borderRadius: '20px',
+            border: 'none',
+            fontSize: '0.85rem',
+            fontWeight: '700',
+            cursor: 'pointer',
+            backgroundColor: inventoryFilter === 'all' ? '#0f172a' : '#e2e8f0',
+            color: inventoryFilter === 'all' ? '#fff' : '#475569',
+            transition: '0.15s'
+          }}
+        >
+          📦 All Items ({safeInventory.length})
+        </button>
+        <button
+          onClick={() => setInventoryFilter('featured')}
+          style={{
+            padding: '8px 14px',
+            borderRadius: '20px',
+            border: 'none',
+            fontSize: '0.85rem',
+            fontWeight: '700',
+            cursor: 'pointer',
+            backgroundColor: inventoryFilter === 'featured' ? '#d97706' : '#fef3c7',
+            color: inventoryFilter === 'featured' ? '#fff' : '#b45309',
+            boxShadow: inventoryFilter === 'featured' ? '0 2px 8px rgba(217,119,6,0.3)' : 'none',
+            transition: '0.15s'
+          }}
+        >
+          ⭐ Featured Picks ({featuredCount})
+        </button>
+        <button
+          onClick={() => setInventoryFilter('outOfStock')}
+          style={{
+            padding: '8px 14px',
+            borderRadius: '20px',
+            border: 'none',
+            fontSize: '0.85rem',
+            fontWeight: '700',
+            cursor: 'pointer',
+            backgroundColor: inventoryFilter === 'outOfStock' ? '#dc2626' : '#fee2e2',
+            color: inventoryFilter === 'outOfStock' ? '#fff' : '#b91c1c',
+            transition: '0.15s'
+          }}
+        >
+          🔴 Out of Stock ({outOfStockCount})
+        </button>
+      </div>
+
+      {inventoryFilter === 'featured' && (
+        <div style={{ backgroundColor: '#fffbeb', border: '1px solid #fde68a', borderRadius: '12px', padding: '10px 14px', marginBottom: '15px', fontSize: '0.85rem', color: '#92400e', display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <span>💡</span>
+          <span><strong>Shopkeeper's Picks Ranking:</strong> Use the ⬆️ and ⬇️ buttons below to order which item shows 1st, 2nd, etc. on the customer app home screen!</span>
+        </div>
+      )}
       
-      {/* Search Current Inventory */}
-      <input 
-        type="text" 
-        placeholder="🔍 Search your store items..." 
-        value={searchInventory} 
-        onChange={(e) => setSearchInventory(e.target.value)} 
-        style={{ ...searchInputStyle, marginBottom: '15px' }} 
-      />
+      {/* Search Current Inventory with Clear Button */}
+      <div style={{ position: 'relative', marginBottom: '15px' }}>
+        <input 
+          type="text" 
+          placeholder={`🔍 Search in ${inventoryFilter === 'featured' ? 'Featured Picks' : inventoryFilter === 'outOfStock' ? 'Out of Stock' : 'Store'}...`} 
+          value={searchInventory} 
+          onChange={(e) => setSearchInventory(e.target.value)} 
+          style={{ ...searchInputStyle, paddingRight: searchInventory ? '40px' : '14px' }} 
+        />
+        {searchInventory && (
+          <button 
+            onClick={() => setSearchInventory('')}
+            style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', color: '#94a3b8', fontSize: '1rem', cursor: 'pointer', padding: '4px' }}
+          >
+            ✕
+          </button>
+        )}
+      </div>
 
       {filteredInventory.length === 0 ? (
-        <div style={{ textAlign: 'center', padding: '30px', backgroundColor: 'white', borderRadius: '16px', color: '#64748b', fontWeight: '600' }}>No items match your search.</div>
+        <div style={{ textAlign: 'center', padding: '40px 20px', backgroundColor: 'white', borderRadius: '16px', color: '#64748b', fontWeight: '600' }}>
+          <div style={{ fontSize: '2rem', marginBottom: '10px' }}>🔍</div>
+          <div>No items match your {searchInventory ? 'search query' : 'selected filter'}.</div>
+          {inventoryFilter !== 'all' && (
+            <button 
+              onClick={() => { setInventoryFilter('all'); setSearchInventory(''); }}
+              style={{ marginTop: '12px', padding: '8px 16px', backgroundColor: '#f1f5f9', border: '1px solid #cbd5e1', borderRadius: '8px', cursor: 'pointer', fontWeight: '700', fontSize: '0.85rem' }}
+            >
+              View All Items
+            </button>
+          )}
+        </div>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
-          {filteredInventory.map(item => {
+          {filteredInventory.slice(0, visibleCount).map((item, index) => {
             if (!item?.product) return null;
             const isOutOfStock = !item.inStock;
+            const isFeaturedView = inventoryFilter === 'featured';
 
             return (
-              <div key={item.product._id} style={{ ...cardStyle, border: isOutOfStock ? '2px solid #fecaca' : '1px solid #e2e8f0', opacity: isOutOfStock ? 0.8 : 1 }}>
+              <div key={item.product._id} style={{ ...cardStyle, border: item.isFeatured ? '2px solid #fde68a' : isOutOfStock ? '2px solid #fecaca' : '1px solid #e2e8f0', opacity: isOutOfStock ? 0.85 : 1, position: 'relative' }}>
                 
+                {/* 🌟 FEATURED RANK BADGE & REORDER CONTROLS */}
+                {item.isFeatured && (
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#fffbeb', padding: '6px 12px', borderRadius: '10px', marginBottom: '10px', border: '1px solid #fef3c7' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <span style={{ fontSize: '1rem' }}>⭐</span>
+                      <span style={{ fontWeight: '800', color: '#b45309', fontSize: '0.85rem' }}>
+                        Shopkeeper Pick #{index + 1}
+                      </span>
+                    </div>
+
+                    <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
+                      <button
+                        title="Move Up in Shopkeeper's Picks"
+                        disabled={isUpdatingRank || index === 0}
+                        onClick={() => handleMoveRank(item, 'up')}
+                        style={{
+                          backgroundColor: index === 0 ? '#f1f5f9' : '#fef3c7',
+                          color: index === 0 ? '#94a3b8' : '#b45309',
+                          border: '1px solid #fde68a',
+                          padding: '4px 8px',
+                          borderRadius: '6px',
+                          cursor: (isUpdatingRank || index === 0) ? 'not-allowed' : 'pointer',
+                          fontWeight: '800',
+                          fontSize: '0.8rem'
+                        }}
+                      >
+                        ⬆️
+                      </button>
+                      <button
+                        title="Move Down in Shopkeeper's Picks"
+                        disabled={isUpdatingRank || index === filteredInventory.length - 1}
+                        onClick={() => handleMoveRank(item, 'down')}
+                        style={{
+                          backgroundColor: index === filteredInventory.length - 1 ? '#f1f5f9' : '#fef3c7',
+                          color: index === filteredInventory.length - 1 ? '#94a3b8' : '#b45309',
+                          border: '1px solid #fde68a',
+                          padding: '4px 8px',
+                          borderRadius: '6px',
+                          cursor: (isUpdatingRank || index === filteredInventory.length - 1) ? 'not-allowed' : 'pointer',
+                          fontWeight: '800',
+                          fontSize: '0.8rem'
+                        }}
+                      >
+                        ⬇️
+                      </button>
+                    </div>
+                  </div>
+                )}
+
                 <div style={{ display: 'flex', gap: '15px', alignItems: 'center', width: '100%' }}>
                   {/* Image/Emoji */}
                   <div style={{ width: '56px', height: '56px', backgroundColor: '#f8fafc', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '24px', flexShrink: 0 }}>
@@ -363,7 +569,7 @@ export default function InventoryTab({ shopData, masterCatalog, handleInventoryU
                   </div>
                 </div>
 
-                {/* 🔴🟢 MASSIVE OUT OF STOCK TOGGLE */}
+                {/* 🔴🟢 MASSIVE OUT OF STOCK & FEATURED TOGGLES */}
                 <div style={{ display: 'flex', gap: '10px', marginTop: '15px' }}>
                   <button 
                     onClick={() => handleInventoryUpdate(item.product._id, item.sellingPrice, !item.inStock)}
@@ -388,7 +594,11 @@ export default function InventoryTab({ shopData, masterCatalog, handleInventoryU
                     {item.inStock ? "🟢 IN STOCK" : "🔴 OUT OF STOCK"}
                   </button>
                   <button 
-                    onClick={() => handleInventoryUpdate(item.product._id, item.sellingPrice, item.inStock, !item.isFeatured)}
+                    onClick={() => {
+                      const nextFeatured = !item.isFeatured;
+                      const nextRank = nextFeatured ? (featuredCount + 1) : 999;
+                      handleInventoryUpdate(item.product._id, item.sellingPrice, item.inStock, nextFeatured, nextRank);
+                    }}
                     style={{ 
                       flex: 1, 
                       padding: '12px', 
@@ -415,10 +625,10 @@ export default function InventoryTab({ shopData, masterCatalog, handleInventoryU
                       }
                     }}
                     style={{
-                      padding: '14px 20px',
+                      padding: '12px 18px',
                       borderRadius: '10px',
                       fontWeight: '800',
-                      fontSize: '0.9rem',
+                      fontSize: '0.85rem',
                       cursor: 'pointer',
                       backgroundColor: '#fff1f2',
                       color: '#e11d48',
@@ -428,13 +638,34 @@ export default function InventoryTab({ shopData, masterCatalog, handleInventoryU
                       justifyContent: 'center',
                     }}
                   >
-                    🗑️ Remove
+                    🗑️
                   </button>
                 </div>
 
               </div>
             );
           })}
+
+          {/* ⚡ LOAD MORE BUTTON (ELIMINATES BROWSER FREEZING/CRASHING) */}
+          {filteredInventory.length > visibleCount && (
+            <button
+              onClick={() => setVisibleCount(prev => prev + 30)}
+              style={{
+                padding: '14px',
+                borderRadius: '12px',
+                backgroundColor: '#0f172a',
+                color: '#fff',
+                border: 'none',
+                fontWeight: '800',
+                fontSize: '0.95rem',
+                cursor: 'pointer',
+                marginTop: '10px',
+                boxShadow: '0 4px 10px rgba(0,0,0,0.1)'
+              }}
+            >
+              📥 Load More Items ({filteredInventory.length - visibleCount} remaining)
+            </button>
+          )}
         </div>
       )}
     </div>

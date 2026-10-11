@@ -180,10 +180,11 @@ export default function ShopDashboard({ user, onExit }) {
     }
   };
 
-  const handleInventoryUpdate = async (productId, sellingPrice, inStock = true, isFeatured = undefined) => {
+  const handleInventoryUpdate = async (productId, sellingPrice, inStock = true, isFeatured = undefined, featuredRank = undefined) => {
     try {
       const payload = { productId, sellingPrice: Number(sellingPrice), inStock };
       if (isFeatured !== undefined) payload.isFeatured = isFeatured;
+      if (featuredRank !== undefined) payload.featuredRank = Number(featuredRank);
 
       const res = await shopFetch(shopData, `/shops/${shopData._id}/inventory`, {
         method: "POST",
@@ -352,13 +353,13 @@ export default function ShopDashboard({ user, onExit }) {
         </div>
       </div>
 
-      {/* 🗂️ TAB NAVIGATION (NEW REVIEWS TAB ADDED) */}
-      <div className="hide-scroll" style={{ display: 'flex', backgroundColor: '#1e293b', padding: '10px 20px', gap: '15px', overflowX: 'auto', whiteSpace: 'nowrap' }}>
+      {/* 🗂️ TAB NAVIGATION */}
+      <div style={{ display: 'flex', backgroundColor: '#1e293b', padding: '10px 15px', gap: '10px', overflowX: 'auto', whiteSpace: 'nowrap', borderBottom: '1px solid #334155' }}>
         <button onClick={() => setActiveTab("orders")} style={tabStyle(activeTab === "orders")}>📦 Live Orders ({orders.length})</button>
         <button onClick={() => setActiveTab("parchis")} style={tabStyle(activeTab === "parchis")}>🧾 Parchis {parchiRequests.length > 0 && <span style={badgeStyle}>{parchiRequests.length}</span>}</button>
         <button onClick={() => setActiveTab("inventory")} style={tabStyle(activeTab === "inventory")}>📊 Manage Inventory</button>
+        <button onClick={() => setActiveTab("combos")} style={{ ...tabStyle(activeTab === "combos"), backgroundColor: activeTab === "combos" ? '#d97706' : '#78350f', color: '#fff', border: '1px solid #f59e0b' }}>🎁 Combos Offers ✨</button>
         <button onClick={() => setActiveTab("requests")} style={tabStyle(activeTab === "requests")}>🛎️ Product Requests</button>
-        <button onClick={() => setActiveTab("combos")} style={tabStyle(activeTab === "combos")}>🎁 Combos</button>
         <button onClick={() => setActiveTab("reviews")} style={tabStyle(activeTab === "reviews")}>⭐ Reviews</button>
         <button onClick={() => setActiveTab("complaints")} style={tabStyle(activeTab === "complaints")}>📣 Complaints</button>
       </div>

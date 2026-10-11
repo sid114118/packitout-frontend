@@ -231,27 +231,26 @@ export default function AdminDashboard({ onExit }) {
 
   return (
     <div style={{ backgroundColor: '#f1f5f9', minHeight: '100vh', fontFamily: 'sans-serif', paddingBottom: '50px' }}>
-      <nav style={{ backgroundColor: '#0f172a', color: 'white', padding: '15px 30px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', position: 'sticky', top: 0, zIndex: 10 }}>
-        <h2 style={{ margin: 0, color: '#10b981', fontSize: '1.4rem' }}>PackItOut ADMIN</h2>
-        
-        {/* 🌟 NEW: Added the Orders and Master POS buttons to the navbar! */}
-        <div style={{ display: 'flex', gap: '8px', overflowX: 'auto', paddingBottom: '5px' }} className="hide-scroll">
-          <style>{`.hide-scroll::-webkit-scrollbar { display: none; }`}</style>
-          
-          <button onClick={() => setActiveTab("products")} style={tabButtonStyle(activeTab === "products")}>📦 Catalog</button>
-          <button onClick={() => setActiveTab("shops")} style={tabButtonStyle(activeTab === "shops")}>🏪 Shops</button>
-          <button onClick={() => setActiveTab("users")} style={tabButtonStyle(activeTab === "users")}>👤 Users</button>
-          <button onClick={() => setActiveTab("orders")} style={tabButtonStyle(activeTab === "orders")}>🛒 Orders</button>
-          <button onClick={() => setActiveTab("liveops")} style={tabButtonStyle(activeTab === "liveops")}>🛡️ Live Ops</button>
-          <button onClick={() => setActiveTab("parchis")} style={tabButtonStyle(activeTab === "parchis")}>🧾 Master POS</button>
-          <button onClick={() => setActiveTab("complaints")} style={tabButtonStyle(activeTab === "complaints")}>📣 Complaints</button>
-          <button onClick={() => setActiveTab("requests")} style={tabButtonStyle(activeTab === "requests")}>🛎️ Requests</button>
-          <button onClick={() => setActiveTab("campaigns")} style={tabButtonStyle(activeTab === "campaigns")}>🌍 Campaigns</button>
-          <button onClick={() => setActiveTab("missed")} style={tabButtonStyle(activeTab === "missed")}>🔎 Missed Searches</button>
-          <button onClick={() => setActiveTab("ranking")} style={tabButtonStyle(activeTab === "ranking")}>🎯 Ranking</button>
-          <button onClick={() => setActiveTab("analytics")} style={tabButtonStyle(activeTab === "analytics")}>📈 Analytics</button>
-        </div>
+      <nav style={{ backgroundColor: '#0f172a', color: 'white', padding: '12px 25px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', position: 'sticky', top: 0, zIndex: 20, boxShadow: '0 2px 10px rgba(0,0,0,0.15)' }}>
+        <h2 style={{ margin: 0, color: '#10b981', fontSize: '1.3rem', fontWeight: 800, letterSpacing: '-0.5px' }}>PackItOut ADMIN</h2>
+        <button onClick={handleLogout} style={{ background: '#ef4444', color: 'white', border: 'none', padding: '6px 14px', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer', fontSize: '0.85rem' }}>Logout</button>
       </nav>
+
+      {/* 🌟 FULL-WIDTH TAB NAVIGATION BAR — Fits all 12 tabs with smooth horizontal scroll */}
+      <div style={{ backgroundColor: '#1e293b', borderBottom: '1px solid #334155', position: 'sticky', top: '50px', zIndex: 15, padding: '10px 20px', display: 'flex', gap: '8px', overflowX: 'auto', whiteSpace: 'nowrap' }}>
+        <button onClick={() => setActiveTab("products")} style={tabButtonStyle(activeTab === "products")}>📦 Catalog</button>
+        <button onClick={() => setActiveTab("shops")} style={tabButtonStyle(activeTab === "shops")}>🏪 Shops</button>
+        <button onClick={() => setActiveTab("users")} style={tabButtonStyle(activeTab === "users")}>👤 Users</button>
+        <button onClick={() => setActiveTab("orders")} style={tabButtonStyle(activeTab === "orders")}>🛒 Orders</button>
+        <button onClick={() => setActiveTab("liveops")} style={tabButtonStyle(activeTab === "liveops")}>🛡️ Live Ops</button>
+        <button onClick={() => setActiveTab("parchis")} style={tabButtonStyle(activeTab === "parchis")}>🧾 Master POS</button>
+        <button onClick={() => setActiveTab("complaints")} style={tabButtonStyle(activeTab === "complaints")}>📣 Complaints</button>
+        <button onClick={() => setActiveTab("requests")} style={tabButtonStyle(activeTab === "requests")}>🛎️ Requests</button>
+        <button onClick={() => setActiveTab("campaigns")} style={{ ...tabButtonStyle(activeTab === "campaigns"), backgroundColor: activeTab === "campaigns" ? '#15803d' : '#065f46', color: '#fff', border: '1px solid #34d399' }}>🌍 Campaigns ✨</button>
+        <button onClick={() => setActiveTab("missed")} style={tabButtonStyle(activeTab === "missed")}>🔎 Missed Searches</button>
+        <button onClick={() => setActiveTab("ranking")} style={tabButtonStyle(activeTab === "ranking")}>🎯 Ranking</button>
+        <button onClick={() => setActiveTab("analytics")} style={tabButtonStyle(activeTab === "analytics")}>📈 Analytics</button>
+      </div>
 
       <div style={{ padding: '30px' }}>
         {loading ? <div style={{ textAlign: 'center', marginTop: '50px', color: '#64748b' }}>Loading data...</div> : (

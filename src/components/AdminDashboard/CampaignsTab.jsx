@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { adminFetch, BASE_URL } from '../../utils/api';
-import toast from 'react-hot-toast';
+import { adminFetch, BASE_URL } from '../../utils/api.js';
+import { useToast } from '../../ui/DialogProvider.jsx';
 
 export default function CampaignsTab({ adminToken }) {
+  const toast = useToast();
   const [campaigns, setCampaigns] = useState([]);
   const [title, setTitle] = useState('');
   const [subtitle, setSubtitle] = useState('');
@@ -29,7 +30,7 @@ export default function CampaignsTab({ adminToken }) {
 
   const handleCreate = async (e) => {
     e.preventDefault();
-    if (!title || !keywords) return toast('Title and keywords required', { icon: '⚠️' });
+    if (!title || !keywords) return toast('Title and keywords required', 'warn');
     setIsSubmitting(true);
     try {
       const payload = {
@@ -39,21 +40,21 @@ export default function CampaignsTab({ adminToken }) {
         bannerColor,
         keywords: keywords.split(',').map(k => k.trim()).filter(k => k)
       };
-      const res = await adminFetch(adminToken, '/campaigns', {
+      const res = await adminFetch('/campaigns', {
         method: 'POST',
         body: JSON.stringify(payload)
       });
       if (res.ok) {
-        toast.success('Campaign launched globally!');
+        toast('Campaign launched globally! 🚀');
         setTitle('');
         setSubtitle('');
         setKeywords('');
         fetchCampaigns();
       } else {
-        toast.error('Failed to create campaign');
+        toast('Failed to create campaign', 'error');
       }
     } catch (err) {
-      toast.error('Network error');
+      toast('Network error', 'error');
     } finally {
       setIsSubmitting(false);
     }
@@ -62,15 +63,15 @@ export default function CampaignsTab({ adminToken }) {
   const handleDelete = async (id) => {
     if (!window.confirm('Stop this global campaign?')) return;
     try {
-      const res = await adminFetch(adminToken, `/campaigns/${id}`, { method: 'DELETE' });
+      const res = await adminFetch(`/campaigns/${id}`, { method: 'DELETE' });
       if (res.ok) {
-        toast.success('Campaign stopped');
+        toast('Campaign stopped');
         fetchCampaigns();
       } else {
-        toast.error('Failed to delete');
+        toast('Failed to delete', 'error');
       }
     } catch (err) {
-      toast.error('Network error');
+      toast('Network error', 'error');
     }
   };
 

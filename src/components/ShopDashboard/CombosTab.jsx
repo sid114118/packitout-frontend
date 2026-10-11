@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
-import { BASE_URL } from '../../utils/api';
-import toast from 'react-hot-toast';
+import { shopFetch } from '../../utils/api.js';
+import { useToast } from '../../ui/DialogProvider.jsx';
 
 export default function CombosTab({ shopData, onComboRefresh }) {
+  const toast = useToast();
   const [name, setName] = useState('');
   const [emoji, setEmoji] = useState('🎁');
   const [selectedItems, setSelectedItems] = useState([]);
@@ -25,17 +26,13 @@ export default function CombosTab({ shopData, onComboRefresh }) {
 
   const handleCreateCombo = async (e) => {
     e.preventDefault();
-    if (selectedItems.length === 0) return toast('Please select at least 1 item', { icon: '⚠️' });
-    if (!name) return toast('Please enter a combo name', { icon: '⚠️' });
+    if (selectedItems.length === 0) return toast('Please select at least 1 item', 'warn');
+    if (!name) return toast('Please enter a combo name', 'warn');
     
     setIsSubmitting(true);
     try {
-      const response = await fetch(`${BASE_URL}/shops/${shopData._id}/combos`, {
+      const response = await shopFetch(shopData, `/shops/${shopData._id}/combos`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${shopData.sessionTokens?.[0]?.token}`
-        },
         body: JSON.stringify({
           name,
           emoji,
@@ -44,17 +41,17 @@ export default function CombosTab({ shopData, onComboRefresh }) {
       });
       const data = await response.json();
       if (response.ok) {
-        toast.success('Combo created!');
+        toast('Combo created! 🎉');
         setName('');
         setEmoji('🎁');
         setSelectedItems([]);
         setSearchTerm('');
         if (onComboRefresh) await onComboRefresh();
       } else {
-        toast.error(data.error || 'Failed to create combo');
+        toast(data.error || 'Failed to create combo', 'error');
       }
     } catch (err) {
-      toast.error('Network error');
+      toast('Network error', 'error');
     } finally {
       setIsSubmitting(false);
     }
@@ -63,20 +60,17 @@ export default function CombosTab({ shopData, onComboRefresh }) {
   const handleDeleteCombo = async (comboId) => {
     if (!window.confirm('Delete this combo?')) return;
     try {
-      const response = await fetch(`${BASE_URL}/shops/${shopData._id}/combos/${comboId}`, {
+      const response = await shopFetch(shopData, `/shops/${shopData._id}/combos/${comboId}`, {
         method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${shopData.sessionTokens?.[0]?.token}`
-        }
       });
       if (response.ok) {
-        toast.success('Combo deleted');
+        toast('Combo deleted');
         if (onComboRefresh) await onComboRefresh();
       } else {
-        toast.error('Failed to delete');
+        toast('Failed to delete', 'error');
       }
     } catch (err) {
-      toast.error('Network error');
+      toast('Network error', 'error');
     }
   };
 
