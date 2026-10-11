@@ -10,6 +10,7 @@ import { useRankingConfig } from '../ui/RankingProvider.jsx';
 import { applyBrandPriority } from '../utils/rankingSort.js';
 import { userFetch } from '../utils/api.js';
 import { useBaskets } from '../utils/useBaskets.js';
+import { cdnImage } from '../utils/cloudinaryUrl.js';
 
 // 🌟 IMPORT OUR NEW BRAIN!
 import useShopFeedData from './useShopFeedData'; 
