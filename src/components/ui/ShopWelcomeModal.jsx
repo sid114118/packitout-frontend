@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
+import { cdnImage } from '../../utils/cloudinaryUrl.js';
 
 export default function ShopWelcomeModal() {
   const [welcomeData, setWelcomeData] = useState(null);
@@ -35,7 +36,7 @@ export default function ShopWelcomeModal() {
 
   if (!welcomeData) return null;
 
-  const { name, pincode, isOpen } = welcomeData;
+  const { name, pincode, isOpen, shopImage } = welcomeData;
 
   // Staggered celebration particles for lively celebratory atmosphere
   const particles = [
@@ -231,13 +232,13 @@ export default function ShopWelcomeModal() {
           }}
         />
 
-        {/* 🏬 STORE ICON EMBLEM (White Glassmorphic circle with checkmark badge) */}
+        {/* 🏬 STORE ICON / IMAGE EMBLEM */}
         <div
           style={{
             position: 'relative',
             zIndex: 1,
-            width: '96px',
-            height: '96px',
+            width: '100px',
+            height: '100px',
             borderRadius: '50%',
             background: 'linear-gradient(135deg, #ffffff 0%, #fff1f2 100%)',
             display: 'flex',
@@ -245,10 +246,37 @@ export default function ShopWelcomeModal() {
             justifyContent: 'center',
             boxShadow: '0 12px 30px rgba(0, 0, 0, 0.25), inset 0 2px 4px rgba(255, 255, 255, 0.8)',
             marginBottom: '18px',
-            animation: 'shopEmblemFloat 2.6s infinite ease-in-out'
+            animation: 'shopEmblemFloat 2.6s infinite ease-in-out',
+            border: '3px solid #ffffff'
           }}
         >
-          <span style={{ fontSize: '3rem', lineHeight: 1 }}>🏬</span>
+          {shopImage ? (
+            <img
+              src={cdnImage(shopImage, 300)}
+              alt={name}
+              style={{
+                width: '100%',
+                height: '100%',
+                borderRadius: '50%',
+                objectFit: 'cover'
+              }}
+              onError={(e) => {
+                e.currentTarget.style.display = 'none';
+                if (e.currentTarget.nextSibling) {
+                  e.currentTarget.nextSibling.style.display = 'block';
+                }
+              }}
+            />
+          ) : null}
+          <span
+            style={{
+              fontSize: '3rem',
+              lineHeight: 1,
+              display: shopImage ? 'none' : 'block'
+            }}
+          >
+            🏬
+          </span>
           <div
             style={{
               position: 'absolute',
@@ -265,7 +293,8 @@ export default function ShopWelcomeModal() {
               fontSize: '0.9rem',
               color: '#ff4757',
               fontWeight: '900',
-              boxShadow: '0 2px 8px rgba(0,0,0,0.2)'
+              boxShadow: '0 2px 8px rgba(0,0,0,0.2)',
+              zIndex: 2
             }}
           >
             ✓
@@ -332,16 +361,16 @@ export default function ShopWelcomeModal() {
           Welcome to
         </div>
 
-        {/* 🔥 BIG PROUD SHOP NAME */}
+        {/* 🔥 BIG PROUD SHOP NAME (GREEN COLOR) */}
         <h1
           style={{
             margin: '0 0 16px 0',
             fontSize: 'clamp(2.4rem, 8vw, 3.4rem)',
             fontWeight: '900',
-            color: '#ffffff',
+            color: '#22c55e',
             lineHeight: 1.15,
             letterSpacing: '-0.5px',
-            textShadow: '0 4px 20px rgba(0, 0, 0, 0.35), 0 2px 6px rgba(0,0,0,0.2)',
+            textShadow: '0 4px 20px rgba(0, 0, 0, 0.45), 0 0 25px rgba(34, 197, 94, 0.5)',
             maxWidth: '100%',
             wordBreak: 'break-word',
             padding: '0 4px'

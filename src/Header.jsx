@@ -53,7 +53,8 @@ export default function Header({ user, onUserUpdate }) {
       triggerShopWelcome({
         name: shopName,
         pincode: pincode,
-        isOpen: chosenShop?.isOpen
+        isOpen: chosenShop?.isOpen,
+        shopImage: chosenShop?.shopImage
       });
       return;
     }
@@ -84,7 +85,8 @@ export default function Header({ user, onUserUpdate }) {
       triggerShopWelcome({
         name: shopName,
         pincode: pincode,
-        isOpen: next.primaryShop?.isOpen ?? chosenShop?.isOpen
+        isOpen: next.primaryShop?.isOpen ?? chosenShop?.isOpen,
+        shopImage: chosenShop?.shopImage || next.primaryShop?.shopImage
       });
       toast("Primary shop updated");
     } catch (err) {

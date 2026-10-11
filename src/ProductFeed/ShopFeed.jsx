@@ -81,7 +81,8 @@ export default function ShopFeed({
       triggerShopWelcome({
         name: newShop.name,
         pincode: newShop.pincode,
-        isOpen: newShop.isOpen
+        isOpen: newShop.isOpen,
+        shopImage: newShop.shopImage
       });
       return;
     }
@@ -94,7 +95,8 @@ export default function ShopFeed({
         triggerShopWelcome({
           name: newShop.name,
           pincode: newShop.pincode,
-          isOpen: newShop.isOpen
+          isOpen: newShop.isOpen,
+          shopImage: newShop.shopImage
         });
       }
     } catch (err) { toast("Failed to switch shop.", 'error'); }

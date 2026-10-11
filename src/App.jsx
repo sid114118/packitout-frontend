@@ -585,7 +585,7 @@ export default function App() {
       }
       setGuestShopRevision(r => r + 1);
       window.dispatchEvent(new CustomEvent('PACKITOUT_SHOP_CHANGED', { detail: { shopId, pincode: shopPin, shopName } }));
-      triggerShopWelcome({ name: shopName, pincode: shopPin, isOpen: shopOpen });
+      triggerShopWelcome({ name: shopName, pincode: shopPin, isOpen: shopOpen, shopImage: viewingShop?.shopImage });
       setViewingShop(null);
       window.location.hash = "";
       return;
@@ -605,7 +605,8 @@ export default function App() {
         triggerShopWelcome({
           name: shopName || next.primaryShop?.name,
           pincode: shopPin || next.pincode,
-          isOpen: shopOpen ?? next.primaryShop?.isOpen
+          isOpen: shopOpen ?? next.primaryShop?.isOpen,
+          shopImage: viewingShop?.shopImage || next.primaryShop?.shopImage
         });
         toast("Primary shop updated");
         setViewingShop(null);
