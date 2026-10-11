@@ -90,7 +90,10 @@ export default function ShopDashboard({ user, onExit }) {
   const refreshShopData = async () => {
     try {
       const res = await fetch(`${BASE_URL}/shops/${shopData._id}/menu`);
-      if (res.ok) setShopData(await res.json());
+      if (res.ok) {
+        const updated = await res.json();
+        setShopData(prev => ({ ...updated, sessionToken: prev?.sessionToken || shopData.sessionToken }));
+      }
     } catch (err) { console.log(err); }
   };
 
@@ -371,7 +374,7 @@ export default function ShopDashboard({ user, onExit }) {
         {activeTab === "parchis" && <ParchiTab parchiRequests={parchiRequests} selectedParchi={selectedParchi} setSelectedParchi={setSelectedParchi} parchiBill={parchiBill} setParchiBill={setParchiBill} handleAddToBill={handleAddToBill} handleSendBill={handleSendBill} shopData={shopData} />}
         {activeTab === "inventory" && <InventoryTab shopData={shopData} masterCatalog={masterCatalog} handleInventoryUpdate={handleInventoryUpdate} handleInventoryRemove={handleInventoryRemove} onInventoryRefresh={refreshShopData} fetchMasterCatalog={fetchMasterCatalog} />}
         {activeTab === "requests" && <RequestsTab shopData={shopData} />}
-        {activeTab === "combos" && <CombosTab shopData={shopData} onComboRefresh={refreshShopData} />}
+        {activeTab === "combos" && <CombosTab shopData={shopData} masterCatalog={masterCatalog} onComboRefresh={refreshShopData} />}
         {activeTab === "reviews" && <ShopReviews shopId={shopData._id} shopRating={shopData.rating} totalReviews={shopData.totalReviews} />}
         {activeTab === "complaints" && <ComplaintsTab shop={shopData} />}
       </div>

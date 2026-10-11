@@ -138,6 +138,18 @@ export default function App() {
     } catch { return null; }
   });
 
+  const effectiveFeedUser = React.useMemo(() => {
+    if (loggedInUser) return loggedInUser;
+    try {
+      const guestShopId = localStorage.getItem("packitout_guest_shop_id");
+      const guestPincode = localStorage.getItem("packitout_guest_pincode");
+      if (guestShopId) {
+        return { primaryShop: guestShopId, pincode: guestPincode, isGuest: true };
+      }
+    } catch (e) {}
+    return null;
+  }, [loggedInUser]);
+
   const { baskets } = useBaskets();
 
   // 🔔 BASKET REMINDER CHECK
@@ -695,7 +707,7 @@ export default function App() {
         <main style={{ flex: 1, padding: '1rem 0' }}>
           <CrashCatcher>
             <ProductFeed
-              user={loggedInUser || (localStorage.getItem("packitout_guest_shop_id") ? { primaryShop: localStorage.getItem("packitout_guest_shop_id"), pincode: localStorage.getItem("packitout_guest_pincode") } : null)}
+              user={effectiveFeedUser}
               onUserUpdate={handleUserUpdate}
               cart={cart}
               onAddToCart={handleAddToCart}

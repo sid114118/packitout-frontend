@@ -11,25 +11,18 @@ export default function InventoryTab({ shopData, masterCatalog, handleInventoryU
   const confirmDialog = useConfirm();
   const askForValue = usePrompt();
   // --- STATES FOR SEARCH & EDITING ---
+  // --- STATES FOR SEARCH & EDITING ---
   const [searchMaster, setSearchMaster] = useState("");
-  const [searchInventory, setSearchInventory] = useState("");
-  const [debouncedSearch, setDebouncedSearch] = useState("");
+  const [searchInventoryInput, setSearchInventoryInput] = useState("");
+  const [appliedSearch, setAppliedSearch] = useState("");
   const [inventoryFilter, setInventoryFilter] = useState("all"); // 'all' | 'featured' | 'outOfStock'
   const [visibleCount, setVisibleCount] = useState(30);
   const [isUpdatingRank, setIsUpdatingRank] = useState(false);
-
-  // Debounce search input to keep the browser responsive
-  useEffect(() => {
-    const handler = setTimeout(() => {
-      setDebouncedSearch(searchInventory);
-      setVisibleCount(30);
-    }, 150);
-    return () => clearTimeout(handler);
-  }, [searchInventory]);
+  const [isAddProductsOpen, setIsAddProductsOpen] = useState(false);
 
   useEffect(() => {
     setVisibleCount(30);
-  }, [inventoryFilter]);
+  }, [inventoryFilter, appliedSearch]);
   
   // States for Inline Price Editing
   const [editingId, setEditingId] = useState(null);
@@ -136,20 +129,60 @@ export default function InventoryTab({ shopData, masterCatalog, handleInventoryU
       list = list.filter(i => !i.inStock);
     }
 
-    if (!debouncedSearch.trim()) return list;
+    if (!appliedSearch.trim()) return list;
 
-    const tokens = debouncedSearch.toLowerCase().trim().split(/\s+/);
+    const tokens = appliedSearch.toLowerCase().trim().split(/\s+/);
     return list.filter(item => {
       const p = item.product;
       const text = `${p.name || ''} ${p.brand || ''} ${p.category || ''} ${Array.isArray(p.searchTags) ? p.searchTags.join(' ') : (p.searchTags || '')}`.toLowerCase();
       return tokens.every(t => text.includes(t));
     });
-  }, [safeInventory, inventoryFilter, debouncedSearch]);
+  }, [safeInventory, inventoryFilter, appliedSearch]);
 
   const featuredCount = useMemo(() => safeInventory.filter(i => i.isFeatured).length, [safeInventory]);
   const outOfStockCount = useMemo(() => safeInventory.filter(i => !i.inStock).length, [safeInventory]);
 
-  // ⭐ FEATURED RANK REORDER HANDLER
+  // ⭐ FEATURED DIRECT RANK SETTER WITH AUTO-SHIFT (Rank 1 shifts old #1 to #2, etc.)
+  const handleSetDirectRank = async (item, targetRankNumber) => {
+    const featuredList = [...safeInventory.filter(i => i.isFeatured)].sort((a, b) => (Number(a.featuredRank ?? 999)) - (Number(b.featuredRank ?? 999)));
+    const currentIndex = featuredList.findIndex(f => f.product._id === item.product._id);
+    if (currentIndex === -1) return;
+
+    const targetRank = Math.max(1, Math.min(Number(targetRankNumber) || 1, featuredList.length));
+    const targetIndex = targetRank - 1;
+    if (targetIndex === currentIndex) return;
+
+    // Remove item from its current position and insert at new target position
+    const [moved] = featuredList.splice(currentIndex, 1);
+    featuredList.splice(targetIndex, 0, moved);
+
+    // Re-assign ranks 1..N so all below targetRank shift down by 1
+    const ranksPayload = featuredList.map((f, idx) => ({
+      productId: f.product._id,
+      featuredRank: idx + 1
+    }));
+
+    setIsUpdatingRank(true);
+    try {
+      const res = await shopFetch(shopData, `/shops/${shopData._id}/inventory/featured-ranks`, {
+        method: 'POST',
+        body: JSON.stringify({ ranks: ranksPayload })
+      });
+      if (res.ok) {
+        toast(`Set "${item.product.name}" to Rank #${targetRank}! ⭐`);
+        if (onInventoryRefresh) await onInventoryRefresh();
+      } else {
+        const err = await res.json().catch(() => ({}));
+        toast(err.error || 'Failed to update rank', 'error');
+      }
+    } catch (e) {
+      toast('Network error', 'error');
+    } finally {
+      setIsUpdatingRank(false);
+    }
+  };
+
+  // ⭐ FEATURED RANK REORDER HANDLER (Step Up/Down)
   const handleMoveRank = async (item, direction) => {
     const featuredList = [...safeInventory.filter(i => i.isFeatured)].sort((a, b) => (Number(a.featuredRank ?? 999)) - (Number(b.featuredRank ?? 999)));
     const currentIndex = featuredList.findIndex(f => f.product._id === item.product._id);
@@ -177,7 +210,8 @@ export default function InventoryTab({ shopData, masterCatalog, handleInventoryU
         toast(`Moved "${item.product.name}" to Rank #${targetIndex + 1}! ⭐`);
         if (onInventoryRefresh) await onInventoryRefresh();
       } else {
-        toast('Failed to update rank', 'error');
+        const err = await res.json().catch(() => ({}));
+        toast(err.error || 'Failed to update rank', 'error');
       }
     } catch (e) {
       toast('Network error', 'error');
@@ -299,81 +333,115 @@ export default function InventoryTab({ shopData, masterCatalog, handleInventoryU
 
       {/* ========================================= */}
       {/* 🚀 ADD NEW PRODUCTS SECTION               */}
+      {/* ===      {/* ========================================= */}
+      {/* 🚀 ADD NEW PRODUCTS SECTION (COLLAPSIBLE) */}
       {/* ========================================= */}
-      <div style={{ marginBottom: '25px', padding: '15px', backgroundColor: '#f0f9ff', borderRadius: '16px', border: '1px solid #bae6fd' }}>
+      <div style={{ marginBottom: '22px', borderRadius: '16px', border: '1.5px solid #bae6fd', backgroundColor: '#f0f9ff', overflow: 'hidden', boxShadow: '0 2px 8px rgba(2, 132, 199, 0.06)' }}>
         
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
-          <h4 style={{ margin: 0, color: '#0369a1', fontSize: '1.1rem', fontWeight: '800' }}>➕ Add New Products</h4>
-          
-          {/* ⚡ THE BULK IMPORT BUTTON ⚡ */}
-          <button 
-            onClick={handleBulkImport} 
-            disabled={isImporting}
-            style={{ 
-              backgroundColor: '#0f172a', 
-              color: '#fff', 
-              padding: '8px 12px', 
-              borderRadius: '8px', 
-              fontWeight: '800', 
-              fontSize: '0.8rem',
-              border: 'none', 
-              cursor: isImporting ? 'wait' : 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              boxShadow: '0 4px 10px rgba(0,0,0,0.1)'
-            }}
-          >
-            {isImporting ? '⏳ Importing...' : '⚡ Bulk Import Catalog'}
-          </button>
-        </div>
-        
-        {/* Search Master Catalog */}
-        <input 
-          type="text" 
-          placeholder="🔍 Search master catalog (e.g., Milk, Lay's)..." 
-          value={searchMaster} 
-          onChange={(e) => setSearchMaster(e.target.value)} 
-          style={searchInputStyle} 
-        />
+        <button 
+          type="button"
+          onClick={() => setIsAddProductsOpen(prev => !prev)}
+          style={{
+            width: '100%',
+            padding: '14px 18px',
+            background: 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)',
+            color: 'white',
+            border: 'none',
+            fontWeight: '800',
+            fontSize: '0.95rem',
+            cursor: 'pointer',
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center'
+          }}
+        >
+          <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <span>➕</span>
+            <span>Add New Products to Store ({availableToAdd.length} catalog items)</span>
+          </span>
+          <span style={{ fontSize: '0.8rem', backgroundColor: 'rgba(255,255,255,0.2)', padding: '4px 10px', borderRadius: '20px' }}>
+            {isAddProductsOpen ? '▲ Collapse' : '▼ Tap to Open'}
+          </span>
+        </button>
 
-        {availableToAdd.length === 0 ? (
-          <div style={{ fontSize: '0.9rem', color: '#0284c7', marginTop: '15px', fontWeight: 'bold', textAlign: 'center' }}>🎉 You have added every available product!</div>
-        ) : (
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: '10px', marginTop: '10px', maxHeight: '250px', overflowY: 'auto', paddingRight: '5px' }}>
-            {filteredAvailable.map(m => (
-              <div key={m._id} style={{ backgroundColor: 'white', padding: '10px', borderRadius: '12px', border: '1px solid #bae6fd', textAlign: 'center', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
-                
-                {/* Product Info */}
-                <div style={{ marginBottom: '10px' }}>
-                  <div style={{ fontSize: '24px', marginBottom: '5px' }}>{m.image ? <img src={cdnImage(m.image, 100)} alt="" loading="lazy" decoding="async" style={{ height: '30px', objectFit: 'contain'}} /> : m.emoji}</div>
-                  <div style={{ fontSize: '0.8rem', fontWeight: 'bold', color: '#0f172a', lineHeight: '1.2', height: '30px', overflow: 'hidden' }}>{m.name}</div>
-                  <div style={{ fontSize: '0.75rem', color: '#64748b', marginTop: '4px', fontWeight: '600' }}>MRP: ₹{m.mrp}</div>
-                </div>
-
-                {/* Inline Add Action */}
-                {addingId === m._id ? (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-                    <input type="number" placeholder={`₹${m.mrp}`} value={tempPrice} onChange={e => setTempPrice(e.target.value)} style={{ padding: '6px', borderRadius: '6px', border: '2px solid #0284c7', outline: 'none', fontSize: '0.9rem', textAlign: 'center', fontWeight: 'bold' }} autoFocus />
-                    <div style={{ display: 'flex', gap: '5px' }}>
-                      <button onClick={() => setAddingId(null)} style={{ flex: 1, padding: '6px', backgroundColor: '#f1f5f9', border: 'none', borderRadius: '6px', cursor: 'pointer' }}>❌</button>
-                      <button 
-                        onClick={() => { 
-                          handleInventoryUpdate(m._id, tempPrice || m.mrp, true); 
-                          setAddingId(null); 
-                          setTempPrice(""); 
-                        }} 
-                        style={{ flex: 1, padding: '6px', backgroundColor: '#0284c7', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold' }}>
-                        Save
-                      </button>
-                    </div>
-                  </div>
-                ) : (
-                  <button onClick={() => { setAddingId(m._id); setTempPrice(m.mrp); }} style={{ width: '100%', padding: '8px 6px', backgroundColor: '#e0f2fe', color: '#0284c7', border: 'none', borderRadius: '8px', fontWeight: '800', cursor: 'pointer' }}>
-                    + Add to Store
-                  </button>
-                )}
+        {isAddProductsOpen && (
+          <div style={{ padding: '16px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
+              <div style={{ fontSize: '0.85rem', color: '#0369a1', fontWeight: '700' }}>
+                Browse master catalog or bulk import into your store
               </div>
-            ))}
+              
+              {/* ⚡ THE BULK IMPORT BUTTON ⚡ */}
+              <button 
+                onClick={handleBulkImport} 
+                disabled={isImporting}
+                style={{ 
+                  backgroundColor: '#0f172a', 
+                  color: '#fff', 
+                  padding: '8px 12px', 
+                  borderRadius: '8px', 
+                  fontWeight: '800', 
+                  fontSize: '0.8rem',
+                  border: 'none', 
+                  cursor: isImporting ? 'wait' : 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  boxShadow: '0 4px 10px rgba(0,0,0,0.1)'
+                }}
+              >
+                {isImporting ? '⏳ Importing...' : '⚡ Bulk Import Catalog'}
+              </button>
+            </div>
+            
+            {/* Search Master Catalog */}
+            <input 
+              type="text" 
+              placeholder="🔍 Search master catalog (e.g., Milk, Lay's)..." 
+              value={searchMaster} 
+              onChange={(e) => setSearchMaster(e.target.value)} 
+              style={searchInputStyle} 
+            />
+
+            {availableToAdd.length === 0 ? (
+              <div style={{ fontSize: '0.9rem', color: '#0284c7', marginTop: '15px', fontWeight: 'bold', textAlign: 'center' }}>🎉 You have added every available product!</div>
+            ) : (
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: '10px', marginTop: '10px', maxHeight: '250px', overflowY: 'auto', paddingRight: '5px' }}>
+                {filteredAvailable.map(m => (
+                  <div key={m._id} style={{ backgroundColor: 'white', padding: '10px', borderRadius: '12px', border: '1px solid #bae6fd', textAlign: 'center', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+                    
+                    {/* Product Info */}
+                    <div style={{ marginBottom: '10px' }}>
+                      <div style={{ fontSize: '24px', marginBottom: '5px' }}>{m.image ? <img src={cdnImage(m.image, 100)} alt="" loading="lazy" decoding="async" style={{ height: '30px', objectFit: 'contain'}} /> : m.emoji}</div>
+                      <div style={{ fontSize: '0.8rem', fontWeight: 'bold', color: '#0f172a', lineHeight: '1.2', height: '30px', overflow: 'hidden' }}>{m.name}</div>
+                      <div style={{ fontSize: '0.75rem', color: '#64748b', marginTop: '4px', fontWeight: '600' }}>MRP: ₹{m.mrp}</div>
+                    </div>
+
+                    {/* Inline Add Action */}
+                    {addingId === m._id ? (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                        <input type="number" placeholder={`₹${m.mrp}`} value={tempPrice} onChange={e => setTempPrice(e.target.value)} style={{ padding: '6px', borderRadius: '6px', border: '2px solid #0284c7', outline: 'none', fontSize: '0.9rem', textAlign: 'center', fontWeight: 'bold' }} autoFocus />
+                        <div style={{ display: 'flex', gap: '5px' }}>
+                          <button onClick={() => setAddingId(null)} style={{ flex: 1, padding: '6px', backgroundColor: '#f1f5f9', border: 'none', borderRadius: '6px', cursor: 'pointer' }}>❌</button>
+                          <button 
+                            onClick={() => { 
+                              handleInventoryUpdate(m._id, tempPrice || m.mrp, true); 
+                              setAddingId(null); 
+                              setTempPrice(""); 
+                            }} 
+                            style={{ flex: 1, padding: '6px', backgroundColor: '#0284c7', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold' }}>
+                            Save
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <button onClick={() => { setAddingId(m._id); setTempPrice(m.mrp); }} style={{ width: '100%', padding: '8px 6px', backgroundColor: '#e0f2fe', color: '#0284c7', border: 'none', borderRadius: '8px', fontWeight: '800', cursor: 'pointer' }}>
+                        + Add to Store
+                      </button>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         )}
       </div>
@@ -391,7 +459,7 @@ export default function InventoryTab({ shopData, masterCatalog, handleInventoryU
       {/* 🏷️ FILTER PILLS FOR FAST GROUPING & FEATURED OVERVIEW */}
       <div style={{ display: 'flex', gap: '8px', marginBottom: '15px', overflowX: 'auto', paddingBottom: '4px' }}>
         <button
-          onClick={() => setInventoryFilter('all')}
+          onClick={() => { setInventoryFilter('all'); setSearchInventoryInput(''); setAppliedSearch(''); }}
           style={{
             padding: '8px 14px',
             borderRadius: '20px',
@@ -407,7 +475,7 @@ export default function InventoryTab({ shopData, masterCatalog, handleInventoryU
           📦 All Items ({safeInventory.length})
         </button>
         <button
-          onClick={() => setInventoryFilter('featured')}
+          onClick={() => { setInventoryFilter('featured'); setSearchInventoryInput(''); setAppliedSearch(''); }}
           style={{
             padding: '8px 14px',
             borderRadius: '20px',
@@ -424,7 +492,7 @@ export default function InventoryTab({ shopData, masterCatalog, handleInventoryU
           ⭐ Featured Picks ({featuredCount})
         </button>
         <button
-          onClick={() => setInventoryFilter('outOfStock')}
+          onClick={() => { setInventoryFilter('outOfStock'); setSearchInventoryInput(''); setAppliedSearch(''); }}
           style={{
             padding: '8px 14px',
             borderRadius: '20px',
@@ -448,32 +516,78 @@ export default function InventoryTab({ shopData, masterCatalog, handleInventoryU
         </div>
       )}
       
-      {/* Search Current Inventory with Clear Button */}
-      <div style={{ position: 'relative', marginBottom: '15px' }}>
-        <input 
-          type="text" 
-          placeholder={`🔍 Search in ${inventoryFilter === 'featured' ? 'Featured Picks' : inventoryFilter === 'outOfStock' ? 'Out of Stock' : 'Store'}...`} 
-          value={searchInventory} 
-          onChange={(e) => setSearchInventory(e.target.value)} 
-          style={{ ...searchInputStyle, paddingRight: searchInventory ? '40px' : '14px' }} 
-        />
-        {searchInventory && (
-          <button 
-            onClick={() => setSearchInventory('')}
-            style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', color: '#94a3b8', fontSize: '1rem', cursor: 'pointer', padding: '4px' }}
-          >
-            ✕
-          </button>
-        )}
+      {/* Search Current Inventory with Dedicated Search & Clear Buttons */}
+      <div style={{ display: 'flex', gap: '8px', marginBottom: '12px' }}>
+        <div style={{ position: 'relative', flex: 1 }}>
+          <input 
+            type="text" 
+            placeholder={`Search in ${inventoryFilter === 'featured' ? 'Featured Picks' : inventoryFilter === 'outOfStock' ? 'Out of Stock' : 'Store'}...`} 
+            value={searchInventoryInput} 
+            onChange={(e) => setSearchInventoryInput(e.target.value)} 
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                setAppliedSearch(searchInventoryInput.trim());
+                setVisibleCount(30);
+              }
+            }}
+            style={{ ...searchInputStyle, paddingRight: searchInventoryInput ? '36px' : '14px', marginBottom: 0 }} 
+          />
+          {searchInventoryInput && (
+            <button 
+              type="button"
+              onClick={() => {
+                setSearchInventoryInput('');
+                setAppliedSearch('');
+                setVisibleCount(30);
+              }}
+              style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', color: '#94a3b8', fontSize: '1rem', cursor: 'pointer', padding: '4px' }}
+            >
+              ✕
+            </button>
+          )}
+        </div>
+
+        <button
+          type="button"
+          onClick={() => {
+            setAppliedSearch(searchInventoryInput.trim());
+            setVisibleCount(30);
+          }}
+          style={{
+            padding: '0 16px',
+            backgroundColor: '#0f172a',
+            color: '#fff',
+            border: 'none',
+            borderRadius: '10px',
+            fontWeight: '800',
+            fontSize: '0.88rem',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '6px',
+            flexShrink: 0
+          }}
+        >
+          🔍 Search
+        </button>
       </div>
+
+      {appliedSearch && (
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', backgroundColor: '#e0f2fe', padding: '6px 12px', borderRadius: '8px', marginBottom: '12px', fontSize: '0.82rem', color: '#0369a1', fontWeight: '700' }}>
+          <span>Search results for "{appliedSearch}" ({filteredInventory.length} matching)</span>
+          <button onClick={() => { setSearchInventoryInput(''); setAppliedSearch(''); }} style={{ background: 'none', border: 'none', color: '#0284c7', cursor: 'pointer', fontWeight: '800', textDecoration: 'underline' }}>
+            Show All
+          </button>
+        </div>
+      )}
 
       {filteredInventory.length === 0 ? (
         <div style={{ textAlign: 'center', padding: '40px 20px', backgroundColor: 'white', borderRadius: '16px', color: '#64748b', fontWeight: '600' }}>
           <div style={{ fontSize: '2rem', marginBottom: '10px' }}>🔍</div>
-          <div>No items match your {searchInventory ? 'search query' : 'selected filter'}.</div>
-          {inventoryFilter !== 'all' && (
+          <div>No items match your {appliedSearch ? 'search query' : 'selected filter'}.</div>
+          {(inventoryFilter !== 'all' || appliedSearch) && (
             <button 
-              onClick={() => { setInventoryFilter('all'); setSearchInventory(''); }}
+              onClick={() => { setInventoryFilter('all'); setSearchInventoryInput(''); setAppliedSearch(''); }}
               style={{ marginTop: '12px', padding: '8px 16px', backgroundColor: '#f1f5f9', border: '1px solid #cbd5e1', borderRadius: '8px', cursor: 'pointer', fontWeight: '700', fontSize: '0.85rem' }}
             >
               View All Items
@@ -492,7 +606,7 @@ export default function InventoryTab({ shopData, masterCatalog, handleInventoryU
                 
                 {/* 🌟 FEATURED RANK BADGE & REORDER CONTROLS */}
                 {item.isFeatured && (
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#fffbeb', padding: '6px 12px', borderRadius: '10px', marginBottom: '10px', border: '1px solid #fef3c7' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#fffbeb', padding: '8px 12px', borderRadius: '10px', marginBottom: '10px', border: '1px solid #fef3c7', flexWrap: 'wrap', gap: '8px' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                       <span style={{ fontSize: '1rem' }}>⭐</span>
                       <span style={{ fontWeight: '800', color: '#b45309', fontSize: '0.85rem' }}>
@@ -500,41 +614,71 @@ export default function InventoryTab({ shopData, masterCatalog, handleInventoryU
                       </span>
                     </div>
 
-                    <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
-                      <button
-                        title="Move Up in Shopkeeper's Picks"
-                        disabled={isUpdatingRank || index === 0}
-                        onClick={() => handleMoveRank(item, 'up')}
-                        style={{
-                          backgroundColor: index === 0 ? '#f1f5f9' : '#fef3c7',
-                          color: index === 0 ? '#94a3b8' : '#b45309',
-                          border: '1px solid #fde68a',
-                          padding: '4px 8px',
-                          borderRadius: '6px',
-                          cursor: (isUpdatingRank || index === 0) ? 'not-allowed' : 'pointer',
-                          fontWeight: '800',
-                          fontSize: '0.8rem'
-                        }}
-                      >
-                        ⬆️
-                      </button>
-                      <button
-                        title="Move Down in Shopkeeper's Picks"
-                        disabled={isUpdatingRank || index === filteredInventory.length - 1}
-                        onClick={() => handleMoveRank(item, 'down')}
-                        style={{
-                          backgroundColor: index === filteredInventory.length - 1 ? '#f1f5f9' : '#fef3c7',
-                          color: index === filteredInventory.length - 1 ? '#94a3b8' : '#b45309',
-                          border: '1px solid #fde68a',
-                          padding: '4px 8px',
-                          borderRadius: '6px',
-                          cursor: (isUpdatingRank || index === filteredInventory.length - 1) ? 'not-allowed' : 'pointer',
-                          fontWeight: '800',
-                          fontSize: '0.8rem'
-                        }}
-                      >
-                        ⬇️
-                      </button>
+                    <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                      {/* DIRECT RANK SELECTOR DROPDOWN */}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                        <span style={{ fontSize: '0.78rem', color: '#92400e', fontWeight: '700' }}>Rank:</span>
+                        <select
+                          value={index + 1}
+                          disabled={isUpdatingRank}
+                          onChange={(e) => handleSetDirectRank(item, Number(e.target.value))}
+                          style={{
+                            padding: '4px 8px',
+                            borderRadius: '6px',
+                            border: '1.5px solid #f59e0b',
+                            backgroundColor: '#fff',
+                            fontWeight: '800',
+                            color: '#b45309',
+                            fontSize: '0.82rem',
+                            cursor: isUpdatingRank ? 'wait' : 'pointer',
+                            outline: 'none'
+                          }}
+                        >
+                          {Array.from({ length: featuredCount }, (_, i) => i + 1).map(r => (
+                            <option key={r} value={r}>
+                              #{r} {r === 1 ? '🥇' : r === 2 ? '🥈' : r === 3 ? '🥉' : ''}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+
+                      {/* ⬆️ / ⬇️ STEP BUTTONS */}
+                      <div style={{ display: 'flex', gap: '3px' }}>
+                        <button
+                          title="Move Up by 1 step"
+                          disabled={isUpdatingRank || index === 0}
+                          onClick={() => handleMoveRank(item, 'up')}
+                          style={{
+                            backgroundColor: index === 0 ? '#f1f5f9' : '#fef3c7',
+                            color: index === 0 ? '#94a3b8' : '#b45309',
+                            border: '1px solid #fde68a',
+                            padding: '4px 8px',
+                            borderRadius: '6px',
+                            cursor: (isUpdatingRank || index === 0) ? 'not-allowed' : 'pointer',
+                            fontWeight: '800',
+                            fontSize: '0.8rem'
+                          }}
+                        >
+                          ⬆️
+                        </button>
+                        <button
+                          title="Move Down by 1 step"
+                          disabled={isUpdatingRank || index === filteredInventory.length - 1}
+                          onClick={() => handleMoveRank(item, 'down')}
+                          style={{
+                            backgroundColor: index === filteredInventory.length - 1 ? '#f1f5f9' : '#fef3c7',
+                            color: index === filteredInventory.length - 1 ? '#94a3b8' : '#b45309',
+                            border: '1px solid #fde68a',
+                            padding: '4px 8px',
+                            borderRadius: '6px',
+                            cursor: (isUpdatingRank || index === filteredInventory.length - 1) ? 'not-allowed' : 'pointer',
+                            fontWeight: '800',
+                            fontSize: '0.8rem'
+                          }}
+                        >
+                          ⬇️
+                        </button>
+                      </div>
                     </div>
                   </div>
                 )}

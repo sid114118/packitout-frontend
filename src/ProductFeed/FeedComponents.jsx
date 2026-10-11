@@ -6,8 +6,9 @@ import ImpressionTracker from '../components/ui/ImpressionTracker.jsx';
 import { trackEvent } from '../utils/analyticsEngine.js';
 
 // 📋 1. FIXED VARIANT SELECTION SHEET (Premium Native Redesign)
-export function VariantBottomSheet({ product, onClose, onAddToCart }) {
+export function VariantBottomSheet({ product, onClose, onAddToCart, onRemoveFromCart, cart = [] }) {
   if (!product) return null;
+  const safeCart = Array.isArray(cart) ? cart.filter(Boolean) : [];
 
   return createPortal(
     <>
@@ -20,7 +21,7 @@ export function VariantBottomSheet({ product, onClose, onAddToCart }) {
         `}</style>
 
         {/* 🌟 NATIVE BOTTOM SHEET CONTAINER */}
-        <div style={{ backgroundColor: '#fff', width: '100%', borderTopLeftRadius: '24px', borderTopRightRadius: '24px', padding: '0 0 25px 0', maxHeight: '85vh', display: 'flex', flexDirection: 'column', boxShadow: '0 -4px 20px rgba(0,0,0,0.1)' }}>
+        <div style={{ backgroundColor: '#fff', width: '100%', borderTopLeftRadius: '24px', borderTopRightRadius: '24px', padding: '0 0 20px 0', maxHeight: '85vh', display: 'flex', flexDirection: 'column', boxShadow: '0 -4px 20px rgba(0,0,0,0.1)' }}>
           
           {/* 🌟 IOS/ANDROID DRAG HANDLE */}
           <div style={{ width: '100%', display: 'flex', justifyContent: 'center', paddingTop: '12px', paddingBottom: '8px' }}>
@@ -29,16 +30,21 @@ export function VariantBottomSheet({ product, onClose, onAddToCart }) {
 
           {/* 🌟 CLEAN HEADER */}
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0 20px 15px 20px', borderBottom: '1px solid #f1f5f9' }}>
-            <h3 style={{ margin: 0, fontSize: '1.15rem', color: '#0f172a', fontWeight: '800', lineHeight: '1.3', paddingRight: '15px' }}>{product.name}</h3>
+            <div>
+              <h3 style={{ margin: 0, fontSize: '1.15rem', color: '#0f172a', fontWeight: '800', lineHeight: '1.3' }}>{product.name}</h3>
+              <span style={{ fontSize: '0.8rem', color: '#64748b' }}>{product.variants?.length || 0} size options available</span>
+            </div>
             <button onClick={onClose} style={{ backgroundColor: '#f8fafc', color: '#64748b', border: 'none', borderRadius: '50%', width: '32px', height: '32px', fontSize: '1.2rem', fontWeight: 'bold', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>✕</button>
           </div>
 
           {/* 🌟 VARIANT LIST */}
           <div className="premium-hide-scroll" style={{ overflowY: 'auto', padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
-            {product.variants.map((variant, idx) => {
+            {product.variants?.map((variant, idx) => {
               const vPrice = variant.sellingPrice || variant.mrp;
               const vDiscounted = vPrice < variant.mrp;
               const vDiscountPercent = vDiscounted ? Math.round(((variant.mrp - vPrice) / variant.mrp) * 100) : 0;
+              const vCart = safeCart.find(c => String(c._id) === String(variant._id));
+              const vQty = vCart ? (vCart.qty || 1) : 0;
               
               return (
                 <div key={idx} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', backgroundColor: '#fff', padding: '12px', borderRadius: '16px', border: '1px solid #e2e8f0', boxShadow: '0 4px 10px rgba(0,0,0,0.02)' }}>
@@ -52,7 +58,7 @@ export function VariantBottomSheet({ product, onClose, onAddToCart }) {
                     
                     {/* Size & Price */}
                     <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-                      <div style={{ fontSize: '0.85rem', color: '#64748b', fontWeight: '700', marginBottom: '2px' }}>{variant.qnty}</div>
+                      <div style={{ fontSize: '0.85rem', color: '#64748b', fontWeight: '700', marginBottom: '2px' }}>{variant.qnty || 'Standard'}</div>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                         <span style={{ fontWeight: '800', fontSize: '1.05rem', color: '#0f172a' }}>₹{vPrice}</span>
                         {vDiscounted && <span style={{ fontSize: '0.75rem', color: '#94a3b8', textDecoration: 'line-through', fontWeight: '600' }}>₹{variant.mrp}</span>}
@@ -60,18 +66,37 @@ export function VariantBottomSheet({ product, onClose, onAddToCart }) {
                     </div>
                   </div>
 
-                  {/* 🌟 RED THEME ADD BUTTON */}
-                  <button 
-                    onClick={() => { onAddToCart(variant); onClose(); }} 
-                    style={{ backgroundColor: '#fff', color: '#ef4444', border: '1px solid #fca5a5', borderRadius: '8px', padding: '6px 16px', fontSize: '0.85rem', fontWeight: '800', cursor: 'pointer', boxShadow: '0 2px 4px rgba(0,0,0,0.03)', textTransform: 'uppercase' }}
-                  >
-                    ADD
-                  </button>
+                  {/* 🌟 ACTION BUTTON: STEPPER IF IN CART, ADD OTHERWISE */}
+                  {vQty > 0 ? (
+                    <div style={{ display: 'flex', alignItems: 'center', backgroundColor: '#ef4444', borderRadius: '8px', height: '32px', width: '76px', boxShadow: '0 4px 10px rgba(239, 68, 68, 0.25)' }}>
+                      <button onClick={() => onRemoveFromCart && onRemoveFromCart(variant)} style={{ flex: 1, height: '100%', border: 'none', background: 'transparent', color: '#fff', fontSize: '1.2rem', fontWeight: 'bold', cursor: 'pointer' }}>−</button>
+                      <span style={{ color: '#fff', fontSize: '0.85rem', fontWeight: '800', minWidth: '16px', textAlign: 'center' }}>{vQty}</span>
+                      <button onClick={() => onAddToCart && onAddToCart(variant)} style={{ flex: 1, height: '100%', border: 'none', background: 'transparent', color: '#fff', fontSize: '1.2rem', fontWeight: 'bold', cursor: 'pointer' }}>+</button>
+                    </div>
+                  ) : (
+                    <button 
+                      onClick={() => onAddToCart && onAddToCart(variant)} 
+                      style={{ backgroundColor: '#fff', color: '#ef4444', border: '1px solid #fca5a5', borderRadius: '8px', padding: '6px 16px', fontSize: '0.85rem', fontWeight: '800', cursor: 'pointer', boxShadow: '0 2px 4px rgba(0,0,0,0.03)', textTransform: 'uppercase' }}
+                    >
+                      ADD
+                    </button>
+                  )}
                   
                 </div>
               );
             })}
           </div>
+
+          {/* BOTTOM DONE BUTTON */}
+          <div style={{ padding: '10px 20px 0', borderTop: '1px solid #f1f5f9', display: 'flex', justifyContent: 'flex-end' }}>
+            <button 
+              onClick={onClose} 
+              style={{ width: '100%', padding: '12px', backgroundColor: '#0f172a', color: '#fff', border: 'none', borderRadius: '12px', fontWeight: '800', cursor: 'pointer', fontSize: '0.95rem' }}
+            >
+              Done
+            </button>
+          </div>
+
         </div>
       </div>
     </>,
@@ -84,7 +109,25 @@ const ModernProductCardBase = ({ item, isCarousel, shopClosed, onOpenDetails, on
   const isOutOfStock = !item.inStock;
   const isMultiVariant = item.variants && item.variants.length > 1;
   const safeCart = Array.isArray(cart) ? cart.filter(c => c !== null) : [];
-  const cartCount = safeCart.filter(c => c._id === item._id).reduce((sum, c) => sum + (c.qty || 1), 0);
+
+  const allVariantIds = isMultiVariant 
+    ? new Set(item.variants.map(v => String(v._id))) 
+    : new Set([String(item._id)]);
+
+  const totalFamilyCartQty = safeCart
+    .filter(c => c && allVariantIds.has(String(c._id)))
+    .reduce((sum, c) => sum + (c.qty || 1), 0);
+
+  const minPrice = isMultiVariant 
+    ? Math.min(...item.variants.map(v => Number(v.sellingPrice || v.mrp || 0)))
+    : Number(item.sellingPrice || item.mrp || 0);
+  const maxPrice = isMultiVariant 
+    ? Math.max(...item.variants.map(v => Number(v.sellingPrice || v.mrp || 0)))
+    : Number(item.sellingPrice || item.mrp || 0);
+
+  const priceLabel = (isMultiVariant && minPrice !== maxPrice) 
+    ? `₹${minPrice} - ₹${maxPrice}` 
+    : `₹${minPrice}`;
 
   const safeBrand = (item.brand && item.brand !== "nan") ? item.brand : "";
   const safeName = item.name || "";
@@ -138,8 +181,8 @@ const ModernProductCardBase = ({ item, isCarousel, shopClosed, onOpenDetails, on
       
       <div style={{ display: 'flex', flexDirection: 'column', flexGrow: 1, justifyContent: 'space-between' }}>
         <div>
-          <p style={{ fontSize: '0.75rem', color: '#64748b', margin: '0 0 4px 0', fontWeight: '600' }}>
-            {item.qnty || "1 pc"}
+          <p style={{ fontSize: '0.75rem', color: isMultiVariant ? '#0284c7' : '#64748b', margin: '0 0 4px 0', fontWeight: '700' }}>
+            {isMultiVariant ? `${item.variants.length} sizes available` : (item.qnty || "1 pc")}
           </p>
           <h4 style={{ fontSize: '0.85rem', margin: '0 0 12px 0', color: '#0f172a', fontWeight: '700', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden', textOverflow: 'ellipsis', height: '2.5em', lineHeight: '1.25em' }}>
             {displayTitle}
@@ -153,27 +196,48 @@ const ModernProductCardBase = ({ item, isCarousel, shopClosed, onOpenDetails, on
                 ₹{item.mrp}
               </span>
             )}
-            <span style={{ fontWeight: '800', fontSize: '1.05rem', color: '#0f172a' }}>
-              ₹{item.sellingPrice || item.mrp}
+            <span style={{ fontWeight: '800', fontSize: '0.95rem', color: '#0f172a' }}>
+              {priceLabel}
             </span>
           </div>
 
           <div onClick={(e) => e.stopPropagation()}>
             {!isOutOfStock && (
-              cartCount > 0 ? (
-                <div style={{ display: 'flex', alignItems: 'center', backgroundColor: '#ef4444', borderRadius: '8px', height: '32px', width: '70px', boxShadow: '0 4px 10px rgba(239, 68, 68, 0.25)' }}>
-                  <button onClick={() => { trackEvent('REMOVE_FROM_CART', getEventPayload()); onRemoveFromCart(item); }} style={{ flex: 1, height: '100%', border: 'none', background: 'transparent', color: '#fff', fontSize: '1.2rem', fontWeight: 'bold', cursor: 'pointer' }}>−</button>
-                  <span style={{ color: '#fff', fontSize: '0.85rem', fontWeight: '800', minWidth: '16px', textAlign: 'center' }}>{cartCount}</span>
-                  <button onClick={() => { trackEvent('ADD_TO_CART', getEventPayload()); onQuickAdd(item); }} style={{ flex: 1, height: '100%', border: 'none', background: 'transparent', color: '#fff', fontSize: '1.2rem', fontWeight: 'bold', cursor: 'pointer' }}>+</button>
-                </div>
-              ) : (
+              isMultiVariant ? (
                 <button 
                   onClick={() => { trackEvent('ADD_TO_CART', getEventPayload()); onQuickAdd(item); }} 
                   className="pio-product-add-btn"
-                  style={{ backgroundColor: '#fff', color: '#ef4444', border: '1px solid #fca5a5', borderRadius: '8px', padding: '6px 12px', fontSize: '0.75rem', fontWeight: '800', cursor: 'pointer', boxShadow: '0 2px 4px rgba(0,0,0,0.04)', textTransform: 'uppercase' }}
+                  style={{ 
+                    backgroundColor: totalFamilyCartQty > 0 ? '#fef2f2' : '#fff', 
+                    color: '#ef4444', 
+                    border: totalFamilyCartQty > 0 ? '1.5px solid #ef4444' : '1px solid #fca5a5', 
+                    borderRadius: '8px', 
+                    padding: '6px 8px', 
+                    fontSize: '0.75rem', 
+                    fontWeight: '800', 
+                    cursor: 'pointer', 
+                    boxShadow: '0 2px 4px rgba(0,0,0,0.04)',
+                    whiteSpace: 'nowrap'
+                  }}
                 >
-                  {isMultiVariant ? "SELECT" : "ADD"}
+                  {totalFamilyCartQty > 0 ? `${totalFamilyCartQty} in cart ▾` : 'SELECT ▾'}
                 </button>
+              ) : (
+                totalFamilyCartQty > 0 ? (
+                  <div style={{ display: 'flex', alignItems: 'center', backgroundColor: '#ef4444', borderRadius: '8px', height: '32px', width: '70px', boxShadow: '0 4px 10px rgba(239, 68, 68, 0.25)' }}>
+                    <button onClick={() => { trackEvent('REMOVE_FROM_CART', getEventPayload()); onRemoveFromCart(item); }} style={{ flex: 1, height: '100%', border: 'none', background: 'transparent', color: '#fff', fontSize: '1.2rem', fontWeight: 'bold', cursor: 'pointer' }}>−</button>
+                    <span style={{ color: '#fff', fontSize: '0.85rem', fontWeight: '800', minWidth: '16px', textAlign: 'center' }}>{totalFamilyCartQty}</span>
+                    <button onClick={() => { trackEvent('ADD_TO_CART', getEventPayload()); onQuickAdd(item); }} style={{ flex: 1, height: '100%', border: 'none', background: 'transparent', color: '#fff', fontSize: '1.2rem', fontWeight: 'bold', cursor: 'pointer' }}>+</button>
+                  </div>
+                ) : (
+                  <button 
+                    onClick={() => { trackEvent('ADD_TO_CART', getEventPayload()); onQuickAdd(item); }} 
+                    className="pio-product-add-btn"
+                    style={{ backgroundColor: '#fff', color: '#ef4444', border: '1px solid #fca5a5', borderRadius: '8px', padding: '6px 12px', fontSize: '0.75rem', fontWeight: '800', cursor: 'pointer', boxShadow: '0 2px 4px rgba(0,0,0,0.04)', textTransform: 'uppercase' }}
+                  >
+                    ADD
+                  </button>
+                )
               )
             )}
           </div>
@@ -188,11 +252,18 @@ const areCardsEqual = (prevProps, nextProps) => {
   if (prevProps.item._id !== nextProps.item._id) return false;
   if (prevProps.shopClosed !== nextProps.shopClosed) return false;
 
+  const prevIds = prevProps.item.variants?.length > 1 
+    ? new Set(prevProps.item.variants.map(v => String(v._id)))
+    : new Set([String(prevProps.item._id)]);
+  const nextIds = nextProps.item.variants?.length > 1 
+    ? new Set(nextProps.item.variants.map(v => String(v._id)))
+    : new Set([String(nextProps.item._id)]);
+
   const safePrevCart = Array.isArray(prevProps.cart) ? prevProps.cart : [];
   const safeNextCart = Array.isArray(nextProps.cart) ? nextProps.cart : [];
 
-  const prevCount = safePrevCart.filter(c => c && c._id === prevProps.item._id).reduce((sum, c) => sum + (c.qty || 1), 0);
-  const nextCount = safeNextCart.filter(c => c && c._id === nextProps.item._id).reduce((sum, c) => sum + (c.qty || 1), 0);
+  const prevCount = safePrevCart.filter(c => c && prevIds.has(String(c._id))).reduce((sum, c) => sum + (c.qty || 1), 0);
+  const nextCount = safeNextCart.filter(c => c && nextIds.has(String(c._id))).reduce((sum, c) => sum + (c.qty || 1), 0);
 
   return prevCount === nextCount; 
 };

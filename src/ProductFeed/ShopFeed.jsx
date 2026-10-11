@@ -156,33 +156,125 @@ export default function ShopFeed({
           {/* 🎁 SHOP COMBOS */}
           {shopCombos?.length > 0 && (
             <div style={{ padding: '10px 15px' }}>
-              <h3 style={{ margin: '0 0 10px 0', color: '#0f172a', display: 'flex', alignItems: 'center', gap: '8px' }}>📦 Special Combos <span style={{ fontSize: '0.75rem', background: '#fef08a', color: '#854d0e', padding: '2px 8px', borderRadius: '10px' }}>HOT</span></h3>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+                <h3 style={{ margin: 0, color: '#0f172a', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '1.15rem', fontWeight: '800' }}>
+                  📦 Special Combo Packs
+                  <span style={{ fontSize: '0.7rem', background: '#fef08a', color: '#854d0e', padding: '2px 8px', borderRadius: '10px', fontWeight: '800' }}>HOT DEALS</span>
+                </h3>
+              </div>
+
               <div className="hide-scroll" style={{ display: 'flex', gap: '15px', overflowX: 'auto', paddingBottom: '10px' }}>
                 {shopCombos.map(combo => {
-                  const comboItems = combo.productIds.map(pid => items.find(i => i._id === pid)).filter(Boolean);
-                  const totalPrice = comboItems.reduce((sum, item) => sum + (item.sellingPrice || item.mrp), 0);
+                  const rawPids = Array.isArray(combo.productIds) ? combo.productIds : [];
+                  const comboItems = rawPids.map(p => {
+                    const pidStr = (typeof p === 'object' && p?._id) ? String(p._id) : String(p);
+                    const matched = items.find(i => String(i._id) === pidStr || i.variants?.some(v => String(v._id) === pidStr));
+                    if (matched) return matched;
+                    if (typeof p === 'object' && p?._id) return p;
+                    return null;
+                  }).filter(Boolean);
+
+                  const regularTotal = comboItems.reduce((sum, item) => sum + Number(item.sellingPrice || item.mrp || 0), 0);
+                  const effectivePrice = combo.comboPrice > 0 ? combo.comboPrice : regularTotal;
+                  const savings = (combo.comboPrice > 0 && regularTotal > combo.comboPrice) ? (regularTotal - combo.comboPrice) : 0;
+
                   return (
-                    <div key={combo._id} style={{ minWidth: '240px', border: '1px solid #e2e8f0', borderRadius: '16px', padding: '15px', backgroundColor: '#fff', display: 'flex', flexDirection: 'column' }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
-                        <h4 style={{ margin: 0, fontSize: '1.1rem', color: '#1e293b' }}>{combo.emoji} {combo.name}</h4>
-                        <span style={{ fontWeight: '800', color: '#16a34a' }}>₹{totalPrice}</span>
+                    <div 
+                      key={combo._id} 
+                      style={{ 
+                        minWidth: '250px', 
+                        maxWidth: '280px', 
+                        flexShrink: 0, 
+                        border: '1.5px solid #fde68a', 
+                        borderRadius: '18px', 
+                        padding: '16px', 
+                        backgroundColor: '#fff', 
+                        display: 'flex', 
+                        flexDirection: 'column', 
+                        justifyContent: 'space-between', 
+                        boxShadow: '0 4px 15px rgba(245, 158, 11, 0.08)' 
+                      }}
+                    >
+                      <div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '8px' }}>
+                          <h4 style={{ margin: 0, fontSize: '1rem', color: '#1e293b', fontWeight: '800', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            <span style={{ fontSize: '1.3rem' }}>{combo.emoji || '🎁'}</span>
+                            <span>{combo.name}</span>
+                          </h4>
+                          {savings > 0 && (
+                            <span style={{ backgroundColor: '#10b981', color: '#fff', fontSize: '0.68rem', fontWeight: '800', padding: '2px 6px', borderRadius: '6px' }}>
+                              SAVE ₹{savings}
+                            </span>
+                          )}
+                        </div>
+
+                        <div style={{ display: 'flex', gap: '6px', overflowX: 'auto', padding: '8px 0 14px' }} className="hide-scroll">
+                          {comboItems.map((ci, idx) => (
+                            <div 
+                              key={idx} 
+                              title={ci.name} 
+                              style={{ 
+                                width: '44px', 
+                                height: '44px', 
+                                borderRadius: '10px', 
+                                border: '1px solid #e2e8f0', 
+                                overflow: 'hidden', 
+                                display: 'flex', 
+                                justifyContent: 'center', 
+                                alignItems: 'center', 
+                                backgroundColor: '#f8fafc', 
+                                flexShrink: 0 
+                              }}
+                            >
+                              {ci.image ? (
+                                <img src={cdnImage(ci.image, 100)} alt={ci.name} style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+                              ) : (
+                                <span style={{ fontSize: '1.2rem' }}>{ci.emoji || '📦'}</span>
+                              )}
+                            </div>
+                          ))}
+                        </div>
                       </div>
-                      <div style={{ display: 'flex', gap: '5px', overflowX: 'hidden', marginBottom: '15px' }}>
-                        {comboItems.map((ci, idx) => (
-                          <div key={idx} style={{ width: '40px', height: '40px', borderRadius: '8px', border: '1px solid #f1f5f9', overflow: 'hidden', display: 'flex', justifyContent: 'center', alignItems: 'center', backgroundColor: '#f8fafc' }}>
-                            {ci.image ? <img src={ci.image} alt={ci.name} style={{ width: '100%', height: '100%', objectFit: 'contain' }} /> : <span style={{ fontSize: '1.2rem' }}>{ci.emoji}</span>}
-                          </div>
-                        ))}
+
+                      <div>
+                        <div style={{ display: 'flex', alignItems: 'baseline', gap: '6px', marginBottom: '10px' }}>
+                          <span style={{ fontWeight: '900', fontSize: '1.25rem', color: '#0f172a' }}>
+                            ₹{effectivePrice}
+                          </span>
+                          {savings > 0 && (
+                            <span style={{ fontSize: '0.8rem', color: '#94a3b8', textDecoration: 'line-through', fontWeight: '600' }}>
+                              ₹{regularTotal}
+                            </span>
+                          )}
+                          <span style={{ fontSize: '0.75rem', color: '#64748b', marginLeft: 'auto' }}>
+                            {comboItems.length} items
+                          </span>
+                        </div>
+
+                        <button 
+                          onClick={() => {
+                            comboItems.forEach(item => {
+                              const toAdd = (item.variants && item.variants.length > 0) ? item.variants[0] : item;
+                              onAddToCart(toAdd);
+                            });
+                            toast('Combo box added to cart! 🎁');
+                          }}
+                          style={{ 
+                            width: '100%', 
+                            padding: '10px', 
+                            background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)', 
+                            color: '#fff', 
+                            border: 'none', 
+                            borderRadius: '10px', 
+                            fontWeight: '800', 
+                            fontSize: '0.88rem', 
+                            cursor: 'pointer', 
+                            boxShadow: '0 4px 10px rgba(245, 158, 11, 0.25)' 
+                          }}
+                        >
+                          Add Box To Cart 🛒
+                        </button>
                       </div>
-                      <button 
-                        onClick={() => {
-                          comboItems.forEach(item => handleQuickAdd(item, 1));
-                          toast.success('Combo added to cart! 🎁');
-                        }}
-                        style={{ marginTop: 'auto', padding: '10px', backgroundColor: '#f59e0b', color: '#fff', border: 'none', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer', width: '100%' }}
-                      >
-                        Add Box To Cart
-                      </button>
                     </div>
                   );
                 })}
@@ -207,7 +299,7 @@ export default function ShopFeed({
         </>
       )}
 
-      <VariantBottomSheet product={selectedVariantProduct} onClose={() => setSelectedVariantProduct(null)} onAddToCart={onAddToCart} />
+      <VariantBottomSheet product={selectedVariantProduct} onClose={() => setSelectedVariantProduct(null)} onAddToCart={onAddToCart} onRemoveFromCart={onRemoveFromCart} cart={cart} />
       <ProductModal product={selectedProductDetails} isOpen={selectedProductDetails !== null} onClose={() => setSelectedProductDetails(null)} onAddToCart={onAddToCart} onRemoveFromCart={onRemoveFromCart} onViewCart={onViewCart} cart={cart} allItems={items} onViewBrand={(brand) => { if (onClearCategory) onClearCategory(); setViewAll(null); if (onBrandSelect) onBrandSelect(brand); }} />
     </div>
   );
