@@ -122,6 +122,37 @@ export default function ShopWelcomeModal() {
           from { width: 100%; }
           to { width: 0%; }
         }
+        @keyframes shopNameZoomInFocus {
+          0% {
+            transform: scale(0.35) translateY(24px);
+            opacity: 0;
+            filter: blur(10px);
+            letter-spacing: -2px;
+          }
+          65% {
+            transform: scale(1.14) translateY(-3px);
+            opacity: 1;
+            filter: blur(0);
+            letter-spacing: 0px;
+          }
+          85% {
+            transform: scale(0.97) translateY(1px);
+          }
+          100% {
+            transform: scale(1) translateY(0);
+            opacity: 1;
+            filter: blur(0);
+            letter-spacing: -0.5px;
+          }
+        }
+        @keyframes shopNameGlowPulse {
+          0%, 100% {
+            text-shadow: 0 4px 20px rgba(0, 0, 0, 0.45), 0 0 25px rgba(34, 197, 94, 0.55);
+          }
+          50% {
+            text-shadow: 0 4px 25px rgba(0, 0, 0, 0.6), 0 0 35px rgba(74, 222, 128, 0.9), 0 0 10px #ffffff;
+          }
+        }
       `}</style>
 
       {/* 🔮 AMBIENT BACKGROUND GLOW ORBS (Upload Parchi Coral / Warm Rose Palette) */}
@@ -361,19 +392,22 @@ export default function ShopWelcomeModal() {
           Welcome to
         </div>
 
-        {/* 🔥 BIG PROUD SHOP NAME (GREEN COLOR) */}
+        {/* 🔥 BIG PROUD SHOP NAME (GREEN COLOR WITH ZOOM-IN FOCUS ANIMATION) */}
         <h1
           style={{
             margin: '0 0 16px 0',
-            fontSize: 'clamp(2.4rem, 8vw, 3.4rem)',
+            fontSize: 'clamp(2.3rem, 7.8vw, 3.3rem)',
             fontWeight: '900',
             color: '#22c55e',
             lineHeight: 1.15,
             letterSpacing: '-0.5px',
-            textShadow: '0 4px 20px rgba(0, 0, 0, 0.45), 0 0 25px rgba(34, 197, 94, 0.5)',
+            textShadow: '0 4px 20px rgba(0, 0, 0, 0.45), 0 0 25px rgba(34, 197, 94, 0.55)',
             maxWidth: '100%',
             wordBreak: 'break-word',
-            padding: '0 4px'
+            padding: '0 4px',
+            display: 'inline-block',
+            transformOrigin: 'center center',
+            animation: 'shopNameZoomInFocus 0.65s cubic-bezier(0.175, 0.885, 0.32, 1.275) 0.18s backwards, shopNameGlowPulse 2.4s ease-in-out 0.85s infinite'
           }}
         >
           {name}
