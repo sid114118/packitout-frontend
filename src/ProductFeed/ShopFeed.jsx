@@ -12,6 +12,7 @@ import { applyBrandPriority } from '../utils/rankingSort.js';
 import { userFetch } from '../utils/api.js';
 import { useBaskets } from '../utils/useBaskets.js';
 import { cdnImage } from '../utils/cloudinaryUrl.js';
+import { triggerShopWelcome } from '../utils/shopWelcome.js';
 
 // 🌟 IMPORT OUR NEW BRAIN!
 import useShopFeedData from './useShopFeedData'; 
@@ -72,8 +73,16 @@ export default function ShopFeed({
     // Handle guest shop switching instantly without hitting DB
     if (!user?._id) {
       localStorage.setItem("packitout_guest_shop_id", newShop._id);
-      toast(`Switched to ${newShop.name}!`);
-      setTimeout(() => window.location.reload(), 300); // Reload to pull new shop data
+      localStorage.setItem("packitout_guest_shop_name", newShop.name);
+      if (newShop.pincode) localStorage.setItem("packitout_guest_pincode", newShop.pincode);
+      window.dispatchEvent(new CustomEvent('PACKITOUT_SHOP_CHANGED', {
+        detail: { shopId: newShop._id, pincode: newShop.pincode, shopName: newShop.name }
+      }));
+      triggerShopWelcome({
+        name: newShop.name,
+        pincode: newShop.pincode,
+        isOpen: newShop.isOpen
+      });
       return;
     }
 
@@ -82,7 +91,11 @@ export default function ShopFeed({
       if(res.ok) {
         const updated = await res.json();
         if (onUserUpdate) onUserUpdate(updated, { clearCart: true });
-        toast(`Switched to ${newShop.name}!`);
+        triggerShopWelcome({
+          name: newShop.name,
+          pincode: newShop.pincode,
+          isOpen: newShop.isOpen
+        });
       }
     } catch (err) { toast("Failed to switch shop.", 'error'); }
   };

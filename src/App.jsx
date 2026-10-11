@@ -28,6 +28,8 @@ const ShopDetail = lazy(() => import('./ShopDetail.jsx'));
 const ManageBaskets = lazy(() => import('./ManageBaskets.jsx'));
 const SharedBasketView = lazy(() => import('./SharedBasketView.jsx'));
 import BasketDrawer from './components/BasketDrawer.jsx';
+import ShopWelcomeModal from './components/ui/ShopWelcomeModal.jsx';
+import { triggerShopWelcome } from './utils/shopWelcome.js';
 
 const BASE_URL = (import.meta.env.VITE_API_BASE || "https://darkslategrey-snail-415133.hostingersite.com");
 
@@ -137,6 +139,16 @@ export default function App() {
     } catch { return null; }
   });
 
+  const [guestShopRevision, setGuestShopRevision] = useState(0);
+
+  useEffect(() => {
+    const handleShopChanged = () => {
+      setGuestShopRevision(r => r + 1);
+    };
+    window.addEventListener('PACKITOUT_SHOP_CHANGED', handleShopChanged);
+    return () => window.removeEventListener('PACKITOUT_SHOP_CHANGED', handleShopChanged);
+  }, []);
+
   const effectiveFeedUser = React.useMemo(() => {
     if (loggedInUser) return loggedInUser;
     try {
@@ -147,7 +159,7 @@ export default function App() {
       }
     } catch (e) {}
     return null;
-  }, [loggedInUser]);
+  }, [loggedInUser, guestShopRevision]);
 
   const { baskets } = useBaskets();
 
@@ -559,12 +571,22 @@ export default function App() {
   };
 
   const handleSetPrimaryShop = async (shopId) => {
+    const shopName = viewingShop?.name || "Your Store";
+    const shopPin = viewingShop?.pincode || "";
+    const shopOpen = viewingShop?.isOpen;
+
     if (!loggedInUser) {
       localStorage.setItem("packitout_guest_shop_id", shopId);
-      if (viewingShop?.name) {
-        localStorage.setItem("packitout_guest_shop_name", viewingShop.name);
+      if (shopName) {
+        localStorage.setItem("packitout_guest_shop_name", shopName);
       }
-      toast("Shop selected! Let's start shopping.", 'success');
+      if (shopPin) {
+        localStorage.setItem("packitout_guest_pincode", shopPin);
+      }
+      setGuestShopRevision(r => r + 1);
+      window.dispatchEvent(new CustomEvent('PACKITOUT_SHOP_CHANGED', { detail: { shopId, pincode: shopPin, shopName } }));
+      triggerShopWelcome({ name: shopName, pincode: shopPin, isOpen: shopOpen });
+      setViewingShop(null);
       window.location.hash = "";
       return;
     }
@@ -580,7 +602,13 @@ export default function App() {
         const next = { ...updatedUser, sessionToken: loggedInUser.sessionToken };
         setLoggedInUser(next);
         try { localStorage.setItem("packitout_user", JSON.stringify(next)); } catch (e) {}
+        triggerShopWelcome({
+          name: shopName || next.primaryShop?.name,
+          pincode: shopPin || next.pincode,
+          isOpen: shopOpen ?? next.primaryShop?.isOpen
+        });
         toast("Primary shop updated");
+        setViewingShop(null);
         window.location.hash = "";
       } else {
         toast("Failed to update shop.", 'error');
@@ -794,6 +822,7 @@ export default function App() {
       {showBottomNav && <BottomNav currentView={currentView} cartCount={navCartCount} />}
       <InstallAppBanner show={showInstallBanner} />
       <BasketDrawer />
+      <ShopWelcomeModal />
     </CrashCatcher>
   );
                }

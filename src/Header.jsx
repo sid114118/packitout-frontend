@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useToast } from './ui/DialogProvider.jsx';
 import { userFetch, BASE_URL } from './utils/api.js';
+import { triggerShopWelcome } from './utils/shopWelcome.js';
 
 export default function Header({ user, onUserUpdate }) {
   const toast = useToast();
@@ -39,10 +40,21 @@ export default function Header({ user, onUserUpdate }) {
     if (!user) {
       localStorage.setItem("packitout_guest_shop_id", selectedShopId);
       localStorage.setItem("packitout_guest_pincode", pincode);
-      const shopName = shops.find(s => s._id === selectedShopId)?.name || "Guest Shop";
+      const chosenShop = shops.find(s => s._id === selectedShopId);
+      const shopName = chosenShop?.name || "Guest Shop";
       localStorage.setItem("packitout_guest_shop_name", shopName);
-      toast("Shop selected! Let's start shopping.", 'success');
-      window.location.reload(); // Reload to let App.jsx pick up the new guest shop
+      setActiveShopName(shopName);
+      setIsChanging(false);
+      setShops([]);
+      setHasSearched(false);
+      window.dispatchEvent(new CustomEvent('PACKITOUT_SHOP_CHANGED', {
+        detail: { shopId: selectedShopId, pincode, shopName }
+      }));
+      triggerShopWelcome({
+        name: shopName,
+        pincode: pincode,
+        isOpen: chosenShop?.isOpen
+      });
       return;
     }
 
@@ -63,10 +75,17 @@ export default function Header({ user, onUserUpdate }) {
       // would desync React state, so we no-op in that case.
       if (onUserUpdate) onUserUpdate(next, { clearCart: true });
 
-      setActiveShopName(next.primaryShop?.name || "");
+      const chosenShop = shops.find(s => s._id === selectedShopId);
+      const shopName = next.primaryShop?.name || chosenShop?.name || "Your Store";
+      setActiveShopName(shopName);
       setIsChanging(false);
       setShops([]);
       setHasSearched(false);
+      triggerShopWelcome({
+        name: shopName,
+        pincode: pincode,
+        isOpen: next.primaryShop?.isOpen ?? chosenShop?.isOpen
+      });
       toast("Primary shop updated");
     } catch (err) {
       console.log("Error saving shop", err);
@@ -110,6 +129,18 @@ export default function Header({ user, onUserUpdate }) {
         })
         .catch(console.error);
     }
+  }, [user]);
+
+  useEffect(() => {
+    const handleShopChanged = (e) => {
+      if (e.detail?.shopName) {
+        setActiveShopName(e.detail.shopName);
+      } else if (!user) {
+        setActiveShopName(localStorage.getItem("packitout_guest_shop_name") || "");
+      }
+    };
+    window.addEventListener('PACKITOUT_SHOP_CHANGED', handleShopChanged);
+    return () => window.removeEventListener('PACKITOUT_SHOP_CHANGED', handleShopChanged);
   }, [user]);
 
   const activePincode = user?.pincode || localStorage.getItem("packitout_guest_pincode");
