@@ -274,17 +274,6 @@ export const ModernProductCard = memo(ModernProductCardBase, areCardsEqual);
 export function ProductRow({ title, subtitle, items, onViewAll, shopClosed, onOpenDetails, onQuickAdd, cart = [], onRemoveFromCart, hideBrandPrefix = false }) {
   if (!items || items.length === 0) return null;
 
-  const flattenedItems = items.flatMap(item => {
-    if (item.variants && item.variants.length > 0) {
-      return item.variants.map(variant => ({
-        ...item,      
-        ...variant,   
-        variants: item.variants 
-      }));
-    }
-    return item;
-  });
-
   return (
     <div style={{ marginBottom: '16px', paddingTop: '15px', fontFamily: 'system-ui, -apple-system, sans-serif' }}>
       
@@ -299,12 +288,12 @@ export function ProductRow({ title, subtitle, items, onViewAll, shopClosed, onOp
           {subtitle && <p style={{ fontSize: '0.8rem', margin: '4px 0 0 0', color: '#64748b', fontWeight: '500' }}>{subtitle}</p>}
         </div>
         {onViewAll && (
-          <button onClick={() => onViewAll({ title, items: flattenedItems })} style={{ background: 'none', color: '#ef4444', border: 'none', fontSize: '0.9rem', fontWeight: '700', cursor: 'pointer', padding: 0 }}>See All ›</button>
+          <button onClick={() => onViewAll({ title, items })} style={{ background: 'none', color: '#ef4444', border: 'none', fontSize: '0.9rem', fontWeight: '700', cursor: 'pointer', padding: 0 }}>See All ›</button>
         )}
       </div>
       
       <div className="premium-hide-scroll" style={{ display: 'flex', overflowX: 'auto', gap: '16px', padding: '0 16px 10px 16px', scrollSnapType: 'x mandatory' }}>
-        {flattenedItems.map((item, index) => (
+        {items.map((item, index) => (
           <ImpressionTracker key={`${item._id}-${index}`} product={item} listPosition={index} category={title}>
             <ModernProductCard
               item={item}
@@ -321,10 +310,10 @@ export function ProductRow({ title, subtitle, items, onViewAll, shopClosed, onOp
       </div>
     </div>
   );
-  }
+}
 
 export function HeartButton({ item }) {
-  const { isFavourite, toggleFavourite } = useBaskets();
+  const { isFavourite } = useBaskets();
   const fav = isFavourite(item._id);
 
   return (
@@ -338,6 +327,182 @@ export function HeartButton({ item }) {
     >
       <svg width="14" height="14" viewBox="0 0 24 24" fill={fav ? "#ef4444" : "none"} stroke={fav ? "#ef4444" : "#64748b"} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg>
     </button>
+  );
+}
+
+// 🎁 4. COMBO DETAIL MODAL (Opens when clicking any Special Combo Pack)
+export function ComboDetailModal({ combo, items = [], onClose, onAddToCart }) {
+  if (!combo) return null;
+
+  const rawPids = Array.isArray(combo.productIds) ? combo.productIds : [];
+  const comboItems = rawPids.map(p => {
+    const pidStr = (typeof p === 'object' && p?._id) ? String(p._id) : String(p);
+    const matched = items.find(i => String(i._id) === pidStr || i.variants?.some(v => String(v._id) === pidStr));
+    if (matched) return matched;
+    if (typeof p === 'object' && p?._id) return p;
+    return null;
+  }).filter(Boolean);
+
+  const regularTotal = comboItems.reduce((sum, item) => sum + Number(item.sellingPrice || item.mrp || 0), 0);
+  const effectivePrice = combo.comboPrice > 0 ? combo.comboPrice : regularTotal;
+  const savings = (combo.comboPrice > 0 && regularTotal > combo.comboPrice) ? (regularTotal - combo.comboPrice) : 0;
+  const discountPercent = regularTotal > 0 && savings > 0 ? Math.round((savings / regularTotal) * 100) : 0;
+
+  return createPortal(
+    <>
+      <div 
+        onClick={onClose} 
+        style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 9999998, backdropFilter: 'blur(4px)' }} 
+      />
+
+      <div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 9999999, display: 'flex', flexDirection: 'column', fontFamily: 'system-ui, -apple-system, sans-serif', animation: 'sheetSlideUp 0.3s cubic-bezier(0.25, 1, 0.5, 1)' }}>
+        
+        <style>{`
+          @keyframes sheetSlideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+        `}</style>
+
+        <div style={{ backgroundColor: '#fff', width: '100%', borderTopLeftRadius: '24px', borderTopRightRadius: '24px', padding: '0 0 24px 0', maxHeight: '88vh', display: 'flex', flexDirection: 'column', boxShadow: '0 -4px 25px rgba(0,0,0,0.15)' }}>
+          
+          {/* DRAG HANDLE */}
+          <div style={{ width: '100%', display: 'flex', justifyContent: 'center', paddingTop: '12px', paddingBottom: '6px' }}>
+            <div style={{ width: '40px', height: '5px', backgroundColor: '#e2e8f0', borderRadius: '10px' }} />
+          </div>
+
+          {/* HEADER */}
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', padding: '10px 20px 14px', borderBottom: '1px solid #f1f5f9' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <span style={{ fontSize: '2.2rem', lineHeight: 1 }}>{combo.emoji || '🎁'}</span>
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <h3 style={{ margin: 0, fontSize: '1.2rem', color: '#0f172a', fontWeight: '800', lineHeight: 1.2 }}>
+                    {combo.name}
+                  </h3>
+                  {savings > 0 && (
+                    <span style={{ backgroundColor: '#10b981', color: '#fff', fontSize: '0.7rem', fontWeight: '800', padding: '2px 8px', borderRadius: '6px' }}>
+                      {discountPercent}% OFF
+                    </span>
+                  )}
+                </div>
+                <span style={{ fontSize: '0.82rem', color: '#64748b', marginTop: '2px', display: 'block' }}>
+                  Special Combo Bundle • {comboItems.length} Products Included
+                </span>
+              </div>
+            </div>
+            <button 
+              onClick={onClose} 
+              style={{ backgroundColor: '#f8fafc', color: '#64748b', border: 'none', borderRadius: '50%', width: '34px', height: '34px', fontSize: '1.2rem', fontWeight: 'bold', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}
+            >
+              ✕
+            </button>
+          </div>
+
+          {/* INCLUDED PRODUCTS LIST */}
+          <div className="premium-hide-scroll" style={{ overflowY: 'auto', padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: '10px', flex: 1 }}>
+            <div style={{ fontSize: '0.82rem', fontWeight: '800', color: '#475569', marginBottom: '2px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+              Included in this combo:
+            </div>
+
+            {comboItems.map((item, idx) => {
+              const price = item.sellingPrice || item.mrp || 0;
+              return (
+                <div 
+                  key={idx} 
+                  style={{ 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    justifyContent: 'space-between', 
+                    padding: '10px 14px', 
+                    borderRadius: '14px', 
+                    backgroundColor: '#f8fafc', 
+                    border: '1px solid #f1f5f9' 
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px', minWidth: 0 }}>
+                    <div style={{ width: '48px', height: '48px', borderRadius: '10px', backgroundColor: '#fff', border: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', flexShrink: 0 }}>
+                      {item.image ? (
+                        <img src={cdnImage(item.image, 120)} alt="" style={{ maxWidth: '38px', maxHeight: '38px', objectFit: 'contain' }} />
+                      ) : (
+                        <span style={{ fontSize: '22px' }}>{item.emoji || '📦'}</span>
+                      )}
+                    </div>
+                    <div style={{ minWidth: 0 }}>
+                      <div style={{ fontSize: '0.9rem', fontWeight: '700', color: '#0f172a', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                        {item.name}
+                      </div>
+                      <div style={{ fontSize: '0.78rem', color: '#64748b' }}>
+                        {item.qnty || '1 unit'} {item.brand ? `• ${item.brand}` : ''}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div style={{ textAlign: 'right', flexShrink: 0, marginLeft: '10px' }}>
+                    <div style={{ fontWeight: '800', color: '#0f172a', fontSize: '0.95rem' }}>
+                      ₹{price}
+                    </div>
+                    {item.mrp && item.mrp > price && (
+                      <div style={{ fontSize: '0.75rem', color: '#94a3b8', textDecoration: 'line-through' }}>
+                        ₹{item.mrp}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+
+            {/* VALUE / SAVINGS BREAKDOWN */}
+            <div style={{ backgroundColor: '#fffbeb', border: '1px solid #fde68a', borderRadius: '14px', padding: '14px 16px', marginTop: '6px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+                <span style={{ fontSize: '0.85rem', color: '#78350f', fontWeight: '600' }}>Total items MRP/Value:</span>
+                <span style={{ fontSize: '0.9rem', color: '#78350f', fontWeight: '700', textDecoration: savings > 0 ? 'line-through' : 'none' }}>₹{regularTotal}</span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: savings > 0 ? '4px' : '0' }}>
+                <span style={{ fontSize: '0.95rem', color: '#92400e', fontWeight: '800' }}>Special Combo Offer:</span>
+                <span style={{ fontSize: '1.25rem', color: '#16a34a', fontWeight: '900' }}>₹{effectivePrice}</span>
+              </div>
+              {savings > 0 && (
+                <div style={{ fontSize: '0.82rem', color: '#047857', fontWeight: '800', borderTop: '1px dashed #fcd34d', paddingTop: '6px', marginTop: '4px' }}>
+                  🎉 You save ₹{savings} with this combo deal!
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* FOOTER ACTION BUTTON */}
+          <div style={{ padding: '12px 20px 0', borderTop: '1px solid #f1f5f9' }}>
+            <button 
+              onClick={() => {
+                comboItems.forEach(item => {
+                  const toAdd = (item.variants && item.variants.length > 0) ? item.variants[0] : item;
+                  onAddToCart(toAdd);
+                });
+                onClose();
+              }}
+              style={{ 
+                width: '100%', 
+                padding: '14px', 
+                background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)', 
+                color: '#fff', 
+                border: 'none', 
+                borderRadius: '14px', 
+                fontWeight: '800', 
+                fontSize: '1rem', 
+                cursor: 'pointer', 
+                boxShadow: '0 4px 15px rgba(245, 158, 11, 0.35)',
+                display: 'flex',
+                justifyContent: 'center',
+                alignItems: 'center',
+                gap: '8px'
+              }}
+            >
+              <span>Add Complete Box To Cart (₹{effectivePrice})</span>
+              <span>🛒</span>
+            </button>
+          </div>
+
+        </div>
+      </div>
+    </>,
+    document.body
   );
 }
                   

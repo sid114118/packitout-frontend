@@ -11,6 +11,7 @@ export default function CombosTab({ shopData, masterCatalog, onComboRefresh }) {
   const [selectedItems, setSelectedItems] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [editingComboId, setEditingComboId] = useState(null);
 
   // Helper to extract a normalized ID string
   const getItemId = (item) => {
@@ -84,7 +85,45 @@ export default function CombosTab({ shopData, masterCatalog, onComboRefresh }) {
     ? Math.round((comboSavings / totalRegularPrice) * 100) 
     : 0;
 
-  const handleCreateCombo = async (e) => {
+  const handleCancelEdit = () => {
+    setEditingComboId(null);
+    setName('');
+    setEmoji('🎁');
+    setComboPrice('');
+    setSelectedItems([]);
+    setSearchTerm('');
+  };
+
+  const handleStartEdit = (combo) => {
+    setEditingComboId(combo._id);
+    setName(combo.name || '');
+    setEmoji(combo.emoji || '🎁');
+    setComboPrice(combo.comboPrice > 0 ? String(combo.comboPrice) : '');
+
+    // Resolve combo productIds into selected items
+    const comboPids = Array.isArray(combo.productIds) ? combo.productIds : [];
+    const initialSelected = [];
+    for (const p of comboPids) {
+      const pidStr = (typeof p === 'object' && p?._id) ? String(p._id) : String(p);
+      const found = availableInventory.find(inv => getItemId(inv) === pidStr);
+      if (found) {
+        initialSelected.push(found);
+      } else if (typeof p === 'object' && p?._id) {
+        initialSelected.push({
+          product: p,
+          sellingPrice: p.sellingPrice || p.mrp || 0,
+          inStock: true
+        });
+      }
+    }
+    setSelectedItems(initialSelected);
+    setSearchTerm('');
+
+    // Smooth scroll to top form
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const handleCreateOrUpdateCombo = async (e) => {
     e.preventDefault();
     if (selectedItems.length < 2) {
       return toast('Select at least 2 products to make a combo offer!', 'warn');
@@ -107,21 +146,22 @@ export default function CombosTab({ shopData, masterCatalog, onComboRefresh }) {
         comboPrice: comboPrice ? Number(comboPrice) : 0
       };
 
-      const response = await shopFetch(shopData, `/shops/${shopData._id}/combos`, {
-        method: 'POST',
+      const url = editingComboId 
+        ? `/shops/${shopData._id}/combos/${editingComboId}`
+        : `/shops/${shopData._id}/combos`;
+      const method = editingComboId ? 'PUT' : 'POST';
+
+      const response = await shopFetch(shopData, url, {
+        method,
         body: JSON.stringify(payload)
       });
       const data = await response.json();
       if (response.ok) {
-        toast('Combo offer launched! 🎉');
-        setName('');
-        setEmoji('🎁');
-        setComboPrice('');
-        setSelectedItems([]);
-        setSearchTerm('');
+        toast(editingComboId ? 'Combo updated successfully! 🎉' : 'Combo offer launched! 🎉');
+        handleCancelEdit();
         if (onComboRefresh) await onComboRefresh();
       } else {
-        toast(data.error || 'Failed to create combo', 'error');
+        toast(data.error || 'Failed to save combo', 'error');
       }
     } catch (err) {
       console.error(err);
@@ -139,6 +179,7 @@ export default function CombosTab({ shopData, masterCatalog, onComboRefresh }) {
       });
       if (response.ok) {
         toast('Combo deleted ✅');
+        if (editingComboId === comboId) handleCancelEdit();
         if (onComboRefresh) await onComboRefresh();
       } else {
         const data = await response.json().catch(() => ({}));
@@ -169,14 +210,37 @@ export default function CombosTab({ shopData, masterCatalog, onComboRefresh }) {
         </div>
       </div>
 
-      {/* CREATE NEW COMBO FORM */}
-      <div style={{ backgroundColor: '#ffffff', border: '1.5px solid #fde68a', borderRadius: '18px', padding: '20px', marginBottom: '30px', boxShadow: '0 4px 15px rgba(245, 158, 11, 0.08)' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '14px' }}>
-          <span style={{ fontSize: '1.4rem' }}>✨</span>
-          <h4 style={{ margin: 0, color: '#b45309', fontSize: '1.1rem', fontWeight: '800' }}>Create New Combo Pack</h4>
-        </div>
+      {/* CREATE / EDIT COMBO FORM */}
+      <div style={{ backgroundColor: '#ffffff', border: editingComboId ? '2px solid #f59e0b' : '1.5px solid #fde68a', borderRadius: '18px', padding: '20px', marginBottom: '30px', boxShadow: editingComboId ? '0 6px 20px rgba(245, 158, 11, 0.18)' : '0 4px 15px rgba(245, 158, 11, 0.08)' }}>
+        {editingComboId ? (
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px', backgroundColor: '#fef3c7', padding: '12px 16px', borderRadius: '12px', border: '1.5px solid #fcd34d' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <span style={{ fontSize: '1.5rem' }}>✏️</span>
+              <div>
+                <h4 style={{ margin: 0, color: '#92400e', fontSize: '1.05rem', fontWeight: '800' }}>
+                  Editing Combo: {name || 'Untitled'}
+                </h4>
+                <span style={{ fontSize: '0.78rem', color: '#b45309' }}>
+                  Modify products, adjust bundle price, or rename this combo pack
+                </span>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={handleCancelEdit}
+              style={{ backgroundColor: '#fff', border: '1px solid #d97706', color: '#b45309', padding: '6px 14px', borderRadius: '8px', fontSize: '0.85rem', fontWeight: '800', cursor: 'pointer', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}
+            >
+              Cancel Edit ✕
+            </button>
+          </div>
+        ) : (
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '14px' }}>
+            <span style={{ fontSize: '1.4rem' }}>✨</span>
+            <h4 style={{ margin: 0, color: '#b45309', fontSize: '1.1rem', fontWeight: '800' }}>Create New Combo Pack</h4>
+          </div>
+        )}
 
-        <form onSubmit={handleCreateCombo} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+        <form onSubmit={handleCreateOrUpdateCombo} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
           
           {/* EMOJI & NAME INPUT */}
           <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
@@ -442,18 +506,28 @@ export default function CombosTab({ shopData, masterCatalog, onComboRefresh }) {
             disabled={isSubmitting || selectedItems.length < 2}
             style={{ 
               padding: '14px', 
-              background: (isSubmitting || selectedItems.length < 2) ? '#94a3b8' : 'linear-gradient(135deg, #d97706 0%, #b45309 100%)', 
+              background: (isSubmitting || selectedItems.length < 2) 
+                ? '#94a3b8' 
+                : (editingComboId 
+                    ? 'linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%)' 
+                    : 'linear-gradient(135deg, #d97706 0%, #b45309 100%)'), 
               color: '#fff', 
               border: 'none', 
               borderRadius: '12px', 
               fontWeight: '800', 
               fontSize: '1rem',
               cursor: (isSubmitting || selectedItems.length < 2) ? 'not-allowed' : 'pointer',
-              boxShadow: (selectedItems.length >= 2) ? '0 4px 14px rgba(217, 119, 6, 0.35)' : 'none',
+              boxShadow: (selectedItems.length >= 2) 
+                ? (editingComboId ? '0 4px 14px rgba(37, 99, 235, 0.35)' : '0 4px 14px rgba(217, 119, 6, 0.35)') 
+                : 'none',
               transition: 'all 0.2s'
             }}
           >
-            {isSubmitting ? 'Creating Combo...' : `🚀 Launch Combo (${selectedItems.length} Products for ₹${effectiveComboPrice})`}
+            {isSubmitting 
+              ? (editingComboId ? 'Saving Changes...' : 'Creating Combo...') 
+              : (editingComboId 
+                  ? `💾 Save Changes (${selectedItems.length} Products for ₹${effectiveComboPrice})` 
+                  : `🚀 Launch Combo (${selectedItems.length} Products for ₹${effectiveComboPrice})`)}
           </button>
         </form>
       </div>
@@ -472,6 +546,7 @@ export default function CombosTab({ shopData, masterCatalog, onComboRefresh }) {
         {currentCombos.map(combo => {
           const comboProducts = Array.isArray(combo.productIds) ? combo.productIds : [];
           const hasDiscount = combo.comboPrice > 0;
+          const isCurrentlyEditing = editingComboId === combo._id;
 
           return (
             <div 
@@ -481,11 +556,12 @@ export default function CombosTab({ shopData, masterCatalog, onComboRefresh }) {
                 flexDirection: 'column', 
                 justifyContent: 'space-between', 
                 padding: '16px', 
-                backgroundColor: '#ffffff', 
-                border: '1.5px solid #fef08a', 
+                backgroundColor: isCurrentlyEditing ? '#fffbeb' : '#ffffff', 
+                border: isCurrentlyEditing ? '2px solid #f59e0b' : '1.5px solid #fef08a', 
                 borderRadius: '16px', 
-                boxShadow: '0 4px 12px rgba(0,0,0,0.03)',
-                position: 'relative'
+                boxShadow: isCurrentlyEditing ? '0 6px 18px rgba(245, 158, 11, 0.2)' : '0 4px 12px rgba(0,0,0,0.03)',
+                position: 'relative',
+                transition: 'all 0.2s'
               }}
             >
               <div>
@@ -503,11 +579,18 @@ export default function CombosTab({ shopData, masterCatalog, onComboRefresh }) {
                     </div>
                   </div>
 
-                  {hasDiscount && (
-                    <span style={{ backgroundColor: '#fef08a', color: '#854d0e', fontSize: '0.7rem', fontWeight: '800', padding: '2px 8px', borderRadius: '10px' }}>
-                      SPECIAL OFFER
-                    </span>
-                  )}
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '4px' }}>
+                    {isCurrentlyEditing && (
+                      <span style={{ backgroundColor: '#f59e0b', color: '#fff', fontSize: '0.68rem', fontWeight: '800', padding: '2px 8px', borderRadius: '10px' }}>
+                        EDITING NOW
+                      </span>
+                    )}
+                    {hasDiscount && (
+                      <span style={{ backgroundColor: '#fef08a', color: '#854d0e', fontSize: '0.7rem', fontWeight: '800', padding: '2px 8px', borderRadius: '10px' }}>
+                        SPECIAL OFFER
+                      </span>
+                    )}
+                  </div>
                 </div>
 
                 {/* INCLUDED PRODUCTS THUMBNAILS */}
@@ -520,7 +603,7 @@ export default function CombosTab({ shopData, masterCatalog, onComboRefresh }) {
                     return (
                       <div 
                         key={idx} 
-                        title={prodName}
+                        title={prodName} 
                         style={{ 
                           width: '42px', 
                           height: '42px', 
@@ -545,7 +628,7 @@ export default function CombosTab({ shopData, masterCatalog, onComboRefresh }) {
                 </div>
               </div>
 
-              {/* FOOTER: PRICE & DELETE */}
+              {/* FOOTER: PRICE, EDIT & DELETE */}
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '12px' }}>
                 <div>
                   <span style={{ fontSize: '0.7rem', color: '#64748b', display: 'block' }}>Bundle Price</span>
@@ -554,21 +637,42 @@ export default function CombosTab({ shopData, masterCatalog, onComboRefresh }) {
                   </span>
                 </div>
 
-                <button 
-                  onClick={() => handleDeleteCombo(combo._id)}
-                  style={{ 
-                    backgroundColor: '#fee2e2', 
-                    color: '#dc2626', 
-                    border: 'none', 
-                    padding: '6px 12px', 
-                    borderRadius: '8px', 
-                    fontWeight: '700', 
-                    fontSize: '0.8rem',
-                    cursor: 'pointer' 
-                  }}
-                >
-                  Delete
-                </button>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <button 
+                    onClick={() => handleStartEdit(combo)}
+                    style={{ 
+                      backgroundColor: isCurrentlyEditing ? '#2563eb' : '#eff6ff', 
+                      color: isCurrentlyEditing ? '#fff' : '#2563eb', 
+                      border: '1px solid #bfdbfe', 
+                      padding: '6px 12px', 
+                      borderRadius: '8px', 
+                      fontWeight: '700', 
+                      fontSize: '0.8rem',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '4px'
+                    }}
+                  >
+                    ✏️ Edit
+                  </button>
+
+                  <button 
+                    onClick={() => handleDeleteCombo(combo._id)}
+                    style={{ 
+                      backgroundColor: '#fee2e2', 
+                      color: '#dc2626', 
+                      border: 'none', 
+                      padding: '6px 12px', 
+                      borderRadius: '8px', 
+                      fontWeight: '700', 
+                      fontSize: '0.8rem',
+                      cursor: 'pointer' 
+                    }}
+                  >
+                    Delete
+                  </button>
+                </div>
               </div>
             </div>
           );

@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import ProductModal from './ProductModal.jsx';
 import ProductListView from './ProductListView.jsx';
 import SearchPage from '../SearchPage.jsx';
-import { VariantBottomSheet, ModernProductCard, ProductRow } from './FeedComponents.jsx';
+import { VariantBottomSheet, ModernProductCard, ProductRow, ComboDetailModal } from './FeedComponents.jsx';
 import ShopCarousel from './ShopCarousel.jsx';
 import { useToast, useConfirm } from '../ui/DialogProvider.jsx';
 import HomeFooter from '../components/HomeFooter.jsx';
@@ -53,6 +53,7 @@ export default function ShopFeed({
   
   const [selectedProductDetails, setSelectedProductDetails] = useState(null); 
   const [selectedVariantProduct, setSelectedVariantProduct] = useState(null);
+  const [selectedComboDetail, setSelectedComboDetail] = useState(null);
   const [viewAll, setViewAll] = useState(null); 
   const [selectedCampaign, setSelectedCampaign] = useState(null);
 
@@ -182,6 +183,7 @@ export default function ShopFeed({
                   return (
                     <div 
                       key={combo._id} 
+                      onClick={() => setSelectedComboDetail(combo)}
                       style={{ 
                         minWidth: '250px', 
                         maxWidth: '280px', 
@@ -193,7 +195,9 @@ export default function ShopFeed({
                         display: 'flex', 
                         flexDirection: 'column', 
                         justifyContent: 'space-between', 
-                        boxShadow: '0 4px 15px rgba(245, 158, 11, 0.08)' 
+                        boxShadow: '0 4px 15px rgba(245, 158, 11, 0.08)',
+                        cursor: 'pointer',
+                        transition: 'transform 0.15s ease, box-shadow 0.15s ease'
                       }}
                     >
                       <div>
@@ -209,7 +213,7 @@ export default function ShopFeed({
                           )}
                         </div>
 
-                        <div style={{ display: 'flex', gap: '6px', overflowX: 'auto', padding: '8px 0 14px' }} className="hide-scroll">
+                        <div style={{ display: 'flex', gap: '6px', overflowX: 'auto', padding: '8px 0 6px' }} className="hide-scroll">
                           {comboItems.map((ci, idx) => (
                             <div 
                               key={idx} 
@@ -235,6 +239,11 @@ export default function ShopFeed({
                             </div>
                           ))}
                         </div>
+
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.75rem', color: '#d97706', fontWeight: '700', marginBottom: '10px' }}>
+                          <span>Tap to see all items</span>
+                          <span>›</span>
+                        </div>
                       </div>
 
                       <div>
@@ -253,7 +262,8 @@ export default function ShopFeed({
                         </div>
 
                         <button 
-                          onClick={() => {
+                          onClick={(e) => {
+                            e.stopPropagation();
                             comboItems.forEach(item => {
                               const toAdd = (item.variants && item.variants.length > 0) ? item.variants[0] : item;
                               onAddToCart(toAdd);
@@ -302,6 +312,7 @@ export default function ShopFeed({
 
       <VariantBottomSheet product={selectedVariantProduct} onClose={() => setSelectedVariantProduct(null)} onAddToCart={onAddToCart} onRemoveFromCart={onRemoveFromCart} cart={cart} />
       <ProductModal product={selectedProductDetails} isOpen={selectedProductDetails !== null} onClose={() => setSelectedProductDetails(null)} onAddToCart={onAddToCart} onRemoveFromCart={onRemoveFromCart} onViewCart={onViewCart} cart={cart} allItems={items} onViewBrand={(brand) => { if (onClearCategory) onClearCategory(); setViewAll(null); if (onBrandSelect) onBrandSelect(brand); }} />
+      <ComboDetailModal combo={selectedComboDetail} items={items} onClose={() => setSelectedComboDetail(null)} onAddToCart={(item) => { onAddToCart(item); toast('Combo box added to cart! 🎁'); }} />
     </div>
   );
 }
