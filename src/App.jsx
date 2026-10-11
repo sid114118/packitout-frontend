@@ -127,6 +127,7 @@ export default function App() {
   const [selectedBrand, setSelectedBrand] = useState(null); 
 
   const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const [autoStartVoiceSearch, setAutoStartVoiceSearch] = useState(false);
   const [isHeaderVisible, setIsHeaderVisible] = useState(true);
   // ref instead of state so the scroll listener doesn't re-bind every event
   // (which used to remove + add the listener tens of times per second).
@@ -701,18 +702,53 @@ export default function App() {
           <Header user={loggedInUser} onUserUpdate={handleUserUpdate} />
           <div style={{ padding: '10px 15px', backgroundColor: '#f3f4f6' }}>
             <div
-              onClick={() => setIsSearchOpen(true)}
+              onClick={() => { setAutoStartVoiceSearch(false); setIsSearchOpen(true); }}
               role="button"
               tabIndex={0}
-              onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') setIsSearchOpen(true); }}
+              onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { setAutoStartVoiceSearch(false); setIsSearchOpen(true); } }}
               className="pio-press"
-              style={{ display: 'flex', alignItems: 'center', gap: '10px', backgroundColor: '#ffffff', borderRadius: '14px', padding: '12px 14px', border: '1px solid #e2e8f0', boxShadow: '0 1px 2px rgba(15,23,42,0.04)', cursor: 'pointer' }}
+              style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', backgroundColor: '#ffffff', borderRadius: '14px', padding: '9px 12px', border: '1px solid #e2e8f0', boxShadow: '0 1px 2px rgba(15,23,42,0.04)', cursor: 'pointer' }}
             >
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                <circle cx="11" cy="11" r="7" />
-                <line x1="21" y1="21" x2="16.65" y2="16.65" />
-              </svg>
-              <span style={{ color: '#94a3b8', fontSize: '0.95rem', fontWeight: 500 }}>Search for atta, milk, soap…</span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flex: 1, overflow: 'hidden' }}>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" style={{ flexShrink: 0 }}>
+                  <circle cx="11" cy="11" r="7" />
+                  <line x1="21" y1="21" x2="16.65" y2="16.65" />
+                </svg>
+                <span style={{ color: '#94a3b8', fontSize: '0.92rem', fontWeight: 500, whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden' }}>Search for atta, milk, soap…</span>
+              </div>
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setAutoStartVoiceSearch(true);
+                  setIsSearchOpen(true);
+                }}
+                className="pio-press"
+                aria-label="Voice search"
+                title="Search by voice"
+                style={{
+                  background: 'linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%)',
+                  border: '1px solid #bbf7d0',
+                  borderRadius: '10px',
+                  padding: '6px 10px',
+                  color: '#16a34a',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '5px',
+                  cursor: 'pointer',
+                  fontSize: '0.78rem',
+                  fontWeight: 700,
+                  flexShrink: 0,
+                  boxShadow: '0 2px 6px rgba(22, 163, 74, 0.12)'
+                }}
+              >
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.3" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                  <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z" />
+                  <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
+                  <line x1="12" x2="12" y1="19" y2="22" />
+                </svg>
+                <span>Bolie 🎙️</span>
+              </button>
             </div>
           </div>
         </div>
@@ -746,8 +782,9 @@ export default function App() {
               onBrandSelect={setSelectedBrand}
               onClearBrand={() => setSelectedBrand(null)}
               isSearchOpen={isSearchOpen} 
-              onOpenSearch={() => setIsSearchOpen(true)} 
-              onCloseSearch={() => setIsSearchOpen(false)}
+              autoStartVoiceSearch={autoStartVoiceSearch}
+              onOpenSearch={() => { setAutoStartVoiceSearch(false); setIsSearchOpen(true); }} 
+              onCloseSearch={() => { setAutoStartVoiceSearch(false); setIsSearchOpen(false); }}
             />
           </CrashCatcher>
         </main>

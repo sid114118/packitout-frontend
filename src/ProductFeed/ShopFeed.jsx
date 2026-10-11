@@ -23,7 +23,8 @@ export default function ShopFeed({
   user, onUserUpdate, onAddToCart, onRemoveFromCart, onViewCart, cart = [],
   selectedCategory, onClearCategory, onCategorySelect,
   selectedBrand, onBrandSelect, onClearBrand,
-  isSearchOpen, onOpenSearch, onCloseSearch
+  isSearchOpen, onOpenSearch, onCloseSearch,
+  autoStartVoiceSearch = false
 }) {
   const toast = useToast();
   const confirmDialog = useConfirm();
@@ -141,7 +142,16 @@ export default function ShopFeed({
     <div style={{ padding: '0', maxWidth: '1000px', margin: '0 auto', overflowX: 'hidden', backgroundColor: '#f3f4f6' }}>
       
       {isSearchOpen && (
-        <SearchPage items={items} onClose={onCloseSearch} onOpenDetails={setSelectedProductDetails} onQuickAdd={handleQuickAdd} cart={cart} onRemoveFromCart={onRemoveFromCart} onViewCart={onViewCart} />
+        <SearchPage
+          items={items}
+          onClose={onCloseSearch}
+          onOpenDetails={setSelectedProductDetails}
+          onQuickAdd={handleQuickAdd}
+          cart={cart}
+          onRemoveFromCart={onRemoveFromCart}
+          onViewCart={onViewCart}
+          autoStartVoice={autoStartVoiceSearch}
+        />
       )}
 
       {isListViewActive && !isSearchOpen && (

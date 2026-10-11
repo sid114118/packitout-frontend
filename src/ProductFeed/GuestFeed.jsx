@@ -16,7 +16,8 @@ export default function GuestFeed({
   selectedCategory, onClearCategory, onCategorySelect,
   
   // 🟢 Search Triggers from App.jsx
-  isSearchOpen, onOpenSearch, onCloseSearch 
+  isSearchOpen, onOpenSearch, onCloseSearch,
+  autoStartVoiceSearch = false
 }) {
   const { config: rankingConfig } = useRankingConfig();
   const [items, setItems] = useState([]);
@@ -167,6 +168,7 @@ export default function GuestFeed({
           cart={cart}
           onRemoveFromCart={onRemoveFromCart}
           onViewCart={onViewCart}
+          autoStartVoice={autoStartVoiceSearch}
         />
       )}
 

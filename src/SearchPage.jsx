@@ -5,6 +5,7 @@ import { ModernProductCard } from './ProductFeed/FeedComponents.jsx';
 import { useRankingConfig } from './ui/RankingProvider.jsx';
 import { applyBrandPriority } from './utils/rankingSort.js';
 import { trackEvent } from './utils/analyticsEngine.js';
+import VoiceSearchModal from './components/VoiceSearchModal.jsx';
 
 const BASE_URL = (import.meta.env.VITE_API_BASE || "https://darkslategrey-snail-415133.hostingersite.com");
 
@@ -28,12 +29,24 @@ export default function SearchPage({
   onQuickAdd,
   cart = [],
   onRemoveFromCart,
-  onViewCart
+  onViewCart,
+  autoStartVoice = false,
 }) {
   const { config: rankingConfig } = useRankingConfig();
   const [query, setQuery] = useState("");
   const [debouncedQuery, setDebouncedQuery] = useState("");
   const [recentSearches, setRecentSearches] = useState([]);
+  const [isVoiceModalOpen, setIsVoiceModalOpen] = useState(autoStartVoice);
+
+  const handleVoiceSearchResult = (cleanTerm) => {
+    if (cleanTerm && cleanTerm.trim()) {
+      const term = cleanTerm.trim();
+      setQuery(term);
+      setDebouncedQuery(term);
+      trackEvent('VOICE_SEARCH_SUCCESS', { query: term });
+      inputRef.current?.focus();
+    }
+  };
 
   // Lazy load results for long lists
   const [visibleCount, setVisibleCount] = useState(16);
@@ -281,12 +294,44 @@ export default function SearchPage({
               touchAction: 'manipulation',
             }}
           />
-          {query && (
-            <button onClick={() => { setQuery(""); setDebouncedQuery(""); inputRef.current?.focus(); }} style={{
-              background: 'none', border: 'none', fontSize: '1.2rem',
-              color: '#94a3b8', cursor: 'pointer', padding: 0,
-            }}>✖</button>
-          )}
+          {query ? (
+            <button
+              onClick={() => { setQuery(""); setDebouncedQuery(""); inputRef.current?.focus(); }}
+              aria-label="Clear search"
+              style={{
+                background: 'none', border: 'none', fontSize: '1.2rem',
+                color: '#94a3b8', cursor: 'pointer', padding: '0 4px',
+                display: 'flex', alignItems: 'center', justifyContent: 'center'
+              }}
+            >✖</button>
+          ) : null}
+
+          <button
+            onClick={() => setIsVoiceModalOpen(true)}
+            aria-label="Search with Voice"
+            title="Search with Voice"
+            className="pio-press"
+            style={{
+              background: 'linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%)',
+              border: '1px solid #bbf7d0',
+              borderRadius: '9px',
+              padding: '6px 8px',
+              color: '#16a34a',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              marginLeft: '4px',
+              flexShrink: 0,
+              boxShadow: '0 2px 5px rgba(22, 163, 74, 0.12)',
+            }}
+          >
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.3" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z" />
+              <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
+              <line x1="12" x2="12" y1="19" y2="22" />
+            </svg>
+          </button>
         </div>
 
         {/* Live type-ahead row — appears the instant the user starts typing */}
@@ -360,6 +405,51 @@ export default function SearchPage({
                 </div>
               </div>
             )}
+
+            {/* Voice Search Quick Banner */}
+            <div
+              onClick={() => setIsVoiceModalOpen(true)}
+              className="pio-press"
+              style={{
+                backgroundColor: '#ffffff',
+                border: '1.5px dashed #86efac',
+                borderRadius: '16px',
+                padding: '12px 16px',
+                marginBottom: '20px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                cursor: 'pointer',
+                background: 'linear-gradient(135deg, #f0fdf4 0%, #ffffff 100%)',
+                boxShadow: '0 2px 8px rgba(22, 163, 74, 0.06)'
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <div style={{
+                  width: '38px', height: '38px', borderRadius: '12px',
+                  backgroundColor: '#16a34a', color: '#ffffff',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  boxShadow: '0 4px 12px rgba(22, 163, 74, 0.25)'
+                }}>
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.3" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                    <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z" />
+                    <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
+                    <line x1="12" x2="12" y1="19" y2="22" />
+                  </svg>
+                </div>
+                <div>
+                  <div style={{ fontWeight: 800, color: '#0f172a', fontSize: '0.92rem' }}>
+                    बोल के सर्च करें (Voice Search)
+                  </div>
+                  <div style={{ fontSize: '0.78rem', color: '#16a34a', fontWeight: 600 }}>
+                    Speak naturally in Hindi or English
+                  </div>
+                </div>
+              </div>
+              <span style={{ fontSize: '0.82rem', fontWeight: 700, color: '#15803d', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                Try now ›
+              </span>
+            </div>
 
             {/* Popular categories */}
             <div style={{ padding: '5px' }}>
@@ -515,6 +605,13 @@ export default function SearchPage({
           <div style={{ fontWeight: 800, fontSize: '0.95rem', display: 'flex', alignItems: 'center', gap: '4px' }}>View Cart ▶</div>
         </div>
       )}
+
+      {/* 🎙️ SMART VOICE SEARCH MODAL */}
+      <VoiceSearchModal
+        isOpen={isVoiceModalOpen}
+        onClose={() => setIsVoiceModalOpen(false)}
+        onSearch={handleVoiceSearchResult}
+      />
     </div>,
     document.body
   );
