@@ -11,7 +11,7 @@ const TOP_PICKS = [
   { icon: '💊', label: 'Health & Pharma', name: 'Health & Pharma' },
 ];
 
-export default function Categories({ onCategorySelect, searchQuery = "", onAddToCart }) {
+export default function Categories({ onCategorySelect, searchQuery = "", onAddToCart, children }) {
 
   const menuData = [
     {
@@ -132,6 +132,13 @@ export default function Categories({ onCategorySelect, searchQuery = "", onAddTo
               ))}
             </div>
             <style>{`.hide-scroll::-webkit-scrollbar { display: none; }`}</style>
+          </div>
+        )}
+
+        {/* 🌟 SLOT: BETWEEN TOP PICKS AND DAILY FRESH & STAPLES */}
+        {children && (
+          <div style={{ marginBottom: '24px' }}>
+            {children}
           </div>
         )}
 
