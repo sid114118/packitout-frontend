@@ -166,7 +166,7 @@ export default function ShopFeed({
       {!isSearchOpen && !isListViewActive && (
         <>
           {/* 🛒 CATEGORIES (With Diwali Special & Combos between Top Picks and Daily Fresh & Staples) */}
-          <Categories onCategorySelect={onCategorySelect} onAddToCart={onAddToCart}>
+          <Categories onCategorySelect={onCategorySelect} onAddToCart={onAddToCart} shopItems={items}>
             {/* 🌍 GLOBAL CAMPAIGNS */}
             {campaigns?.length > 0 && (
               <div className="hide-scroll" style={{ display: 'flex', gap: '15px', padding: '0 0 16px', overflowX: 'auto', marginInline: '-15px', paddingInline: '15px' }}>

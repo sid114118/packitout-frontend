@@ -11,7 +11,7 @@ const TOP_PICKS = [
   { icon: '💊', label: 'Health & Pharma', name: 'Health & Pharma' },
 ];
 
-export default function Categories({ onCategorySelect, searchQuery = "", onAddToCart, children }) {
+export default function Categories({ onCategorySelect, searchQuery = "", onAddToCart, shopItems = [], children }) {
 
   const menuData = [
     {
@@ -70,7 +70,7 @@ export default function Categories({ onCategorySelect, searchQuery = "", onAddTo
       <div style={{ padding: '10px 15px' }}>
         
         <div style={{ marginBottom: '25px' }}>
-          <UploadParchi onAddToCart={onAddToCart} />
+          <UploadParchi onAddToCart={onAddToCart} shopItems={shopItems} />
         </div>
 
         {/* 🔥 QUICK ACCESS — TOP CATEGORY PILLS */}
