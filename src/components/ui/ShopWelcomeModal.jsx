@@ -60,7 +60,7 @@ export default function ShopWelcomeModal() {
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        background: 'radial-gradient(circle at 50% 40%, rgba(16, 185, 129, 0.32) 0%, rgba(15, 23, 42, 0.95) 68%, #070b14 100%)',
+        background: 'radial-gradient(circle at 50% 40%, rgba(255, 71, 87, 0.42) 0%, rgba(15, 23, 42, 0.94) 70%, #080c14 100%)',
         backdropFilter: 'blur(20px)',
         WebkitBackdropFilter: 'blur(20px)',
         padding: '20px',
@@ -123,17 +123,17 @@ export default function ShopWelcomeModal() {
         }
       `}</style>
 
-      {/* 🔮 AMBIENT BACKGROUND GLOW ORBS */}
+      {/* 🔮 AMBIENT BACKGROUND GLOW ORBS (Upload Parchi Coral / Warm Rose Palette) */}
       <div
         style={{
           position: 'absolute',
-          top: '25%',
-          left: '20%',
-          width: '320px',
-          height: '320px',
+          top: '20%',
+          left: '18%',
+          width: '340px',
+          height: '340px',
           borderRadius: '50%',
-          background: 'radial-gradient(circle, rgba(16, 185, 129, 0.35) 0%, rgba(16, 185, 129, 0) 70%)',
-          filter: 'blur(45px)',
+          background: 'radial-gradient(circle, rgba(255, 107, 107, 0.45) 0%, rgba(255, 71, 87, 0) 70%)',
+          filter: 'blur(50px)',
           pointerEvents: 'none'
         }}
       />
@@ -141,12 +141,12 @@ export default function ShopWelcomeModal() {
         style={{
           position: 'absolute',
           bottom: '20%',
-          right: '20%',
-          width: '300px',
-          height: '300px',
+          right: '18%',
+          width: '320px',
+          height: '320px',
           borderRadius: '50%',
-          background: 'radial-gradient(circle, rgba(245, 158, 11, 0.22) 0%, rgba(245, 158, 11, 0) 70%)',
-          filter: 'blur(50px)',
+          background: 'radial-gradient(circle, rgba(255, 71, 87, 0.35) 0%, rgba(255, 107, 107, 0) 70%)',
+          filter: 'blur(55px)',
           pointerEvents: 'none'
         }}
       />
@@ -168,18 +168,18 @@ export default function ShopWelcomeModal() {
         </span>
       ))}
 
-      {/* 🌟 CENTER SHOWCASE CARD */}
+      {/* 🌟 CENTER SHOWCASE CARD WITH EXACT "UPLOAD PARCHI" GRADIENT */}
       <div
         onClick={(e) => e.stopPropagation()}
         style={{
           width: '100%',
           maxWidth: '460px',
-          backgroundColor: 'rgba(255, 255, 255, 0.08)',
-          border: '1.5px solid rgba(255, 255, 255, 0.22)',
+          background: 'linear-gradient(135deg, #ff6b6b 0%, #ff4757 100%)',
+          border: '1.5px solid rgba(255, 255, 255, 0.32)',
           borderRadius: '36px',
           padding: '40px 26px 30px',
           textAlign: 'center',
-          boxShadow: '0 30px 80px -15px rgba(0, 0, 0, 0.75), 0 0 50px rgba(16, 185, 129, 0.28), inset 0 1px 2px rgba(255, 255, 255, 0.3)',
+          boxShadow: '0 30px 80px -10px rgba(255, 71, 87, 0.55), 0 0 50px rgba(255, 107, 107, 0.35), inset 0 1px 2px rgba(255, 255, 255, 0.45)',
           animation: 'welcomeCardSpring 0.55s cubic-bezier(0.175, 0.885, 0.32, 1.25) forwards',
           display: 'flex',
           flexDirection: 'column',
@@ -197,8 +197,22 @@ export default function ShopWelcomeModal() {
             left: '15%',
             right: '15%',
             height: '2px',
-            background: 'linear-gradient(90deg, transparent, #34d399, transparent)',
-            boxShadow: '0 0 12px #34d399'
+            background: 'linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.9), transparent)',
+            boxShadow: '0 0 12px rgba(255, 255, 255, 0.8)'
+          }}
+        />
+
+        {/* DECORATIVE LIGHT RADIAL BUBBLE IN CARD CORNER */}
+        <div
+          style={{
+            position: 'absolute',
+            top: '-50px',
+            right: '-50px',
+            width: '180px',
+            height: '180px',
+            borderRadius: '50%',
+            background: 'radial-gradient(circle, rgba(255, 255, 255, 0.22) 0%, transparent 70%)',
+            pointerEvents: 'none'
           }}
         />
 
@@ -210,14 +224,14 @@ export default function ShopWelcomeModal() {
             width: '140px',
             height: '140px',
             borderRadius: '50%',
-            background: 'radial-gradient(circle, rgba(16, 185, 129, 0.7) 0%, rgba(5, 150, 105, 0.2) 60%, transparent 70%)',
+            background: 'radial-gradient(circle, rgba(255, 255, 255, 0.45) 0%, rgba(255, 255, 255, 0.1) 60%, transparent 70%)',
             animation: 'haloRotatePulse 4s infinite ease-in-out',
             pointerEvents: 'none',
             zIndex: 0
           }}
         />
 
-        {/* 🏬 STORE ICON EMBLEM */}
+        {/* 🏬 STORE ICON EMBLEM (White Glassmorphic circle with checkmark badge) */}
         <div
           style={{
             position: 'relative',
@@ -225,11 +239,11 @@ export default function ShopWelcomeModal() {
             width: '96px',
             height: '96px',
             borderRadius: '50%',
-            background: 'linear-gradient(135deg, #34d399 0%, #059669 60%, #047857 100%)',
+            background: 'linear-gradient(135deg, #ffffff 0%, #fff1f2 100%)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            boxShadow: '0 12px 30px rgba(16, 185, 129, 0.45), inset 0 2px 4px rgba(255,255,255,0.5)',
+            boxShadow: '0 12px 30px rgba(0, 0, 0, 0.25), inset 0 2px 4px rgba(255, 255, 255, 0.8)',
             marginBottom: '18px',
             animation: 'shopEmblemFloat 2.6s infinite ease-in-out'
           }}
@@ -243,15 +257,15 @@ export default function ShopWelcomeModal() {
               width: '30px',
               height: '30px',
               borderRadius: '50%',
-              backgroundColor: '#10b981',
-              border: '2.5px solid #ffffff',
+              backgroundColor: '#ffffff',
+              border: '2.5px solid #ff4757',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               fontSize: '0.9rem',
-              color: '#ffffff',
+              color: '#ff4757',
               fontWeight: '900',
-              boxShadow: '0 2px 8px rgba(0,0,0,0.3)'
+              boxShadow: '0 2px 8px rgba(0,0,0,0.2)'
             }}
           >
             ✓
@@ -265,9 +279,9 @@ export default function ShopWelcomeModal() {
               display: 'inline-flex',
               alignItems: 'center',
               gap: '6px',
-              backgroundColor: 'rgba(255, 255, 255, 0.12)',
-              border: '1px solid rgba(255, 255, 255, 0.24)',
-              color: '#a7f3d0',
+              backgroundColor: 'rgba(255, 255, 255, 0.22)',
+              border: '1px solid rgba(255, 255, 255, 0.38)',
+              color: '#ffffff',
               padding: '5px 16px',
               borderRadius: '24px',
               fontSize: '0.8rem',
@@ -275,7 +289,7 @@ export default function ShopWelcomeModal() {
               letterSpacing: '0.6px',
               marginBottom: '14px',
               textTransform: 'uppercase',
-              boxShadow: '0 2px 8px rgba(0,0,0,0.2)'
+              boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
             }}
           >
             <span>📍</span>
@@ -287,9 +301,9 @@ export default function ShopWelcomeModal() {
               display: 'inline-flex',
               alignItems: 'center',
               gap: '6px',
-              backgroundColor: 'rgba(255, 255, 255, 0.12)',
-              border: '1px solid rgba(255, 255, 255, 0.24)',
-              color: '#a7f3d0',
+              backgroundColor: 'rgba(255, 255, 255, 0.22)',
+              border: '1px solid rgba(255, 255, 255, 0.38)',
+              color: '#ffffff',
               padding: '5px 16px',
               borderRadius: '24px',
               fontSize: '0.8rem',
@@ -309,7 +323,7 @@ export default function ShopWelcomeModal() {
           style={{
             fontSize: '0.95rem',
             fontWeight: '800',
-            color: '#cbd5e1',
+            color: 'rgba(255, 255, 255, 0.9)',
             letterSpacing: '3.5px',
             textTransform: 'uppercase',
             marginBottom: '8px'
@@ -327,7 +341,7 @@ export default function ShopWelcomeModal() {
             color: '#ffffff',
             lineHeight: 1.15,
             letterSpacing: '-0.5px',
-            textShadow: '0 4px 30px rgba(16, 185, 129, 0.65), 0 2px 6px rgba(0,0,0,0.6)',
+            textShadow: '0 4px 20px rgba(0, 0, 0, 0.35), 0 2px 6px rgba(0,0,0,0.2)',
             maxWidth: '100%',
             wordBreak: 'break-word',
             padding: '0 4px'
@@ -344,17 +358,17 @@ export default function ShopWelcomeModal() {
                 display: 'inline-flex',
                 alignItems: 'center',
                 gap: '8px',
-                backgroundColor: 'rgba(16, 185, 129, 0.22)',
-                border: '1px solid #10b981',
-                color: '#34d399',
+                backgroundColor: 'rgba(255, 255, 255, 0.22)',
+                border: '1px solid rgba(255, 255, 255, 0.45)',
+                color: '#ffffff',
                 padding: '6px 18px',
                 borderRadius: '14px',
                 fontSize: '0.84rem',
                 fontWeight: '800',
-                boxShadow: '0 2px 10px rgba(16, 185, 129, 0.2)'
+                boxShadow: '0 2px 10px rgba(0, 0, 0, 0.12)'
               }}
             >
-              <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#10b981', display: 'inline-block', boxShadow: '0 0 8px #10b981' }} />
+              <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#ffffff', display: 'inline-block', boxShadow: '0 0 8px #ffffff' }} />
               Open for Orders • Fresh Local Products
             </span>
           ) : (
@@ -363,9 +377,9 @@ export default function ShopWelcomeModal() {
                 display: 'inline-flex',
                 alignItems: 'center',
                 gap: '8px',
-                backgroundColor: 'rgba(239, 68, 68, 0.22)',
-                border: '1px solid #ef4444',
-                color: '#fca5a5',
+                backgroundColor: 'rgba(0, 0, 0, 0.25)',
+                border: '1px solid rgba(255, 255, 255, 0.3)',
+                color: '#ffffff',
                 padding: '6px 18px',
                 borderRadius: '14px',
                 fontSize: '0.84rem',
@@ -382,16 +396,16 @@ export default function ShopWelcomeModal() {
           style={{
             margin: '0 0 26px 0',
             fontSize: '0.9rem',
-            color: '#94a3b8',
+            color: 'rgba(255, 255, 255, 0.95)',
             lineHeight: '1.45',
             maxWidth: '340px',
-            fontWeight: '500'
+            fontWeight: '600'
           }}
         >
           Explore fresh groceries, daily essentials & exclusive offers curated for you.
         </p>
 
-        {/* 🛒 START SHOPPING ACTION BUTTON */}
+        {/* 🛒 START SHOPPING ACTION BUTTON (White button with #ff4757 text matching Upload Parchi) */}
         <button
           onClick={handleClose}
           style={{
@@ -399,15 +413,15 @@ export default function ShopWelcomeModal() {
             width: '100%',
             maxWidth: '330px',
             padding: '16px 26px',
-            background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
-            color: '#ffffff',
+            backgroundColor: '#ffffff',
+            color: '#ff4757',
             border: 'none',
             borderRadius: '18px',
             fontSize: '1.1rem',
-            fontWeight: '800',
+            fontWeight: '900',
             letterSpacing: '0.4px',
             cursor: 'pointer',
-            boxShadow: '0 12px 30px rgba(16, 185, 129, 0.45), inset 0 1px 2px rgba(255,255,255,0.4)',
+            boxShadow: '0 12px 30px rgba(0, 0, 0, 0.22), 0 2px 6px rgba(0, 0, 0, 0.1)',
             transition: 'transform 0.15s ease, box-shadow 0.15s ease',
             display: 'flex',
             alignItems: 'center',
@@ -426,7 +440,7 @@ export default function ShopWelcomeModal() {
               left: 0,
               width: '50%',
               height: '100%',
-              background: 'linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.25), transparent)',
+              background: 'linear-gradient(90deg, transparent, rgba(255, 71, 87, 0.18), transparent)',
               transform: 'skewX(-20deg)',
               animation: 'buttonShimmerSweep 2.2s infinite ease-in-out',
               pointerEvents: 'none'
@@ -443,15 +457,15 @@ export default function ShopWelcomeModal() {
             bottom: 0,
             left: 0,
             right: 0,
-            height: '3px',
-            backgroundColor: 'rgba(255, 255, 255, 0.1)'
+            height: '3.5px',
+            backgroundColor: 'rgba(255, 255, 255, 0.2)'
           }}
         >
           <div
             style={{
               height: '100%',
-              backgroundColor: '#10b981',
-              boxShadow: '0 0 8px #10b981',
+              backgroundColor: '#ffffff',
+              boxShadow: '0 0 8px rgba(255, 255, 255, 0.8)',
               animation: 'countdownTimerFill 3.2s linear forwards'
             }}
           />
