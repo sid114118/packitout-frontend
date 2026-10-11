@@ -6,13 +6,14 @@ import ProductListView from './ProductListView.jsx';
 import SearchPage from '../SearchPage.jsx'; 
 
 import { VariantBottomSheet, ModernProductCard, ProductRow } from './FeedComponents.jsx';
+import Categories from '../Categories.jsx';
 import HomeFooter from '../components/HomeFooter.jsx';
 import { useRankingConfig } from '../ui/RankingProvider.jsx';
 import { applyBrandPriority } from '../utils/rankingSort.js';
 
 export default function GuestFeed({ 
   user, onAddToCart, onRemoveFromCart, onViewCart, cart = [], 
-  selectedCategory, onClearCategory, 
+  selectedCategory, onClearCategory, onCategorySelect,
   
   // 🟢 Search Triggers from App.jsx
   isSearchOpen, onOpenSearch, onCloseSearch 
@@ -192,6 +193,7 @@ export default function GuestFeed({
       {/* 🌟 3. NORMAL FEED 🌟 */}
       {!isSearchOpen && !viewAll && !selectedCategory && (
         <>
+          <Categories onCategorySelect={onCategorySelect} onAddToCart={onAddToCart} />
           <ProductRow title="🆕 Freshly Restocked" subtitle="Back on the shelves" items={rankedNewArrivals} onViewAll={setViewAll} shopClosed={false} onOpenDetails={setSelectedProductDetails} onQuickAdd={handleQuickAdd} cart={cart} onRemoveFromCart={onRemoveFromCart} hideBrandPrefix />
           <ProductRow title="🚀 Trending on PackItOut" subtitle="What everyone is ordering" items={rankedTrendingPlatform} onViewAll={setViewAll} shopClosed={false} onOpenDetails={setSelectedProductDetails} onQuickAdd={handleQuickAdd} cart={cart} onRemoveFromCart={onRemoveFromCart} />
           <ProductRow title={rankedTimeBased.title} subtitle={rankedTimeBased.subtitle} items={rankedTimeBased.items} onViewAll={setViewAll} shopClosed={false} onOpenDetails={setSelectedProductDetails} onQuickAdd={handleQuickAdd} cart={cart} onRemoveFromCart={onRemoveFromCart} />

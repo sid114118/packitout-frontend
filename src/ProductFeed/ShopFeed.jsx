@@ -3,6 +3,7 @@ import ProductModal from './ProductModal.jsx';
 import ProductListView from './ProductListView.jsx';
 import SearchPage from '../SearchPage.jsx';
 import { VariantBottomSheet, ModernProductCard, ProductRow, ComboDetailModal } from './FeedComponents.jsx';
+import Categories from '../Categories.jsx';
 import ShopCarousel from './ShopCarousel.jsx';
 import { useToast, useConfirm } from '../ui/DialogProvider.jsx';
 import HomeFooter from '../components/HomeFooter.jsx';
@@ -19,7 +20,7 @@ import ProductSkeletonGrid from './ProductSkeletonGrid.jsx';
 
 export default function ShopFeed({
   user, onUserUpdate, onAddToCart, onRemoveFromCart, onViewCart, cart = [],
-  selectedCategory, onClearCategory,
+  selectedCategory, onClearCategory, onCategorySelect,
   selectedBrand, onBrandSelect, onClearBrand,
   isSearchOpen, onOpenSearch, onCloseSearch
 }) {
@@ -292,6 +293,10 @@ export default function ShopFeed({
               </div>
             </div>
           )}
+
+          {/* 🛒 CATEGORIES (Daily Fresh & Staples, Munchies & Refreshments, Home, Health & Utilities) */}
+          <Categories onCategorySelect={onCategorySelect} onAddToCart={onAddToCart} />
+
           {shopRecommendations?.length > 0 && (
             <ProductRow title="Shopkeeper's Picks" subtitle="🔥 Featured for you" items={shopRecommendations} onViewAll={setViewAll} shopClosed={shopClosed} onOpenDetails={setSelectedProductDetails} onQuickAdd={handleQuickAdd} cart={cart} onRemoveFromCart={onRemoveFromCart} />
           )}

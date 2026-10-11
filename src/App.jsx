@@ -8,7 +8,6 @@ import { getRedirectResult } from 'firebase/auth';
 
 // Eagerly imported: rendered on the customer's first paint.
 import Header from './Header.jsx';
-import Categories from './Categories.jsx';
 import ProductFeed from './ProductFeed.jsx';
 import BottomNav from './BottomNav.jsx';
 import InstallAppBanner from './InstallAppBanner.jsx';
@@ -701,10 +700,7 @@ export default function App() {
           }
         `}</style>
 
-        {/* 🛡️ Hides Categories if viewing a Brand */}
-        {!selectedCategory && !selectedBrand && !isSearchOpen && <Categories onCategorySelect={setSelectedCategory} onAddToCart={handleAddToCart} />}
-        
-        <main style={{ flex: 1, padding: '1rem 0' }}>
+        <main style={{ flex: 1, padding: '0' }}>
           <CrashCatcher>
             <ProductFeed
               user={effectiveFeedUser}
@@ -715,6 +711,7 @@ export default function App() {
               onViewCart={() => window.location.hash = "#cart"}
               selectedCategory={selectedCategory} 
               onClearCategory={() => setSelectedCategory(null)} 
+              onCategorySelect={setSelectedCategory}
               // 🏷️ PASS BRAND STATE DOWN
               selectedBrand={selectedBrand}
               onBrandSelect={setSelectedBrand}
