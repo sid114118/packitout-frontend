@@ -53,6 +53,10 @@ export default function ShopDashboard({ user, onExit }) {
       clearTimeout(ordersTimeout);
       ordersTimeout = setTimeout(fetchOrders, 500);
     });
+    eventSource.addEventListener('order_chat_update', () => {
+      clearTimeout(ordersTimeout);
+      ordersTimeout = setTimeout(fetchOrders, 400);
+    });
     eventSource.addEventListener('customer_arrived', () => {
       playArrivalBell();
       toast("🚨 Customer has reached the counter!", "info");
@@ -377,7 +381,7 @@ export default function ShopDashboard({ user, onExit }) {
       <ShopLocationBanner shopData={shopData} onShopUpdated={setShopData} />
 
       <div style={{ padding: '15px', maxWidth: '800px', margin: '0 auto' }}>
-        {activeTab === "orders" && <OrdersTab orders={orders} updateOrderStatus={updateOrderStatus} markOrderPaid={markOrderPaid} />}
+        {activeTab === "orders" && <OrdersTab orders={orders} updateOrderStatus={updateOrderStatus} markOrderPaid={markOrderPaid} shopData={shopData} refreshOrders={fetchOrders} />}
         {activeTab === "parchis" && <ParchiTab parchiRequests={parchiRequests} selectedParchi={selectedParchi} setSelectedParchi={setSelectedParchi} parchiBill={parchiBill} setParchiBill={setParchiBill} handleAddToBill={handleAddToBill} handleSendBill={handleSendBill} shopData={shopData} />}
         {activeTab === "inventory" && <InventoryTab shopData={shopData} masterCatalog={masterCatalog} handleInventoryUpdate={handleInventoryUpdate} handleInventoryRemove={handleInventoryRemove} onInventoryRefresh={refreshShopData} fetchMasterCatalog={fetchMasterCatalog} />}
         {activeTab === "requests" && <RequestsTab shopData={shopData} />}

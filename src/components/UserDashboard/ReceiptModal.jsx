@@ -3,7 +3,7 @@ import ViewReviewModal from './ViewReviewModal';
 import OrderTimeline from './OrderTimeline';
 import { cdnImage } from '../../utils/cloudinaryUrl.js';
 
-export default function ReceiptModal({ selectedOrder, setSelectedOrder, onReorderItem, user, onReviewsDeleted, onCustomerArrived }) {
+export default function ReceiptModal({ selectedOrder, setSelectedOrder, onReorderItem, user, onReviewsDeleted, onCustomerArrived, onOpenChat }) {
   const [isViewReviewModalOpen, setIsViewReviewModalOpen] = useState(false);
 
   if (!selectedOrder) return null;
@@ -225,6 +225,34 @@ export default function ReceiptModal({ selectedOrder, setSelectedOrder, onReorde
                    <span style={{ fontSize: '1.2rem' }}>📍</span> I'm at the Shop (दुकान पर पहुँच गए)
                  </button>
                )
+             )}
+
+             {/* 💬 WhatsApp Chat with Shopkeeper */}
+             {!isDelivered && !isCancelled && (
+               <button
+                 onClick={() => {
+                   onOpenChat && onOpenChat(selectedOrder);
+                   setSelectedOrder(null);
+                 }}
+                 style={{
+                   width: '100%',
+                   padding: '13px',
+                   background: 'linear-gradient(135deg, #25d366 0%, #128c7e 100%)',
+                   color: '#fff',
+                   border: 'none',
+                   borderRadius: '12px',
+                   fontSize: '0.95rem',
+                   fontWeight: '800',
+                   cursor: 'pointer',
+                   display: 'flex',
+                   alignItems: 'center',
+                   justifyContent: 'center',
+                   gap: '8px',
+                   boxShadow: '0 4px 16px rgba(37, 211, 102, 0.35)'
+                 }}
+               >
+                 <span style={{ fontSize: '1.2rem' }}>💬</span> Chat with Shopkeeper (दुकानदार से बात करें)
+               </button>
              )}
 
              {isDelivered && isAlreadyReviewed && (

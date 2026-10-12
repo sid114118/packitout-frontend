@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { useOrderAlarm } from '../../utils/orderAlarm.js';
 import { cdnImage } from '../../utils/cloudinaryUrl.js';
+import OrderChatDrawer from '../Chat/OrderChatDrawer.jsx';
+import SubstitutePickerModal from './SubstitutePickerModal.jsx';
 
 const formatArrivedAgo = (isoDate) => {
   if (!isoDate) return '';
@@ -11,8 +13,11 @@ const formatArrivedAgo = (isoDate) => {
   return `${diffMins}m ago`;
 };
 
-export default function OrdersTab({ orders, updateOrderStatus, markOrderPaid }) {
+export default function OrdersTab({ orders, updateOrderStatus, markOrderPaid, shopData, refreshOrders }) {
   const [showPastOrders, setShowPastOrders] = useState(false);
+  const [activeChatOrder, setActiveChatOrder] = useState(null);
+  const [substituteTarget, setSubstituteTarget] = useState(null); // { order, itemIndex }
+
 
   // Split orders into Active and Past based on their status. Active orders are
   // sorted so customers physically waiting at the counter float to the very top,
@@ -143,11 +148,45 @@ export default function OrdersTab({ orders, updateOrderStatus, markOrderPaid }) 
           </div>
         )}
 
-        {/* Customer Details */}
-        <div style={{ marginBottom: '15px', backgroundColor: '#f8fafc', padding: '12px', borderRadius: '12px' }}>
-          <div style={{ fontWeight: '700', color: '#0f172a', marginBottom: '4px' }}>👤 {customerName}</div>
-          <div style={{ fontSize: '0.85rem', color: '#475569', marginBottom: '4px' }}>📞 <a href={`tel:${customerPhone}`} style={{ color: '#3b82f6', textDecoration: 'none' }}>{customerPhone}</a></div>
-          <div style={{ fontSize: '0.85rem', color: '#475569' }}>📍 {customerAddress}</div>
+        {/* Customer Details & Chat Button */}
+        <div style={{ marginBottom: '15px', backgroundColor: '#f8fafc', padding: '12px', borderRadius: '12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '10px' }}>
+          <div>
+            <div style={{ fontWeight: '700', color: '#0f172a', marginBottom: '4px' }}>👤 {customerName}</div>
+            <div style={{ fontSize: '0.85rem', color: '#475569', marginBottom: '4px' }}>📞 <a href={`tel:${customerPhone}`} style={{ color: '#3b82f6', textDecoration: 'none' }}>{customerPhone}</a></div>
+            <div style={{ fontSize: '0.85rem', color: '#475569' }}>📍 {customerAddress}</div>
+          </div>
+          <button
+            onClick={() => setActiveChatOrder(order)}
+            style={{
+              backgroundColor: '#25d366',
+              color: '#ffffff',
+              border: 'none',
+              borderRadius: '10px',
+              padding: '8px 12px',
+              fontWeight: 800,
+              fontSize: '0.82rem',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              boxShadow: '0 2px 8px rgba(37, 211, 102, 0.3)',
+              flexShrink: 0
+            }}
+          >
+            <span>💬 Chat</span>
+            {Number(order.unreadCountShop) > 0 && (
+              <span style={{
+                backgroundColor: '#ef4444',
+                color: '#fff',
+                borderRadius: '999px',
+                padding: '1px 6px',
+                fontSize: '0.7rem',
+                fontWeight: 900
+              }}>
+                {order.unreadCountShop}
+              </span>
+            )}
+          </button>
         </div>
 
         {/* Items List */}
@@ -162,9 +201,40 @@ export default function OrdersTab({ orders, updateOrderStatus, markOrderPaid }) 
                   ) : (
                     <div style={{ width: '40px', height: '40px', borderRadius: '6px', backgroundColor: '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.2rem' }}>📦</div>
                   )}
-                  <span style={{ fontWeight: '500', color: '#1e293b' }}>{item.qty}x {item.name}</span>
+                  <div>
+                    <span style={{ fontWeight: '500', color: '#1e293b' }}>{item.qty}x {item.name}</span>
+                    {item.substitutedFrom && (
+                      <div style={{ fontSize: '0.7rem', color: '#059669', fontWeight: 800 }}>
+                        ✓ Substituted for {item.substitutedFrom}
+                      </div>
+                    )}
+                  </div>
                 </div>
-                <span style={{ fontWeight: '700', color: '#0f172a' }}>₹{(item.price || item.sellingPrice || item.mrp || 0) * item.qty}</span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <span style={{ fontWeight: '700', color: '#0f172a' }}>₹{(item.price || item.sellingPrice || item.mrp || 0) * item.qty}</span>
+                  {isActive && (
+                    <button
+                      onClick={() => setSubstituteTarget({ order, itemIndex: idx })}
+                      style={{
+                        padding: '4px 8px',
+                        backgroundColor: '#eff6ff',
+                        color: '#2563eb',
+                        border: '1px solid #bfdbfe',
+                        borderRadius: '6px',
+                        fontSize: '0.72rem',
+                        fontWeight: 800,
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '2px',
+                        boxShadow: '0 1px 3px rgba(37, 99, 235, 0.1)'
+                      }}
+                      title="Suggest substitute item if out of stock"
+                    >
+                      ⇄ Swap
+                    </button>
+                  )}
+                </div>
               </div>
             ))
           ) : (
@@ -181,8 +251,15 @@ export default function OrdersTab({ orders, updateOrderStatus, markOrderPaid }) 
 
         {/* Total & Payment Status */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid #f1f5f9', paddingTop: '15px', paddingBottom: isActive ? '15px' : '0' }}>
-          <div style={{ fontSize: '1.3rem', fontWeight: '900', color: '#0f172a' }}>
-            ₹{order.totalAmount}
+          <div>
+            <div style={{ fontSize: '1.3rem', fontWeight: '900', color: '#0f172a' }}>
+              ₹{order.totalAmount}
+            </div>
+            {order.adjustedDelta ? (
+              <div style={{ fontSize: '0.74rem', fontWeight: 800, color: order.adjustedDelta > 0 ? '#ea580c' : '#16a34a' }}>
+                {order.adjustedDelta > 0 ? `(+₹${order.adjustedDelta} adjusted in chat)` : `(-₹${Math.abs(order.adjustedDelta)} adjusted in chat)`}
+              </div>
+            ) : null}
           </div>
 
           {/* 💳 PAYMENT BADGE */}
@@ -399,6 +476,37 @@ export default function OrdersTab({ orders, updateOrderStatus, markOrderPaid }) 
             pastOrders.map(order => <OrderCard key={order._id} order={order} isActive={false} />)
           )}
         </div>
+      )}
+
+      {/* 🔄 SUBSTITUTE PICKER MODAL */}
+      {substituteTarget && (
+        <SubstitutePickerModal
+          open={Boolean(substituteTarget)}
+          order={substituteTarget.order}
+          itemIndex={substituteTarget.itemIndex}
+          shopData={shopData}
+          onClose={() => setSubstituteTarget(null)}
+          onProposalSent={(msg) => {
+            if (refreshOrders) refreshOrders();
+            // Automatically open chat drawer so shopkeeper sees proposal
+            setActiveChatOrder(substituteTarget.order);
+          }}
+        />
+      )}
+
+      {/* 💬 IN-APP WHATSAPP-STYLE CHAT DRAWER */}
+      {activeChatOrder && (
+        <OrderChatDrawer
+          orderId={activeChatOrder._id}
+          role="shop"
+          sessionShop={shopData}
+          orderData={activeChatOrder}
+          onClose={() => setActiveChatOrder(null)}
+          onOrderUpdated={(updated) => {
+            if (refreshOrders) refreshOrders();
+            setActiveChatOrder(updated);
+          }}
+        />
       )}
     </div>
   );

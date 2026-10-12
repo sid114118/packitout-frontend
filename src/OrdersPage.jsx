@@ -4,6 +4,7 @@ import { useToast, useConfirm } from './ui/DialogProvider.jsx';
 import NotificationBell from './NotificationBell';
 import ReceiptModal from './components/UserDashboard/ReceiptModal';
 import OrderReviewModal from './components/UserDashboard/OrderReviewModal';
+import OrderChatDrawer from './components/Chat/OrderChatDrawer.jsx';
 import { cdnImage } from './utils/cloudinaryUrl.js';
 import StorefrontIcon from './ui/StorefrontIcon.jsx';
 import { userFetch, BASE_URL } from './utils/api.js';
@@ -73,6 +74,7 @@ export default function OrdersPage({ user, onExit, onAddToCart, cart, setCart })
   const [searchQ, setSearchQ] = useState('');
   const { baskets, saveBaskets } = useBaskets();
   const [checkoutBasketId, setCheckoutBasketId] = useState(null);
+  const [chatOrder, setChatOrder] = useState(null);
 
   const handleShareBasket = async (basket) => {
     try {
@@ -195,6 +197,12 @@ export default function OrdersPage({ user, onExit, onAddToCart, cart, setCart })
       sseTimeout = setTimeout(() => {
         fetchOrders();
       }, 500);
+    });
+    eventSource.addEventListener('order_chat_update', () => {
+      clearTimeout(sseTimeout);
+      sseTimeout = setTimeout(() => {
+        fetchOrders();
+      }, 400);
     });
     
     return () => {
@@ -630,6 +638,7 @@ export default function OrdersPage({ user, onExit, onAddToCart, cart, setCart })
                 onReview={() => { setOrderToReview(order); setIsReviewModalOpen(true); }}
                 onReorderItem={handleReorderItem}
                 onCustomerArrived={handleCustomerArrived}
+                onOpenChat={setChatOrder}
               />
             ))}
             
@@ -695,6 +704,7 @@ export default function OrdersPage({ user, onExit, onAddToCart, cart, setCart })
                 onReview={() => { setOrderToReview(order); setIsReviewModalOpen(true); }}
                 onReorderItem={handleReorderItem}
                 onCustomerArrived={handleCustomerArrived}
+                onOpenChat={setChatOrder}
               />
             ))}
           </div>
@@ -708,6 +718,7 @@ export default function OrdersPage({ user, onExit, onAddToCart, cart, setCart })
         onReorderItem={handleReorderItem}
         user={user}
         onCustomerArrived={handleCustomerArrived}
+        onOpenChat={setChatOrder}
         onReviewsDeleted={(orderId) => {
           setOrders(prev => prev.map(o => o._id === orderId ? { ...o, isReviewed: false } : o));
           // Close the receipt modal too — the order just became review-able again,
@@ -745,6 +756,21 @@ export default function OrdersPage({ user, onExit, onAddToCart, cart, setCart })
           }
         }}
       />
+
+      {/* 💬 IN-APP WHATSAPP-STYLE CHAT & QUICK REPLACEMENT DRAWER */}
+      {chatOrder && (
+        <OrderChatDrawer
+          orderId={chatOrder._id}
+          role="user"
+          sessionUser={user}
+          orderData={chatOrder}
+          onClose={() => setChatOrder(null)}
+          onOrderUpdated={(updated) => {
+            setOrders(prev => prev.map(o => o._id === updated._id ? { ...o, ...updated } : o));
+            setChatOrder(updated);
+          }}
+        />
+      )}
     </div>
   );
 }
@@ -772,7 +798,7 @@ function Stat({ label, value, icon, small, ellipsis }) {
 }
 
 // ─────────────────────────────────────────────────────────
-function OrderCard({ order, onOpen, onCancel, onReview, onReorderItem, onCustomerArrived }) {
+function OrderCard({ order, onOpen, onCancel, onReview, onReorderItem, onCustomerArrived, onOpenChat }) {
   const stage = stageOf(order.status);
   const live = stage !== 'delivered' && stage !== 'cancelled';
   const isPending = stage === 'pending';
@@ -970,10 +996,52 @@ function OrderCard({ order, onOpen, onCancel, onReview, onReorderItem, onCustome
 
       {/* Footer row */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '12px', marginTop: '12px', borderTop: '1px dashed #f1f5f9' }}>
-        <div style={{ fontSize: '0.88rem', color: '#475569', fontWeight: 700 }}>
-          <span style={{ color: '#0f172a', fontWeight: 900 }}>{items.length}</span> item{items.length === 1 ? '' : 's'} · <span style={{ color: '#0f172a', fontWeight: 900 }}>{fmtINR(order.totalAmount)}</span>
+        <div>
+          <div style={{ fontSize: '0.88rem', color: '#475569', fontWeight: 700 }}>
+            <span style={{ color: '#0f172a', fontWeight: 900 }}>{items.length}</span> item{items.length === 1 ? '' : 's'} · <span style={{ color: '#0f172a', fontWeight: 900 }}>{fmtINR(order.totalAmount)}</span>
+          </div>
+          {order.adjustedDelta ? (
+            <div style={{ fontSize: '0.72rem', fontWeight: 800, color: order.adjustedDelta > 0 ? '#ea580c' : '#16a34a', marginTop: '1px' }}>
+              {order.adjustedDelta > 0 ? `(+₹${order.adjustedDelta} adjusted in chat)` : `(-₹${Math.abs(order.adjustedDelta)} adjusted in chat)`}
+            </div>
+          ) : null}
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+          {live && (
+            <button
+              onClick={(e) => { e.stopPropagation(); onOpenChat && onOpenChat(order); }}
+              aria-label="Chat with shopkeeper"
+              className="op-press"
+              style={{
+                background: '#25d366',
+                color: '#fff',
+                border: 'none',
+                padding: '6px 12px',
+                borderRadius: '10px',
+                fontSize: '0.78rem',
+                fontWeight: 800,
+                cursor: 'pointer',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '4px',
+                boxShadow: '0 2px 6px rgba(37, 211, 102, 0.3)'
+              }}
+            >
+              <span>💬</span> Chat
+              {Number(order.unreadCountUser) > 0 && (
+                <span style={{
+                  background: '#ef4444',
+                  color: '#fff',
+                  borderRadius: '999px',
+                  padding: '1px 5px',
+                  fontSize: '0.66rem',
+                  fontWeight: 900
+                }}>
+                  {order.unreadCountUser}
+                </span>
+              )}
+            </button>
+          )}
           {isPending && (
             <button
               onClick={(e) => { e.stopPropagation(); onCancel(); }}
