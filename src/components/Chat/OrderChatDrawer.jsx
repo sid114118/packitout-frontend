@@ -35,6 +35,8 @@ export default function OrderChatDrawer({
   const [respondingId, setRespondingId] = useState(null);
   const [loading, setLoading] = useState(true);
   const [substitutePickerIdx, setSubstitutePickerIdx] = useState(null);
+  const [substituteMode, setSubstituteMode] = useState('swap');
+  const [showPickerModal, setShowPickerModal] = useState(false);
 
   const messagesEndRef = useRef(null);
   const prevMsgCountRef = useRef(0);
@@ -303,8 +305,8 @@ export default function OrderChatDrawer({
           )}
         </div>
 
-        {/* 🛍️ SHOPKEEPER QUICK REPLACEMENT BAR */}
-        {isShop && !isClosed && order?.items && order.items.length > 0 && (
+        {/* 🛍️ SHOPKEEPER QUICK REPLACEMENT & ADD ITEM BAR */}
+        {isShop && !isClosed && (
           <div style={{
             backgroundColor: '#054c44',
             padding: '7px 12px',
@@ -316,31 +318,66 @@ export default function OrderChatDrawer({
             borderTop: '1px solid rgba(255,255,255,0.12)',
             boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.15)'
           }}>
-            <span style={{ fontSize: '0.73rem', color: '#a7f3d0', fontWeight: 800, flexShrink: 0 }}>
-              Out of stock? Tap to replace:
-            </span>
-            {order.items.map((it, idx) => (
-              <button
-                key={idx}
-                onClick={() => setSubstitutePickerIdx(idx)}
-                style={{
-                  backgroundColor: 'rgba(255,255,255,0.16)',
-                  border: '1px solid rgba(255,255,255,0.28)',
-                  borderRadius: '14px',
-                  color: '#ffffff',
-                  padding: '4px 10px',
-                  fontSize: '0.73rem',
-                  fontWeight: 700,
-                  cursor: 'pointer',
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '4px',
-                  flexShrink: 0
-                }}
-              >
-                <span>⇄ {it.name}</span>
-              </button>
-            ))}
+            {/* ➕ Add Extra Item Button */}
+            <button
+              onClick={() => {
+                setSubstituteMode('add');
+                setSubstitutePickerIdx(null);
+                setShowPickerModal(true);
+              }}
+              style={{
+                backgroundColor: '#16a34a',
+                border: '1px solid #4ade80',
+                borderRadius: '14px',
+                color: '#ffffff',
+                padding: '4px 12px',
+                fontSize: '0.75rem',
+                fontWeight: 800,
+                cursor: 'pointer',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '5px',
+                flexShrink: 0,
+                boxShadow: '0 2px 6px rgba(22, 163, 74, 0.35)'
+              }}
+              title="Add a new item to this order if customer asked in chat"
+            >
+              <span>➕ Add Item (सामान जोड़ें)</span>
+            </button>
+
+            {order?.items && order.items.length > 0 && (
+              <>
+                <span style={{ fontSize: '0.73rem', color: '#a7f3d0', fontWeight: 800, flexShrink: 0, marginLeft: '4px' }}>
+                  Replace:
+                </span>
+                {order.items.map((it, idx) => (
+                  <button
+                    key={idx}
+                    onClick={() => {
+                      setSubstituteMode('swap');
+                      setSubstitutePickerIdx(idx);
+                      setShowPickerModal(true);
+                    }}
+                    style={{
+                      backgroundColor: 'rgba(255,255,255,0.16)',
+                      border: '1px solid rgba(255,255,255,0.28)',
+                      borderRadius: '14px',
+                      color: '#ffffff',
+                      padding: '4px 10px',
+                      fontSize: '0.73rem',
+                      fontWeight: 700,
+                      cursor: 'pointer',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '4px',
+                      flexShrink: 0
+                    }}
+                  >
+                    <span>⇄ {it.name}</span>
+                  </button>
+                ))}
+              </>
+            )}
           </div>
         )}
 
@@ -688,16 +725,31 @@ export default function OrderChatDrawer({
           </div>
         )}
 
-        {/* 🔄 Substitute Picker Modal for Shopkeeper */}
-        {substitutePickerIdx !== null && (
+        {/* 🔄 Substitute & Add Item Modal for Shopkeeper */}
+        {showPickerModal && (
           <SubstitutePickerModal
-            open={substitutePickerIdx !== null}
+            open={showPickerModal}
             order={order}
             itemIndex={substitutePickerIdx}
+            mode={substituteMode}
             shopData={sessionShop}
-            onClose={() => setSubstitutePickerIdx(null)}
-            onProposalSent={(msg) => {
+            onClose={() => {
+              setShowPickerModal(false);
               setSubstitutePickerIdx(null);
+              setSubstituteMode('swap');
+            }}
+            onItemAdded={(updated) => {
+              setShowPickerModal(false);
+              setSubstitutePickerIdx(null);
+              setSubstituteMode('swap');
+              if (onOrderUpdated) onOrderUpdated(updated);
+              setOrder(updated);
+              loadChat(false);
+            }}
+            onProposalSent={(msg) => {
+              setShowPickerModal(false);
+              setSubstitutePickerIdx(null);
+              setSubstituteMode('swap');
               loadChat(false);
             }}
           />

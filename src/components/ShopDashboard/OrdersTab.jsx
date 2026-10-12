@@ -259,7 +259,30 @@ export default function OrdersTab({ orders, updateOrderStatus, markOrderPaid, sh
 
         {/* Items List */}
         <div style={{ marginBottom: '15px' }}>
-          <h4 style={{ margin: '0 0 8px 0', fontSize: '0.9rem', color: '#334155' }}>Items:</h4>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+            <h4 style={{ margin: 0, fontSize: '0.9rem', color: '#334155' }}>Items:</h4>
+            {isActive && (
+              <button
+                onClick={() => setSubstituteTarget({ order, itemIndex: null, mode: 'add' })}
+                style={{
+                  padding: '3px 8px',
+                  backgroundColor: '#f0fdf4',
+                  color: '#16a34a',
+                  border: '1px solid #bbf7d0',
+                  borderRadius: '6px',
+                  fontSize: '0.73rem',
+                  fontWeight: 800,
+                  cursor: 'pointer',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '4px'
+                }}
+                title="Add extra item to this order"
+              >
+                <span>➕ Add Extra Item</span>
+              </button>
+            )}
+          </div>
           {order.items && order.items.length > 0 ? (
             order.items.map((item, idx) => (
               <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.85rem', color: '#475569', marginBottom: '8px', paddingBottom: '8px', borderBottom: '1px solid #f1f5f9' }}>
@@ -282,7 +305,7 @@ export default function OrdersTab({ orders, updateOrderStatus, markOrderPaid, sh
                   <span style={{ fontWeight: '700', color: '#0f172a' }}>₹{(item.price || item.sellingPrice || item.mrp || 0) * item.qty}</span>
                   {isActive && (
                     <button
-                      onClick={() => setSubstituteTarget({ order, itemIndex: idx })}
+                      onClick={() => setSubstituteTarget({ order, itemIndex: idx, mode: 'swap' })}
                       style={{
                         padding: '4px 8px',
                         backgroundColor: '#eff6ff',
@@ -619,15 +642,22 @@ export default function OrdersTab({ orders, updateOrderStatus, markOrderPaid, sh
         </div>
       )}
 
-      {/* 🔄 SUBSTITUTE PICKER MODAL */}
+      {/* 🔄 SUBSTITUTE & ADD ITEM PICKER MODAL */}
       {substituteTarget && (
         <SubstitutePickerModal
           open={Boolean(substituteTarget)}
           order={substituteTarget.order}
           itemIndex={substituteTarget.itemIndex}
+          mode={substituteTarget.mode || 'swap'}
           shopData={shopData}
           onClose={() => setSubstituteTarget(null)}
+          onItemAdded={(updated) => {
+            setSubstituteTarget(null);
+            if (refreshOrders) refreshOrders();
+            if (updated) setActiveChatOrder(updated);
+          }}
           onProposalSent={(msg) => {
+            setSubstituteTarget(null);
             if (refreshOrders) refreshOrders();
             // Automatically open chat drawer so shopkeeper sees proposal
             setActiveChatOrder(substituteTarget.order);
