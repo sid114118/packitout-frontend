@@ -2,14 +2,18 @@ import React, { useState } from 'react';
 import ViewReviewModal from './ViewReviewModal';
 import OrderTimeline from './OrderTimeline';
 import { cdnImage } from '../../utils/cloudinaryUrl.js';
+import ChatIcon from '../../ui/ChatIcon.jsx';
 
 export default function ReceiptModal({ selectedOrder, setSelectedOrder, onReorderItem, user, onReviewsDeleted, onCustomerArrived, onOpenChat }) {
   const [isViewReviewModalOpen, setIsViewReviewModalOpen] = useState(false);
 
   if (!selectedOrder) return null;
 
-  const isDelivered = selectedOrder.status && (selectedOrder.status.includes('✅') || selectedOrder.status.includes('🎉'));
-  const isCancelled = (selectedOrder.status || '').toLowerCase().includes('cancel');
+  const statusStr = (selectedOrder.status || '').toLowerCase();
+  const isDelivered = statusStr.includes('✅') || statusStr.includes('🎉') || statusStr.includes('deliver');
+  const isCancelled = statusStr.includes('cancel');
+  const isReady = statusStr.includes('ready');
+  const isArrived = Boolean(selectedOrder.customerArrivedAt);
   const isAlreadyReviewed = selectedOrder.isReviewed === true;
 
   return (
@@ -178,8 +182,8 @@ export default function ReceiptModal({ selectedOrder, setSelectedOrder, onReorde
           {/* 🌟 FLOATING ACTIONS BELOW THE RECEIPT */}
           <div style={{ marginTop: '25px', width: '100%', display: 'flex', flexDirection: 'column', gap: '10px', alignItems: 'center' }}>
              
-             {/* 📍 "I'm at the Shop" counter arrival button / banner */}
-             {!isDelivered && !isCancelled && (
+             {/* 📍 "I'm at the Shop" counter arrival button / banner - Only when ready or arrived */}
+             {!isDelivered && !isCancelled && (isReady || isArrived) && (
                selectedOrder.customerArrivedAt ? (
                  <div style={{
                    width: '100%',
@@ -251,7 +255,7 @@ export default function ReceiptModal({ selectedOrder, setSelectedOrder, onReorde
                    boxShadow: '0 4px 16px rgba(37, 211, 102, 0.35)'
                  }}
                >
-                 <span style={{ fontSize: '1.2rem' }}>💬</span> Chat with Shopkeeper (दुकानदार से बात करें)
+                 <ChatIcon size={18} color="#ffffff" /> Chat with Shopkeeper (दुकानदार से बात करें)
                </button>
              )}
 

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import ChatIcon from '../../ui/ChatIcon.jsx';
 
 export default function ShopReviews({ shopId, shopRating, totalReviews }) {
   const [reviews, setReviews] = useState([]);
@@ -85,7 +86,9 @@ export default function ShopReviews({ shopId, shopRating, totalReviews }) {
         </div>
       ) : (
         <div style={{ textAlign: 'center', padding: '40px 20px', backgroundColor: '#f8fafc', borderRadius: '12px', border: '1px dashed #e2e8f0' }}>
-          <div style={{ fontSize: '2rem', marginBottom: '10px' }}>💬</div>
+          <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '10px' }}>
+            <ChatIcon size={32} color="#94a3b8" />
+          </div>
           <div style={{ fontWeight: '700', color: '#475569', fontSize: '0.95rem' }}>No reviews yet</div>
           <div style={{ color: '#94a3b8', fontSize: '0.85rem', marginTop: '4px' }}>When customers rate your shop, their feedback will appear here.</div>
         </div>

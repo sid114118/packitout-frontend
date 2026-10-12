@@ -2,18 +2,18 @@ import React, { useState, useEffect, useRef } from 'react';
 import { BASE_URL, userFetch, shopFetch } from '../../utils/api.js';
 import { cdnImage } from '../../utils/cloudinaryUrl.js';
 import { playMessagePop, playAcceptChime } from '../../utils/chatSound.js';
+import ChatIcon from '../../ui/ChatIcon.jsx';
+import SubstitutePickerModal from '../ShopDashboard/SubstitutePickerModal.jsx';
 
 const QUICK_CHIPS_CUSTOMER = [
-  '👍 Okay replace it',
-  '❌ Remove that item',
   '🏃 Coming in 5 mins',
   '🥛 Add 1 Amul Milk pouch',
+  '🍞 Add 1 bread packet please',
   '🙏 Thanks bhaiya',
 ];
 
 const QUICK_CHIPS_SHOP = [
   '📦 Packing almost done',
-  '⚠️ Check replacement proposal above',
   '🛍️ Ready for pickup!',
   '👍 Noted, packing now',
   '🙏 Thank you!',
@@ -34,6 +34,7 @@ export default function OrderChatDrawer({
   const [sending, setSending] = useState(false);
   const [respondingId, setRespondingId] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [substitutePickerIdx, setSubstitutePickerIdx] = useState(null);
 
   const messagesEndRef = useRef(null);
   const prevMsgCountRef = useRef(0);
@@ -302,6 +303,47 @@ export default function OrderChatDrawer({
           )}
         </div>
 
+        {/* 🛍️ SHOPKEEPER QUICK REPLACEMENT BAR */}
+        {isShop && !isClosed && order?.items && order.items.length > 0 && (
+          <div style={{
+            backgroundColor: '#054c44',
+            padding: '7px 12px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+            overflowX: 'auto',
+            whiteSpace: 'nowrap',
+            borderTop: '1px solid rgba(255,255,255,0.12)',
+            boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.15)'
+          }}>
+            <span style={{ fontSize: '0.73rem', color: '#a7f3d0', fontWeight: 800, flexShrink: 0 }}>
+              Out of stock? Tap to replace:
+            </span>
+            {order.items.map((it, idx) => (
+              <button
+                key={idx}
+                onClick={() => setSubstitutePickerIdx(idx)}
+                style={{
+                  backgroundColor: 'rgba(255,255,255,0.16)',
+                  border: '1px solid rgba(255,255,255,0.28)',
+                  borderRadius: '14px',
+                  color: '#ffffff',
+                  padding: '4px 10px',
+                  fontSize: '0.73rem',
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '4px',
+                  flexShrink: 0
+                }}
+              >
+                <span>⇄ {it.name}</span>
+              </button>
+            ))}
+          </div>
+        )}
+
         {/* 📜 CHAT MESSAGE STREAM */}
         <div style={{
           flex: 1,
@@ -336,7 +378,7 @@ export default function OrderChatDrawer({
             </div>
           ) : messages.length === 0 ? (
             <div style={{ textAlign: 'center', color: '#64748b', fontSize: '0.85rem', marginTop: '40px' }}>
-              <div style={{ fontSize: '2rem', marginBottom: '8px' }}>💬</div>
+              <div style={{ marginBottom: '10px' }}><ChatIcon size={36} color="#64748b" /></div>
               <div style={{ fontWeight: 800, color: '#334155' }}>No messages yet</div>
               <div style={{ fontSize: '0.76rem', color: '#64748b', marginTop: '4px' }}>
                 {isShop
@@ -412,7 +454,7 @@ export default function OrderChatDrawer({
                     )}
 
                     {/* 🔄 INTERACTIVE REPLACEMENT PROPOSAL CARD */}
-                    {msg.proposal && (
+                    {Boolean(msg.proposal && msg.proposal.proposalId && (msg.proposal.replacementItem?.name || msg.proposal.originalItem?.name)) && (
                       <div style={{
                         marginTop: '8px',
                         backgroundColor: '#f8fafc',
@@ -644,6 +686,21 @@ export default function OrderChatDrawer({
               ➤
             </button>
           </div>
+        )}
+
+        {/* 🔄 Substitute Picker Modal for Shopkeeper */}
+        {substitutePickerIdx !== null && (
+          <SubstitutePickerModal
+            open={substitutePickerIdx !== null}
+            order={order}
+            itemIndex={substitutePickerIdx}
+            shopData={sessionShop}
+            onClose={() => setSubstitutePickerIdx(null)}
+            onProposalSent={(msg) => {
+              setSubstitutePickerIdx(null);
+              loadChat(false);
+            }}
+          />
         )}
 
       </div>

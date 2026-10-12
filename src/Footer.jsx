@@ -1,4 +1,5 @@
 import React from 'react';
+import ChatIcon from './ui/ChatIcon.jsx';
 
 export default function Footer() {
   return (
@@ -48,7 +49,7 @@ export default function Footer() {
 
         {/* 📞 CONTACT STRIP */}
         <div style={{ backgroundColor: '#1e293b', padding: '16px', borderRadius: '12px', display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '30px' }}>
-          <div style={{ fontSize: '1.5rem' }}>💬</div>
+          <ChatIcon size={24} color="#38bdf8" />
           <div>
             <div style={{ fontSize: '0.75rem', color: '#94a3b8', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Need Help?</div>
             <div style={{ fontSize: '0.95rem', color: '#fff', fontWeight: '700', marginTop: '2px' }}>support@packitout.com</div>

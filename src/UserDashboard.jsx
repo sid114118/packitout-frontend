@@ -9,6 +9,7 @@ import ComplaintModal from './components/UserDashboard/ComplaintModal';
 import MyComplaintsModal from './components/UserDashboard/MyComplaintsModal';
 import ParchiBillModal from './components/UserDashboard/ParchiBillModal';
 import RequestItemModal from './components/UserDashboard/RequestItemModal.jsx';
+import ChatIcon from './ui/ChatIcon.jsx';
 export default function UserDashboard({ user, onExit, onLogout, onUserUpdate }) {
   const triggerToast = useToast();
 
@@ -251,8 +252,9 @@ export default function UserDashboard({ user, onExit, onLogout, onUserUpdate }) 
                 width: '38px', height: '38px', borderRadius: '12px',
                 background: 'linear-gradient(135deg, #f0fdf4, #dcfce7)',
                 display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-                fontSize: '1.1rem',
-              }}>💬</span>
+              }}>
+                <ChatIcon size={18} color="#16a34a" />
+              </span>
               <span>
                 <div style={{ fontWeight: 800, color: '#0f172a', fontSize: '0.95rem' }}>My Complaints &amp; Replies</div>
                 <div style={{ fontSize: '0.78rem', color: '#64748b', fontWeight: 600, marginTop: '2px' }}>See responses from the shop or admin</div>

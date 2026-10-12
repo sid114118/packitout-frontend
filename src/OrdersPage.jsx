@@ -5,6 +5,7 @@ import NotificationBell from './NotificationBell';
 import ReceiptModal from './components/UserDashboard/ReceiptModal';
 import OrderReviewModal from './components/UserDashboard/OrderReviewModal';
 import OrderChatDrawer from './components/Chat/OrderChatDrawer.jsx';
+import ChatIcon from './ui/ChatIcon.jsx';
 import { cdnImage } from './utils/cloudinaryUrl.js';
 import StorefrontIcon from './ui/StorefrontIcon.jsx';
 import { userFetch, BASE_URL } from './utils/api.js';
@@ -937,8 +938,8 @@ function OrderCard({ order, onOpen, onCancel, onReview, onReorderItem, onCustome
         </div>
       )}
 
-      {/* 📍 "I'M AT THE SHOP" / COUNTER ARRIVAL BANNER */}
-      {live && !isCancelled && !isDelivered && (
+      {/* 📍 "I'M AT THE SHOP" / COUNTER ARRIVAL BANNER - Only when shop marks Ready or customer already arrived */}
+      {live && !isCancelled && !isDelivered && (isReady || isArrived) && (
         <div style={{ marginTop: '12px' }}>
           {isArrived ? (
             <div style={{
@@ -1027,7 +1028,8 @@ function OrderCard({ order, onOpen, onCancel, onReview, onReorderItem, onCustome
                 boxShadow: '0 2px 6px rgba(37, 211, 102, 0.3)'
               }}
             >
-              <span>💬</span> Chat
+              <ChatIcon size={14} color="#ffffff" />
+              <span>Chat</span>
               {Number(order.unreadCountUser) > 0 && (
                 <span style={{
                   background: '#ef4444',

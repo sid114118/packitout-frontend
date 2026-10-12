@@ -3,6 +3,7 @@ import { useOrderAlarm } from '../../utils/orderAlarm.js';
 import { cdnImage } from '../../utils/cloudinaryUrl.js';
 import OrderChatDrawer from '../Chat/OrderChatDrawer.jsx';
 import SubstitutePickerModal from './SubstitutePickerModal.jsx';
+import ChatIcon from '../../ui/ChatIcon.jsx';
 
 const formatArrivedAgo = (isoDate) => {
   if (!isoDate) return '';
@@ -122,6 +123,37 @@ export default function OrdersTab({ orders, updateOrderStatus, markOrderPaid, sh
           </div>
         )}
 
+        {/* 💬 Unread customer message alert banner */}
+        {Number(order.unreadCountShop) > 0 && (
+          <div
+            onClick={() => setActiveChatOrder(order)}
+            role="button"
+            tabIndex={0}
+            style={{
+              background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+              color: '#fff',
+              padding: '10px 14px',
+              borderRadius: '10px',
+              marginBottom: '12px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              cursor: 'pointer',
+              boxShadow: '0 4px 12px rgba(16, 185, 129, 0.28)',
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <ChatIcon size={18} color="#ffffff" />
+              <div style={{ fontWeight: 800, fontSize: '0.88rem' }}>
+                New message from customer! ({order.unreadCountShop})
+              </div>
+            </div>
+            <span style={{ background: '#ffffff', color: '#047857', padding: '3px 9px', borderRadius: '6px', fontSize: '0.74rem', fontWeight: 900 }}>
+              Reply Now ›
+            </span>
+          </div>
+        )}
+
         {/* Header: Order ID & Status */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', borderBottom: '1px solid #f1f5f9', paddingBottom: '12px', marginBottom: '12px' }}>
           <div>
@@ -132,8 +164,43 @@ export default function OrdersTab({ orders, updateOrderStatus, markOrderPaid, sh
               {new Date(order.createdAt).toLocaleString()}
             </div>
           </div>
-          <div style={{ backgroundColor: isActive ? '#ecfdf5' : '#f1f5f9', color: isActive ? '#059669' : '#475569', padding: '6px 12px', borderRadius: '8px', fontWeight: 'bold', fontSize: '0.85rem' }}>
-            {order.status}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <button
+              onClick={() => setActiveChatOrder(order)}
+              aria-label="Chat with customer"
+              style={{
+                backgroundColor: '#25d366',
+                color: '#ffffff',
+                border: 'none',
+                borderRadius: '8px',
+                padding: '6px 11px',
+                fontWeight: 800,
+                fontSize: '0.8rem',
+                cursor: 'pointer',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '5px',
+                boxShadow: '0 2px 6px rgba(37, 211, 102, 0.28)',
+              }}
+            >
+              <ChatIcon size={14} color="#ffffff" />
+              <span>Chat</span>
+              {Number(order.unreadCountShop) > 0 && (
+                <span style={{
+                  backgroundColor: '#ef4444',
+                  color: '#fff',
+                  borderRadius: '999px',
+                  padding: '1px 5px',
+                  fontSize: '0.65rem',
+                  fontWeight: 900
+                }}>
+                  {order.unreadCountShop}
+                </span>
+              )}
+            </button>
+            <div style={{ backgroundColor: isActive ? '#ecfdf5' : '#f1f5f9', color: isActive ? '#059669' : '#475569', padding: '6px 12px', borderRadius: '8px', fontWeight: 'bold', fontSize: '0.85rem' }}>
+              {order.status}
+            </div>
           </div>
         </div>
 
@@ -173,7 +240,8 @@ export default function OrdersTab({ orders, updateOrderStatus, markOrderPaid, sh
               flexShrink: 0
             }}
           >
-            <span>💬 Chat</span>
+            <ChatIcon size={15} color="#ffffff" />
+            <span>Chat</span>
             {Number(order.unreadCountShop) > 0 && (
               <span style={{
                 backgroundColor: '#ef4444',
@@ -231,7 +299,8 @@ export default function OrdersTab({ orders, updateOrderStatus, markOrderPaid, sh
                       }}
                       title="Suggest substitute item if out of stock"
                     >
-                      ⇄ Swap
+                      <ChatIcon size={12} color="#2563eb" />
+                      <span>Swap</span>
                     </button>
                   )}
                 </div>
@@ -306,6 +375,42 @@ export default function OrdersTab({ orders, updateOrderStatus, markOrderPaid, sh
                   </button>
 
                   <button
+                    onClick={() => setActiveChatOrder(order)}
+                    style={{
+                      flex: '1 1 100%',
+                      padding: '12px',
+                      backgroundColor: '#25d366',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '10px',
+                      fontWeight: '800',
+                      cursor: 'pointer',
+                      fontSize: '0.92rem',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '8px',
+                      boxShadow: '0 4px 12px rgba(37, 211, 102, 0.28)',
+                      marginTop: '4px'
+                    }}
+                  >
+                    <ChatIcon size={18} color="#ffffff" />
+                    <span>Chat & Replace Item (ग्राहक से चैट करें)</span>
+                    {Number(order.unreadCountShop) > 0 && (
+                      <span style={{
+                        backgroundColor: '#ef4444',
+                        color: '#fff',
+                        borderRadius: '999px',
+                        padding: '1px 7px',
+                        fontSize: '0.72rem',
+                        fontWeight: 900
+                      }}>
+                        {order.unreadCountShop} new
+                      </span>
+                    )}
+                  </button>
+
+                  <button
                     onClick={() => updateOrderStatus(order._id, 'Cancelled ❌')}
                     style={{ flex: '1 1 100%', padding: '10px', backgroundColor: 'transparent', color: '#ef4444', border: '1px dashed #fca5a5', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer', fontSize: '0.9rem', marginTop: '4px' }}
                   >
@@ -326,6 +431,42 @@ export default function OrdersTab({ orders, updateOrderStatus, markOrderPaid, sh
                     style={{ flex: '1 1 45%', padding: '10px', backgroundColor: '#e0f2fe', color: '#0369a1', border: '1px solid #bae6fd', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer', fontSize: '0.9rem' }}
                   >
                     🛍️ Ready
+                  </button>
+
+                  <button
+                    onClick={() => setActiveChatOrder(order)}
+                    style={{
+                      flex: '1 1 100%',
+                      padding: '12px',
+                      backgroundColor: '#25d366',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '10px',
+                      fontWeight: '800',
+                      cursor: 'pointer',
+                      fontSize: '0.92rem',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '8px',
+                      boxShadow: '0 4px 12px rgba(37, 211, 102, 0.28)',
+                      marginTop: '4px'
+                    }}
+                  >
+                    <ChatIcon size={18} color="#ffffff" />
+                    <span>Chat & Replace Item (ग्राहक से चैट करें)</span>
+                    {Number(order.unreadCountShop) > 0 && (
+                      <span style={{
+                        backgroundColor: '#ef4444',
+                        color: '#fff',
+                        borderRadius: '999px',
+                        padding: '1px 7px',
+                        fontSize: '0.72rem',
+                        fontWeight: 900
+                      }}>
+                        {order.unreadCountShop} new
+                      </span>
+                    )}
                   </button>
 
                   <button
