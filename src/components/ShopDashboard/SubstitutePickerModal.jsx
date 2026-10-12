@@ -194,8 +194,7 @@ export default function SubstitutePickerModal({
         }
 
         const data = await res.json();
-        if (onItemAdded) onItemAdded(data.order);
-        if (onProposalSent) onProposalSent(data);
+        if (onProposalSent) onProposalSent(data.message);
         onClose();
 
       } else {
@@ -643,8 +642,8 @@ export default function SubstitutePickerModal({
             }}
           >
             {submitting
-              ? (isAddMode ? 'Adding Item...' : 'Sending Proposal...')
-              : (isAddMode ? `➕ Add to Order (+₹${itemTotal})` : '🚀 Propose to Customer (ग्राहक को भेजें)')}
+              ? (isAddMode ? 'Sending Proposal...' : 'Sending Proposal...')
+              : (isAddMode ? `➕ Propose to Customer (+₹${itemTotal})` : '🚀 Propose to Customer (ग्राहक को भेजें)')}
           </button>
         </div>
 

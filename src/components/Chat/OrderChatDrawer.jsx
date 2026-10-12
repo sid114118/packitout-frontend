@@ -40,7 +40,15 @@ export default function OrderChatDrawer({
 
   const messagesEndRef = useRef(null);
   const prevMsgCountRef = useRef(0);
+  const isMountedRef = useRef(true);
   const isShop = role === 'shop';
+
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
 
   const scrollToBottom = (smooth = true) => {
     messagesEndRef.current?.scrollIntoView({ behavior: smooth ? 'smooth' : 'auto' });
@@ -57,8 +65,9 @@ export default function OrderChatDrawer({
   const loadChat = async (isInitial = false) => {
     try {
       const res = await doFetch(`/orders/${orderId}/messages`);
-      if (!res.ok) return;
+      if (!res.ok || !isMountedRef.current) return;
       const data = await res.json();
+      if (!isMountedRef.current) return;
       if (data.success) {
         setMessages(prev => {
           // Play pop sound if new incoming message arrived
@@ -74,16 +83,23 @@ export default function OrderChatDrawer({
         });
 
         if (data.order) {
-          setOrder(data.order);
-          if (onOrderUpdated) onOrderUpdated(data.order);
+          setOrder(prev => {
+            const changed = !prev || prev.totalAmount !== data.order.totalAmount || prev.status !== data.order.status || prev.items?.length !== data.order.items?.length;
+            if (changed && onOrderUpdated && isMountedRef.current) {
+              onOrderUpdated(data.order);
+            }
+            return data.order;
+          });
         }
       }
     } catch (err) {
-      console.error('Failed to load chat messages:', err);
+      if (isMountedRef.current) {
+        console.error('Failed to load chat messages:', err);
+      }
     } finally {
-      if (isInitial) {
+      if (isInitial && isMountedRef.current) {
         setLoading(false);
-        setTimeout(() => scrollToBottom(false), 80);
+        setTimeout(() => { if (isMountedRef.current) scrollToBottom(false); }, 80);
       }
     }
   };
@@ -93,7 +109,9 @@ export default function OrderChatDrawer({
 
     // ⚡ Real-Time Polling fallback every 3s while drawer is open
     const pollInterval = setInterval(() => {
-      loadChat(false);
+      if (isMountedRef.current) {
+        loadChat(false);
+      }
     }, 3000);
 
     return () => clearInterval(pollInterval);
@@ -179,17 +197,23 @@ export default function OrderChatDrawer({
   const shortId = (orderId || '').slice(-5).toUpperCase();
 
   return (
-    <div style={{
-      position: 'fixed',
-      top: 0, left: 0, right: 0, bottom: 0,
-      backgroundColor: 'rgba(15, 23, 42, 0.72)',
-      backdropFilter: 'blur(5px)',
-      zIndex: 9999,
-      display: 'flex',
-      justifyContent: 'center',
-      alignItems: 'flex-end',
-      animation: 'fadeIn 0.2s ease-out'
-    }}>
+    <div
+      onClick={(e) => {
+        if (e.target === e.currentTarget) {
+          onClose();
+        }
+      }}
+      style={{
+        position: 'fixed',
+        top: 0, left: 0, right: 0, bottom: 0,
+        backgroundColor: 'rgba(15, 23, 42, 0.72)',
+        backdropFilter: 'blur(5px)',
+        zIndex: 9999,
+        display: 'flex',
+        justifyContent: 'center',
+        alignItems: 'flex-end',
+        animation: 'fadeIn 0.2s ease-out'
+      }}>
       <style>{`
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
         @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
@@ -490,116 +514,138 @@ export default function OrderChatDrawer({
                       </div>
                     )}
 
-                    {/* 🔄 INTERACTIVE REPLACEMENT PROPOSAL CARD */}
-                    {Boolean(msg.proposal && msg.proposal.proposalId && (msg.proposal.replacementItem?.name || msg.proposal.originalItem?.name)) && (
-                      <div style={{
-                        marginTop: '8px',
-                        backgroundColor: '#f8fafc',
-                        border: '1.5px solid #cbd5e1',
-                        borderRadius: '12px',
-                        padding: '10px',
-                        fontSize: '0.82rem',
-                        boxShadow: '0 2px 6px rgba(0,0,0,0.06)'
-                      }}>
+                    {/* 🔄 INTERACTIVE PROPOSAL CARD (SUBSTITUTE OR ADD ITEM) */}
+                    {Boolean(msg.proposal && msg.proposal.proposalId && (msg.proposal.newItem?.name || msg.proposal.replacementItem?.name || msg.proposal.originalItem?.name)) && (() => {
+                      const isAddItem = msg.proposal.type === 'add_item';
+                      const itemObj = msg.proposal.newItem || msg.proposal.replacementItem;
+                      const addedDelta = Number(msg.proposal.priceDelta) || (Number(itemObj?.price || 0) * Number(itemObj?.qty || 1));
+
+                      return (
                         <div style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'space-between',
-                          marginBottom: '8px',
-                          borderBottom: '1px dashed #e2e8f0',
-                          paddingBottom: '6px'
+                          marginTop: '8px',
+                          backgroundColor: '#f8fafc',
+                          border: isAddItem ? '1.5px solid #86efac' : '1.5px solid #cbd5e1',
+                          borderRadius: '12px',
+                          padding: '10px',
+                          fontSize: '0.82rem',
+                          boxShadow: '0 2px 6px rgba(0,0,0,0.06)'
                         }}>
-                          <span style={{ fontWeight: 900, color: '#b45309', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                            <span>🔄</span> Substitute Proposed
-                          </span>
-                          <span style={{
-                            fontSize: '0.7rem',
-                            fontWeight: 900,
-                            padding: '2px 6px',
-                            borderRadius: '6px',
-                            backgroundColor: msg.proposal.status === 'accepted' ? '#dcfce7' : msg.proposal.status === 'declined' ? '#fee2e2' : '#fef3c7',
-                            color: msg.proposal.status === 'accepted' ? '#15803d' : msg.proposal.status === 'declined' ? '#b91c1c' : '#92400e',
+                          <div style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'space-between',
+                            marginBottom: '8px',
+                            borderBottom: '1px dashed #e2e8f0',
+                            paddingBottom: '6px'
                           }}>
-                            {msg.proposal.status === 'accepted' ? '✅ Accepted' : msg.proposal.status === 'declined' ? '❌ Declined' : '⏳ Pending'}
-                          </span>
-                        </div>
-
-                        {/* Original item */}
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
-                          <span style={{ fontSize: '0.72rem', color: '#ef4444', fontWeight: 900, width: '42px', flexShrink: 0 }}>OUT:</span>
-                          <div style={{ flex: 1, minWidth: 0, textDecoration: 'line-through', color: '#64748b' }}>
-                            {msg.proposal.originalItem?.name} (₹{msg.proposal.originalItem?.price})
+                            <span style={{ fontWeight: 900, color: isAddItem ? '#15803d' : '#b45309', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                              <span>{isAddItem ? '➕' : '🔄'}</span> {isAddItem ? 'Extra Item Proposed' : 'Substitute Proposed'}
+                            </span>
+                            <span style={{
+                              fontSize: '0.7rem',
+                              fontWeight: 900,
+                              padding: '2px 6px',
+                              borderRadius: '6px',
+                              backgroundColor: msg.proposal.status === 'accepted' ? '#dcfce7' : msg.proposal.status === 'declined' ? '#fee2e2' : '#fef3c7',
+                              color: msg.proposal.status === 'accepted' ? '#15803d' : msg.proposal.status === 'declined' ? '#b91c1c' : '#92400e',
+                            }}>
+                              {msg.proposal.status === 'accepted' ? '✅ Accepted' : msg.proposal.status === 'declined' ? '❌ Declined' : '⏳ Pending'}
+                            </span>
                           </div>
-                        </div>
 
-                        {/* Replacement item */}
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
-                          <span style={{ fontSize: '0.72rem', color: '#16a34a', fontWeight: 900, width: '42px', flexShrink: 0 }}>SUB:</span>
-                          <div style={{ flex: 1, minWidth: 0, fontWeight: 800, color: '#0f172a' }}>
-                            {msg.proposal.replacementItem?.name} (₹{msg.proposal.replacementItem?.price})
+                          {isAddItem ? (
+                            /* Add Item Details */
+                            <div style={{ marginBottom: '8px' }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
+                                <span style={{ fontSize: '0.72rem', color: '#16a34a', fontWeight: 900, width: '42px', flexShrink: 0 }}>ITEM:</span>
+                                <div style={{ flex: 1, minWidth: 0, fontWeight: 800, color: '#0f172a' }}>
+                                  {itemObj?.qty || 1}x {itemObj?.name} {itemObj?.brand ? `(${itemObj.brand})` : ''}
+                                </div>
+                                <span style={{ fontWeight: 800, color: '#0f172a' }}>
+                                  ₹{(Number(itemObj?.price) || 0) * (Number(itemObj?.qty) || 1)}
+                                </span>
+                              </div>
+                            </div>
+                          ) : (
+                            /* Substitute Details */
+                            <>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
+                                <span style={{ fontSize: '0.72rem', color: '#ef4444', fontWeight: 900, width: '42px', flexShrink: 0 }}>OUT:</span>
+                                <div style={{ flex: 1, minWidth: 0, textDecoration: 'line-through', color: '#64748b' }}>
+                                  {msg.proposal.originalItem?.name} (₹{msg.proposal.originalItem?.price})
+                                </div>
+                              </div>
+
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+                                <span style={{ fontSize: '0.72rem', color: '#16a34a', fontWeight: 900, width: '42px', flexShrink: 0 }}>SUB:</span>
+                                <div style={{ flex: 1, minWidth: 0, fontWeight: 800, color: '#0f172a' }}>
+                                  {msg.proposal.replacementItem?.name} (₹{msg.proposal.replacementItem?.price})
+                                </div>
+                              </div>
+                            </>
+                          )}
+
+                          {/* Price Delta Badge */}
+                          <div style={{
+                            backgroundColor: isAddItem ? '#f0fdf4' : '#f1f5f9',
+                            padding: '5px 8px',
+                            borderRadius: '8px',
+                            fontWeight: 800,
+                            fontSize: '0.76rem',
+                            color: '#334155',
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            marginBottom: msg.proposal.status === 'pending' && !isShop ? '10px' : '0'
+                          }}>
+                            <span>{isAddItem ? 'Order Total Will Increase By:' : 'Price Difference:'}</span>
+                            <span style={{ color: addedDelta > 0 ? '#16a34a' : '#475569', fontWeight: 900 }}>
+                              {addedDelta > 0 ? `+₹${addedDelta}` : addedDelta < 0 ? `-₹${Math.abs(addedDelta)}` : '₹0'}
+                            </span>
                           </div>
+
+                          {/* Action Buttons for Customer when Pending */}
+                          {!isShop && msg.proposal.status === 'pending' && (
+                            <div style={{ display: 'flex', gap: '6px', marginTop: '8px' }}>
+                              <button
+                                onClick={() => handleRespondProposal(msg._id, 'accept')}
+                                disabled={respondingId === msg._id}
+                                style={{
+                                  flex: 1,
+                                  padding: '8px 10px',
+                                  backgroundColor: '#16a34a',
+                                  color: '#ffffff',
+                                  border: 'none',
+                                  borderRadius: '8px',
+                                  fontWeight: 900,
+                                  fontSize: '0.8rem',
+                                  cursor: 'pointer',
+                                  boxShadow: '0 2px 6px rgba(22, 163, 74, 0.28)'
+                                }}
+                              >
+                                {respondingId === msg._id ? 'Updating...' : `✅ Accept (+₹${addedDelta})`}
+                              </button>
+
+                              <button
+                                onClick={() => handleRespondProposal(msg._id, 'decline', isAddItem ? 'decline' : 'remove')}
+                                disabled={respondingId === msg._id}
+                                style={{
+                                  padding: '8px 10px',
+                                  backgroundColor: '#fee2e2',
+                                  color: '#dc2626',
+                                  border: '1px solid #fca5a5',
+                                  borderRadius: '8px',
+                                  fontWeight: 800,
+                                  fontSize: '0.76rem',
+                                  cursor: 'pointer'
+                                }}
+                              >
+                                {isAddItem ? '❌ Reject' : '❌ Remove Item'}
+                              </button>
+                            </div>
+                          )}
                         </div>
-
-                        {/* Price Delta Badge */}
-                        <div style={{
-                          backgroundColor: '#f1f5f9',
-                          padding: '5px 8px',
-                          borderRadius: '8px',
-                          fontWeight: 800,
-                          fontSize: '0.76rem',
-                          color: '#334155',
-                          display: 'flex',
-                          justifyContent: 'space-between',
-                          marginBottom: msg.proposal.status === 'pending' && !isShop ? '10px' : '0'
-                        }}>
-                          <span>Price Difference:</span>
-                          <span style={{ color: msg.proposal.priceDelta > 0 ? '#ea580c' : msg.proposal.priceDelta < 0 ? '#16a34a' : '#475569', fontWeight: 900 }}>
-                            {msg.proposal.priceDelta > 0 ? `+₹${msg.proposal.priceDelta}` : msg.proposal.priceDelta < 0 ? `-₹${Math.abs(msg.proposal.priceDelta)}` : '₹0'}
-                          </span>
-                        </div>
-
-                        {/* Action Buttons for Customer when Pending */}
-                        {!isShop && msg.proposal.status === 'pending' && (
-                          <div style={{ display: 'flex', gap: '6px', marginTop: '8px' }}>
-                            <button
-                              onClick={() => handleRespondProposal(msg._id, 'accept')}
-                              disabled={respondingId === msg._id}
-                              style={{
-                                flex: 1,
-                                padding: '8px 10px',
-                                backgroundColor: '#16a34a',
-                                color: '#ffffff',
-                                border: 'none',
-                                borderRadius: '8px',
-                                fontWeight: 900,
-                                fontSize: '0.8rem',
-                                cursor: 'pointer',
-                                boxShadow: '0 2px 6px rgba(22, 163, 74, 0.28)'
-                              }}
-                            >
-                              {respondingId === msg._id ? 'Updating...' : `✅ Accept (${msg.proposal.priceDelta >= 0 ? '+' : ''}₹${msg.proposal.priceDelta})`}
-                            </button>
-
-                            <button
-                              onClick={() => handleRespondProposal(msg._id, 'decline', 'remove')}
-                              disabled={respondingId === msg._id}
-                              style={{
-                                padding: '8px 10px',
-                                backgroundColor: '#fee2e2',
-                                color: '#dc2626',
-                                border: '1px solid #fca5a5',
-                                borderRadius: '8px',
-                                fontWeight: 800,
-                                fontSize: '0.76rem',
-                                cursor: 'pointer'
-                              }}
-                            >
-                              ❌ Remove Item
-                            </button>
-                          </div>
-                        )}
-                      </div>
-                    )}
+                      );
+                    })()}
 
                     {/* Timestamp & Ticks */}
                     <div style={{

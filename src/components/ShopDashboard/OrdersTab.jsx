@@ -675,7 +675,7 @@ export default function OrdersTab({ orders, updateOrderStatus, markOrderPaid, sh
           onClose={() => setActiveChatOrder(null)}
           onOrderUpdated={(updated) => {
             if (refreshOrders) refreshOrders();
-            setActiveChatOrder(updated);
+            setActiveChatOrder(prev => (prev && prev._id === updated?._id ? { ...prev, ...updated } : null));
           }}
         />
       )}

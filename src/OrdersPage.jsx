@@ -767,8 +767,9 @@ export default function OrdersPage({ user, onExit, onAddToCart, cart, setCart })
           orderData={chatOrder}
           onClose={() => setChatOrder(null)}
           onOrderUpdated={(updated) => {
+            if (!updated?._id) return;
             setOrders(prev => prev.map(o => o._id === updated._id ? { ...o, ...updated } : o));
-            setChatOrder(updated);
+            setChatOrder(prev => (prev && prev._id === updated._id ? { ...prev, ...updated } : null));
           }}
         />
       )}
