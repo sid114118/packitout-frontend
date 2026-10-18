@@ -286,7 +286,13 @@ export default function OrdersTab({ orders, updateOrderStatus, markOrderPaid, sh
           {order.items && order.items.length > 0 ? (
             order.items.map((item, idx) => {
               if (item.isCombo) {
-                const subItems = Array.isArray(item.comboItems) ? item.comboItems : [];
+                let subItems = Array.isArray(item.comboItems) && item.comboItems.length > 0 ? item.comboItems : [];
+                if (subItems.length === 0 && item.comboId && shopData?.combos) {
+                  const matchedCombo = shopData.combos.find(c => String(c._id) === String(item.comboId));
+                  if (matchedCombo && Array.isArray(matchedCombo.productIds)) {
+                    subItems = matchedCombo.productIds.filter(p => p && typeof p === 'object');
+                  }
+                }
                 return (
                   <div 
                     key={idx} 

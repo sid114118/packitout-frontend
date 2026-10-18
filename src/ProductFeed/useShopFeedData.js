@@ -214,6 +214,24 @@ export default function useShopFeedData(user) {
       // ⚡⚡⚡ UI UNBLOCKS HERE: Drop the loading screen IMMEDIATELY!
       setLoading(false);
 
+      try {
+        localStorage.setItem(cacheKey, JSON.stringify({
+          cachedAt: Date.now(),
+          items: availableItems,
+          shopInfo: newShopInfo,
+          nearbyShops: initialCache?.nearbyShops || [],
+          shopRecommendations: newShopRecommendations,
+          shopCombos: newShopCombos,
+          campaigns: initialCache?.campaigns || [],
+          shopDeals: newShopDeals,
+          shopBestSellers: newBestSellers,
+          under99: newUnder99,
+          newArrivals: newArrivalsList,
+          buyItAgain: initialCache?.buyItAgain || [],
+          timeBased: finalTimeBased,
+        }));
+      } catch (e) {}
+
       // 🐢 PHASE 2: BACKGROUND HYDRATION
       let finalCampaigns = [];
       let finalNearbyShops = [];
