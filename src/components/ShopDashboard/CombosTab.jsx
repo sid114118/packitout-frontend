@@ -23,23 +23,27 @@ export default function CombosTab({ shopData, masterCatalog, onComboRefresh }) {
     return String(item._id || '');
   };
 
-  // Safe inventory items
-  const availableInventory = useMemo(() => {
-    return (shopData?.inventory || []).filter(i => i && i.inStock && i.product);
+  // Inventory items from shopData
+  const allInventory = useMemo(() => {
+    return (shopData?.inventory || []).filter(i => i && i.product);
   }, [shopData]);
 
-  // Filter available items for search
+  // Filter items for search: in-stock items first
   const filteredItems = useMemo(() => {
-    if (!searchTerm.trim()) return availableInventory.slice(0, 8);
-    const tokens = searchTerm.toLowerCase().trim().split(/\s+/);
-    return availableInventory.filter(item => {
-      const prod = item.product || {};
-      const text = `${prod.name || ''} ${prod.brand || ''} ${prod.category || ''}`.toLowerCase();
-      return tokens.every(t => text.includes(t));
-    }).slice(0, 15);
-  }, [availableInventory, searchTerm]);
+    let list = allInventory;
+    if (searchTerm.trim()) {
+      const tokens = searchTerm.toLowerCase().trim().split(/\s+/);
+      list = allInventory.filter(item => {
+        const prod = item.product || {};
+        const text = `${prod.name || ''} ${prod.brand || ''} ${prod.category || ''}`.toLowerCase();
+        return tokens.every(t => text.includes(t));
+      });
+    }
+    // Sort so in-stock items appear first
+    return [...list].sort((a, b) => (b.inStock ? 1 : 0) - (a.inStock ? 1 : 0)).slice(0, 20);
+  }, [allInventory, searchTerm]);
 
-  // Multi-select toggle
+  // Multi-select toggle with quantity support
   const handleToggleItem = (item) => {
     const pid = getItemId(item);
     if (!pid) return;
@@ -49,8 +53,20 @@ export default function CombosTab({ shopData, masterCatalog, onComboRefresh }) {
       if (exists) {
         return prev.filter(x => getItemId(x) !== pid);
       } else {
-        return [...prev, item];
+        return [...prev, { ...item, comboItemQty: 1 }];
       }
+    });
+  };
+
+  const handleUpdateItemQty = (pid, delta) => {
+    setSelectedItems(prev => {
+      return prev.map(x => {
+        if (getItemId(x) === pid) {
+          const newQty = (x.comboItemQty || 1) + delta;
+          return newQty > 0 ? { ...x, comboItemQty: newQty } : null;
+        }
+        return x;
+      }).filter(Boolean);
     });
   };
 
@@ -64,18 +80,20 @@ export default function CombosTab({ shopData, masterCatalog, onComboRefresh }) {
     'Quick Snacking Pack 🥪'
   ];
 
-  // Pricing calculations
+  // Pricing calculations factoring in quantities
   const totalRegularPrice = useMemo(() => {
     return selectedItems.reduce((sum, item) => {
       const price = Number(item.sellingPrice || item.product?.mrp || 0);
-      return sum + price;
+      const qty = Math.max(1, item.comboItemQty || 1);
+      return sum + (price * qty);
     }, 0);
   }, [selectedItems]);
 
   const totalMrp = useMemo(() => {
     return selectedItems.reduce((sum, item) => {
       const mrp = Number(item.product?.mrp || item.sellingPrice || 0);
-      return sum + mrp;
+      const qty = Math.max(1, item.comboItemQty || 1);
+      return sum + (mrp * qty);
     }, 0);
   }, [selectedItems]);
 
@@ -100,20 +118,29 @@ export default function CombosTab({ shopData, masterCatalog, onComboRefresh }) {
     setEmoji(combo.emoji || '🎁');
     setComboPrice(combo.comboPrice > 0 ? String(combo.comboPrice) : '');
 
-    // Resolve combo productIds into selected items
+    // Resolve combo productIds and aggregate duplicate IDs into quantities
     const comboPids = Array.isArray(combo.productIds) ? combo.productIds : [];
-    const initialSelected = [];
+    const pidCounts = {};
     for (const p of comboPids) {
       const pidStr = (typeof p === 'object' && p?._id) ? String(p._id) : String(p);
-      const found = availableInventory.find(inv => getItemId(inv) === pidStr);
+      pidCounts[pidStr] = (pidCounts[pidStr] || 0) + 1;
+    }
+
+    const initialSelected = [];
+    for (const [pidStr, count] of Object.entries(pidCounts)) {
+      const found = allInventory.find(inv => getItemId(inv) === pidStr);
       if (found) {
-        initialSelected.push(found);
-      } else if (typeof p === 'object' && p?._id) {
-        initialSelected.push({
-          product: p,
-          sellingPrice: p.sellingPrice || p.mrp || 0,
-          inStock: true
-        });
+        initialSelected.push({ ...found, comboItemQty: count });
+      } else {
+        const rawP = comboPids.find(p => ((typeof p === 'object' && p?._id) ? String(p._id) : String(p)) === pidStr);
+        if (typeof rawP === 'object' && rawP?._id) {
+          initialSelected.push({
+            product: rawP,
+            sellingPrice: rawP.sellingPrice || rawP.mrp || 0,
+            inStock: true,
+            comboItemQty: count
+          });
+        }
       }
     }
     setSelectedItems(initialSelected);
@@ -132,7 +159,16 @@ export default function CombosTab({ shopData, masterCatalog, onComboRefresh }) {
       return toast('Please enter a combo name', 'warn');
     }
 
-    const productIds = selectedItems.map(i => getItemId(i)).filter(Boolean);
+    // Expand product IDs based on configured item quantities
+    const productIds = [];
+    selectedItems.forEach(i => {
+      const pid = getItemId(i);
+      const q = Math.max(1, i.comboItemQty || 1);
+      for (let c = 0; c < q; c++) {
+        productIds.push(pid);
+      }
+    });
+
     if (productIds.length < 2) {
       return toast('Product IDs could not be resolved', 'error');
     }
@@ -168,6 +204,23 @@ export default function CombosTab({ shopData, masterCatalog, onComboRefresh }) {
       toast('Network error', 'error');
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  const handleToggleComboStatus = async (comboId) => {
+    try {
+      const response = await shopFetch(shopData, `/shops/${shopData._id}/combos/${comboId}/toggle`, {
+        method: 'PATCH'
+      });
+      if (response.ok) {
+        toast('Combo status updated! ✨');
+        if (onComboRefresh) await onComboRefresh();
+      } else {
+        const data = await response.json().catch(() => ({}));
+        toast(data.error || 'Failed to update status', 'error');
+      }
+    } catch {
+      toast('Network error', 'error');
     }
   };
 
@@ -317,6 +370,8 @@ export default function CombosTab({ shopData, masterCatalog, onComboRefresh }) {
                   const pid = getItemId(item);
                   const prod = item.product || {};
                   const price = item.sellingPrice || prod.mrp || 0;
+                  const itemQty = Math.max(1, item.comboItemQty || 1);
+
                   return (
                     <div 
                       key={pid} 
@@ -325,7 +380,7 @@ export default function CombosTab({ shopData, masterCatalog, onComboRefresh }) {
                         alignItems: 'center', 
                         gap: '8px', 
                         backgroundColor: '#ffffff', 
-                        padding: '6px 10px 6px 6px', 
+                        padding: '6px 8px 6px 6px', 
                         borderRadius: '12px', 
                         border: '1.5px solid #10b981', 
                         boxShadow: '0 2px 6px rgba(0,0,0,0.04)' 
@@ -338,19 +393,35 @@ export default function CombosTab({ shopData, masterCatalog, onComboRefresh }) {
                           <span style={{ fontSize: '18px' }}>{prod.emoji || '📦'}</span>
                         )}
                       </div>
-                      <div style={{ maxWidth: '120px' }}>
+                      <div style={{ maxWidth: '110px' }}>
                         <div style={{ fontSize: '0.8rem', fontWeight: '700', color: '#0f172a', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                           {prod.name}
                         </div>
                         <div style={{ fontSize: '0.75rem', fontWeight: '800', color: '#16a34a' }}>
-                          ₹{price}
+                          ₹{price * itemQty}
                         </div>
                       </div>
+
+                      {/* Quantity stepper inside combo tray */}
+                      <div style={{ display: 'flex', alignItems: 'center', backgroundColor: '#f1f5f9', borderRadius: '6px', padding: '1px' }}>
+                        <button
+                          type="button"
+                          onClick={() => handleUpdateItemQty(pid, -1)}
+                          style={{ width: '20px', height: '22px', border: 'none', background: 'transparent', cursor: 'pointer', fontWeight: 'bold', fontSize: '0.8rem', color: '#475569', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                        >−</button>
+                        <span style={{ fontSize: '0.75rem', fontWeight: '800', minWidth: '16px', textAlign: 'center', color: '#0f172a' }}>{itemQty}</span>
+                        <button
+                          type="button"
+                          onClick={() => handleUpdateItemQty(pid, 1)}
+                          style={{ width: '20px', height: '22px', border: 'none', background: 'transparent', cursor: 'pointer', fontWeight: 'bold', fontSize: '0.8rem', color: '#475569', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                        >+</button>
+                      </div>
+
                       <button 
                         type="button" 
                         onClick={() => handleToggleItem(item)} 
                         title="Remove"
-                        style={{ background: '#fee2e2', border: 'none', color: '#dc2626', width: '22px', height: '22px', borderRadius: '50%', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', fontSize: '0.75rem', marginLeft: '4px' }}
+                        style={{ background: '#fee2e2', border: 'none', color: '#dc2626', width: '20px', height: '20px', borderRadius: '50%', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', fontSize: '0.7rem', marginLeft: '2px' }}
                       >
                         ✕
                       </button>
@@ -547,6 +618,19 @@ export default function CombosTab({ shopData, masterCatalog, onComboRefresh }) {
           const comboProducts = Array.isArray(combo.productIds) ? combo.productIds : [];
           const hasDiscount = combo.comboPrice > 0;
           const isCurrentlyEditing = editingComboId === combo._id;
+          const isPaused = combo.isActive === false;
+
+          // Check if any product is out of stock in the shop's inventory
+          const outOfStockNames = [];
+          comboProducts.forEach(p => {
+            const pidStr = (typeof p === 'object' && p?._id) ? String(p._id) : String(p);
+            const inv = (shopData?.inventory || []).find(i => getItemId(i) === pidStr);
+            if (!inv || inv.inStock === false) {
+              const name = (typeof p === 'object' && p?.name) ? p.name : (inv?.product?.name || 'Item');
+              if (!outOfStockNames.includes(name)) outOfStockNames.push(name);
+            }
+          });
+          const hasOutOfStock = outOfStockNames.length > 0;
 
           return (
             <div 
@@ -556,12 +640,13 @@ export default function CombosTab({ shopData, masterCatalog, onComboRefresh }) {
                 flexDirection: 'column', 
                 justifyContent: 'space-between', 
                 padding: '16px', 
-                backgroundColor: isCurrentlyEditing ? '#fffbeb' : '#ffffff', 
-                border: isCurrentlyEditing ? '2px solid #f59e0b' : '1.5px solid #fef08a', 
+                backgroundColor: isCurrentlyEditing ? '#fffbeb' : (isPaused ? '#f8fafc' : '#ffffff'), 
+                border: isCurrentlyEditing ? '2px solid #f59e0b' : (isPaused ? '1.5px solid #cbd5e1' : (hasOutOfStock ? '1.5px solid #fca5a5' : '1.5px solid #fef08a')), 
                 borderRadius: '16px', 
                 boxShadow: isCurrentlyEditing ? '0 6px 18px rgba(245, 158, 11, 0.2)' : '0 4px 12px rgba(0,0,0,0.03)',
                 position: 'relative',
-                transition: 'all 0.2s'
+                transition: 'all 0.2s',
+                opacity: isPaused ? 0.8 : 1
               }}
             >
               <div>
@@ -585,6 +670,15 @@ export default function CombosTab({ shopData, masterCatalog, onComboRefresh }) {
                         EDITING NOW
                       </span>
                     )}
+                    {isPaused ? (
+                      <span style={{ backgroundColor: '#e2e8f0', color: '#475569', fontSize: '0.68rem', fontWeight: '800', padding: '2px 8px', borderRadius: '10px' }}>
+                        PAUSED
+                      </span>
+                    ) : (
+                      <span style={{ backgroundColor: '#dcfce7', color: '#166534', fontSize: '0.68rem', fontWeight: '800', padding: '2px 8px', borderRadius: '10px' }}>
+                        ACTIVE
+                      </span>
+                    )}
                     {hasDiscount && (
                       <span style={{ backgroundColor: '#fef08a', color: '#854d0e', fontSize: '0.7rem', fontWeight: '800', padding: '2px 8px', borderRadius: '10px' }}>
                         SPECIAL OFFER
@@ -592,6 +686,13 @@ export default function CombosTab({ shopData, masterCatalog, onComboRefresh }) {
                     )}
                   </div>
                 </div>
+
+                {/* STOCK ALERT */}
+                {hasOutOfStock && (
+                  <div style={{ backgroundColor: '#fee2e2', border: '1px solid #fca5a5', color: '#b91c1c', padding: '6px 10px', borderRadius: '8px', fontSize: '0.73rem', fontWeight: '700', marginBottom: '10px' }}>
+                    ⚠️ {outOfStockNames.join(', ')} currently out of stock in your store
+                  </div>
+                )}
 
                 {/* INCLUDED PRODUCTS THUMBNAILS */}
                 <div style={{ display: 'flex', gap: '6px', overflowX: 'auto', padding: '6px 0 12px', borderBottom: '1px solid #f1f5f9' }}>
@@ -628,8 +729,8 @@ export default function CombosTab({ shopData, masterCatalog, onComboRefresh }) {
                 </div>
               </div>
 
-              {/* FOOTER: PRICE, EDIT & DELETE */}
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '12px' }}>
+              {/* FOOTER: PRICE, TOGGLE, EDIT & DELETE */}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '12px', flexWrap: 'wrap', gap: '8px' }}>
                 <div>
                   <span style={{ fontSize: '0.7rem', color: '#64748b', display: 'block' }}>Bundle Price</span>
                   <span style={{ fontSize: '1.2rem', fontWeight: '900', color: '#16a34a' }}>
@@ -637,17 +738,35 @@ export default function CombosTab({ shopData, masterCatalog, onComboRefresh }) {
                   </span>
                 </div>
 
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <button
+                    type="button"
+                    onClick={() => handleToggleComboStatus(combo._id)}
+                    style={{
+                      backgroundColor: isPaused ? '#f0fdf4' : '#fef2f2',
+                      color: isPaused ? '#16a34a' : '#dc2626',
+                      border: isPaused ? '1px solid #bbf7d0' : '1px solid #fecaca',
+                      padding: '6px 10px',
+                      borderRadius: '8px',
+                      fontWeight: '700',
+                      fontSize: '0.78rem',
+                      cursor: 'pointer'
+                    }}
+                    title={isPaused ? "Make this combo active and visible to customers" : "Pause this combo without deleting"}
+                  >
+                    {isPaused ? '▶ Activate' : '⏸ Pause'}
+                  </button>
+
                   <button 
                     onClick={() => handleStartEdit(combo)}
                     style={{ 
                       backgroundColor: isCurrentlyEditing ? '#2563eb' : '#eff6ff', 
                       color: isCurrentlyEditing ? '#fff' : '#2563eb', 
                       border: '1px solid #bfdbfe', 
-                      padding: '6px 12px', 
+                      padding: '6px 10px', 
                       borderRadius: '8px', 
                       fontWeight: '700', 
-                      fontSize: '0.8rem',
+                      fontSize: '0.78rem',
                       cursor: 'pointer',
                       display: 'flex',
                       alignItems: 'center',
@@ -663,10 +782,10 @@ export default function CombosTab({ shopData, masterCatalog, onComboRefresh }) {
                       backgroundColor: '#fee2e2', 
                       color: '#dc2626', 
                       border: 'none', 
-                      padding: '6px 12px', 
+                      padding: '6px 10px', 
                       borderRadius: '8px', 
                       fontWeight: '700', 
-                      fontSize: '0.8rem',
+                      fontSize: '0.78rem',
                       cursor: 'pointer' 
                     }}
                   >

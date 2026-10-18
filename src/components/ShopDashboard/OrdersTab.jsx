@@ -284,51 +284,111 @@ export default function OrdersTab({ orders, updateOrderStatus, markOrderPaid, sh
             )}
           </div>
           {order.items && order.items.length > 0 ? (
-            order.items.map((item, idx) => (
-              <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.85rem', color: '#475569', marginBottom: '8px', paddingBottom: '8px', borderBottom: '1px solid #f1f5f9' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                  {(item.image || item.product?.image) ? (
-                    <img src={cdnImage(item.image || item.product?.image, 100)} alt={item.name} style={{ width: '40px', height: '40px', objectFit: 'cover', borderRadius: '6px', backgroundColor: '#f8fafc' }} />
-                  ) : (
-                    <div style={{ width: '40px', height: '40px', borderRadius: '6px', backgroundColor: '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.2rem' }}>📦</div>
-                  )}
-                  <div>
-                    <span style={{ fontWeight: '500', color: '#1e293b' }}>{item.qty}x {item.name}</span>
-                    {item.substitutedFrom && (
-                      <div style={{ fontSize: '0.7rem', color: '#059669', fontWeight: 800 }}>
-                        ✓ Substituted for {item.substitutedFrom}
+            order.items.map((item, idx) => {
+              if (item.isCombo) {
+                const subItems = Array.isArray(item.comboItems) ? item.comboItems : [];
+                return (
+                  <div 
+                    key={idx} 
+                    style={{ 
+                      backgroundColor: '#fffbeb', 
+                      border: '1.5px solid #fde68a', 
+                      borderRadius: '12px', 
+                      padding: '12px 14px', 
+                      marginBottom: '10px',
+                      boxShadow: '0 2px 8px rgba(245, 158, 11, 0.08)'
+                    }}
+                  >
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <span style={{ fontSize: '1.4rem', lineHeight: 1 }}>{item.emoji || '🎁'}</span>
+                        <div>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            <span style={{ fontWeight: '800', color: '#92400e', fontSize: '0.95rem' }}>
+                              {item.qty}x {item.name}
+                            </span>
+                            <span style={{ backgroundColor: '#f59e0b', color: '#fff', fontSize: '0.62rem', fontWeight: '900', padding: '2px 6px', borderRadius: '4px' }}>
+                              COMBO PACK
+                            </span>
+                          </div>
+                          {item.savings > 0 && (
+                            <span style={{ fontSize: '0.72rem', color: '#059669', fontWeight: '700' }}>
+                              Promo Discount: ₹{item.savings * item.qty} off
+                            </span>
+                          )}
+                        </div>
                       </div>
+                      <span style={{ fontWeight: '900', color: '#b45309', fontSize: '1.05rem' }}>
+                        ₹{(item.price || 0) * item.qty}
+                      </span>
+                    </div>
+
+                    {/* Breakdown list of what shopkeeper must pack */}
+                    <div style={{ backgroundColor: '#ffffff', borderRadius: '8px', padding: '8px 10px', border: '1px solid #fef08a' }}>
+                      <div style={{ fontSize: '0.7rem', fontWeight: '800', color: '#78350f', textTransform: 'uppercase', marginBottom: '4px' }}>
+                        📦 Pack Together ({subItems.length} items included):
+                      </div>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                        {subItems.map((ci, cidx) => (
+                          <div key={cidx} style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.8rem', color: '#334155' }}>
+                            <span style={{ color: '#d97706', fontWeight: 'bold' }}>•</span>
+                            <span style={{ fontWeight: '700' }}>{ci.name}</span>
+                            {ci.qnty && <span style={{ color: '#64748b', fontSize: '0.72rem' }}>({ci.qnty})</span>}
+                            {ci.brand && <span style={{ color: '#94a3b8', fontSize: '0.72rem' }}>- {ci.brand}</span>}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                );
+              }
+
+              return (
+                <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.85rem', color: '#475569', marginBottom: '8px', paddingBottom: '8px', borderBottom: '1px solid #f1f5f9' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    {(item.image || item.product?.image) ? (
+                      <img src={cdnImage(item.image || item.product?.image, 100)} alt={item.name} style={{ width: '40px', height: '40px', objectFit: 'cover', borderRadius: '6px', backgroundColor: '#f8fafc' }} />
+                    ) : (
+                      <div style={{ width: '40px', height: '40px', borderRadius: '6px', backgroundColor: '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.2rem' }}>📦</div>
+                    )}
+                    <div>
+                      <span style={{ fontWeight: '500', color: '#1e293b' }}>{item.qty}x {item.name}</span>
+                      {item.substitutedFrom && (
+                        <div style={{ fontSize: '0.7rem', color: '#059669', fontWeight: 800 }}>
+                          ✓ Substituted for {item.substitutedFrom}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <span style={{ fontWeight: '700', color: '#0f172a' }}>₹{(item.price || item.sellingPrice || item.mrp || 0) * item.qty}</span>
+                    {isActive && (
+                      <button
+                        onClick={() => setSubstituteTarget({ order, itemIndex: idx, mode: 'swap' })}
+                        style={{
+                          padding: '4px 8px',
+                          backgroundColor: '#eff6ff',
+                          color: '#2563eb',
+                          border: '1px solid #bfdbfe',
+                          borderRadius: '6px',
+                          fontSize: '0.72rem',
+                          fontWeight: 800,
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '2px',
+                          boxShadow: '0 1px 3px rgba(37, 99, 235, 0.1)'
+                        }}
+                        title="Suggest substitute item if out of stock"
+                      >
+                        <ChatIcon size={12} color="#2563eb" />
+                        <span>Swap</span>
+                      </button>
                     )}
                   </div>
                 </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <span style={{ fontWeight: '700', color: '#0f172a' }}>₹{(item.price || item.sellingPrice || item.mrp || 0) * item.qty}</span>
-                  {isActive && (
-                    <button
-                      onClick={() => setSubstituteTarget({ order, itemIndex: idx, mode: 'swap' })}
-                      style={{
-                        padding: '4px 8px',
-                        backgroundColor: '#eff6ff',
-                        color: '#2563eb',
-                        border: '1px solid #bfdbfe',
-                        borderRadius: '6px',
-                        fontSize: '0.72rem',
-                        fontWeight: 800,
-                        cursor: 'pointer',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '2px',
-                        boxShadow: '0 1px 3px rgba(37, 99, 235, 0.1)'
-                      }}
-                      title="Suggest substitute item if out of stock"
-                    >
-                      <ChatIcon size={12} color="#2563eb" />
-                      <span>Swap</span>
-                    </button>
-                  )}
-                </div>
-              </div>
-            ))
+              );
+            })
           ) : (
             <div style={{ fontSize: '0.85rem', color: '#94a3b8', fontStyle: 'italic' }}>Custom Parchi Order</div>
           )}

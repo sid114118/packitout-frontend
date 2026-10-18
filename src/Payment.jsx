@@ -53,16 +53,30 @@ export default function Payment({ user, cart, targetShop, finalBill, useCoins, c
 
   const cleanCartItems = () => cart
     .filter(item => item !== null)
-    .map(item => ({
-      productId: item._id,
-      name: item.name,
-      qty: Number(item.qty || 1),
-      price: Number(item.sellingPrice !== undefined ? item.sellingPrice : (item.mrp || 0)),
-      image: item.image || "",
-      qnty: item.qnty || "",
-      brand: item.brand || "",
-      emoji: item.emoji || "🛒",
-    }));
+    .map(item => {
+      if (item.isCombo) {
+        return {
+          isCombo: true,
+          comboId: item.comboId || String(item._id).replace(/^combo_/, ''),
+          name: item.name,
+          qty: Number(item.qty || 1),
+          price: Number(item.sellingPrice !== undefined ? item.sellingPrice : (item.mrp || 0)),
+          emoji: item.emoji || "🎁",
+          savings: Number(item.savings || 0),
+          comboItems: item.comboItems || []
+        };
+      }
+      return {
+        productId: item._id,
+        name: item.name,
+        qty: Number(item.qty || 1),
+        price: Number(item.sellingPrice !== undefined ? item.sellingPrice : (item.mrp || 0)),
+        image: item.image || "",
+        qnty: item.qnty || "",
+        brand: item.brand || "",
+        emoji: item.emoji || "🛒",
+      };
+    });
 
   const placeOrder = async (method) => {
     const response = await userFetch(user, '/orders', {

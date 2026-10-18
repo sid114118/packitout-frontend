@@ -198,15 +198,45 @@ export default function ShopFeed({
                     const rawPids = Array.isArray(combo.productIds) ? combo.productIds : [];
                     const comboItems = rawPids.map(p => {
                       const pidStr = (typeof p === 'object' && p?._id) ? String(p._id) : String(p);
-                      const matched = items.find(i => String(i._id) === pidStr || i.variants?.some(v => String(v._id) === pidStr));
-                      if (matched) return matched;
+                      for (const item of items) {
+                        if (String(item._id) === pidStr) return item;
+                        if (item.variants && item.variants.length > 0) {
+                          const vMatch = item.variants.find(v => String(v._id) === pidStr);
+                          if (vMatch) return vMatch;
+                        }
+                      }
                       if (typeof p === 'object' && p?._id) return p;
                       return null;
                     }).filter(Boolean);
 
+                    const isOutOfStock = comboItems.length === 0 || comboItems.some(item => item.inStock === false);
                     const regularTotal = comboItems.reduce((sum, item) => sum + Number(item.sellingPrice || item.mrp || 0), 0);
                     const effectivePrice = combo.comboPrice > 0 ? combo.comboPrice : regularTotal;
                     const savings = (combo.comboPrice > 0 && regularTotal > combo.comboPrice) ? (regularTotal - combo.comboPrice) : 0;
+
+                    const handleAddComboToCart = (e) => {
+                      e.stopPropagation();
+                      if (isOutOfStock) return;
+                      onAddToCart({
+                        _id: `combo_${combo._id}`,
+                        isCombo: true,
+                        comboId: String(combo._id),
+                        name: combo.name,
+                        emoji: combo.emoji || '🎁',
+                        mrp: regularTotal,
+                        sellingPrice: effectivePrice,
+                        savings: savings,
+                        comboItems: comboItems.map(item => ({
+                          _id: item._id,
+                          name: item.name,
+                          image: item.image,
+                          brand: item.brand,
+                          qnty: item.qnty,
+                          sellingPrice: item.sellingPrice || item.mrp || 0
+                        }))
+                      });
+                      toast('Combo box added to cart! 🎁');
+                    };
 
                     return (
                       <div 
@@ -216,7 +246,7 @@ export default function ShopFeed({
                           minWidth: '250px', 
                           maxWidth: '280px', 
                           flexShrink: 0, 
-                          border: '1.5px solid #fde68a', 
+                          border: isOutOfStock ? '1.5px solid #cbd5e1' : '1.5px solid #fde68a', 
                           borderRadius: '18px', 
                           padding: '16px', 
                           backgroundColor: '#fff', 
@@ -225,7 +255,8 @@ export default function ShopFeed({
                           justifyContent: 'space-between', 
                           boxShadow: '0 4px 15px rgba(245, 158, 11, 0.08)',
                           cursor: 'pointer',
-                          transition: 'transform 0.15s ease, box-shadow 0.15s ease'
+                          transition: 'transform 0.15s ease, box-shadow 0.15s ease',
+                          opacity: isOutOfStock ? 0.75 : 1
                         }}
                       >
                         <div>
@@ -234,9 +265,14 @@ export default function ShopFeed({
                               <span style={{ fontSize: '1.3rem' }}>{combo.emoji || '🎁'}</span>
                               <span>{combo.name}</span>
                             </h4>
-                            {savings > 0 && (
+                            {savings > 0 && !isOutOfStock && (
                               <span style={{ backgroundColor: '#10b981', color: '#fff', fontSize: '0.68rem', fontWeight: '800', padding: '2px 6px', borderRadius: '6px' }}>
                                 SAVE ₹{savings}
+                              </span>
+                            )}
+                            {isOutOfStock && (
+                              <span style={{ backgroundColor: '#64748b', color: '#fff', fontSize: '0.62rem', fontWeight: '800', padding: '2px 6px', borderRadius: '6px' }}>
+                                OUT OF STOCK
                               </span>
                             )}
                           </div>
@@ -268,7 +304,7 @@ export default function ShopFeed({
                             ))}
                           </div>
 
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.75rem', color: '#d97706', fontWeight: '700', marginBottom: '10px' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.75rem', color: isOutOfStock ? '#64748b' : '#d97706', fontWeight: '700', marginBottom: '10px' }}>
                             <span>Tap to see all items</span>
                             <span>›</span>
                           </div>
@@ -290,28 +326,22 @@ export default function ShopFeed({
                           </div>
 
                           <button 
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              comboItems.forEach(item => {
-                                const toAdd = (item.variants && item.variants.length > 0) ? item.variants[0] : item;
-                                onAddToCart(toAdd);
-                              });
-                              toast('Combo box added to cart! 🎁');
-                            }}
+                            disabled={isOutOfStock}
+                            onClick={handleAddComboToCart}
                             style={{ 
                               width: '100%', 
                               padding: '10px', 
-                              background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)', 
-                              color: '#fff', 
+                              background: isOutOfStock ? '#cbd5e1' : 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)', 
+                              color: isOutOfStock ? '#64748b' : '#fff', 
                               border: 'none', 
                               borderRadius: '10px', 
                               fontWeight: '800', 
                               fontSize: '0.88rem', 
-                              cursor: 'pointer', 
-                              boxShadow: '0 4px 10px rgba(245, 158, 11, 0.25)' 
+                              cursor: isOutOfStock ? 'not-allowed' : 'pointer', 
+                              boxShadow: isOutOfStock ? 'none' : '0 4px 10px rgba(245, 158, 11, 0.25)' 
                             }}
                           >
-                            Add Box To Cart 🛒
+                            {isOutOfStock ? 'Temporarily Unavailable' : 'Add Box To Cart 🛒'}
                           </button>
                         </div>
                       </div>
@@ -342,7 +372,7 @@ export default function ShopFeed({
 
       <VariantBottomSheet product={selectedVariantProduct} onClose={() => setSelectedVariantProduct(null)} onAddToCart={onAddToCart} onRemoveFromCart={onRemoveFromCart} cart={cart} />
       <ProductModal product={selectedProductDetails} isOpen={selectedProductDetails !== null} onClose={() => setSelectedProductDetails(null)} onAddToCart={onAddToCart} onRemoveFromCart={onRemoveFromCart} onViewCart={onViewCart} cart={cart} allItems={items} onViewBrand={(brand) => { if (onClearCategory) onClearCategory(); setViewAll(null); if (onBrandSelect) onBrandSelect(brand); }} />
-      <ComboDetailModal combo={selectedComboDetail} items={items} onClose={() => setSelectedComboDetail(null)} onAddToCart={(item) => { onAddToCart(item); toast('Combo box added to cart! 🎁'); }} />
+      <ComboDetailModal combo={selectedComboDetail} items={items} onClose={() => setSelectedComboDetail(null)} onAddToCart={(comboBundle) => { onAddToCart(comboBundle); toast('Combo box added to cart! 🎁'); }} />
     </div>
   );
 }

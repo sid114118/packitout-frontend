@@ -75,7 +75,13 @@ export default function Cart({ cart, setCart, user, onUserUpdate, onBack, onChec
 
   const outOfStockItems = cart.filter(item => {
     if (!targetShop || !targetShop.inventory) return false;
-    const inv = targetShop.inventory.find(i => i.product?._id === item._id || i.product === item._id);
+    if (item.isCombo && Array.isArray(item.comboItems) && item.comboItems.length > 0) {
+      return item.comboItems.some(ci => {
+        const inv = targetShop.inventory.find(i => String(i.product?._id || i.product) === String(ci._id || ci.productId));
+        return !inv || inv.inStock === false;
+      });
+    }
+    const inv = targetShop.inventory.find(i => String(i.product?._id || i.product) === String(item._id));
     return !inv || inv.inStock === false;
   });
   const hasOutOfStock = outOfStockItems.length > 0;
@@ -259,6 +265,84 @@ export default function Cart({ cart, setCart, user, onUserUpdate, onBack, onChec
             const isDiscounted = originalPrice > safePrice;
             const isOutOfStock = outOfStockIds.has(String(item._id));
             
+            // 🎁 COMBO PACK LINE ITEM RENDERING
+            if (item.isCombo) {
+              const comboItemsList = Array.isArray(item.comboItems) ? item.comboItems : [];
+              const savingsAmount = (originalPrice > safePrice) ? (originalPrice - safePrice) : (item.savings || 0);
+
+              return (
+                <div 
+                  key={item._id} 
+                  style={{ 
+                    backgroundColor: isOutOfStock ? '#f8fafc' : '#fffbeb', 
+                    border: isOutOfStock ? '1.5px solid #cbd5e1' : '1.5px solid #fde68a', 
+                    borderRadius: '16px', 
+                    padding: '16px', 
+                    marginBottom: '16px',
+                    boxShadow: '0 2px 10px rgba(245, 158, 11, 0.08)'
+                  }}
+                >
+                  <div style={{ display: 'flex', gap: '12px', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '8px' }}>
+                    <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+                      <span style={{ fontSize: '1.8rem', lineHeight: 1 }}>{item.emoji || '🎁'}</span>
+                      <div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          <span style={{ fontWeight: '800', color: '#0f172a', fontSize: '0.98rem' }}>{item.name}</span>
+                          <span style={{ backgroundColor: '#fef08a', color: '#854d0e', fontSize: '0.62rem', fontWeight: '900', padding: '2px 6px', borderRadius: '4px' }}>
+                            COMBO DEAL
+                          </span>
+                        </div>
+                        {savingsAmount > 0 && (
+                          <span style={{ color: '#059669', fontSize: '0.75rem', fontWeight: '800' }}>
+                            🎉 You save ₹{savingsAmount * safeQty} on this combo!
+                          </span>
+                        )}
+                        {isOutOfStock && (
+                          <div style={{ color: '#dc2626', fontSize: '0.75rem', fontWeight: '800', marginTop: '2px' }}>
+                            ⚠️ An item in this combo is currently out of stock
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Quantity controls */}
+                    <div style={{ display: 'flex', alignItems: 'center', backgroundColor: '#d97706', borderRadius: '10px', height: '34px', width: '85px', boxShadow: '0 4px 10px rgba(217, 119, 6, 0.25)' }}>
+                      <button onClick={() => updateQty(item._id, -1)} style={{ flex: 1, height: '100%', border: 'none', background: 'transparent', color: '#fff', fontSize: '1.3rem', fontWeight: 'bold', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>−</button>
+                      <span style={{ color: '#fff', fontSize: '0.95rem', fontWeight: '800', minWidth: '20px', textAlign: 'center' }}>{safeQty}</span>
+                      <button onClick={() => updateQty(item._id, 1)} style={{ flex: 1, height: '100%', border: 'none', background: 'transparent', color: '#fff', fontSize: '1.3rem', fontWeight: 'bold', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>+</button>
+                    </div>
+                  </div>
+
+                  {/* Included Items Pills */}
+                  {comboItemsList.length > 0 && (
+                    <div style={{ backgroundColor: '#ffffff', borderRadius: '10px', padding: '8px 12px', border: '1px solid #fef08a', marginTop: '8px' }}>
+                      <div style={{ fontSize: '0.72rem', color: '#92400e', fontWeight: '800', marginBottom: '4px', textTransform: 'uppercase' }}>
+                        📦 Included in this bundle ({comboItemsList.length} items):
+                      </div>
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                        {comboItemsList.map((ci, cidx) => (
+                          <span key={cidx} style={{ backgroundColor: '#fffbeb', border: '1px solid #fde68a', color: '#78350f', fontSize: '0.75rem', fontWeight: '700', padding: '2px 8px', borderRadius: '12px' }}>
+                            ✓ {ci.name} {ci.qnty ? `(${ci.qnty})` : ''}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Price Row */}
+                  <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px', marginTop: '10px', justifyContent: 'flex-end' }}>
+                    <span style={{ fontSize: '0.78rem', color: '#64748b' }}>Bundle Total:</span>
+                    <span style={{ fontWeight: '900', color: '#0f172a', fontSize: '1.15rem' }}>₹{safePrice * safeQty}</span>
+                    {originalPrice > safePrice && (
+                      <span style={{ fontSize: '0.85rem', color: '#94a3b8', textDecoration: 'line-through', fontWeight: '600' }}>
+                        ₹{originalPrice * safeQty}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              );
+            }
+
             return (
               <div key={item._id} style={{ display: 'flex', gap: '15px', alignItems: 'center', paddingBottom: '20px', marginBottom: '20px', borderBottom: index === cart.length - 1 ? 'none' : '1px solid #f1f5f9' }}>
                 

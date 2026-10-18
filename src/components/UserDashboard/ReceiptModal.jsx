@@ -125,7 +125,22 @@ export default function ReceiptModal({ selectedOrder, setSelectedOrder, onReorde
                         return (
                           <tr key={i}>
                             <td style={{ padding: '6px 0', color: '#0f172a', fontWeight: '700', verticalAlign: 'top', width: '55%' }}>
-                              {item.name}
+                              {item.isCombo ? (
+                                <div>
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                    <span>{item.emoji || '🎁'}</span>
+                                    <span>{item.name}</span>
+                                    <span style={{ fontSize: '0.62rem', backgroundColor: '#fef08a', color: '#854d0e', padding: '1px 5px', borderRadius: '4px', fontWeight: 800 }}>COMBO</span>
+                                  </div>
+                                  {Array.isArray(item.comboItems) && item.comboItems.length > 0 && (
+                                    <div style={{ fontSize: '0.72rem', color: '#64748b', fontWeight: '500', marginTop: '2px', lineHeight: '1.2' }}>
+                                      {item.comboItems.map(ci => ci.name).join(', ')}
+                                    </div>
+                                  )}
+                                </div>
+                              ) : (
+                                item.name
+                              )}
                             </td>
                             <td style={{ padding: '6px 0', textAlign: 'center', color: '#475569', verticalAlign: 'top', fontWeight: '600' }}>
                               x{item.qty}

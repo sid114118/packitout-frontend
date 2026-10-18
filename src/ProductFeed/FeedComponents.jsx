@@ -337,12 +337,18 @@ export function ComboDetailModal({ combo, items = [], onClose, onAddToCart }) {
   const rawPids = Array.isArray(combo.productIds) ? combo.productIds : [];
   const comboItems = rawPids.map(p => {
     const pidStr = (typeof p === 'object' && p?._id) ? String(p._id) : String(p);
-    const matched = items.find(i => String(i._id) === pidStr || i.variants?.some(v => String(v._id) === pidStr));
-    if (matched) return matched;
+    for (const item of items) {
+      if (String(item._id) === pidStr) return item;
+      if (item.variants && item.variants.length > 0) {
+        const vMatch = item.variants.find(v => String(v._id) === pidStr);
+        if (vMatch) return vMatch;
+      }
+    }
     if (typeof p === 'object' && p?._id) return p;
     return null;
   }).filter(Boolean);
 
+  const isOutOfStock = comboItems.length === 0 || comboItems.some(item => item.inStock === false);
   const regularTotal = comboItems.reduce((sum, item) => sum + Number(item.sellingPrice || item.mrp || 0), 0);
   const effectivePrice = combo.comboPrice > 0 ? combo.comboPrice : regularTotal;
   const savings = (combo.comboPrice > 0 && regularTotal > combo.comboPrice) ? (regularTotal - combo.comboPrice) : 0;
@@ -464,38 +470,59 @@ export function ComboDetailModal({ combo, items = [], onClose, onAddToCart }) {
                   🎉 You save ₹{savings} with this combo deal!
                 </div>
               )}
+              {isOutOfStock && (
+                <div style={{ fontSize: '0.82rem', color: '#dc2626', fontWeight: '800', borderTop: '1px dashed #fca5a5', paddingTop: '6px', marginTop: '4px' }}>
+                  ⚠️ One or more items in this combo are currently out of stock.
+                </div>
+              )}
             </div>
           </div>
 
           {/* FOOTER ACTION BUTTON */}
           <div style={{ padding: '12px 20px 0', borderTop: '1px solid #f1f5f9' }}>
             <button 
+              disabled={isOutOfStock}
               onClick={() => {
-                comboItems.forEach(item => {
-                  const toAdd = (item.variants && item.variants.length > 0) ? item.variants[0] : item;
-                  onAddToCart(toAdd);
+                if (isOutOfStock) return;
+                onAddToCart({
+                  _id: `combo_${combo._id}`,
+                  isCombo: true,
+                  comboId: String(combo._id),
+                  name: combo.name,
+                  emoji: combo.emoji || '🎁',
+                  mrp: regularTotal,
+                  sellingPrice: effectivePrice,
+                  savings: savings,
+                  comboItems: comboItems.map(item => ({
+                    _id: item._id,
+                    name: item.name,
+                    image: item.image,
+                    brand: item.brand,
+                    qnty: item.qnty,
+                    sellingPrice: item.sellingPrice || item.mrp || 0
+                  }))
                 });
                 onClose();
               }}
               style={{ 
                 width: '100%', 
                 padding: '14px', 
-                background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)', 
-                color: '#fff', 
+                background: isOutOfStock ? '#cbd5e1' : 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)', 
+                color: isOutOfStock ? '#64748b' : '#fff', 
                 border: 'none', 
                 borderRadius: '14px', 
                 fontWeight: '800', 
                 fontSize: '1rem', 
-                cursor: 'pointer', 
-                boxShadow: '0 4px 15px rgba(245, 158, 11, 0.35)',
+                cursor: isOutOfStock ? 'not-allowed' : 'pointer', 
+                boxShadow: isOutOfStock ? 'none' : '0 4px 15px rgba(245, 158, 11, 0.35)',
                 display: 'flex',
                 justifyContent: 'center',
                 alignItems: 'center',
                 gap: '8px'
               }}
             >
-              <span>Add Complete Box To Cart (₹{effectivePrice})</span>
-              <span>🛒</span>
+              <span>{isOutOfStock ? 'Temporarily Unavailable' : `Add Complete Box To Cart (₹${effectivePrice})`}</span>
+              {!isOutOfStock && <span>🛒</span>}
             </button>
           </div>
 

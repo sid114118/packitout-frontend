@@ -407,7 +407,13 @@ export default function App() {
           qnty: product.qnty,
           mrp: Number(product.mrp || 0),
           sellingPrice: Number(product.sellingPrice || product.mrp || 0),
-          shopId: currentShopId
+          shopId: currentShopId,
+          ...(product.isCombo ? {
+            isCombo: true,
+            comboId: product.comboId || String(product._id).replace(/^combo_/, ''),
+            comboItems: product.comboItems || [],
+            savings: Number(product.savings || 0)
+          } : {})
         };
         setCart([{ ...lightProduct, qty: 1 }]);
         return;
@@ -423,7 +429,13 @@ export default function App() {
       qnty: product.qnty,
       mrp: Number(product.mrp || 0),
       sellingPrice: Number(product.sellingPrice || product.mrp || 0),
-      shopId: currentShopId
+      shopId: currentShopId,
+      ...(product.isCombo ? {
+        isCombo: true,
+        comboId: product.comboId || String(product._id).replace(/^combo_/, ''),
+        comboItems: product.comboItems || [],
+        savings: Number(product.savings || 0)
+      } : {})
     };
 
     setCart((prevCart) => {
