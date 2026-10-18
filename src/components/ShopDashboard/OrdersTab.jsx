@@ -324,17 +324,28 @@ export default function OrdersTab({ orders, updateOrderStatus, markOrderPaid, sh
                     </div>
 
                     {/* Breakdown list of what shopkeeper must pack */}
-                    <div style={{ backgroundColor: '#ffffff', borderRadius: '8px', padding: '8px 10px', border: '1px solid #fef08a' }}>
-                      <div style={{ fontSize: '0.7rem', fontWeight: '800', color: '#78350f', textTransform: 'uppercase', marginBottom: '4px' }}>
+                    <div style={{ backgroundColor: '#ffffff', borderRadius: '10px', padding: '10px 12px', border: '1px solid #fef08a' }}>
+                      <div style={{ fontSize: '0.72rem', fontWeight: '800', color: '#78350f', textTransform: 'uppercase', marginBottom: '8px', letterSpacing: '0.3px' }}>
                         📦 Pack Together ({subItems.length} items included):
                       </div>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: '8px' }}>
                         {subItems.map((ci, cidx) => (
-                          <div key={cidx} style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.8rem', color: '#334155' }}>
-                            <span style={{ color: '#d97706', fontWeight: 'bold' }}>•</span>
-                            <span style={{ fontWeight: '700' }}>{ci.name}</span>
-                            {ci.qnty && <span style={{ color: '#64748b', fontSize: '0.72rem' }}>({ci.qnty})</span>}
-                            {ci.brand && <span style={{ color: '#94a3b8', fontSize: '0.72rem' }}>- {ci.brand}</span>}
+                          <div key={cidx} style={{ display: 'flex', alignItems: 'center', gap: '8px', backgroundColor: '#f8fafc', padding: '6px 8px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+                            <div style={{ width: '36px', height: '36px', borderRadius: '6px', backgroundColor: '#fff', border: '1px solid #cbd5e1', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', flexShrink: 0 }}>
+                              {ci.image ? (
+                                <img src={cdnImage(ci.image, 80)} alt={ci.name} style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+                              ) : (
+                                <span style={{ fontSize: '16px' }}>📦</span>
+                              )}
+                            </div>
+                            <div style={{ minWidth: 0, flex: 1 }}>
+                              <div style={{ fontWeight: '700', color: '#0f172a', fontSize: '0.8rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                {ci.name}
+                              </div>
+                              <div style={{ fontSize: '0.68rem', color: '#64748b' }}>
+                                {ci.qnty ? `${ci.qnty}` : ''} {ci.brand ? `• ${ci.brand}` : ''}
+                              </div>
+                            </div>
                           </div>
                         ))}
                       </div>

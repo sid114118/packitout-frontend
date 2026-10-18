@@ -51,90 +51,112 @@ export default function GuestFeed({
   const BASE_URL = (import.meta.env.VITE_API_BASE || "https://darkslategrey-snail-415133.hostingersite.com");
 
   useEffect(() => {
-    const fetchGuestProducts = async () => {
-      setLoading(true);
-      try {
-        const res = await fetch(`${BASE_URL}/master-products`);
-        if (!res.ok) { setLoading(false); return; }
-        const masterData = await res.json();
-        if (!Array.isArray(masterData)) { setLoading(false); return; }
+    const MASTER_KEY = 'packitout_master_products_v1';
 
-        const groupedMap = new Map();
-        const finalItems = [];
+    const processMasterData = (masterData) => {
+      const groupedMap = new Map();
+      const finalItems = [];
 
-        masterData.forEach(p => {
-          const formattedItem = { 
-            ...p, 
-            sellingPrice: p.mrp, 
-            isDiscounted: false, 
-            discountPercent: 0, 
-            inStock: true, 
-            variants: [] 
-          };
+      masterData.forEach(p => {
+        const formattedItem = { 
+          ...p, 
+          sellingPrice: p.mrp, 
+          isDiscounted: false, 
+          discountPercent: 0, 
+          inStock: true, 
+          variants: [] 
+        };
 
-          // 🛡️ THE FIX: Safely check for group IDs and ignore "nan"
-          const rawId = p.itemGroupId ? String(p.itemGroupId).trim().toLowerCase() : "";
-          const groupId = (rawId === "" || rawId === "nan") ? null : rawId;
+        // 🛡️ THE FIX: Safely check for group IDs and ignore "nan"
+        const rawId = p.itemGroupId ? String(p.itemGroupId).trim().toLowerCase() : "";
+        const groupId = (rawId === "" || rawId === "nan") ? null : rawId;
 
-          if (groupId) {
-            if (!groupedMap.has(groupId)) {
-              formattedItem.variants = [formattedItem]; 
-              groupedMap.set(groupId, formattedItem);
-              finalItems.push(formattedItem);
-            } else {
-              groupedMap.get(groupId).variants.push(formattedItem);
-            }
-          } else {
-            // No valid group ID? Just push it normally!
-            formattedItem.variants = [formattedItem];
+        if (groupId) {
+          if (!groupedMap.has(groupId)) {
+            formattedItem.variants = [formattedItem]; 
+            groupedMap.set(groupId, formattedItem);
             finalItems.push(formattedItem);
+          } else {
+            groupedMap.get(groupId).variants.push(formattedItem);
           }
-        });
-        
-        setItems(finalItems);
-        
-        setTrendingPlatform(finalItems.slice(0, 8)); 
-        setShopDeals([...finalItems].reverse().slice(0, 8)); 
-        setShopBestSellers(finalItems.slice(0, 8));
-        setUnder99(finalItems.filter(i => i.sellingPrice > 0 && i.sellingPrice < 100).slice(0, 8));
-        setNewArrivals([...finalItems].reverse().slice(0, 8)); 
-        setBuyItAgain(finalItems.slice(0, 8));
-
-        // 🕒 CLEVER SHOPKEEPER LOGIC: Time of Day Merchandising
-        const hour = new Date().getHours();
-        let timeTitle = ""; let timeSubtitle = ""; let keywords = [];
-
-        if (hour >= 5 && hour < 11) {
-          timeTitle = "🌤️ Breakfast & Dairy"; timeSubtitle = "Start your morning right";
-          keywords = ["dairy", "bread", "milk", "eggs", "breakfast", "tea", "coffee"];
-        } else if (hour >= 11 && hour < 16) {
-          timeTitle = "⚡ Mid-Day Energy Boost"; timeSubtitle = "Keep the momentum going";
-          keywords = ["snacks", "drinks", "beverages", "chips", "biscuit", "juice"];
-        } else if (hour >= 16 && hour < 22) {
-          timeTitle = "🌙 Evening Cravings"; timeSubtitle = "Perfect time for a snack";
-          keywords = ["ice cream", "maggi", "noodles", "chocolate", "chips", "dinner"];
         } else {
-          timeTitle = "🦉 Late Night Essentials"; timeSubtitle = "We are still awake for you";
-          keywords = ["snacks", "beverages", "noodles", "condoms", "personal"];
+          // No valid group ID? Just push it normally!
+          formattedItem.variants = [formattedItem];
+          finalItems.push(formattedItem);
         }
+      });
+      
+      setItems(finalItems);
+      setTrendingPlatform(finalItems.slice(0, 8)); 
+      setShopDeals([...finalItems].reverse().slice(0, 8)); 
+      setShopBestSellers(finalItems.slice(0, 8));
+      setUnder99(finalItems.filter(i => i.sellingPrice > 0 && i.sellingPrice < 100).slice(0, 8));
+      setNewArrivals([...finalItems].reverse().slice(0, 8)); 
+      setBuyItAgain(finalItems.slice(0, 8));
 
-        const matchedItems = finalItems.filter(i => {
-          const cat = (i.category || "").toLowerCase();
-          const name = (i.name || "").toLowerCase();
-          return keywords.some(kw => cat.includes(kw) || name.includes(kw));
-        });
+      // 🕒 CLEVER SHOPKEEPER LOGIC: Time of Day Merchandising
+      const hour = new Date().getHours();
+      let timeTitle = ""; let timeSubtitle = ""; let keywords = [];
 
-        setTimeBased({ 
-          title: timeTitle, 
-          subtitle: timeSubtitle,
-          items: matchedItems.length > 0 ? matchedItems.slice(0, 8) : finalItems.slice(0, 8) 
-        });
+      if (hour >= 5 && hour < 11) {
+        timeTitle = "🌤️ Breakfast & Dairy"; timeSubtitle = "Start your morning right";
+        keywords = ["dairy", "bread", "milk", "eggs", "breakfast", "tea", "coffee"];
+      } else if (hour >= 11 && hour < 16) {
+        timeTitle = "⚡ Mid-Day Energy Boost"; timeSubtitle = "Keep the momentum going";
+        keywords = ["snacks", "drinks", "beverages", "chips", "biscuit", "juice"];
+      } else if (hour >= 16 && hour < 22) {
+        timeTitle = "🌙 Evening Cravings"; timeSubtitle = "Perfect time for a snack";
+        keywords = ["ice cream", "maggi", "noodles", "chocolate", "chips", "dinner"];
+      } else {
+        timeTitle = "🦉 Late Night Essentials"; timeSubtitle = "We are still awake for you";
+        keywords = ["snacks", "beverages", "noodles", "condoms", "personal"];
+      }
 
-      } catch (err) { console.log("Guest fetch error:", err); }
-      setLoading(false);
+      const matchedItems = finalItems.filter(i => {
+        const cat = (i.category || "").toLowerCase();
+        const name = (i.name || "").toLowerCase();
+        return keywords.some(kw => cat.includes(kw) || name.includes(kw));
+      });
+
+      setTimeBased({ 
+        title: timeTitle, 
+        subtitle: timeSubtitle,
+        items: matchedItems.length > 0 ? matchedItems.slice(0, 8) : finalItems.slice(0, 8) 
+      });
     };
 
-    fetchGuestProducts();
+    let hasCached = false;
+    try {
+      const raw = localStorage.getItem(MASTER_KEY);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed?.data) && parsed.data.length > 0) {
+          processMasterData(parsed.data);
+          setLoading(false);
+          hasCached = true;
+        }
+      }
+    } catch (e) {}
+
+    if (!hasCached) setLoading(true);
+
+    fetch(`${BASE_URL}/master-products`)
+      .then(res => res.ok ? res.json() : null)
+      .then(masterData => {
+        if (!Array.isArray(masterData)) {
+          if (!hasCached) setLoading(false);
+          return;
+        }
+        try {
+          localStorage.setItem(MASTER_KEY, JSON.stringify({ at: Date.now(), data: masterData }));
+        } catch (e) {}
+        processMasterData(masterData);
+        setLoading(false);
+      })
+      .catch((err) => {
+        console.log("Guest fetch error:", err);
+        if (!hasCached) setLoading(false);
+      });
   }, []);
 
   const handleQuickAdd = (item) => {

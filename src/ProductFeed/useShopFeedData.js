@@ -75,15 +75,18 @@ export default function useShopFeedData(user) {
         ? Promise.resolve(cachedMaster)
         : fetchJson(`${BASE_URL}/master-products`);
 
-      // 🏎️ PHASE 1: CRITICAL PATH (Only fetch products to paint the screen instantly)
-      const [shopData, masterProducts] = await Promise.all([
-        fetchJson(`${BASE_URL}/shops/${shopId}/menu/lean?t=${Date.now()}`),
-        masterPromise,
-      ]);
+      // 🏎️ PHASE 1: CRITICAL PATH (Fetch shop inventory and paint immediately)
+      // Since menu/lean populates inventory.product with essential fields (name, image, brand, mrp, etc.),
+      // we do NOT block the screen on the heavy /master-products catalog download.
+      const shopData = await fetchJson(`${BASE_URL}/shops/${shopId}/menu/lean?t=${Date.now()}`);
 
-      if (!cachedMaster && Array.isArray(masterProducts)) {
-        try { localStorage.setItem(MASTER_CACHE_KEY, JSON.stringify({ at: Date.now(), data: masterProducts })); } catch {}
-      }
+      // Background load & cache master products if not already cached
+      let masterProducts = cachedMaster;
+      masterPromise.then(res => {
+        if (!cachedMaster && Array.isArray(res)) {
+          try { localStorage.setItem(MASTER_CACHE_KEY, JSON.stringify({ at: Date.now(), data: res })); } catch {}
+        }
+      });
 
       if (cancelled) return;
 

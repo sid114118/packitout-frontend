@@ -313,17 +313,44 @@ export default function Cart({ cart, setCart, user, onUserUpdate, onBack, onChec
                     </div>
                   </div>
 
-                  {/* Included Items Pills */}
+                  {/* Included Items with Product Thumbnails */}
                   {comboItemsList.length > 0 && (
-                    <div style={{ backgroundColor: '#ffffff', borderRadius: '10px', padding: '8px 12px', border: '1px solid #fef08a', marginTop: '8px' }}>
-                      <div style={{ fontSize: '0.72rem', color: '#92400e', fontWeight: '800', marginBottom: '4px', textTransform: 'uppercase' }}>
-                        📦 Included in this bundle ({comboItemsList.length} items):
+                    <div style={{ backgroundColor: '#ffffff', borderRadius: '12px', padding: '10px 12px', border: '1px solid #fef08a', marginTop: '10px' }}>
+                      <div style={{ fontSize: '0.72rem', color: '#92400e', fontWeight: '800', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.3px' }}>
+                        📦 Products in this bundle ({comboItemsList.length}):
                       </div>
-                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(130px, 1fr))', gap: '8px' }}>
                         {comboItemsList.map((ci, cidx) => (
-                          <span key={cidx} style={{ backgroundColor: '#fffbeb', border: '1px solid #fde68a', color: '#78350f', fontSize: '0.75rem', fontWeight: '700', padding: '2px 8px', borderRadius: '12px' }}>
-                            ✓ {ci.name} {ci.qnty ? `(${ci.qnty})` : ''}
-                          </span>
+                          <div 
+                            key={cidx} 
+                            style={{ 
+                              display: 'flex', 
+                              alignItems: 'center', 
+                              gap: '8px', 
+                              backgroundColor: '#fffbeb', 
+                              border: '1px solid #fde68a', 
+                              borderRadius: '8px', 
+                              padding: '4px 6px' 
+                            }}
+                          >
+                            <div style={{ width: '32px', height: '32px', borderRadius: '6px', backgroundColor: '#fff', border: '1px solid #fed7aa', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', flexShrink: 0 }}>
+                              {ci.image ? (
+                                <img src={cdnImage(ci.image, 80)} alt={ci.name} style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+                              ) : (
+                                <span style={{ fontSize: '14px' }}>📦</span>
+                              )}
+                            </div>
+                            <div style={{ minWidth: 0, flex: 1 }}>
+                              <div style={{ fontSize: '0.72rem', fontWeight: '700', color: '#0f172a', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                {ci.name}
+                              </div>
+                              {ci.qnty && (
+                                <div style={{ fontSize: '0.65rem', color: '#78350f', fontWeight: '600' }}>
+                                  {ci.qnty}
+                                </div>
+                              )}
+                            </div>
+                          </div>
                         ))}
                       </div>
                     </div>
