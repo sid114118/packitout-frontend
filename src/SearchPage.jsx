@@ -111,24 +111,76 @@ export default function SearchPage({
     })
   ), [items]);
 
+  const [serverResults, setServerResults] = useState([]);
+
+  // Server-side search sync (for 10,000+ item catalogs where local cache is partial or paginated)
+  useEffect(() => {
+    const q = debouncedQuery.trim();
+    if (q.length < 2) {
+      setServerResults([]);
+      return;
+    }
+    let cancelled = false;
+    try {
+      const activeShop = JSON.parse(localStorage.getItem('packitout_active_shop') || '{}');
+      const shopId = activeShop?._id;
+      if (!shopId) return;
+      fetch(`${BASE_URL}/shops/${shopId}/search?q=${encodeURIComponent(q)}&limit=40`)
+        .then(r => (r.ok ? r.json() : null))
+        .then(data => {
+          if (cancelled || !data || !Array.isArray(data.items)) return;
+          setServerResults(data.items);
+        })
+        .catch(() => {});
+    } catch {}
+    return () => { cancelled = true; };
+  }, [debouncedQuery]);
+
   const fuse = useMemo(() => {
-    return new Fuse(flatItems, {
+    // Cap Fuse index to 2,500 items so 10,000+ catalogs never freeze the main thread
+    const fusePool = flatItems.length > 2500 ? flatItems.slice(0, 2500) : flatItems;
+    return new Fuse(fusePool, {
       keys: [
         { name: 'name', weight: 0.6 },
         { name: 'brand', weight: 0.2 },
         { name: 'searchTags', weight: 0.2 }
       ],
-      threshold: 0.4, // allows some typos
+      threshold: 0.38,
       ignoreLocation: true,
     });
   }, [flatItems]);
 
   const displayItems = useMemo(() => {
-    if (debouncedQuery.trim().length === 0) return [];
-    const results = fuse.search(debouncedQuery.trim());
+    const q = debouncedQuery.trim();
+    if (q.length === 0) return [];
+    const results = fuse.search(q);
     const matches = results.map(r => r.item);
+    const seenIds = new Set(matches.map(m => String(m._id)));
+
+    // Fast token scan across any remaining items beyond 2,500 + server-side results
+    const tokens = q.toLowerCase().split(/\s+/).filter(Boolean);
+    if (flatItems.length > 2500 && tokens.length > 0) {
+      for (let i = 2500; i < flatItems.length; i++) {
+        const it = flatItems[i];
+        if (!it || seenIds.has(String(it._id))) continue;
+        const hay = `${it.name || ''} ${it.brand || ''} ${(it.searchTags || []).join(' ')}`.toLowerCase();
+        if (tokens.every(t => hay.includes(t))) {
+          seenIds.add(String(it._id));
+          matches.push(it);
+          if (matches.length >= 80) break;
+        }
+      }
+    }
+
+    for (const sItem of serverResults) {
+      if (sItem && sItem._id && !seenIds.has(String(sItem._id))) {
+        seenIds.add(String(sItem._id));
+        matches.push(sItem);
+      }
+    }
+
     return applyBrandPriority(matches, rankingConfig);
-  }, [debouncedQuery, fuse, rankingConfig]);
+  }, [debouncedQuery, fuse, flatItems, serverResults, rankingConfig]);
 
   // Type-ahead chips while typing. Pulls unique product names/brands that
   // start with or contain the live (un-debounced) query so it feels instant.

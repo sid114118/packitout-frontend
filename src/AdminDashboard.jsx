@@ -36,7 +36,7 @@ export default function AdminDashboard({ onExit }) {
   const initialShopForm = { 
     name: "", phone: "", password: "", pincode: "",
     ownerName: "", fullAddress: "", operatingHours: "", shopImage: "",
-    fssai: "", gst: "", panNumber: "", inventoryMode: "manual", canAddMasterProducts: false
+    fssai: "", gst: "", panNumber: "", inventoryMode: "manual", canAddMasterProducts: false, canUseBarcodeScanner: false, canUseCounterPos: false
   };
   const [shopForm, setShopForm] = useState(initialShopForm);
   const [editingShopId, setEditingShopId] = useState(null);
@@ -193,7 +193,7 @@ export default function AdminDashboard({ onExit }) {
     try {
       if (editingShopId) {
         const res = await adminFetch(`/shops/${editingShopId}/admin-edit`, {
-          method: "PATCH", body: JSON.stringify(shopForm),
+          method: "PATCH", body: JSON.stringify(shopForm.password?.trim() ? shopForm : (() => { const p = { ...shopForm }; delete p.password; return p; })()),
         });
         if (!res.ok) {
           const errData = await res.json().catch(() => ({}));
@@ -221,7 +221,7 @@ export default function AdminDashboard({ onExit }) {
       name: shop.name || "", phone: shop.phone || "", password: shop.password || "", pincode: shop.pincode || "",
       ownerName: shop.ownerName || "", fullAddress: shop.fullAddress || "", operatingHours: shop.operatingHours || "", 
       shopImage: shop.shopImage || "", fssai: shop.fssai || "", gst: shop.gst || "", panNumber: shop.panNumber || "", 
-      inventoryMode: shop.inventoryMode || "manual", canAddMasterProducts: shop.canAddMasterProducts || false
+      inventoryMode: shop.inventoryMode || "manual", canAddMasterProducts: shop.canAddMasterProducts || false, canUseBarcodeScanner: shop.canUseBarcodeScanner || false, canUseCounterPos: shop.canUseCounterPos || false
     });
     setEditingShopId(shop._id);
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -258,7 +258,7 @@ export default function AdminDashboard({ onExit }) {
             {/* 🔀 ROUTING: This tells React which component to show based on the active tab */}
             {activeTab === "products" && <ProductsTab products={products} form={form} setForm={setForm} handleProductSubmit={handleProductSubmit} CATEGORIES={CATEGORIES} editingProductId={editingProductId} startEditingProduct={startEditingProduct} cancelEdit={cancelEditProduct} onProductsChanged={fetchData} />}
 
-            {activeTab === "shops" && <ShopsTab shops={shops} shopForm={shopForm} setShopForm={setShopForm} handleShopSubmit={handleShopSubmit} editingShopId={editingShopId} startEditingShop={startEditingShop} cancelEditShop={cancelEditShop} />}
+            {activeTab === "shops" && <ShopsTab shops={shops} shopForm={shopForm} setShopForm={setShopForm} handleShopSubmit={handleShopSubmit} editingShopId={editingShopId} startEditingShop={startEditingShop} cancelEditShop={cancelEditShop} onShopsChanged={fetchData} />}
 
             {activeTab === "users" && <UsersTab users={users} onUsersChanged={fetchData} />}
             

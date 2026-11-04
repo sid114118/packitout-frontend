@@ -14,6 +14,7 @@ import ShopProfileModal from './components/ShopDashboard/ShopProfileModal';
 import ShopLocationBanner from './components/ShopDashboard/ShopLocationBanner';
 import RequestsTab from './components/ShopDashboard/RequestsTab.jsx';
 import CombosTab from './components/ShopDashboard/CombosTab.jsx';
+import CounterPosTab from './components/ShopDashboard/CounterPosTab.jsx';
 import { cdnImage } from './utils/cloudinaryUrl.js';
 import { shopFetch, BASE_URL } from './utils/api.js';
 import { playArrivalBell } from './utils/orderAlarm.js';
@@ -22,9 +23,9 @@ export default function ShopDashboard({ user, onExit }) {
   const toast = useToast();
   // --- STATE ---
   const [activeTab, setActiveTab] = useState("orders");
-  const [orders, setOrders] = useState([]); 
-  const [masterCatalog, setMasterCatalog] = useState([]); 
-  const [shopData, setShopData] = useState(user); 
+  const [orders, setOrders] = useState([]);
+  const [masterCatalog, setMasterCatalog] = useState([]);
+  const [shopData, setShopData] = useState(user);
 
   const [parchiRequests, setParchiRequests] = useState([]);
   const [selectedParchi, setSelectedParchi] = useState(null);
@@ -35,6 +36,7 @@ export default function ShopDashboard({ user, onExit }) {
   // --- DATA FETCHING ---
   useEffect(() => {
     const fetchAllData = async () => {
+      await refreshShopData();
       await fetchOrders();
       await fetchMasterCatalog();
       await fetchParchis();
@@ -275,7 +277,7 @@ export default function ShopDashboard({ user, onExit }) {
 
   return (
     <div style={{ backgroundColor: '#f8fafc', minHeight: '100vh', paddingBottom: '70px', fontFamily: 'sans-serif' }}>
-      
+
       {/* TOP HEADER WITH SHOP AVATAR + NOTIFICATION BELL */}
       <div style={{ backgroundColor: '#0f172a', color: 'white', padding: '15px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', position: 'sticky', top: 0, zIndex: 100, boxShadow: '0 2px 10px rgba(0,0,0,0.1)' }}>
         <button
@@ -341,9 +343,9 @@ export default function ShopDashboard({ user, onExit }) {
             </button>
             {!shopData.isOpen && (
               <label style={{ fontSize: '0.65rem', color: '#94a3b8', display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer' }}>
-                <input 
-                  type="checkbox" 
-                  checked={shopData.acceptsPreOrders !== false} 
+                <input
+                  type="checkbox"
+                  checked={shopData.acceptsPreOrders !== false}
                   onChange={async (e) => {
                     const accepts = e.target.checked;
                     const res = await shopFetch(shopData, `/shops/${shopData._id}`, {
@@ -369,7 +371,8 @@ export default function ShopDashboard({ user, onExit }) {
 
       {/* 🗂️ TAB NAVIGATION */}
       <div style={{ display: 'flex', backgroundColor: '#1e293b', padding: '10px 15px', gap: '10px', overflowX: 'auto', whiteSpace: 'nowrap', borderBottom: '1px solid #334155' }}>
-        <button onClick={() => setActiveTab("orders")} style={tabStyle(activeTab === "orders")}>📦 Live Orders ({orders.length})</button>
+        <button onClick={() => setActiveTab("orders")} style={tabStyle(activeTab === "orders")}>📦 Live Orders ({orders.filter(o => o?.orderSource !== 'POS').length})</button>
+        <button onClick={() => setActiveTab("pos")} style={{ ...tabStyle(activeTab === "pos"), backgroundColor: activeTab === "pos" ? '#059669' : '#064e3b', color: '#fff', border: '1px solid #34d399' }}>⚡ Counter POS {shopData.canUseCounterPos ? '🟢' : '🔒'}</button>
         <button onClick={() => setActiveTab("parchis")} style={tabStyle(activeTab === "parchis")}>🧾 Parchis {parchiRequests.length > 0 && <span style={badgeStyle}>{parchiRequests.length}</span>}</button>
         <button onClick={() => setActiveTab("inventory")} style={tabStyle(activeTab === "inventory")}>📊 Manage Inventory</button>
         <button onClick={() => setActiveTab("combos")} style={{ ...tabStyle(activeTab === "combos"), backgroundColor: activeTab === "combos" ? '#d97706' : '#78350f', color: '#fff', border: '1px solid #f59e0b' }}>🎁 Combos Offers ✨</button>
@@ -380,7 +383,18 @@ export default function ShopDashboard({ user, onExit }) {
 
       <ShopLocationBanner shopData={shopData} onShopUpdated={setShopData} />
 
-      <div style={{ padding: '15px', maxWidth: '800px', margin: '0 auto' }}>
+      <div style={{ padding: '15px', maxWidth: activeTab === "pos" ? '1140px' : '800px', margin: '0 auto' }}>
+        {activeTab === "pos" && (
+          <CounterPosTab
+            shopData={shopData}
+            masterCatalog={masterCatalog}
+            orders={orders}
+            onBillCreated={(updatedShop, createdOrder) => {
+              if (updatedShop) setShopData({ ...updatedShop, sessionToken: shopData.sessionToken });
+              if (createdOrder) setOrders(prev => [createdOrder, ...prev]);
+            }}
+          />
+        )}
         {activeTab === "orders" && <OrdersTab orders={orders} updateOrderStatus={updateOrderStatus} markOrderPaid={markOrderPaid} shopData={shopData} refreshOrders={fetchOrders} />}
         {activeTab === "parchis" && <ParchiTab parchiRequests={parchiRequests} selectedParchi={selectedParchi} setSelectedParchi={setSelectedParchi} parchiBill={parchiBill} setParchiBill={setParchiBill} handleAddToBill={handleAddToBill} handleSendBill={handleSendBill} shopData={shopData} />}
         {activeTab === "inventory" && <InventoryTab shopData={shopData} masterCatalog={masterCatalog} handleInventoryUpdate={handleInventoryUpdate} handleInventoryRemove={handleInventoryRemove} onInventoryRefresh={refreshShopData} fetchMasterCatalog={fetchMasterCatalog} />}

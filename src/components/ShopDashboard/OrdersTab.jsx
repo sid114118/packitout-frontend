@@ -4,6 +4,9 @@ import { cdnImage } from '../../utils/cloudinaryUrl.js';
 import OrderChatDrawer from '../Chat/OrderChatDrawer.jsx';
 import SubstitutePickerModal from './SubstitutePickerModal.jsx';
 import ChatIcon from '../../ui/ChatIcon.jsx';
+import { shopFetch } from '../../utils/api.js';
+import { useToast } from '../../ui/DialogProvider.jsx';
+import { buildShopToCustomerWhatsApp, openWhatsAppChat } from '../../utils/whatsappShare.js';
 
 const formatArrivedAgo = (isoDate) => {
   if (!isoDate) return '';
@@ -15,7 +18,36 @@ const formatArrivedAgo = (isoDate) => {
 };
 
 export default function OrdersTab({ orders, updateOrderStatus, markOrderPaid, shopData, refreshOrders }) {
+  const toast = useToast();
   const [showPastOrders, setShowPastOrders] = useState(false);
+  const [pricingTarget, setPricingTarget] = useState(null); // { orderId, itemIndex, priceInput }
+  const [isSavingPrice, setIsSavingPrice] = useState(false);
+
+  const handleSaveCustomPrice = async (orderId, itemIndex) => {
+    const val = Number(pricingTarget?.priceInput);
+    if (!Number.isFinite(val) || val < 0) {
+      toast('Please enter a valid price (₹)', 'error');
+      return;
+    }
+    setIsSavingPrice(true);
+    try {
+      const res = await shopFetch(shopData, `/orders/${orderId}/price-custom-item`, {
+        method: 'PATCH',
+        body: JSON.stringify({ itemIndex, price: val }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        toast(data.error || 'Could not update price', 'error');
+      } else {
+        toast(`Price set to ₹${val}/unit! Customer notified 📝`);
+        setPricingTarget(null);
+        if (refreshOrders) refreshOrders();
+      }
+    } catch (err) {
+      toast('Network error while setting price', 'error');
+    }
+    setIsSavingPrice(false);
+  };
   const [activeChatOrder, setActiveChatOrder] = useState(null);
   const [substituteTarget, setSubstituteTarget] = useState(null); // { order, itemIndex }
 
@@ -47,8 +79,8 @@ export default function OrdersTab({ orders, updateOrderStatus, markOrderPaid, sh
 
   const OrderCard = ({ order, isActive }) => {
     // Safely extract customer info
-    const customerName = order.userId?.name || "Customer";
-    const customerPhone = order.userId?.phone || "No phone";
+    const customerName = order.userId?.name || order.customerName || "Customer";
+    const customerPhone = order.userId?.phone || order.customerPhone || "No phone";
     const customerAddress = order.userId?.address || "No address provided";
 
     // Payment state matrix:
@@ -158,7 +190,7 @@ export default function OrdersTab({ orders, updateOrderStatus, markOrderPaid, sh
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', borderBottom: '1px solid #f1f5f9', paddingBottom: '12px', marginBottom: '12px' }}>
           <div>
             <div style={{ fontSize: '0.8rem', color: '#64748b', fontWeight: 'bold' }}>
-              ORDER #{order._id.slice(-5).toUpperCase()}
+              ORDER #{order._id.slice(-5).toUpperCase()} {order.orderSource === 'POS' && <span style={{ marginLeft: '6px', background: '#059669', color: '#fff', padding: '2px 7px', borderRadius: '6px', fontSize: '0.7rem' }}>⚡ Counter POS</span>}
             </div>
             <div style={{ fontSize: '0.8rem', color: '#94a3b8', marginTop: '4px' }}>
               {new Date(order.createdAt).toLocaleString()}
@@ -221,6 +253,63 @@ export default function OrdersTab({ orders, updateOrderStatus, markOrderPaid, sh
             <div style={{ fontWeight: '700', color: '#0f172a', marginBottom: '4px' }}>👤 {customerName}</div>
             <div style={{ fontSize: '0.85rem', color: '#475569', marginBottom: '4px' }}>📞 <a href={`tel:${customerPhone}`} style={{ color: '#3b82f6', textDecoration: 'none' }}>{customerPhone}</a></div>
             <div style={{ fontSize: '0.85rem', color: '#475569' }}>📍 {customerAddress}</div>
+            {order.userId?.phone && (
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginTop: '8px' }}>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const msg = buildShopToCustomerWhatsApp(order, shopData, 'bill');
+                    openWhatsAppChat(order.userId.phone, msg);
+                  }}
+                  style={{
+                    padding: '5px 10px',
+                    backgroundColor: '#f0fdf4',
+                    color: '#15803d',
+                    border: '1px solid #86efac',
+                    borderRadius: '8px',
+                    fontSize: '0.75rem',
+                    fontWeight: 800,
+                    cursor: 'pointer',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '4px',
+                  }}
+                  title="Send itemized digital bill to customer on WhatsApp"
+                >
+                  <span>🧾</span>
+                  <span>WhatsApp Bill</span>
+                </button>
+                {isActive && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (order.status !== 'Ready to Collect 🛍️') {
+                        updateOrderStatus(order._id, 'Ready to Collect 🛍️');
+                      }
+                      const msg = buildShopToCustomerWhatsApp(order, shopData, 'ready');
+                      openWhatsAppChat(order.userId.phone, msg);
+                    }}
+                    style={{
+                      padding: '5px 10px',
+                      backgroundColor: '#eff6ff',
+                      color: '#1d4ed8',
+                      border: '1px solid #93c5fd',
+                      borderRadius: '8px',
+                      fontSize: '0.75rem',
+                      fontWeight: 800,
+                      cursor: 'pointer',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '4px',
+                    }}
+                    title="Mark order Ready and ping customer on WhatsApp with Pickup Token"
+                  >
+                    <span>📲</span>
+                    <span>Ready Ping on WhatsApp</span>
+                  </button>
+                )}
+              </div>
+            )}
           </div>
           <button
             onClick={() => setActiveChatOrder(order)}
@@ -378,7 +467,60 @@ export default function OrdersTab({ orders, updateOrderStatus, markOrderPaid, sh
                     </div>
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <span style={{ fontWeight: '700', color: '#0f172a' }}>₹{(item.price || item.sellingPrice || item.mrp || 0) * item.qty}</span>
+                    <span style={{ fontWeight: '700', color: (item.isCustomNote && !item.price) ? '#d97706' : '#0f172a' }}>
+                      {(item.isCustomNote && !item.price) ? '⚠️ Needs Price (₹0)' : `₹${(item.price || item.sellingPrice || item.mrp || 0) * item.qty}`}
+                    </span>
+                    {isActive && (item.isCustomNote || String(item.productId || '').startsWith('custom_parchi_note_')) && (
+                      pricingTarget && pricingTarget.orderId === order._id && pricingTarget.itemIndex === idx ? (
+                        <div style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', backgroundColor: '#fffbeb', padding: '3px 6px', borderRadius: '8px', border: '1.5px solid #f59e0b' }}>
+                          <span style={{ fontWeight: 800, color: '#b45309', fontSize: '0.78rem' }}>₹</span>
+                          <input
+                            type="number"
+                            min="0"
+                            placeholder="Unit ₹"
+                            value={pricingTarget.priceInput}
+                            onChange={(e) => setPricingTarget(prev => ({ ...prev, priceInput: e.target.value }))}
+                            onKeyDown={(e) => { if (e.key === 'Enter') handleSaveCustomPrice(order._id, idx); }}
+                            style={{ width: '58px', padding: '4px 6px', borderRadius: '5px', border: '1px solid #fcd34d', fontWeight: 800, fontSize: '0.8rem', outline: 'none' }}
+                            autoFocus
+                          />
+                          <button
+                            disabled={isSavingPrice}
+                            onClick={() => handleSaveCustomPrice(order._id, idx)}
+                            style={{ padding: '4px 8px', backgroundColor: '#16a34a', color: '#fff', border: 'none', borderRadius: '5px', fontWeight: 800, fontSize: '0.72rem', cursor: 'pointer' }}
+                          >
+                            {isSavingPrice ? '…' : 'Save'}
+                          </button>
+                          <button
+                            onClick={() => setPricingTarget(null)}
+                            style={{ padding: '4px 6px', backgroundColor: '#f1f5f9', color: '#475569', border: 'none', borderRadius: '5px', fontWeight: 800, fontSize: '0.72rem', cursor: 'pointer' }}
+                          >
+                            ✕
+                          </button>
+                        </div>
+                      ) : (
+                        <button
+                          onClick={() => setPricingTarget({ orderId: order._id, itemIndex: idx, priceInput: item.price ? String(item.price) : '' })}
+                          style={{
+                            padding: '4px 9px',
+                            backgroundColor: item.price ? '#fef3c7' : '#f59e0b',
+                            color: item.price ? '#92400e' : '#ffffff',
+                            border: '1px solid #f59e0b',
+                            borderRadius: '6px',
+                            fontSize: '0.72rem',
+                            fontWeight: 800,
+                            cursor: 'pointer',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '3px',
+                            boxShadow: '0 1px 4px rgba(245, 158, 11, 0.25)'
+                          }}
+                          title="Set unit price for this custom parchi note"
+                        >
+                          <span>{item.price ? '✏️ Edit ₹' : '₹ Set Price'}</span>
+                        </button>
+                      )
+                    )}
                     {isActive && (
                       <button
                         onClick={() => setSubstituteTarget({ order, itemIndex: idx, mode: 'swap' })}

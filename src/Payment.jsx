@@ -66,6 +66,20 @@ export default function Payment({ user, cart, targetShop, finalBill, useCoins, c
           comboItems: item.comboItems || []
         };
       }
+      if (item.isCustomNote || String(item._id || '').startsWith('custom_parchi_note_')) {
+        return {
+          productId: item._id,
+          isCustomNote: true,
+          noteText: item.noteText || item.name || "",
+          name: item.name,
+          qty: Number(item.qty || 1),
+          price: 0,
+          image: "",
+          qnty: item.qnty || "Priced at counter",
+          brand: item.brand || "Custom Parchi Request",
+          emoji: item.emoji || "📝",
+        };
+      }
       return {
         productId: item._id,
         name: item.name,
@@ -102,6 +116,13 @@ export default function Payment({ user, cart, targetShop, finalBill, useCoins, c
       try { localStorage.setItem('packitout_user', JSON.stringify(next)); } catch {}
       if (onUserUpdate) onUserUpdate(next);
     }
+    try {
+      sessionStorage.setItem('packitout_last_order', JSON.stringify({
+        ...order,
+        shopId: { _id: targetShop._id, name: targetShop.name, phone: targetShop.phone },
+        userId: { _id: user._id, name: user.name, phone: user.phone },
+      }));
+    } catch {}
     return order;
   };
 

@@ -10,11 +10,11 @@ const BASE_URL = (import.meta.env.VITE_API_BASE || "https://darkslategrey-snail-
 
 // 🚀 FIX: The "export default" is right here so App.jsx can read it!
 export default function Cart({ cart, setCart, user, onUserUpdate, onBack, onCheckoutSuccess }) {
-  useScrollToTop(); 
+  useScrollToTop();
 
-  const [targetShop, setTargetShop] = useState(null); 
+  const [targetShop, setTargetShop] = useState(null);
   const [loadingShops, setLoadingShops] = useState(true);
-  
+
   // 🚦 Checkout step: 'cart' → 'pickup' → 'payment'
   const [step, setStep] = useState('cart');
 
@@ -51,8 +51,8 @@ export default function Cart({ cart, setCart, user, onUserUpdate, onBack, onChec
   }, 0);
 
   const itemTotal = cart.reduce((sum, item) => {
-    if (!item) return sum; 
-    const safeQty = item.qty || 1; 
+    if (!item) return sum;
+    const safeQty = item.qty || 1;
     const safePrice = item.sellingPrice !== undefined ? item.sellingPrice : (item.mrp || 0);
     return sum + (safePrice * safeQty);
   }, 0);
@@ -75,6 +75,7 @@ export default function Cart({ cart, setCart, user, onUserUpdate, onBack, onChec
 
   const outOfStockItems = cart.filter(item => {
     if (!targetShop || !targetShop.inventory) return false;
+    if (item.isCustomNote || String(item._id || '').startsWith('custom_parchi_note_')) return false;
     if (item.isCombo && Array.isArray(item.comboItems) && item.comboItems.length > 0) {
       return item.comboItems.some(ci => {
         const inv = targetShop.inventory.find(i => String(i.product?._id || i.product) === String(ci._id || ci.productId));
@@ -93,12 +94,12 @@ export default function Cart({ cart, setCart, user, onUserUpdate, onBack, onChec
     setCart(prevCart => {
       return prevCart.map(item => {
         if (item && item._id === productId) {
-          const currentQty = item.qty || 1; 
+          const currentQty = item.qty || 1;
           const newQty = currentQty + delta;
-          return newQty > 0 ? { ...item, qty: newQty } : null; 
+          return newQty > 0 ? { ...item, qty: newQty } : null;
         }
         return item;
-      }).filter(item => item !== null); 
+      }).filter(item => item !== null);
     });
   };
 
@@ -128,14 +129,14 @@ export default function Cart({ cart, setCart, user, onUserUpdate, onBack, onChec
         <div style={{ fontSize: '5rem', marginBottom: '15px', filter: 'drop-shadow(0 10px 15px rgba(0,0,0,0.1))' }}>🛒</div>
         <h2 style={{ color: '#0f172a', marginBottom: '8px', fontWeight: '900', fontSize: '1.4rem' }}>Your cart is empty</h2>
         <p style={{ color: '#64748b', marginBottom: '30px', fontWeight: '500' }}>Looks like you haven't added anything yet.</p>
-        
+
         <button onClick={onBack} style={{ width: '100%', maxWidth: '300px', padding: '14px 32px', backgroundColor: '#16a34a', color: 'white', border: 'none', borderRadius: '12px', fontWeight: '800', fontSize: '1.05rem', cursor: 'pointer', boxShadow: '0 8px 20px rgba(22, 163, 74, 0.3)', transition: 'transform 0.2s', marginBottom: '24px' }}>
           Browse Products
         </button>
 
         <div onClick={() => { window.location.hash = "#baskets"; }} style={{ width: '100%', maxWidth: '300px', backgroundColor: '#fff', padding: '20px', borderRadius: '16px', border: '1px solid #e2e8f0', boxShadow: '0 10px 30px rgba(15,23,42,0.06)', display: 'flex', flexDirection: 'column', gap: '10px', alignItems: 'center', cursor: 'pointer' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '48px', height: '48px', backgroundColor: '#f0fdf4', borderRadius: '12px', color: '#16a34a' }}>
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" /></svg>
           </div>
           <div style={{ fontWeight: 800, color: '#0f172a', fontSize: '1.1rem' }}>Short on time?</div>
           <div style={{ fontSize: '0.85rem', color: '#64748b', lineHeight: 1.4 }}>Build your cart instantly from your Saved Baskets!</div>
@@ -180,7 +181,7 @@ export default function Cart({ cart, setCart, user, onUserUpdate, onBack, onChec
   // 🛒 ================= CART SCREEN (Premium Redesign) ================= 🛒
   return (
     <div style={{ backgroundColor: '#f4f6f8', minHeight: '100vh', fontFamily: 'system-ui, -apple-system, sans-serif', paddingBottom: '180px' }}>
-      
+
       {/* Premium Sticky Header */}
       <div style={{ position: 'sticky', top: 0, backgroundColor: 'rgba(255, 255, 255, 0.95)', backdropFilter: 'blur(10px)', padding: '16px 20px', display: 'flex', alignItems: 'center', gap: '15px', zIndex: 100, borderBottom: '1px solid rgba(0,0,0,0.05)' }}>
         <button onClick={onBack} style={{ background: 'none', border: 'none', fontSize: '1.4rem', cursor: 'pointer', color: '#0f172a', display: 'flex', alignItems: 'center' }}>←</button>
@@ -188,13 +189,13 @@ export default function Cart({ cart, setCart, user, onUserUpdate, onBack, onChec
       </div>
 
       <div style={{ padding: '16px', maxWidth: '800px', margin: '0 auto' }}>
-        
+
         {/* 🏪 LOCKED SHOP SELECTION */}
         <div style={{ backgroundColor: '#fff', padding: '16px', borderRadius: '20px', marginBottom: '20px', boxShadow: '0 4px 15px rgba(0,0,0,0.03)' }}>
           <div style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: '800', marginBottom: '12px', letterSpacing: '0.5px', textTransform: 'uppercase' }}>
             📍 Pickup From ({user?.pincode})
           </div>
-          
+
           {loadingShops ? (
             <div style={{ padding: '16px', background: '#f8fafc', borderRadius: '12px', color: '#64748b', textAlign: 'center', fontWeight: '600' }}>🔍 Confirming shop details...</div>
           ) : targetShop ? (
@@ -225,13 +226,13 @@ export default function Cart({ cart, setCart, user, onUserUpdate, onBack, onChec
         {/* 🛒 ITEM SUMMARY */}
         <div style={{ backgroundColor: '#fff', borderRadius: '20px', padding: '20px 16px', marginBottom: '20px', boxShadow: '0 4px 15px rgba(0,0,0,0.03)' }}>
           <div style={{ fontWeight: '800', fontSize: '1.1rem', marginBottom: '20px', color: '#0f172a' }}>Review Items</div>
-          
+
           {targetShop && !targetShop.isOpen && (
             <div style={{ backgroundColor: '#fef3c7', padding: '14px', borderRadius: '12px', border: '1px solid #fde68a', marginBottom: '20px', display: 'flex', gap: '12px', alignItems: 'flex-start' }}>
               <div style={{ fontSize: '1.5rem' }}>🌙</div>
               <div style={{ flex: 1 }}>
                 <strong style={{ color: '#92400e', display: 'block', marginBottom: '4px' }}>Shop is currently closed</strong>
-                
+
                 {targetShop.acceptsPreOrders === false ? (
                   <span style={{ color: '#b45309', fontSize: '0.85rem', lineHeight: '1.4', display: 'block' }}>
                     This shop is <strong>not</strong> accepting pre-orders right now. Please check back when they are open.
@@ -242,9 +243,9 @@ export default function Cart({ cart, setCart, user, onUserUpdate, onBack, onChec
                       You can place your order now as a <strong>Pre-Order</strong>. They will process it first thing when they open!
                     </span>
                     <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', backgroundColor: 'rgba(255,255,255,0.5)', padding: '8px 12px', borderRadius: '8px', border: '1px solid rgba(0,0,0,0.05)' }}>
-                      <input 
-                        type="checkbox" 
-                        checked={preOrderChecked} 
+                      <input
+                        type="checkbox"
+                        checked={preOrderChecked}
                         onChange={(e) => setPreOrderChecked(e.target.checked)}
                         style={{ width: '18px', height: '18px', accentColor: '#d97706', cursor: 'pointer' }}
                       />
@@ -257,27 +258,27 @@ export default function Cart({ cart, setCart, user, onUserUpdate, onBack, onChec
           )}
 
           {cart.map((item, index) => {
-            if (!item) return null; 
-            
+            if (!item) return null;
+
             const safeQty = item.qty || 1;
             const safePrice = item.sellingPrice !== undefined ? item.sellingPrice : (item.mrp || 0);
             const originalPrice = (item.mrp && item.mrp > 0) ? item.mrp : safePrice;
             const isDiscounted = originalPrice > safePrice;
             const isOutOfStock = outOfStockIds.has(String(item._id));
-            
+
             // 🎁 COMBO PACK LINE ITEM RENDERING
             if (item.isCombo) {
               const comboItemsList = Array.isArray(item.comboItems) ? item.comboItems : [];
               const savingsAmount = (originalPrice > safePrice) ? (originalPrice - safePrice) : (item.savings || 0);
 
               return (
-                <div 
-                  key={item._id} 
-                  style={{ 
-                    backgroundColor: isOutOfStock ? '#f8fafc' : '#fffbeb', 
-                    border: isOutOfStock ? '1.5px solid #cbd5e1' : '1.5px solid #fde68a', 
-                    borderRadius: '16px', 
-                    padding: '16px', 
+                <div
+                  key={item._id}
+                  style={{
+                    backgroundColor: isOutOfStock ? '#f8fafc' : '#fffbeb',
+                    border: isOutOfStock ? '1.5px solid #cbd5e1' : '1.5px solid #fde68a',
+                    borderRadius: '16px',
+                    padding: '16px',
                     marginBottom: '16px',
                     boxShadow: '0 2px 10px rgba(245, 158, 11, 0.08)'
                   }}
@@ -321,16 +322,16 @@ export default function Cart({ cart, setCart, user, onUserUpdate, onBack, onChec
                       </div>
                       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(130px, 1fr))', gap: '8px' }}>
                         {comboItemsList.map((ci, cidx) => (
-                          <div 
-                            key={cidx} 
-                            style={{ 
-                              display: 'flex', 
-                              alignItems: 'center', 
-                              gap: '8px', 
-                              backgroundColor: '#fffbeb', 
-                              border: '1px solid #fde68a', 
-                              borderRadius: '8px', 
-                              padding: '4px 6px' 
+                          <div
+                            key={cidx}
+                            style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '8px',
+                              backgroundColor: '#fffbeb',
+                              border: '1px solid #fde68a',
+                              borderRadius: '8px',
+                              padding: '4px 6px'
                             }}
                           >
                             <div style={{ width: '32px', height: '32px', borderRadius: '6px', backgroundColor: '#fff', border: '1px solid #fed7aa', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', flexShrink: 0 }}>
@@ -372,7 +373,7 @@ export default function Cart({ cart, setCart, user, onUserUpdate, onBack, onChec
 
             return (
               <div key={item._id} style={{ display: 'flex', gap: '15px', alignItems: 'center', paddingBottom: '20px', marginBottom: '20px', borderBottom: index === cart.length - 1 ? 'none' : '1px solid #f1f5f9' }}>
-                
+
                 {/* Product Image Squircle */}
                 <div style={{ width: '65px', height: '65px', backgroundColor: '#f8fafc', borderRadius: '16px', display: 'flex', justifyContent: 'center', alignItems: 'center', border: '1px solid rgba(0,0,0,0.02)', position: 'relative', flexShrink: 0 }}>
                   {isDiscounted && !isOutOfStock && <span style={{ position: 'absolute', top: '-6px', left: '-6px', backgroundColor: '#ef4444', color: '#fff', fontSize: '0.55rem', fontWeight: '900', padding: '3px 6px', borderRadius: '6px', zIndex: 1 }}>OFFER</span>}
@@ -383,7 +384,7 @@ export default function Cart({ cart, setCart, user, onUserUpdate, onBack, onChec
                 <div style={{ flex: 1 }}>
                   <div style={{ fontWeight: '700', color: '#0f172a', fontSize: '0.9rem', lineHeight: '1.25', marginBottom: '4px', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{item.name}</div>
                   <div style={{ fontSize: '0.75rem', color: '#64748b', marginBottom: '6px', fontWeight: '600' }}>{item.qnty}</div>
-                  
+
                   <div style={{ display: 'flex', alignItems: 'baseline', gap: '6px' }}>
                     <div style={{ fontWeight: '800', color: '#0f172a', fontSize: '1rem' }}>₹{safePrice}</div>
                     {isDiscounted && (
@@ -418,9 +419,9 @@ export default function Cart({ cart, setCart, user, onUserUpdate, onBack, onChec
             </div>
             <label style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer' }}>
               <span style={{ fontWeight: '800', color: '#a16207', fontSize: '0.9rem' }}>Apply</span>
-              <input 
-                type="checkbox" 
-                checked={useCoins} 
+              <input
+                type="checkbox"
+                checked={useCoins}
                 onChange={(e) => setUseCoins(e.target.checked)}
                 style={{ width: '22px', height: '22px', accentColor: '#eab308', cursor: 'pointer' }}
               />
@@ -431,7 +432,7 @@ export default function Cart({ cart, setCart, user, onUserUpdate, onBack, onChec
         {/* 💵 FINAL BILL BREAKDOWN */}
         <div style={{ backgroundColor: '#fff', borderRadius: '20px', padding: '20px 16px', boxShadow: '0 4px 15px rgba(0,0,0,0.03)' }}>
           <div style={{ fontWeight: '800', fontSize: '1.1rem', marginBottom: '16px', color: '#0f172a' }}>Bill Details</div>
-          
+
           <div style={{ display: 'flex', justifyContent: 'space-between', color: '#64748b', fontSize: '0.9rem', marginBottom: '12px', fontWeight: '600' }}>
             <span>Total MRP</span>
             <span>₹{totalMRP.toFixed(2)}</span>
@@ -443,14 +444,14 @@ export default function Cart({ cart, setCart, user, onUserUpdate, onBack, onChec
               <span>- ₹{totalProductDiscount.toFixed(2)}</span>
             </div>
           )}
-          
+
           {useCoins && discount > 0 && (
             <div style={{ display: 'flex', justifyContent: 'space-between', color: '#16a34a', fontWeight: '700', fontSize: '0.9rem', marginBottom: '12px' }}>
               <span>Coin Discount (-{coinsUsed} Coins)</span>
               <span>- ₹{discount.toFixed(2)}</span>
             </div>
           )}
-          
+
           <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '16px', paddingTop: '16px', borderTop: '1px dashed #cbd5e1', fontWeight: '900', color: '#0f172a', fontSize: '1.2rem' }}>
             <span>To Pay</span>
             <span>₹{finalBill.toFixed(2)}</span>
@@ -491,4 +492,4 @@ export default function Cart({ cart, setCart, user, onUserUpdate, onBack, onChec
 
     </div>
   );
-                       }
+}

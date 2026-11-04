@@ -67,7 +67,7 @@ export default function UploadParchi({ onAddToCart, shopItems = [] }) {
       const savedUser = JSON.parse(localStorage.getItem("packitout_user") || "{}");
       const shopId = savedUser.primaryShop?._id || savedUser.primaryShop || "";
       if (shopId) {
-        fetch(`${BASE_URL}/shop/${shopId}`)
+        fetch(`${BASE_URL}/shops/${shopId}/menu/lean`)
           .then(res => res.json())
           .then(data => {
             if (data?.inventory) {

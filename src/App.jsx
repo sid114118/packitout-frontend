@@ -27,6 +27,7 @@ const Nearby = lazy(() => import('./Nearby.jsx'));
 const ShopDetail = lazy(() => import('./ShopDetail.jsx'));
 const ManageBaskets = lazy(() => import('./ManageBaskets.jsx'));
 const SharedBasketView = lazy(() => import('./SharedBasketView.jsx'));
+const PosBillView = lazy(() => import('./PosBillView.jsx'));
 import BasketDrawer from './components/BasketDrawer.jsx';
 import ShopWelcomeModal from './components/ui/ShopWelcomeModal.jsx';
 import { triggerShopWelcome } from './utils/shopWelcome.js';
@@ -119,7 +120,12 @@ export default function App() {
   const isShopApp = import.meta.env.VITE_APP_MODE === "shop";
   const [currentView, setCurrentView] = useState(isShopApp ? "shop" : "customer");
   const [isAdminAuthenticated, setIsAdminAuthenticated] = useState(false);
-  const [isShopAuthenticated, setIsShopAuthenticated] = useState(null);
+  const [isShopAuthenticated, setIsShopAuthenticated] = useState(() => {
+    try {
+      const saved = localStorage.getItem("packitout_shop");
+      return saved ? JSON.parse(saved) : null;
+    } catch { return null; }
+  });
   const [viewingShop, setViewingShop] = useState(null);
   const [selectedCategory, setSelectedCategory] = useState(null); 
   
@@ -246,14 +252,22 @@ export default function App() {
     const userId = loggedInUser?._id;
     if (!userId) {
       loadOneSignal()
-        .then(OneSignal => OneSignal.logout())
+        .then(OneSignal => isShopAuthenticated?._id ? OneSignal.login(isShopAuthenticated._id.toString()) : OneSignal.logout())
         .catch(err => console.log("OneSignal Logout Error", err));
       return;
     }
     loadOneSignal()
-      .then(OneSignal => OneSignal.login(userId.toString()))
+      .then(OneSignal => OneSignal.login(((currentView === "shop" && isShopAuthenticated?._id) ? isShopAuthenticated._id : userId).toString()))
       .catch(err => console.log("OneSignal Login Error", err));
-  }, [loggedInUser?._id]);
+  }, [loggedInUser?._id, isShopAuthenticated?._id, currentView]);
+
+  useEffect(() => {
+    if (!isShopAuthenticated) return;
+    try {
+      const { inventory, ...slimShop } = isShopAuthenticated;
+      localStorage.setItem("packitout_shop", JSON.stringify(slimShop));
+    } catch (e) {}
+  }, [isShopAuthenticated]);
 
   // Persist the cart against the current user's namespaced key. We skip
   // persistence when no one is logged in — there's nothing to claim a guest
@@ -338,6 +352,18 @@ export default function App() {
       else if (hash === "#success") setCurrentView("success");
       else if (hash === "#nearby") setCurrentView("nearby");
       else if (hash === "#baskets") setCurrentView("baskets");
+      else if (hash.startsWith("#/bill/")) {
+        const [billPart, queryPart] = hash.replace("#/bill/", "").split("?");
+        if (queryPart) {
+          const params = new URLSearchParams(queryPart);
+          const sid = params.get("s");
+          const pin = params.get("pin");
+          if (sid) localStorage.setItem("packitout_guest_shop_id", sid);
+          if (pin) localStorage.setItem("packitout_guest_pincode", pin);
+          setGuestShopRevision(r => r + 1);
+        }
+        if (billPart) setCurrentView(`bill:${billPart}`);
+      }
       else if (hash.startsWith("#/shared-basket/")) {
         const id = hash.split("/")[2];
         setCurrentView(`shared-basket:${id}`);
@@ -552,6 +578,7 @@ export default function App() {
     try { localStorage.removeItem("packitout_cart"); } catch {} // legacy key
     setIsAdminAuthenticated(false);
     setIsShopAuthenticated(null);
+    try { localStorage.removeItem("packitout_shop"); } catch (e) {}
     setLoggedInUser(null);
     setCart([]);
     // OneSignal.logout is driven by the loggedInUser._id effect above.
@@ -573,6 +600,7 @@ export default function App() {
 
   const handleShopLogout = () => {
     setIsShopAuthenticated(null);
+    try { localStorage.removeItem("packitout_shop"); } catch (e) {}
     // Drop any admin token still in localStorage so a logged-out shopkeeper
     // can't pivot into the admin panel from the same device.
     clearAdminToken();
@@ -648,6 +676,31 @@ export default function App() {
       return <OrdersPage user={loggedInUser} onExit={() => window.location.hash = ""} onAddToCart={handleAddToCart} cart={cart} setCart={setCart} />;
     }
     if (currentView === "success") return <OrderSuccess />;
+    if (currentView.startsWith("bill:")) {
+      const billOrderId = currentView.split(":")[1];
+      return (
+        <PosBillView
+          orderId={billOrderId}
+          onSetCartAndGo={(reorderItems, shopId, pin) => {
+            if (shopId) localStorage.setItem("packitout_guest_shop_id", shopId);
+            if (pin) localStorage.setItem("packitout_guest_pincode", pin);
+            setGuestShopRevision(r => r + 1);
+            setCart(reorderItems);
+            window.location.hash = "#cart";
+          }}
+          onGoToShopStore={(shopId, pin) => {
+            if (shopId) localStorage.setItem("packitout_guest_shop_id", shopId);
+            if (pin) localStorage.setItem("packitout_guest_pincode", pin);
+            setGuestShopRevision(r => r + 1);
+            if (loggedInUser && shopId) {
+              handleSetPrimaryShop(shopId);
+            } else {
+              window.location.hash = "";
+            }
+          }}
+        />
+      );
+    }
     if (currentView.startsWith("shared-basket:")) {
       const basketId = currentView.split(":")[1];
       return (

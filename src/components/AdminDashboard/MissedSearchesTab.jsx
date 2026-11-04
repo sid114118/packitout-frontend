@@ -33,7 +33,7 @@ export default function MissedSearchesTab() {
     setLoading(true);
     try {
       const params = new URLSearchParams({ sort, resolved });
-      const res = await fetch(`${BASE_URL}/missed-searches?${params}`);
+      const res = await adminFetch(`/missed-searches?${params}`);
       const data = res.ok ? await res.json() : [];
       setRows(Array.isArray(data) ? data : []);
     } catch {

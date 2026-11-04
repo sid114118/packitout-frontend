@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useToast } from '../../ui/DialogProvider.jsx';
 import { cdnImage } from '../../utils/cloudinaryUrl.js';
 import { adminFetch } from '../../utils/api.js';
@@ -10,11 +10,51 @@ export default function ProductsTab({ products, form, setForm, handleProductSubm
   const [file, setFile] = useState(null);
   const [uploading, setUploading] = useState(false);
 
+  // 🚀 PAGINATION & SEARCH FOR 10,000+ CATALOG ITEMS
+  const [catalogSearch, setCatalogSearch] = useState('');
+  const [catalogCategory, setCatalogCategory] = useState('All');
+  const [visibleCount, setVisibleCount] = useState(48);
+
   // Helper function to handle the multi-select dropdowns for related/substitute products
   const handleMultiSelect = (e, fieldName) => {
     const selectedOptions = Array.from(e.target.selectedOptions, option => option.value);
     setForm({ ...form, [fieldName]: selectedOptions });
   };
+
+  // Cap select options so 10,000+ products don't render 20,000 <option> DOM nodes
+  const selectableProducts = useMemo(() => {
+    const selectedIds = new Set([...(form.relatedProducts || []), ...(form.substitutes || [])].map(String));
+    const currentCat = (form.category || '').toLowerCase();
+    const out = [];
+    for (const p of (products || [])) {
+      if (!p || p._id === editingProductId) continue;
+      if (selectedIds.has(String(p._id))) {
+        out.unshift(p);
+      } else if (!currentCat || (p.category || '').toLowerCase() === currentCat) {
+        if (out.length < 150) out.push(p);
+      }
+    }
+    if (out.length < 100) {
+      for (const p of (products || [])) {
+        if (!p || p._id === editingProductId || out.includes(p)) continue;
+        out.push(p);
+        if (out.length >= 150) break;
+      }
+    }
+    return out;
+  }, [products, editingProductId, form.category, form.relatedProducts, form.substitutes]);
+
+  const filteredCatalog = useMemo(() => {
+    const q = catalogSearch.trim().toLowerCase();
+    const tokens = q ? q.split(/\s+/).filter(Boolean) : [];
+    return (products || []).filter(p => {
+      if (!p) return false;
+      if (catalogCategory !== 'All' && (p.category || '') !== catalogCategory) return false;
+      if (tokens.length === 0) return true;
+      const hay = `${p.name || ''} ${p.brand || ''} ${p.category || ''} ${p.qnty || ''} ${p.barcode || ''} ${(p.searchTags || []).join(' ')}`.toLowerCase();
+      return tokens.every(t => hay.includes(t));
+    });
+  }, [products, catalogSearch, catalogCategory]);
 
   // 🚀 THE BULK UPLOAD HANDLER
   const handleBulkUpload = async () => {
@@ -139,7 +179,7 @@ export default function ProductsTab({ products, form, setForm, handleProductSubm
           <div>
             <label style={{ display: 'block', marginBottom: '5px', fontSize: '0.85rem', fontWeight: 'bold', color: '#475569' }}>Frequently Bought Together</label>
             <select multiple value={form.relatedProducts || []} onChange={(e) => handleMultiSelect(e, 'relatedProducts')} style={{...inputStyle, height: '100px'}}>
-              {products.filter(p => p._id !== editingProductId).map(p => (
+              {selectableProducts.map(p => (
                 <option key={p._id} value={p._id}>{p.name} ({p.qnty})</option>
               ))}
             </select>
@@ -150,7 +190,7 @@ export default function ProductsTab({ products, form, setForm, handleProductSubm
           <div>
             <label style={{ display: 'block', marginBottom: '5px', fontSize: '0.85rem', fontWeight: 'bold', color: '#475569' }}>Out of Stock Substitutes</label>
             <select multiple value={form.substitutes || []} onChange={(e) => handleMultiSelect(e, 'substitutes')} style={{...inputStyle, height: '100px'}}>
-              {products.filter(p => p._id !== editingProductId).map(p => (
+              {selectableProducts.map(p => (
                 <option key={p._id} value={p._id}>{p.name} ({p.qnty})</option>
               ))}
             </select>
@@ -164,10 +204,32 @@ export default function ProductsTab({ products, form, setForm, handleProductSubm
         </button>
       </form>
 
-      {/* PRODUCT LIST PREVIEW */}
-      <h3 style={{ color: '#0f172a', marginBottom: '15px' }}>Current Master Catalog ({products.length})</h3>
+      {/* PRODUCT LIST PREVIEW WITH SEARCH, FILTER & PAGINATION */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px', marginBottom: '15px' }}>
+        <h3 style={{ color: '#0f172a', margin: 0 }}>
+          Current Master Catalog ({filteredCatalog.length} of {products.length})
+        </h3>
+        <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', flex: '1 1 360px', justifyContent: 'flex-end' }}>
+          <input
+            type="text"
+            placeholder="🔍 Search catalog by name, brand, barcode, tag..."
+            value={catalogSearch}
+            onChange={(e) => { setCatalogSearch(e.target.value); setVisibleCount(48); }}
+            style={{ ...inputStyle, maxWidth: '320px', backgroundColor: 'white' }}
+          />
+          <select
+            value={catalogCategory}
+            onChange={(e) => { setCatalogCategory(e.target.value); setVisibleCount(48); }}
+            style={{ ...inputStyle, maxWidth: '220px', backgroundColor: 'white' }}
+          >
+            <option value="All">All Categories ({products.length})</option>
+            {CATEGORIES.map(cat => <option key={cat} value={cat}>{cat}</option>)}
+          </select>
+        </div>
+      </div>
+
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))', gap: '15px' }}>
-        {products.map(p => (
+        {filteredCatalog.slice(0, visibleCount).map(p => (
           <div key={p._id} style={{ backgroundColor: 'white', padding: '15px', borderRadius: '10px', boxShadow: '0 2px 4px rgba(0,0,0,0.05)', border: '1px solid #e2e8f0', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
             <div>
               <div style={{ display: 'flex', gap: '10px', alignItems: 'center', marginBottom: '10px' }}>
@@ -200,6 +262,28 @@ export default function ProductsTab({ products, form, setForm, handleProductSubm
           </div>
         ))}
       </div>
+
+      {filteredCatalog.length > visibleCount && (
+        <div style={{ textAlign: 'center', marginTop: '20px' }}>
+          <button
+            type="button"
+            onClick={() => setVisibleCount(prev => prev + 48)}
+            style={{
+              padding: '12px 24px',
+              backgroundColor: '#0f172a',
+              color: '#fff',
+              border: 'none',
+              borderRadius: '10px',
+              fontWeight: 800,
+              fontSize: '0.95rem',
+              cursor: 'pointer',
+              boxShadow: '0 4px 10px rgba(0,0,0,0.1)'
+            }}
+          >
+            📥 Load More Products ({filteredCatalog.length - visibleCount} remaining)
+          </button>
+        </div>
+      )}
     </div>
   );
 }

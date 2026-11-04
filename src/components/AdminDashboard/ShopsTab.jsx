@@ -1,6 +1,33 @@
-import React from 'react';
+import React, { useState } from 'react';
+import { adminFetch } from '../../utils/api.js';
+import { useToast } from '../../ui/DialogProvider.jsx';
 
-export default function ShopsTab({ shops, shopForm, setShopForm, handleShopSubmit, editingShopId, startEditingShop, cancelEditShop }) {
+export default function ShopsTab({ shops, shopForm, setShopForm, handleShopSubmit, editingShopId, startEditingShop, cancelEditShop, onShopsChanged }) {
+  const toast = useToast();
+  const [togglingKey, setTogglingKey] = useState(null);
+
+  const handleQuickTogglePermission = async (shop, field, label) => {
+    const nextVal = !shop[field];
+    const key = `${shop._id}_${field}`;
+    setTogglingKey(key);
+    try {
+      const res = await adminFetch(`/shops/${shop._id}/admin-edit`, {
+        method: 'PATCH',
+        body: JSON.stringify({ [field]: nextVal }),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        toast(err.error || `Failed to update ${label}`, 'error');
+      } else {
+        toast(`${label} ${nextVal ? 'ENABLED' : 'DISABLED'} for ${shop.name}!`);
+        if (onShopsChanged) onShopsChanged();
+      }
+    } catch {
+      toast('Network error while updating shop permission', 'error');
+    }
+    setTogglingKey(null);
+  };
+
   return (
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
@@ -18,7 +45,7 @@ export default function ShopsTab({ shops, shopForm, setShopForm, handleShopSubmi
         <div style={gridStyle}>
           <input required type="text" placeholder="Store Name (e.g., Gupta General Store)" value={shopForm.name} onChange={e => setShopForm({...shopForm, name: e.target.value})} style={inputStyle} />
           <input required type="text" placeholder="Phone Number (Login ID)" value={shopForm.phone} onChange={e => setShopForm({...shopForm, phone: e.target.value})} style={inputStyle} />
-          <input required type="text" placeholder="Password" value={shopForm.password} onChange={e => setShopForm({...shopForm, password: e.target.value})} style={inputStyle} />
+          <input required={!editingShopId} type="text" placeholder={editingShopId ? "New Password (leave blank to keep current)" : "Password"} value={shopForm.password} onChange={e => setShopForm({...shopForm, password: e.target.value})} style={inputStyle} />
           <input type="text" placeholder="Store Image URL" value={shopForm.shopImage} onChange={e => setShopForm({...shopForm, shopImage: e.target.value})} style={inputStyle} />
         </div>
 
@@ -37,7 +64,7 @@ export default function ShopsTab({ shops, shopForm, setShopForm, handleShopSubmi
           <input type="text" placeholder="PAN Number" value={shopForm.panNumber} onChange={e => setShopForm({...shopForm, panNumber: e.target.value})} style={inputStyle} />
         </div>
 
-        <h4 style={sectionTitleStyle}>4. App Settings</h4>
+        <h4 style={sectionTitleStyle}>4. App Settings & SaaS Feature Permissions</h4>
         <div style={gridStyle}>
           <select value={shopForm.inventoryMode} onChange={e => setShopForm({...shopForm, inventoryMode: e.target.value})} style={inputStyle}>
             <option value="manual">Inventory Mode: Manual Toggle (In/Out of Stock)</option>
@@ -50,7 +77,25 @@ export default function ShopsTab({ shops, shopForm, setShopForm, handleShopSubmi
               onChange={e => setShopForm({...shopForm, canAddMasterProducts: e.target.checked})} 
               style={{ transform: 'scale(1.2)' }}
             />
-            <span style={{ fontWeight: 'bold', color: '#475569' }}>Allow this shop to add custom products to the Master Catalog</span>
+            <span style={{ fontWeight: 'bold', color: '#475569' }}>✨ Allow this shop to add custom products to the Master Catalog</span>
+          </label>
+          <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', ...inputStyle, gridColumn: '1 / -1', backgroundColor: shopForm.canUseBarcodeScanner ? '#eff6ff' : '#fff', borderColor: shopForm.canUseBarcodeScanner ? '#3b82f6' : '#cbd5e1' }}>
+            <input 
+              type="checkbox" 
+              checked={shopForm.canUseBarcodeScanner || false} 
+              onChange={e => setShopForm({...shopForm, canUseBarcodeScanner: e.target.checked})} 
+              style={{ transform: 'scale(1.2)' }}
+            />
+            <span style={{ fontWeight: 'bold', color: '#1e3a8a' }}>🔫 Enable Hardware Barcode Scanner (USB / Bluetooth Scanner Gun + Scan-to-Link)</span>
+          </label>
+          <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', ...inputStyle, gridColumn: '1 / -1', backgroundColor: shopForm.canUseCounterPos ? '#ecfdf5' : '#fff', borderColor: shopForm.canUseCounterPos ? '#10b981' : '#cbd5e1' }}>
+            <input 
+              type="checkbox" 
+              checked={shopForm.canUseCounterPos || false} 
+              onChange={e => setShopForm({...shopForm, canUseCounterPos: e.target.checked})} 
+              style={{ transform: 'scale(1.2)' }}
+            />
+            <span style={{ fontWeight: 'bold', color: '#065f46' }}>⚡ Enable Fast Counter POS Billing (Walk-in Counter Billing + Offline-to-Online Customer Converter)</span>
           </label>
         </div>
 
@@ -62,25 +107,77 @@ export default function ShopsTab({ shops, shopForm, setShopForm, handleShopSubmi
       {/* SHOP PREVIEW CARDS */}
       <h3 style={{ color: '#0f172a', marginBottom: '15px' }}>Active Partners ({shops.length})</h3>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '15px' }}>
-        {shops.map(shop => (
-          <div key={shop._id} style={{ backgroundColor: 'white', padding: '15px', borderRadius: '10px', boxShadow: '0 2px 4px rgba(0,0,0,0.05)', border: '1px solid #e2e8f0', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
-            <div>
-              <strong style={{ fontSize: '1.1rem', color: '#0f172a' }}>{shop.name}</strong>
-              <div style={{ fontSize: '0.75rem', color: '#94a3b8', marginTop: '2px', fontFamily: 'monospace' }}>ID: {shop._id}</div>
-              <div style={{ fontSize: '0.85rem', color: '#64748b', marginTop: '4px' }}>📍 {shop.pincode} | 📞 {shop.phone}</div>
-              <div style={{ margin: '10px 0', padding: '8px', backgroundColor: '#f8fafc', borderRadius: '6px', fontSize: '0.8rem', color: '#475569' }}>
-                <div><strong>FSSAI:</strong> {shop.fssai || 'Not Provided'}</div>
-                <div><strong>Inventory:</strong> {shop.inventoryMode === 'stock_count' ? '📊 Strict Count' : '🔘 Manual Toggle'}</div>
-                {shop.canAddMasterProducts && (
-                  <div style={{ marginTop: '5px', color: '#16a34a', fontWeight: 'bold' }}>✅ Can Add Master Products</div>
-                )}
+        {shops.map(shop => {
+          const isTogglingScanner = togglingKey === `${shop._id}_canUseBarcodeScanner`;
+          const isTogglingPos = togglingKey === `${shop._id}_canUseCounterPos`;
+          return (
+            <div key={shop._id} style={{ backgroundColor: 'white', padding: '15px', borderRadius: '10px', boxShadow: '0 2px 4px rgba(0,0,0,0.05)', border: '1px solid #e2e8f0', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+              <div>
+                <strong style={{ fontSize: '1.1rem', color: '#0f172a' }}>{shop.name}</strong>
+                <div style={{ fontSize: '0.75rem', color: '#94a3b8', marginTop: '2px', fontFamily: 'monospace' }}>ID: {shop._id}</div>
+                <div style={{ fontSize: '0.85rem', color: '#64748b', marginTop: '4px' }}>📍 {shop.pincode} | 📞 {shop.phone}</div>
+                <div style={{ margin: '10px 0', padding: '8px', backgroundColor: '#f8fafc', borderRadius: '6px', fontSize: '0.8rem', color: '#475569' }}>
+                  <div><strong>FSSAI:</strong> {shop.fssai || 'Not Provided'}</div>
+                  <div><strong>Inventory:</strong> {shop.inventoryMode === 'stock_count' ? '📊 Strict Count' : '🔘 Manual Toggle'}</div>
+                  {shop.canAddMasterProducts && (
+                    <div style={{ marginTop: '5px', color: '#16a34a', fontWeight: 'bold' }}>✅ Can Add Master Products</div>
+                  )}
+
+                  {/* 1-Click Barcode Scanner Toggle */}
+                  <div style={{ marginTop: '6px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingTop: '6px', borderTop: '1px dashed #e2e8f0' }}>
+                    <span style={{ fontWeight: 'bold', color: shop.canUseBarcodeScanner ? '#1d4ed8' : '#64748b' }}>
+                      🔫 Scanner: {shop.canUseBarcodeScanner ? 'ENABLED' : 'OFF'}
+                    </span>
+                    <button
+                      type="button"
+                      disabled={isTogglingScanner}
+                      onClick={() => handleQuickTogglePermission(shop, 'canUseBarcodeScanner', '🔫 Barcode Scanner')}
+                      style={{
+                        padding: '4px 10px',
+                        borderRadius: '6px',
+                        border: 'none',
+                        fontWeight: 'bold',
+                        fontSize: '0.75rem',
+                        cursor: isTogglingScanner ? 'wait' : 'pointer',
+                        backgroundColor: shop.canUseBarcodeScanner ? '#fee2e2' : '#dbeafe',
+                        color: shop.canUseBarcodeScanner ? '#b91c1c' : '#1e40af',
+                      }}
+                    >
+                      {isTogglingScanner ? '...' : (shop.canUseBarcodeScanner ? 'Turn OFF' : 'Enable 🔫')}
+                    </button>
+                  </div>
+
+                  {/* 1-Click Counter POS Toggle */}
+                  <div style={{ marginTop: '6px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingTop: '6px', borderTop: '1px dashed #e2e8f0' }}>
+                    <span style={{ fontWeight: 'bold', color: shop.canUseCounterPos ? '#047857' : '#64748b' }}>
+                      ⚡ Counter POS: {shop.canUseCounterPos ? 'ENABLED' : 'OFF'}
+                    </span>
+                    <button
+                      type="button"
+                      disabled={isTogglingPos}
+                      onClick={() => handleQuickTogglePermission(shop, 'canUseCounterPos', '⚡ Counter POS')}
+                      style={{
+                        padding: '4px 10px',
+                        borderRadius: '6px',
+                        border: 'none',
+                        fontWeight: 'bold',
+                        fontSize: '0.75rem',
+                        cursor: isTogglingPos ? 'wait' : 'pointer',
+                        backgroundColor: shop.canUseCounterPos ? '#fee2e2' : '#dcfce7',
+                        color: shop.canUseCounterPos ? '#b91c1c' : '#15803d',
+                      }}
+                    >
+                      {isTogglingPos ? '...' : (shop.canUseCounterPos ? 'Turn OFF' : 'Enable ⚡')}
+                    </button>
+                  </div>
+                </div>
               </div>
+              <button onClick={() => startEditingShop(shop)} style={{ width: '100%', padding: '8px', backgroundColor: '#f1f5f9', color: '#334155', border: '1px solid #cbd5e1', borderRadius: '6px', fontWeight: 'bold', cursor: 'pointer' }}>
+                ✏️ Edit Partner Info
+              </button>
             </div>
-            <button onClick={() => startEditingShop(shop)} style={{ width: '100%', padding: '8px', backgroundColor: '#f1f5f9', color: '#334155', border: '1px solid #cbd5e1', borderRadius: '6px', fontWeight: 'bold', cursor: 'pointer' }}>
-              ✏️ Edit Partner Info
-            </button>
-          </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );

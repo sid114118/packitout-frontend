@@ -34,7 +34,7 @@ export default function InventoryTab({ shopData, masterCatalog, handleInventoryU
 
   // 📝 STATE FOR CUSTOM PRODUCT
   const CATEGORIES = ["Dairy, Bread & Eggs", "Fruits & Veg", "Atta, Rice & Dal", "Chips & Namkeen", "Drinks & Juices", "Sweets & Chocolates", "Ice Creams", "Instant Food", "Bath & Body", "Health & Pharma"];
-  const initialProductForm = { name: "", brand: "", category: "", mrp: "", qnty: "", emoji: "", image: "" };
+  const initialProductForm = { name: "", brand: "", category: "", mrp: "", qnty: "", emoji: "", image: "", barcode: "" };
   const [newProductForm, setNewProductForm] = useState(initialProductForm);
   const [isCreatingProduct, setIsCreatingProduct] = useState(false);
   const [isUploadingImage, setIsUploadingImage] = useState(false);
@@ -113,7 +113,7 @@ export default function InventoryTab({ shopData, masterCatalog, handleInventoryU
     if (!searchMaster.trim()) return availableToAdd;
     const tokens = searchMaster.toLowerCase().trim().split(/\s+/);
     return availableToAdd.filter(m => {
-      const text = `${m.name || ''} ${m.brand || ''} ${m.category || ''} ${Array.isArray(m.searchTags) ? m.searchTags.join(' ') : (m.searchTags || '')}`.toLowerCase();
+      const text = `${m.name || ''} ${m.brand || ''} ${m.category || ''} ${m.barcode || ''} ${Array.isArray(m.searchTags) ? m.searchTags.join(' ') : (m.searchTags || '')}`.toLowerCase();
       return tokens.every(t => text.includes(t));
     });
   }, [availableToAdd, searchMaster]);
@@ -134,13 +134,173 @@ export default function InventoryTab({ shopData, masterCatalog, handleInventoryU
     const tokens = appliedSearch.toLowerCase().trim().split(/\s+/);
     return list.filter(item => {
       const p = item.product;
-      const text = `${p.name || ''} ${p.brand || ''} ${p.category || ''} ${Array.isArray(p.searchTags) ? p.searchTags.join(' ') : (p.searchTags || '')}`.toLowerCase();
+      const text = `${p.name || ''} ${p.brand || ''} ${p.category || ''} ${p.barcode || ''} ${Array.isArray(p.searchTags) ? p.searchTags.join(' ') : (p.searchTags || '')}`.toLowerCase();
       return tokens.every(t => text.includes(t));
     });
   }, [safeInventory, inventoryFilter, appliedSearch]);
 
   const featuredCount = useMemo(() => safeInventory.filter(i => i.isFeatured).length, [safeInventory]);
   const outOfStockCount = useMemo(() => safeInventory.filter(i => !i.inStock).length, [safeInventory]);
+
+  // 🔫 HARDWARE BARCODE SCANNER (USB / BLUETOOTH HID GUN + SCAN-TO-LINK)
+  const [scannerListening, setScannerListening] = useState(true);
+  const [barcodeInput, setBarcodeInput] = useState("");
+  const [scanResult, setScanResult] = useState(null);
+  const [scanPriceInput, setScanPriceInput] = useState("");
+  const [linkSearchQuery, setLinkSearchQuery] = useState("");
+  const [selectedLinkProduct, setSelectedLinkProduct] = useState(null);
+  const [isLinkingBarcode, setIsLinkingBarcode] = useState(false);
+
+  const playScannerBeep = (isSuccess = true) => {
+    try {
+      const AudioCtx = window.AudioContext || window.webkitAudioContext;
+      if (!AudioCtx) return;
+      const ctx = new AudioCtx();
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = isSuccess ? 'sine' : 'triangle';
+      osc.frequency.setValueAtTime(isSuccess ? 920 : 340, ctx.currentTime);
+      gain.gain.setValueAtTime(0.14, ctx.currentTime);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start();
+      osc.stop(ctx.currentTime + (isSuccess ? 0.09 : 0.22));
+    } catch { /* ignore */ }
+  };
+
+  const handleBarcodeLookup = (rawCode) => {
+    const code = String(rawCode || "").trim();
+    if (!code) return;
+    setBarcodeInput(code);
+    setSelectedLinkProduct(null);
+    setLinkSearchQuery("");
+
+    const foundInShop = safeInventory.find(
+      i => String(i.product?.barcode || "").trim().toLowerCase() === code.toLowerCase()
+    );
+    if (foundInShop) {
+      playScannerBeep(true);
+      setScanPriceInput(String(foundInShop.sellingPrice ?? foundInShop.product?.mrp ?? ""));
+      setScanResult({
+        status: 'in_shop',
+        barcode: code,
+        invItem: foundInShop,
+        masterItem: foundInShop.product,
+      });
+      return;
+    }
+
+    const foundInCatalog = safeCatalog.find(
+      m => String(m?.barcode || "").trim().toLowerCase() === code.toLowerCase()
+    );
+    if (foundInCatalog) {
+      playScannerBeep(true);
+      setScanPriceInput(String(foundInCatalog.mrp ?? ""));
+      setScanResult({
+        status: 'in_catalog',
+        barcode: code,
+        invItem: null,
+        masterItem: foundInCatalog,
+      });
+      return;
+    }
+
+    playScannerBeep(false);
+    setScanPriceInput("");
+    setScanResult({
+      status: 'unlinked',
+      barcode: code,
+      invItem: null,
+      masterItem: null,
+    });
+  };
+
+  useEffect(() => {
+    if (!shopData?.canUseBarcodeScanner || !scannerListening) return;
+    let buffer = "";
+    let lastKeyTime = 0;
+
+    const onKeyDown = (e) => {
+      const tag = (e.target?.tagName || "").toUpperCase();
+      const isInputFocused = tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT";
+      if (isInputFocused) return;
+
+      const now = Date.now();
+      if (now - lastKeyTime > 80) {
+        buffer = "";
+      }
+      lastKeyTime = now;
+
+      if (e.key === "Enter") {
+        if (buffer.length >= 4) {
+          e.preventDefault();
+          const scanned = buffer;
+          buffer = "";
+          handleBarcodeLookup(scanned);
+        }
+        return;
+      }
+
+      if (e.key && e.key.length === 1 && !e.ctrlKey && !e.altKey && !e.metaKey) {
+        buffer += e.key;
+      }
+    };
+
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [shopData?.canUseBarcodeScanner, scannerListening, safeInventory, safeCatalog]);
+
+  const linkCandidates = useMemo(() => {
+    const q = linkSearchQuery.trim().toLowerCase();
+    if (q.length < 2) return [];
+    const tokens = q.split(/\s+/).filter(Boolean);
+    const out = [];
+    for (const m of safeCatalog) {
+      if (!m || !m.name) continue;
+      const hay = `${m.name || ''} ${m.brand || ''} ${m.qnty || ''} ${m.category || ''}`.toLowerCase();
+      if (tokens.every(t => hay.includes(t))) {
+        out.push(m);
+        if (out.length >= 12) break;
+      }
+    }
+    return out;
+  }, [linkSearchQuery, safeCatalog]);
+
+  const handleLinkBarcodeAndAdd = async () => {
+    if (!scanResult?.barcode || !selectedLinkProduct?._id) return;
+    const priceNum = Number(scanPriceInput || selectedLinkProduct.mrp || 0);
+    if (!Number.isFinite(priceNum) || priceNum < 0) {
+      toast("Please enter a valid selling price (₹)", "error");
+      return;
+    }
+    setIsLinkingBarcode(true);
+    try {
+      const res = await shopFetch(shopData, `/shops/${shopData._id}/barcode-link`, {
+        method: "POST",
+        body: JSON.stringify({
+          barcode: scanResult.barcode,
+          productId: selectedLinkProduct._id,
+          sellingPrice: priceNum,
+          inStock: true,
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        toast(data.error || "Failed to link barcode", "error");
+      } else {
+        toast(`🔗 Linked barcode ${scanResult.barcode} to "${selectedLinkProduct.name}" & added to store at ₹${priceNum}!`);
+        if (fetchMasterCatalog) await fetchMasterCatalog();
+        if (onInventoryRefresh) await onInventoryRefresh();
+        setScanResult(null);
+        setBarcodeInput("");
+        setSelectedLinkProduct(null);
+        setLinkSearchQuery("");
+      }
+    } catch {
+      toast("Network error while linking barcode", "error");
+    }
+    setIsLinkingBarcode(false);
+  };
 
   // ⭐ FEATURED DIRECT RANK SETTER WITH AUTO-SHIFT (Rank 1 shifts old #1 to #2, etc.)
   const handleSetDirectRank = async (item, targetRankNumber) => {
@@ -259,7 +419,7 @@ export default function InventoryTab({ shopData, masterCatalog, handleInventoryU
 
     setIsImporting(true);
     try {
-      const response = await fetch(`${BASE_URL}/shops/${shopId}/bulk-import`, {
+      const response = await shopFetch(shopData, `/shops/${shopId}/bulk-import`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ discountPercent: discountPercent })
@@ -289,6 +449,291 @@ export default function InventoryTab({ shopData, masterCatalog, handleInventoryU
       </div>
 
       {/* ========================================= */}
+      {/* 🔫 HARDWARE BARCODE SCANNER & SCAN-TO-LINK */}
+      {shopData?.canUseBarcodeScanner && (
+        <div style={{ marginBottom: '22px', padding: '16px', backgroundColor: '#eff6ff', borderRadius: '16px', border: '1.5px solid #93c5fd', boxShadow: '0 4px 12px rgba(37, 99, 235, 0.08)' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px', marginBottom: '12px' }}>
+            <div>
+              <h4 style={{ margin: 0, color: '#1e3a8a', fontSize: '1.05rem', fontWeight: 900, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <span>🔫 Hardware Barcode Scanner</span>
+                <span style={{ fontSize: '0.7rem', padding: '2px 8px', borderRadius: '999px', backgroundColor: scannerListening ? '#dcfce7' : '#f1f5f9', color: scannerListening ? '#15803d' : '#64748b', border: scannerListening ? '1px solid #86efac' : '1px solid #cbd5e1' }}>
+                  {scannerListening ? '🟢 USB/Bluetooth Gun Ready' : '⏸️ Gun Paused'}
+                </span>
+              </h4>
+              <div style={{ fontSize: '0.78rem', color: '#3b82f6', fontWeight: 600, marginTop: '3px' }}>
+                Pull trigger on your barcode scanner gun anywhere on this screen, or type a barcode below & press Enter.
+              </div>
+            </div>
+            <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+              <button
+                type="button"
+                onClick={() => {
+                  setInventoryFilter('all');
+                  setSearchInventoryInput('loose');
+                  setAppliedSearch('loose');
+                  toast('Filtering Loose / Unpacked items');
+                }}
+                style={{ padding: '6px 10px', borderRadius: '8px', border: '1px solid #cbd5e1', backgroundColor: '#fff', color: '#334155', fontWeight: 700, fontSize: '0.76rem', cursor: 'pointer' }}
+                title="Quickly filter loose/unbranded items without barcodes"
+              >
+                🌾 Loose Items
+              </button>
+              <button
+                type="button"
+                onClick={() => setScannerListening(prev => !prev)}
+                style={{ padding: '6px 12px', borderRadius: '8px', border: 'none', backgroundColor: scannerListening ? '#1e3a8a' : '#64748b', color: '#fff', fontWeight: 800, fontSize: '0.76rem', cursor: 'pointer' }}
+              >
+                {scannerListening ? '⏸️ Pause Gun' : '▶️ Resume Gun'}
+              </button>
+            </div>
+          </div>
+
+          <div style={{ display: 'flex', gap: '8px' }}>
+            <input
+              type="text"
+              placeholder="Scan with USB/Bluetooth gun or type barcode (e.g. 8901058851250) & press Enter..."
+              value={barcodeInput}
+              onChange={(e) => setBarcodeInput(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault();
+                  handleBarcodeLookup(barcodeInput);
+                }
+              }}
+              style={{ ...searchInputStyle, flex: 1, marginBottom: 0, border: '1.5px solid #60a5fa' }}
+            />
+            <button
+              type="button"
+              onClick={() => handleBarcodeLookup(barcodeInput)}
+              style={{ padding: '0 16px', backgroundColor: '#2563eb', color: '#fff', border: 'none', borderRadius: '10px', fontWeight: 800, fontSize: '0.88rem', cursor: 'pointer', flexShrink: 0 }}
+            >
+              🔍 Scan / Lookup
+            </button>
+            {(barcodeInput || scanResult) && (
+              <button
+                type="button"
+                onClick={() => { setBarcodeInput(''); setScanResult(null); setSelectedLinkProduct(null); setLinkSearchQuery(''); }}
+                style={{ padding: '0 12px', backgroundColor: '#fff', color: '#64748b', border: '1px solid #cbd5e1', borderRadius: '10px', fontWeight: 800, cursor: 'pointer' }}
+              >
+                ✕
+              </button>
+            )}
+          </div>
+
+          {/* 🎯 CASE 1: BARCODE FOUND IN THIS SHOP'S INVENTORY */}
+          {scanResult?.status === 'in_shop' && scanResult.invItem && (
+            <div style={{ marginTop: '12px', backgroundColor: '#fff', borderRadius: '12px', padding: '14px', border: '2px solid #22c55e', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <div style={{ width: '50px', height: '50px', borderRadius: '10px', backgroundColor: '#f8fafc', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '22px' }}>
+                  {scanResult.masterItem?.image ? <img src={cdnImage(scanResult.masterItem.image, 120)} style={{ maxWidth: '42px', maxHeight: '42px', objectFit: 'contain' }} alt="" /> : (scanResult.masterItem?.emoji || '📦')}
+                </div>
+                <div>
+                  <div style={{ fontSize: '0.72rem', fontWeight: 800, color: '#16a34a', textTransform: 'uppercase' }}>
+                    ✅ In Your Store • Barcode: {scanResult.barcode}
+                  </div>
+                  <div style={{ fontWeight: 800, color: '#0f172a', fontSize: '0.98rem' }}>{scanResult.masterItem?.name}</div>
+                  <div style={{ fontSize: '0.78rem', color: '#64748b', fontWeight: 600 }}>
+                    {scanResult.masterItem?.qnty} • MRP ₹{scanResult.masterItem?.mrp}
+                  </div>
+                </div>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                  <span style={{ fontWeight: 800, color: '#0f172a' }}>Selling ₹</span>
+                  <input
+                    type="number"
+                    value={scanPriceInput}
+                    onChange={(e) => setScanPriceInput(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        handleInventoryUpdate(scanResult.masterItem._id, scanPriceInput, scanResult.invItem.inStock);
+                        toast(`Updated "${scanResult.masterItem.name}" to ₹${scanPriceInput}!`);
+                        setScanResult(null);
+                        setBarcodeInput('');
+                      }
+                    }}
+                    style={{ width: '80px', padding: '8px', borderRadius: '8px', border: '2px solid #16a34a', fontWeight: 800, fontSize: '0.95rem' }}
+                    autoFocus
+                  />
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    handleInventoryUpdate(scanResult.masterItem._id, scanPriceInput, scanResult.invItem.inStock);
+                    toast(`Updated "${scanResult.masterItem.name}" to ₹${scanPriceInput}!`);
+                    setScanResult(null);
+                    setBarcodeInput('');
+                  }}
+                  style={{ padding: '9px 14px', backgroundColor: '#16a34a', color: '#fff', border: 'none', borderRadius: '8px', fontWeight: 800, cursor: 'pointer' }}
+                >
+                  💾 Save Price
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const nextStock = !scanResult.invItem.inStock;
+                    handleInventoryUpdate(scanResult.masterItem._id, scanPriceInput || scanResult.invItem.sellingPrice, nextStock);
+                    setScanResult(null);
+                    setBarcodeInput('');
+                  }}
+                  style={{ padding: '9px 12px', backgroundColor: scanResult.invItem.inStock ? '#fef2f2' : '#f0fdf4', color: scanResult.invItem.inStock ? '#dc2626' : '#16a34a', border: '1px solid #cbd5e1', borderRadius: '8px', fontWeight: 800, cursor: 'pointer' }}
+                >
+                  {scanResult.invItem.inStock ? '🔴 Mark Out of Stock' : '🟢 Mark In Stock'}
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* 📦 CASE 2: BARCODE FOUND IN MASTER CATALOG (NOT IN SHOP YET) */}
+          {scanResult?.status === 'in_catalog' && scanResult.masterItem && (
+            <div style={{ marginTop: '12px', backgroundColor: '#fff', borderRadius: '12px', padding: '14px', border: '2px solid #3b82f6', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <div style={{ width: '50px', height: '50px', borderRadius: '10px', backgroundColor: '#f8fafc', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '22px' }}>
+                  {scanResult.masterItem?.image ? <img src={cdnImage(scanResult.masterItem.image, 120)} style={{ maxWidth: '42px', maxHeight: '42px', objectFit: 'contain' }} alt="" /> : (scanResult.masterItem?.emoji || '📦')}
+                </div>
+                <div>
+                  <div style={{ fontSize: '0.72rem', fontWeight: 800, color: '#2563eb', textTransform: 'uppercase' }}>
+                    📦 Found in Master Catalog • Barcode: {scanResult.barcode}
+                  </div>
+                  <div style={{ fontWeight: 800, color: '#0f172a', fontSize: '0.98rem' }}>{scanResult.masterItem?.name}</div>
+                  <div style={{ fontSize: '0.78rem', color: '#64748b', fontWeight: 600 }}>
+                    {scanResult.masterItem?.qnty} • MRP ₹{scanResult.masterItem?.mrp}
+                  </div>
+                </div>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <span style={{ fontWeight: 800, color: '#0f172a' }}>Selling ₹</span>
+                <input
+                  type="number"
+                  value={scanPriceInput}
+                  onChange={(e) => setScanPriceInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      handleInventoryUpdate(scanResult.masterItem._id, scanPriceInput || scanResult.masterItem.mrp, true);
+                      toast(`Added "${scanResult.masterItem.name}" to your store!`);
+                      setScanResult(null);
+                      setBarcodeInput('');
+                    }
+                  }}
+                  style={{ width: '80px', padding: '8px', borderRadius: '8px', border: '2px solid #2563eb', fontWeight: 800, fontSize: '0.95rem' }}
+                  autoFocus
+                />
+                <button
+                  type="button"
+                  onClick={() => {
+                    handleInventoryUpdate(scanResult.masterItem._id, scanPriceInput || scanResult.masterItem.mrp, true);
+                    toast(`Added "${scanResult.masterItem.name}" to your store!`);
+                    setScanResult(null);
+                    setBarcodeInput('');
+                  }}
+                  style={{ padding: '9px 14px', backgroundColor: '#2563eb', color: '#fff', border: 'none', borderRadius: '8px', fontWeight: 800, cursor: 'pointer' }}
+                >
+                  ➕ Add to Store
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* 🔗 CASE 3: BARCODE NOT RECOGNIZED YET -> SCAN-TO-LINK WORKFLOW */}
+          {scanResult?.status === 'unlinked' && (
+            <div style={{ marginTop: '12px', backgroundColor: '#fffbeb', borderRadius: '12px', padding: '14px', border: '2px solid #f59e0b' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px', marginBottom: '10px' }}>
+                <div>
+                  <div style={{ fontWeight: 900, color: '#92400e', fontSize: '0.92rem' }}>
+                    🔗 Barcode "{scanResult.barcode}" is not linked to any item yet
+                  </div>
+                  <div style={{ fontSize: '0.78rem', color: '#b45309', fontWeight: 600 }}>
+                    Search the product below once to permanently link this barcode for future scans!
+                  </div>
+                </div>
+                {shopData?.canAddMasterProducts && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsCreatingProduct(true);
+                      setNewProductForm(prev => ({ ...prev, barcode: scanResult.barcode }));
+                      setScanResult(null);
+                    }}
+                    style={{ padding: '6px 12px', backgroundColor: '#a21caf', color: '#fff', border: 'none', borderRadius: '8px', fontWeight: 800, fontSize: '0.78rem', cursor: 'pointer' }}
+                  >
+                    ✨ Or Create Brand-New Product with Barcode
+                  </button>
+                )}
+              </div>
+
+              {!selectedLinkProduct ? (
+                <>
+                  <input
+                    type="text"
+                    placeholder="Type product name to link barcode (e.g. Maggi, Parle G, Surf Excel)..."
+                    value={linkSearchQuery}
+                    onChange={(e) => setLinkSearchQuery(e.target.value)}
+                    style={{ ...searchInputStyle, marginBottom: '8px', border: '1.5px solid #f59e0b' }}
+                    autoFocus
+                  />
+                  {linkCandidates.length > 0 && (
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(210px, 1fr))', gap: '8px', maxHeight: '210px', overflowY: 'auto' }}>
+                      {linkCandidates.map(cand => (
+                        <div
+                          key={cand._id}
+                          onClick={() => {
+                            setSelectedLinkProduct(cand);
+                            setScanPriceInput(String(cand.mrp || ''));
+                          }}
+                          style={{ backgroundColor: '#fff', padding: '8px 10px', borderRadius: '8px', border: '1px solid #fde68a', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }}
+                        >
+                          <div style={{ width: '36px', height: '36px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                            {cand.image ? <img src={cdnImage(cand.image, 80)} style={{ maxWidth: '32px', maxHeight: '32px', objectFit: 'contain' }} alt="" /> : (cand.emoji || '📦')}
+                          </div>
+                          <div style={{ minWidth: 0 }}>
+                            <div style={{ fontWeight: 800, fontSize: '0.8rem', color: '#0f172a', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{cand.name}</div>
+                            <div style={{ fontSize: '0.72rem', color: '#64748b', fontWeight: 600 }}>{cand.qnty} • MRP ₹{cand.mrp}</div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </>
+              ) : (
+                <div style={{ backgroundColor: '#fff', padding: '12px', borderRadius: '10px', border: '1.5px solid #f59e0b', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px' }}>
+                  <div>
+                    <div style={{ fontSize: '0.72rem', fontWeight: 800, color: '#d97706' }}>LINKING BARCODE {scanResult.barcode} TO:</div>
+                    <div style={{ fontWeight: 800, color: '#0f172a', fontSize: '0.95rem' }}>{selectedLinkProduct.name} ({selectedLinkProduct.qnty})</div>
+                    <div style={{ fontSize: '0.76rem', color: '#64748b' }}>MRP: ₹{selectedLinkProduct.mrp}</div>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <span style={{ fontWeight: 800, color: '#0f172a' }}>Selling ₹</span>
+                    <input
+                      type="number"
+                      value={scanPriceInput}
+                      onChange={(e) => setScanPriceInput(e.target.value)}
+                      onKeyDown={(e) => { if (e.key === 'Enter') handleLinkBarcodeAndAdd(); }}
+                      style={{ width: '80px', padding: '8px', borderRadius: '8px', border: '2px solid #f59e0b', fontWeight: 800 }}
+                      autoFocus
+                    />
+                    <button
+                      type="button"
+                      disabled={isLinkingBarcode}
+                      onClick={handleLinkBarcodeAndAdd}
+                      style={{ padding: '9px 14px', backgroundColor: '#d97706', color: '#fff', border: 'none', borderRadius: '8px', fontWeight: 800, cursor: 'pointer' }}
+                    >
+                      {isLinkingBarcode ? '⏳ Linking...' : '🔗 Link Barcode & Add to Store'}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setSelectedLinkProduct(null)}
+                      style={{ padding: '9px 10px', backgroundColor: '#f1f5f9', color: '#475569', border: 'none', borderRadius: '8px', fontWeight: 800, cursor: 'pointer' }}
+                    >
+                      Change
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+
       {/* 🛠️ CREATE CUSTOM PRODUCT SECTION            */}
       {/* ========================================= */}
       {shopData?.canAddMasterProducts && (
@@ -315,6 +760,7 @@ export default function InventoryTab({ shopData, masterCatalog, handleInventoryU
                 <input required type="number" placeholder="MRP (₹)" value={newProductForm.mrp} onChange={e => setNewProductForm({...newProductForm, mrp: e.target.value})} style={searchInputStyle} />
                 <input required type="text" placeholder="Quantity (e.g. 1 unit)" value={newProductForm.qnty} onChange={e => setNewProductForm({...newProductForm, qnty: e.target.value})} style={searchInputStyle} />
                 <input type="text" placeholder="Emoji (e.g. 🍞)" value={newProductForm.emoji} onChange={e => setNewProductForm({...newProductForm, emoji: e.target.value})} style={searchInputStyle} />
+                <input type="text" placeholder="Barcode (Optional)" value={newProductForm.barcode || ""} onChange={e => setNewProductForm({...newProductForm, barcode: e.target.value})} style={searchInputStyle} />
                 <div style={{ display: 'flex', gap: '5px', alignItems: 'center' }}>
                   <input type="text" placeholder="Image URL (Optional)" value={newProductForm.image} onChange={e => setNewProductForm({...newProductForm, image: e.target.value})} style={{ ...searchInputStyle, flex: 1, marginBottom: 0 }} />
                   <label style={{ cursor: isUploadingImage ? 'wait' : 'pointer', padding: '12px 10px', backgroundColor: '#e879f9', color: 'white', borderRadius: '8px', fontSize: '0.8rem', fontWeight: 'bold', whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', height: '100%' }}>

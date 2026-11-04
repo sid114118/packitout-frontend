@@ -2,18 +2,22 @@ import { useState, useEffect } from 'react';
 
 const BASE_URL = (import.meta.env.VITE_API_BASE || "https://darkslategrey-snail-415133.hostingersite.com");
 
-const FEED_CACHE_MAX_AGE_MS = 24 * 60 * 60 * 1000; 
-const MASTER_CACHE_KEY = 'packitout_master_products_v1';
-const MASTER_CACHE_MAX_AGE_MS = 24 * 60 * 60 * 1000;
+const FEED_CACHE_MAX_AGE_MS = 24 * 60 * 60 * 1000;
 
-const readMaster = () => {
+const saveFeedCache = (key, payload) => {
   try {
-    const raw = localStorage.getItem(MASTER_CACHE_KEY);
-    if (!raw) return null;
-    const { at, data } = JSON.parse(raw);
-    if (!at || Date.now() - at > MASTER_CACHE_MAX_AGE_MS) return null;
-    return Array.isArray(data) ? data : null;
-  } catch { return null; }
+    localStorage.setItem(key, JSON.stringify(payload));
+  } catch {
+    // If shop inventory is huge (e.g. 10,000+ items) and exceeds the 5MB localStorage quota,
+    // store a capped slice of items alongside the full pre-computed home shelves so instant paint still works!
+    try {
+      const slimPayload = {
+        ...payload,
+        items: Array.isArray(payload.items) ? payload.items.slice(0, 300) : [],
+      };
+      localStorage.setItem(key, JSON.stringify(slimPayload));
+    } catch { /* ignore */ }
+  }
 };
 
 const shuffleArray = (array) => {
@@ -70,23 +74,11 @@ export default function useShopFeedData(user) {
     const fetchJson = (url) => fetch(url).then(r => r.ok ? r.json() : null).catch(() => null);
 
     const fetchShopProducts = async () => {
-      const cachedMaster = readMaster();
-      const masterPromise = cachedMaster
-        ? Promise.resolve(cachedMaster)
-        : fetchJson(`${BASE_URL}/master-products`);
+      try { localStorage.removeItem('packitout_master_products_v1'); } catch {}
 
       // 🏎️ PHASE 1: CRITICAL PATH (Fetch shop inventory and paint immediately)
-      // Since menu/lean populates inventory.product with essential fields (name, image, brand, mrp, etc.),
-      // we do NOT block the screen on the heavy /master-products catalog download.
+      // menu/lean populates inventory.product with all feed & search fields (name, image, brand, category, subCategory, searchTags, mrp, etc.)
       const shopData = await fetchJson(`${BASE_URL}/shops/${shopId}/menu/lean?t=${Date.now()}`);
-
-      // Background load & cache master products if not already cached
-      let masterProducts = cachedMaster;
-      masterPromise.then(res => {
-        if (!cachedMaster && Array.isArray(res)) {
-          try { localStorage.setItem(MASTER_CACHE_KEY, JSON.stringify({ at: Date.now(), data: res })); } catch {}
-        }
-      });
 
       if (cancelled) return;
 
@@ -96,6 +88,7 @@ export default function useShopFeedData(user) {
       }
 
       const newShopInfo = { 
+        _id: shopData._id,
         name: shopData.name, 
         isOpen: shopData.isOpen,
         combos: shopData.combos || []
@@ -104,11 +97,6 @@ export default function useShopFeedData(user) {
       try { localStorage.setItem('packitout_active_shop', JSON.stringify({ _id: shopData._id, name: shopData.name, pincode: shopData.pincode })); } catch (e) {}
 
       const masterMap = new Map();
-      if (Array.isArray(masterProducts)) {
-        masterProducts.forEach(mp => {
-          if (mp && mp._id) masterMap.set(String(mp._id), mp);
-        });
-      }
 
       // 🧬 SMART VARIANT GROUPING KEY
       // Automatically clusters variants (e.g. Amul Lassi 250ml, 200ml, 1L) into one family card
@@ -214,23 +202,21 @@ export default function useShopFeedData(user) {
       // ⚡⚡⚡ UI UNBLOCKS HERE: Drop the loading screen IMMEDIATELY!
       setLoading(false);
 
-      try {
-        localStorage.setItem(cacheKey, JSON.stringify({
-          cachedAt: Date.now(),
-          items: availableItems,
-          shopInfo: newShopInfo,
-          nearbyShops: initialCache?.nearbyShops || [],
-          shopRecommendations: newShopRecommendations,
-          shopCombos: newShopCombos,
-          campaigns: initialCache?.campaigns || [],
-          shopDeals: newShopDeals,
-          shopBestSellers: newBestSellers,
-          under99: newUnder99,
-          newArrivals: newArrivalsList,
-          buyItAgain: initialCache?.buyItAgain || [],
-          timeBased: finalTimeBased,
-        }));
-      } catch (e) {}
+      saveFeedCache(cacheKey, {
+        cachedAt: Date.now(),
+        items: availableItems,
+        shopInfo: newShopInfo,
+        nearbyShops: initialCache?.nearbyShops || [],
+        shopRecommendations: newShopRecommendations,
+        shopCombos: newShopCombos,
+        campaigns: initialCache?.campaigns || [],
+        shopDeals: newShopDeals,
+        shopBestSellers: newBestSellers,
+        under99: newUnder99,
+        newArrivals: newArrivalsList,
+        buyItAgain: initialCache?.buyItAgain || [],
+        timeBased: finalTimeBased,
+      });
 
       // 🐢 PHASE 2: BACKGROUND HYDRATION
       let finalCampaigns = [];
@@ -248,7 +234,7 @@ export default function useShopFeedData(user) {
       const pin = user?.pincode;
       if (pin) {
         bgPromises.push(
-          fetchJson(`${BASE_URL}/shops/nearby?pincode=${pin}`).then(data => {
+          fetchJson(`${BASE_URL}/shops/all/${encodeURIComponent(pin)}`).then(data => {
             if (cancelled) return;
             const otherShops = Array.isArray(data) ? data.filter(s => s._id !== shopId) : [];
             finalNearbyShops = otherShops;
@@ -257,46 +243,49 @@ export default function useShopFeedData(user) {
         );
       }
 
-      if (user?._id) {
+      if (user?._id && user?.sessionToken) {
         bgPromises.push(
-          fetchJson(`${BASE_URL}/orders/user/${user._id}`).then(orders => {
-            if (cancelled) return;
-            const pastBoughtIds = new Set();
-            if (Array.isArray(orders)) {
-              orders.forEach(ord => {
-                ord.items?.forEach(itemRow => {
-                  const pid = itemRow.product?._id || itemRow.product || itemRow.productId;
-                  if (pid) pastBoughtIds.add(pid.toString());
+          fetch(`${BASE_URL}/orders/user/${user._id}`, {
+            headers: { Authorization: `Bearer ${user.sessionToken}` },
+          })
+            .then(r => (r.ok ? r.json() : null))
+            .then(orders => {
+              if (cancelled) return;
+              const pastBoughtIds = new Set();
+              if (Array.isArray(orders)) {
+                orders.forEach(ord => {
+                  ord.items?.forEach(itemRow => {
+                    const pid = itemRow.product?._id || itemRow.product || itemRow.productId;
+                    if (pid) pastBoughtIds.add(pid.toString());
+                  });
                 });
-              });
-            }
-            const realBuyItAgain = availableItems.filter(i => i.inStock && pastBoughtIds.has(i._id.toString()));
-            finalBuyItAgain = realBuyItAgain.length > 0 ? realBuyItAgain.slice(0, 12) : availableItems.filter(i => i.inStock).slice(0, 12);
-            setBuyItAgain(finalBuyItAgain);
-          }).catch(() => null)
+              }
+              const realBuyItAgain = availableItems.filter(i => i.inStock && pastBoughtIds.has(i._id.toString()));
+              finalBuyItAgain = realBuyItAgain.length > 0 ? realBuyItAgain.slice(0, 12) : availableItems.filter(i => i.inStock).slice(0, 12);
+              setBuyItAgain(finalBuyItAgain);
+            })
+            .catch(() => null)
         );
       }
 
       // Once background data arrives, save the fully completed state to cache
       Promise.all(bgPromises).then(() => {
         if (cancelled) return;
-        try {
-          localStorage.setItem(cacheKey, JSON.stringify({
-            cachedAt: Date.now(),
-            items: availableItems,
-            shopInfo: newShopInfo,
-            nearbyShops: finalNearbyShops,
-            shopRecommendations: newShopRecommendations,
-            shopCombos: newShopCombos,
-            campaigns: finalCampaigns,
-            shopDeals: newShopDeals,
-            shopBestSellers: newBestSellers,
-            under99: newUnder99,
-            newArrivals: newArrivalsList,
-            buyItAgain: finalBuyItAgain,
-            timeBased: finalTimeBased,
-          }));
-        } catch (e) { }
+        saveFeedCache(cacheKey, {
+          cachedAt: Date.now(),
+          items: availableItems,
+          shopInfo: newShopInfo,
+          nearbyShops: finalNearbyShops,
+          shopRecommendations: newShopRecommendations,
+          shopCombos: newShopCombos,
+          campaigns: finalCampaigns,
+          shopDeals: newShopDeals,
+          shopBestSellers: newBestSellers,
+          under99: newUnder99,
+          newArrivals: newArrivalsList,
+          buyItAgain: finalBuyItAgain,
+          timeBased: finalTimeBased,
+        });
       });
 
     };
