@@ -6,6 +6,7 @@ import { useRankingConfig } from './ui/RankingProvider.jsx';
 import { applyBrandPriority } from './utils/rankingSort.js';
 import { trackEvent } from './utils/analyticsEngine.js';
 import VoiceSearchModal from './components/VoiceSearchModal.jsx';
+import { translateDevanagari } from './utils/voiceSearchCleaner.js';
 
 const BASE_URL = (import.meta.env.VITE_API_BASE || "https://darkslategrey-snail-415133.hostingersite.com");
 
@@ -17,13 +18,14 @@ const POPULAR_CATEGORIES = [
   { label: 'Eggs',      query: 'egg',       emoji: '🥚' },
   { label: 'Chips',     query: 'chips',     emoji: '🍟' },
   { label: 'Maggi',     query: 'maggi',     emoji: '🍜' },
-  { label: 'Cold drink',query: 'cola',      emoji: '🥤' },
+  { label: 'Cold drink',query: 'drink',     emoji: '🥤' },
   { label: 'Chocolate', query: 'chocolate', emoji: '🍫' },
   { label: 'Ice cream', query: 'ice cream', emoji: '🍦' },
 ];
 
 export default function SearchPage({
   items = [],
+  shopId: propShopId,
   onClose,
   onOpenDetails,
   onQuickAdd,
@@ -88,6 +90,31 @@ export default function SearchPage({
     }
   }, [debouncedQuery]);
 
+  const onCloseRef = useRef(onClose);
+  useEffect(() => {
+    onCloseRef.current = onClose;
+  }, [onClose]);
+
+  // 🛡️ MOBILE BACK BUTTON FIX
+  useEffect(() => {
+    if (window.history.state?.name !== 'searchPage') {
+      window.history.pushState({ name: 'searchPage' }, '');
+    }
+
+    const handlePopState = (e) => {
+      if (e.state?.name === 'searchPage') return;
+      if (onCloseRef.current) onCloseRef.current();
+    };
+
+    window.addEventListener('popstate', handlePopState);
+    return () => {
+      window.removeEventListener('popstate', handlePopState);
+      if (window.history.state?.name === 'searchPage') {
+        window.history.back();
+      }
+    };
+  }, []);
+
   useEffect(() => {
     document.body.style.overflow = 'hidden';
     const focusTimer = setTimeout(() => { if (inputRef.current) inputRef.current.focus(); }, 100);
@@ -97,53 +124,88 @@ export default function SearchPage({
     };
   }, []);
 
-  // Flatten variants once — used by both type-ahead and results
+  // Normalizes Devanagari Hindi typing (e.g. 'दूध' -> 'milk', 'मैगी' -> 'maggi')
+  const normalizedQuery = useMemo(() => {
+    return translateDevanagari(debouncedQuery).trim();
+  }, [debouncedQuery]);
+
+  // Flatten variants once — grouped with stable _familyId to prevent duplicate cards
   const flatItems = useMemo(() => (
-    items.flatMap(item => {
+    (Array.isArray(items) ? items : []).filter(Boolean).flatMap(item => {
+      const familyId = String(item.itemGroupId || item._id || '');
       if (item.variants && item.variants.length > 0) {
         return item.variants.map(variant => ({
           ...item,
           ...variant,
+          _familyId: familyId,
           variants: item.variants
         }));
       }
-      return item;
+      return [{
+        ...item,
+        _familyId: familyId
+      }];
     })
   ), [items]);
 
   const [serverResults, setServerResults] = useState([]);
+  const [isServerSearching, setIsServerSearching] = useState(false);
+
+  // Robust active shop ID resolution (props -> active_shop -> guest_shop -> user.primaryShop)
+  const effectiveShopId = propShopId || (() => {
+    try {
+      const activeShop = JSON.parse(localStorage.getItem('packitout_active_shop') || '{}');
+      if (activeShop?._id) return activeShop._id;
+      const guestId = localStorage.getItem('packitout_guest_shop_id');
+      if (guestId) return guestId;
+      const userStr = localStorage.getItem('packitout_user');
+      if (userStr) {
+        const u = JSON.parse(userStr);
+        if (u.primaryShop) {
+          return typeof u.primaryShop === 'object' ? u.primaryShop._id : u.primaryShop;
+        }
+      }
+    } catch {}
+    return null;
+  })();
 
   // Server-side search sync (for 10,000+ item catalogs where local cache is partial or paginated)
   useEffect(() => {
-    const q = debouncedQuery.trim();
-    if (q.length < 2) {
+    const q = normalizedQuery;
+    if (q.length < 2 || !effectiveShopId) {
       setServerResults([]);
+      setIsServerSearching(false);
       return;
     }
     let cancelled = false;
-    try {
-      const activeShop = JSON.parse(localStorage.getItem('packitout_active_shop') || '{}');
-      const shopId = activeShop?._id;
-      if (!shopId) return;
-      fetch(`${BASE_URL}/shops/${shopId}/search?q=${encodeURIComponent(q)}&limit=40`)
-        .then(r => (r.ok ? r.json() : null))
-        .then(data => {
-          if (cancelled || !data || !Array.isArray(data.items)) return;
-          setServerResults(data.items);
-        })
-        .catch(() => {});
-    } catch {}
-    return () => { cancelled = true; };
-  }, [debouncedQuery]);
+    setIsServerSearching(true);
+    fetch(`${BASE_URL}/shops/${effectiveShopId}/search?q=${encodeURIComponent(q)}&limit=40`)
+      .then(r => (r.ok ? r.json() : null))
+      .then(data => {
+        if (cancelled) return;
+        setIsServerSearching(false);
+        if (!data || !Array.isArray(data.items)) return;
+        setServerResults(data.items);
+      })
+      .catch(() => {
+        if (!cancelled) setIsServerSearching(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [normalizedQuery, effectiveShopId]);
 
   const fuse = useMemo(() => {
     // Cap Fuse index to 2,500 items so 10,000+ catalogs never freeze the main thread
     const fusePool = flatItems.length > 2500 ? flatItems.slice(0, 2500) : flatItems;
     return new Fuse(fusePool, {
       keys: [
-        { name: 'name', weight: 0.6 },
+        { name: 'name', weight: 0.5 },
         { name: 'brand', weight: 0.2 },
-        { name: 'searchTags', weight: 0.2 }
+        { name: 'category', weight: 0.15 },
+        { name: 'subCategory', weight: 0.1 },
+        { name: 'searchTags', weight: 0.15 },
+        { name: 'barcode', weight: 0.2 },
       ],
       threshold: 0.38,
       ignoreLocation: true,
@@ -151,42 +213,61 @@ export default function SearchPage({
   }, [flatItems]);
 
   const displayItems = useMemo(() => {
-    const q = debouncedQuery.trim();
+    const q = normalizedQuery;
     if (q.length === 0) return [];
     const results = fuse.search(q);
-    const matches = results.map(r => r.item);
-    const seenIds = new Set(matches.map(m => String(m._id)));
 
-    // Fast token scan across any remaining items beyond 2,500 + server-side results
+    // Deduplicate by familyId so multi-variant families only produce 1 consolidated card
+    const seenFamilyIds = new Set();
+    const matches = [];
+
+    for (const r of results) {
+      const it = r.item;
+      const famId = it._familyId || String(it._id);
+      if (!seenFamilyIds.has(famId)) {
+        seenFamilyIds.add(famId);
+        matches.push(it);
+      }
+    }
+
+    // Fast token scan across any remaining items beyond 2,500
     const tokens = q.toLowerCase().split(/\s+/).filter(Boolean);
     if (flatItems.length > 2500 && tokens.length > 0) {
       for (let i = 2500; i < flatItems.length; i++) {
         const it = flatItems[i];
-        if (!it || seenIds.has(String(it._id))) continue;
-        const hay = `${it.name || ''} ${it.brand || ''} ${(it.searchTags || []).join(' ')}`.toLowerCase();
+        if (!it) continue;
+        const famId = it._familyId || String(it._id);
+        if (seenFamilyIds.has(famId)) continue;
+
+        const tagsStr = Array.isArray(it.searchTags) ? it.searchTags.join(' ') : (it.searchTags || '');
+        const hay = `${it.name || ''} ${it.brand || ''} ${it.category || ''} ${it.subCategory || ''} ${it.barcode || ''} ${tagsStr}`.toLowerCase();
         if (tokens.every(t => hay.includes(t))) {
-          seenIds.add(String(it._id));
+          seenFamilyIds.add(famId);
           matches.push(it);
           if (matches.length >= 80) break;
         }
       }
     }
 
+    // Merge server-side search results cleanly
     for (const sItem of serverResults) {
-      if (sItem && sItem._id && !seenIds.has(String(sItem._id))) {
-        seenIds.add(String(sItem._id));
-        matches.push(sItem);
+      if (sItem && sItem._id) {
+        const famId = sItem.itemGroupId || String(sItem._id);
+        if (!seenFamilyIds.has(famId)) {
+          seenFamilyIds.add(famId);
+          matches.push(sItem);
+        }
       }
     }
 
     return applyBrandPriority(matches, rankingConfig);
-  }, [debouncedQuery, fuse, flatItems, serverResults, rankingConfig]);
+  }, [normalizedQuery, fuse, flatItems, serverResults, rankingConfig]);
 
   // Type-ahead chips while typing. Pulls unique product names/brands that
   // start with or contain the live (un-debounced) query so it feels instant.
   // Capped at 6 to keep the UI tight.
   const liveSuggestions = useMemo(() => {
-    const raw = query.trim().toLowerCase();
+    const raw = translateDevanagari(query).trim().toLowerCase();
     if (raw.length === 0) return [];
     const seen = new Set();
     const out = [];
@@ -194,7 +275,7 @@ export default function SearchPage({
     const startsWith = [];
     const contains = [];
     for (const item of flatItems) {
-      const candidates = [item.name, item.brand].filter(Boolean);
+      const candidates = [item.name, item.brand, item.category].filter(Boolean);
       for (const cand of candidates) {
         const key = String(cand).trim();
         const lc = key.toLowerCase();
@@ -214,20 +295,23 @@ export default function SearchPage({
     return out.slice(0, 6);
   }, [query, flatItems]);
 
-  // Log missed searches once per term per session
+  // Log missed searches once per term per session (only after server search finishes)
   useEffect(() => {
-    const term = debouncedQuery.trim().toLowerCase();
+    const term = (normalizedQuery || debouncedQuery).trim().toLowerCase();
     if (term.length < 3) return;
 
+    // Do NOT log zero-result prematurely while server search is still pending
+    if (isServerSearching) return;
+
     if (displayItems.length > 0) {
-       if (!loggedMissedTermsRef.current.has(term + '_hit')) {
-         loggedMissedTermsRef.current.add(term + '_hit');
-         trackEvent('SEARCH_QUERY', { query: term, resultsCount: displayItems.length });
-       }
-       return;
+      if (!loggedMissedTermsRef.current.has(term + '_hit')) {
+        loggedMissedTermsRef.current.add(term + '_hit');
+        trackEvent('SEARCH_QUERY', { query: term, resultsCount: displayItems.length });
+      }
+      return;
     }
 
-    // We only log if the user actually settled on this term (debounced).
+    // We only log if the user actually settled on this term (debounced and server settled).
     if (loggedMissedTermsRef.current.has(term)) return;
     loggedMissedTermsRef.current.add(term);
 
@@ -250,7 +334,7 @@ export default function SearchPage({
     }).catch(() => { /* swallow — analytics shouldn't break the UX */ });
 
     return () => { cancelled = true; };
-  }, [debouncedQuery, displayItems.length]);
+  }, [normalizedQuery, debouncedQuery, displayItems.length, isServerSearching]);
 
   const safeCart = Array.isArray(cart) ? cart.filter(c => c !== null) : [];
   const cartTotalItems = safeCart.reduce((total, item) => total + (Number(item.qty) || 1), 0);

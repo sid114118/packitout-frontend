@@ -3,17 +3,17 @@
 
 // 🛡️ Known compound brands/products where numbers or words must NOT be stripped as generic quantities
 const PROTECTED_PHRASES = [
-  { regex: /\b(five|5)\s*(star|stars)\b/gi, replacement: "5 star" },
-  { regex: /\b(seven|7)\s*(up)\b/gi, replacement: "7 up" },
-  { regex: /\b(twenty|20)[\s-]*(twenty|20)\b/gi, replacement: "20 20" },
-  { regex: /\b(parle)\s*(g)\b/gi, replacement: "parle g" },
-  { regex: /\b(kinder)\s*(joy)\b/gi, replacement: "kinder joy" },
-  { regex: /\b(surf)\s*(excel)\b/gi, replacement: "surf excel" },
-  { regex: /\b(red)\s*(label)\b/gi, replacement: "red label" },
-  { regex: /\b(taj)\s*(mahal)\b/gi, replacement: "taj mahal" },
-  { regex: /\b(minute)\s*(maid)\b/gi, replacement: "minute maid" },
-  { regex: /\b(coca|coke)\s*(cola)?\b/gi, replacement: "coca cola" },
-  { regex: /\b(mountain)\s*(dew)\b/gi, replacement: "mountain dew" },
+  { regex: /\b(five|5)\s*(star|stars)\b/i, replacement: "5 star" },
+  { regex: /\b(seven|7)\s*(up)\b/i, replacement: "7 up" },
+  { regex: /\b(twenty|20)[\s-]*(twenty|20)\b/i, replacement: "20 20" },
+  { regex: /\b(parle)\s*(g)\b/i, replacement: "parle g" },
+  { regex: /\b(kinder)\s*(joy)\b/i, replacement: "kinder joy" },
+  { regex: /\b(surf)\s*(excel)\b/i, replacement: "surf excel" },
+  { regex: /\b(red)\s*(label)\b/i, replacement: "red label" },
+  { regex: /\b(taj)\s*(mahal)\b/i, replacement: "taj mahal" },
+  { regex: /\b(minute)\s*(maid)\b/i, replacement: "minute maid" },
+  { regex: /\b(coca|coke)\s*(cola)?\b/i, replacement: "coca cola" },
+  { regex: /\b(mountain)\s*(dew)\b/i, replacement: "mountain dew" },
 ];
 
 // 🎙️ Conversational filler phrases & shopkeeper honorifics
@@ -65,44 +65,65 @@ const NUMBER_WORDS = [
   /\b(one|two|three|four|five|six|seven|eight|nine|ten|half)\b/gi,
 ];
 
-// Devanagari Hindi filler words (if user speaks in pure Hindi)
+// Devanagari Hindi filler words (Unicode whitespace boundary safe)
 const DEVANAGARI_FILLERS = [
-  /\b(भैया\s*जी|भैया|अंकल|नमस्ते|कृपया|प्लीज|सुनो)\b/gu,
-  /\b(चाहिए|दे\s*दो|देदो|देना|दिखाओ|लाओ|भेज\s*दो|ढूंढो)\b/gu,
-  /\b(मुझे|हमें|हमको|मेरे\s*को|कुछ)\b/gu,
-  /\b(का|की|के|वाला|वाली|वाले)\b/gu,
-  /\b(पैकेट|डिब्बा|बोतल|पीस|लीटर|किलो|ग्राम|दर्जन|आधा)\b/gu,
-  /\b(एक|दो|तीन|चार|पांच|छह|सात|आठ|नौ|दस)\b/gu,
+  /(?:^|\s)(?:भैया\s*जी|भैया|अंकल|नमस्ते|कृपया|प्लीज|सुनो)(?=\s|$)/gu,
+  /(?:^|\s)(?:चाहिए|दे\s*दो|देदो|देना|दिखाओ|लाओ|भेज\s*दो|ढूंढो)(?=\s|$)/gu,
+  /(?:^|\s)(?:मुझे|हमें|हमको|मेरे\s*को|कुछ)(?=\s|$)/gu,
+  /(?:^|\s)(?:का|की|के|वाला|वाली|वाले)(?=\s|$)/gu,
+  /(?:^|\s)(?:पैकेट|डिब्बा|बोतल|पीस|लीटर|किलो|ग्राम|दर्जन|आधा)(?=\s|$)/gu,
+  /(?:^|\s)(?:एक|दो|तीन|चार|पांच|छह|सात|आठ|नौ|दस)(?=\s|$)/gu,
 ];
 
-// Common Devanagari to English/Hinglish grocery keyword mappings for maximum search recall
-const DEVANAGARI_KEYWORD_MAP = {
-  "दूध": "doodh milk",
-  "आटा": "atta aashirvaad",
-  "चावल": "rice chawal",
-  "चीनी": "sugar cheeni",
-  "शक्कर": "sugar cheeni",
-  "नमक": "salt namak tata",
-  "तेल": "oil tel fortune",
-  "घी": "ghee amul",
-  "चाय": "tea chai",
+// Single canonical keywords that directly match database product names/categories
+export const DEVANAGARI_KEYWORD_MAP = {
+  "दूध": "milk",
+  "आटा": "atta",
+  "चावल": "rice",
+  "चीनी": "sugar",
+  "शक्कर": "sugar",
+  "नमक": "salt",
+  "तेल": "oil",
+  "घी": "ghee",
+  "चाय": "tea",
   "कॉफी": "coffee",
   "बिस्कुट": "biscuit",
   "साबुन": "soap",
   "शैम्पू": "shampoo",
-  "दाल": "dal pulses",
-  "अंडे": "egg anda",
-  "अंडा": "egg anda",
-  "मक्खन": "butter amul",
-  "दही": "curd dahi",
+  "दाल": "dal",
+  "अंडे": "egg",
+  "अंडा": "egg",
+  "मक्खन": "butter",
+  "दही": "curd",
   "ब्रेड": "bread",
-  "मैगी": "maggi noodles",
-  "चिप्स": "chips lays",
+  "मैगी": "maggi",
+  "चिप्स": "chips",
   "पानी": "water",
   "मसाला": "masala",
-  "हल्दी": "haldi turmeric",
-  "मिर्च": "mirch chilli",
+  "हल्दी": "turmeric",
+  "मिर्च": "chilli",
   "धनिया": "dhaniya",
+};
+
+/**
+ * Translates and normalizes Devanagari (Hindi) input into English grocery keywords
+ * Useful for both typed search and voice search
+ */
+export const translateDevanagari = (text = "") => {
+  if (!text || typeof text !== "string") return text;
+  let res = text;
+  if (/[\u0900-\u097F]/.test(res)) {
+    DEVANAGARI_FILLERS.forEach(pattern => {
+      res = res.replace(pattern, " ");
+    });
+    Object.keys(DEVANAGARI_KEYWORD_MAP).forEach(devWord => {
+      if (res.includes(devWord)) {
+        res = res.replace(new RegExp(devWord, "g"), ` ${DEVANAGARI_KEYWORD_MAP[devWord]} `);
+      }
+    });
+    res = res.replace(/\s+/g, " ").trim();
+  }
+  return res;
 };
 
 /**
@@ -148,7 +169,7 @@ export const cleanVoiceSearchQuery = (rawSpeech = "") => {
   PROTECTED_PHRASES.forEach(({ regex, replacement }, index) => {
     const token = `PROTECTEDBRANDTOKEN${index}XYZ`;
     if (regex.test(text)) {
-      text = text.replace(regex, token);
+      text = text.replace(new RegExp(regex.source, 'gi'), token);
       restoredMap[token] = replacement;
     }
   });

@@ -164,7 +164,30 @@ export default function GuestFeed({
     else onAddToCart({ ...item, mrp: item.sellingPrice });
   };
 
-  if (loading) return <div style={{ padding: '40px', textAlign: 'center', color: '#6b7280' }}>Loading fresh products...</div>;
+  const guestShopId = (() => {
+    try { return localStorage.getItem("packitout_guest_shop_id") || ""; } catch { return ""; }
+  })();
+
+  if (loading) {
+    return (
+      <div style={{ padding: '40px', textAlign: 'center', color: '#6b7280' }}>
+        {isSearchOpen && (
+          <SearchPage 
+            items={items}
+            shopId={guestShopId}
+            onClose={onCloseSearch}
+            onOpenDetails={setSelectedProductDetails}
+            onQuickAdd={handleQuickAdd}
+            cart={cart}
+            onRemoveFromCart={onRemoveFromCart}
+            onViewCart={onViewCart}
+            autoStartVoice={autoStartVoiceSearch}
+          />
+        )}
+        Loading fresh products...
+      </div>
+    );
+  }
 
   let displayItems = items;
   if (viewAll) {
@@ -184,6 +207,7 @@ export default function GuestFeed({
       {isSearchOpen && (
         <SearchPage 
           items={items}
+          shopId={guestShopId}
           onClose={onCloseSearch}
           onOpenDetails={setSelectedProductDetails}
           onQuickAdd={handleQuickAdd}

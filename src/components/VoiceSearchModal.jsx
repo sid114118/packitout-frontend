@@ -10,6 +10,8 @@ export default function VoiceSearchModal({ isOpen, onClose, onSearch }) {
   const [errorMessage, setErrorMessage] = useState(null);
   const recognitionRef = useRef(null);
   const finishTimeoutRef = useRef(null);
+  const handledFinalRef = useRef(false);
+  const liveTranscriptRef = useRef('');
 
   // Stop recognition on unmount or close
   useEffect(() => {
@@ -34,11 +36,13 @@ export default function VoiceSearchModal({ isOpen, onClose, onSearch }) {
 
     setErrorMessage(null);
     setLiveTranscript('');
+    liveTranscriptRef.current = '';
+    handledFinalRef.current = false;
     setProcessedResult(null);
 
     try {
       if (recognitionRef.current) {
-        try { recognitionRef.current.abort(); } catch (e) {}
+        try { recognitionRef.current.abort(); } catch (e) { }
       }
 
       const recognition = createSpeechRecognition({ lang });
@@ -69,8 +73,9 @@ export default function VoiceSearchModal({ isOpen, onClose, onSearch }) {
 
         const currentSpeech = final || interim;
         setLiveTranscript(currentSpeech);
+        liveTranscriptRef.current = currentSpeech;
 
-        if (final) {
+        if (final && !handledFinalRef.current) {
           handleFinalSpeech(final);
         }
       };
@@ -90,6 +95,10 @@ export default function VoiceSearchModal({ isOpen, onClose, onSearch }) {
 
       recognition.onend = () => {
         setIsListening(false);
+        // Mobile fallback: if silence ended recognition without isFinal: true, process the last transcript
+        if (!handledFinalRef.current && liveTranscriptRef.current && liveTranscriptRef.current.trim().length > 1) {
+          handleFinalSpeech(liveTranscriptRef.current);
+        }
       };
 
       recognition.start();
@@ -105,13 +114,14 @@ export default function VoiceSearchModal({ isOpen, onClose, onSearch }) {
     if (recognitionRef.current) {
       try {
         recognitionRef.current.stop();
-      } catch (e) {}
+      } catch (e) { }
       recognitionRef.current = null;
     }
     setIsListening(false);
   };
 
   const handleFinalSpeech = (rawText) => {
+    handledFinalRef.current = true;
     stopListening();
     const result = cleanVoiceSearchQuery(rawText);
     setProcessedResult(result);

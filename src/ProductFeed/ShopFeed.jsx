@@ -112,6 +112,19 @@ export default function ShopFeed({
   if (loading) {
     return (
       <div style={{ padding: '15px 0', maxWidth: '1000px', margin: '0 auto', overflowX: 'hidden', backgroundColor: '#f3f4f6', minHeight: '100vh' }}>
+        {isSearchOpen && (
+          <SearchPage
+            items={items}
+            shopId={shopInfo?._id || (typeof user?.primaryShop === 'object' ? user?.primaryShop?._id : user?.primaryShop)}
+            onClose={onCloseSearch}
+            onOpenDetails={setSelectedProductDetails}
+            onQuickAdd={handleQuickAdd}
+            cart={cart}
+            onRemoveFromCart={onRemoveFromCart}
+            onViewCart={onViewCart}
+            autoStartVoice={autoStartVoiceSearch}
+          />
+        )}
         {/* Fake Row Header Skeleton */}
         <div style={{ padding: '0 15px', marginBottom: '15px' }}>
           <div className="skeleton-shimmer" style={{ width: '45%', height: '22px', borderRadius: '8px', backgroundColor: '#e2e8f0', marginBottom: '6px' }}></div>
@@ -144,6 +157,7 @@ export default function ShopFeed({
       {isSearchOpen && (
         <SearchPage
           items={items}
+          shopId={shopInfo?._id || (typeof user?.primaryShop === 'object' ? user?.primaryShop?._id : user?.primaryShop)}
           onClose={onCloseSearch}
           onOpenDetails={setSelectedProductDetails}
           onQuickAdd={handleQuickAdd}
@@ -371,7 +385,7 @@ export default function ShopFeed({
       )}
 
       <VariantBottomSheet product={selectedVariantProduct} onClose={() => setSelectedVariantProduct(null)} onAddToCart={onAddToCart} onRemoveFromCart={onRemoveFromCart} cart={cart} />
-      <ProductModal product={selectedProductDetails} isOpen={selectedProductDetails !== null} onClose={() => setSelectedProductDetails(null)} onAddToCart={onAddToCart} onRemoveFromCart={onRemoveFromCart} onViewCart={onViewCart} cart={cart} allItems={items} onViewBrand={(brand) => { if (onClearCategory) onClearCategory(); setViewAll(null); if (onBrandSelect) onBrandSelect(brand); }} />
+      <ProductModal product={selectedProductDetails} isOpen={selectedProductDetails !== null} onClose={() => setSelectedProductDetails(null)} onAddToCart={onAddToCart} onRemoveFromCart={onRemoveFromCart} onViewCart={onViewCart} cart={cart} allItems={items} onViewBrand={(brand) => { if (onClearCategory) onClearCategory(); setViewAll(null); if (onCloseSearch) onCloseSearch(); if (onBrandSelect) onBrandSelect(brand); }} />
       <ComboDetailModal combo={selectedComboDetail} items={items} onClose={() => setSelectedComboDetail(null)} onAddToCart={(comboBundle) => { onAddToCart(comboBundle); toast('Combo box added to cart! 🎁'); }} />
     </div>
   );

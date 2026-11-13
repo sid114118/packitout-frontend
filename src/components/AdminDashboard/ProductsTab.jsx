@@ -49,9 +49,10 @@ export default function ProductsTab({ products, form, setForm, handleProductSubm
     const tokens = q ? q.split(/\s+/).filter(Boolean) : [];
     return (products || []).filter(p => {
       if (!p) return false;
-      if (catalogCategory !== 'All' && (p.category || '') !== catalogCategory) return false;
+      if (catalogCategory !== 'All' && String(p.category || '').toLowerCase() !== catalogCategory.toLowerCase()) return false;
       if (tokens.length === 0) return true;
-      const hay = `${p.name || ''} ${p.brand || ''} ${p.category || ''} ${p.qnty || ''} ${p.barcode || ''} ${(p.searchTags || []).join(' ')}`.toLowerCase();
+      const tagsStr = Array.isArray(p.searchTags) ? p.searchTags.join(' ') : (p.searchTags || '');
+      const hay = `${p.name || ''} ${p.brand || ''} ${p.category || ''} ${p.qnty || ''} ${p.barcode || ''} ${tagsStr}`.toLowerCase();
       return tokens.every(t => hay.includes(t));
     });
   }, [products, catalogSearch, catalogCategory]);

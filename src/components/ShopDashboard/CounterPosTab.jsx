@@ -89,7 +89,8 @@ export default function CounterPosTab({
     const matches = [];
     for (const inv of validInventory) {
       const p = inv.product;
-      const hay = `${p.name || ''} ${p.brand || ''} ${p.category || ''} ${p.barcode || ''} ${(p.searchTags || []).join(' ')}`.toLowerCase();
+      const tagsStr = Array.isArray(p.searchTags) ? p.searchTags.join(' ') : (p.searchTags || '');
+      const hay = `${p.name || ''} ${p.brand || ''} ${p.category || ''} ${p.barcode || ''} ${tagsStr}`.toLowerCase();
       if (tokens.every(t => hay.includes(t))) {
         matches.push(inv);
         if (matches.length >= 24) break;
