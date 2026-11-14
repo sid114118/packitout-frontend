@@ -1,6 +1,12 @@
 // 🧾 High-Resolution Visual Bill Image (PNG) & Official PDF Generator + Smart WhatsApp Dispatcher
 import { jsPDF } from 'jspdf';
-import { getPublicBillUrl, getShopStorefrontUrl, toWhatsAppPhone } from './whatsappShare.js';
+import {
+  getPublicBillUrl,
+  getShopStorefrontUrl,
+  toWhatsAppPhone,
+  openWhatsAppChat,
+  sanitizeWhatsAppText,
+} from './whatsappShare.js';
 
 /**
  * Loads an image safely with CORS handling and timeout protection.
@@ -505,7 +511,7 @@ export function buildWhatsAppBillTextMessage(order, shopData) {
   const itemCount = items.reduce((s, i) => s + (Number(i?.qty) || 1), 0);
 
   const lines = [
-    `🧾 *DIGITAL BILL • #${shortId}*`,
+    `📋 *DIGITAL BILL • #${shortId}*`,
     `🏪 *${shopName}*`,
     ``,
     `Namaste *${customerName}* ji! 🙏`,
@@ -519,7 +525,7 @@ export function buildWhatsAppBillTextMessage(order, shopData) {
     lines.push(`🎉 *MRP Savings:* ₹${order.savingsAmount}`);
   }
   if (Number(order?.coinsEarned) > 0) {
-    lines.push(`🪙 *Loyalty Coins Earned:* +${order.coinsEarned} Coins`);
+    lines.push(`⭐ *Loyalty Coins Earned:* +${order.coinsEarned} Coins`);
   }
 
   lines.push(
@@ -527,19 +533,19 @@ export function buildWhatsAppBillTextMessage(order, shopData) {
     `📄 *Click Link to View Receipt & Download Official PDF Bill:*`,
     publicBillUrl,
     ``,
-    `🛍️ *Order Online from ${shopName} Next Time:*`,
+    `🛒 *Order Online from ${shopName} Next Time:*`,
     `Skip the counter wait — browse live items & upload parchi:`,
     storefrontUrl,
     ``,
     `_Thank you for supporting your local store!_ 🙏`
   );
 
-  return lines.join('\n');
+  return sanitizeWhatsAppText(lines.join('\n'));
 }
 
 /**
  * SMART WHATSAPP DISPATCHER:
- * Ensures the customer ALWAYS gets the clickable link in WhatsApp text,
+ * Ensures the customer ALWAYS gets the clickable link in WhatsApp text with 100% intact emojis (no tofu/squares!),
  * AND the shopkeeper gets the bill image/PDF downloaded and copied to clipboard!
  */
 export async function sendBillToCustomerWhatsApp(order, shopData, { format = 'whatsapp', toast = null } = {}) {
@@ -569,20 +575,13 @@ export async function sendBillToCustomerWhatsApp(order, shopData, { format = 'wh
       if (toast) toast('📲 WhatsApp opening with clickable links! (Image copied: Ctrl+V to attach)', 'success');
     }
 
-    // Open WhatsApp Chat with pre-filled message containing the CLICKABLE links
-    const waUrl = cleanPhone
-      ? `https://wa.me/${cleanPhone}?text=${encodeURIComponent(captionText)}`
-      : `https://wa.me/?text=${encodeURIComponent(captionText)}`;
-    
-    window.open(waUrl, '_blank', 'noopener,noreferrer');
+    // Open WhatsApp Chat directly (bypassing wa.me 302 emoji-mangling redirect)
+    openWhatsAppChat(cleanPhone, captionText);
     return true;
   } catch (err) {
     console.error('Error sharing bill on WhatsApp:', err);
     if (toast) toast('Opening WhatsApp with clickable links…', 'info');
-    const waUrl = cleanPhone
-      ? `https://wa.me/${cleanPhone}?text=${encodeURIComponent(captionText)}`
-      : `https://wa.me/?text=${encodeURIComponent(captionText)}`;
-    window.open(waUrl, '_blank', 'noopener,noreferrer');
+    openWhatsAppChat(cleanPhone, captionText);
     return false;
   }
 }

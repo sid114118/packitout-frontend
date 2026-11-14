@@ -598,7 +598,7 @@ export default function CounterPosTab({
       }
 
       if (sendWhatsApp && cleanPhone) {
-        sendBillToCustomerWhatsApp(createdOrder, shopData, { format: 'image', toast });
+        sendBillToCustomerWhatsApp(createdOrder, shopData, { format: 'whatsapp', toast });
       }
     } catch {
       toast('Network error while saving counter bill', 'error');

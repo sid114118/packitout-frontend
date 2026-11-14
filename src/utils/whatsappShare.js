@@ -1,4 +1,4 @@
-// 📲 WhatsApp Digital Bill, Counter POS Receipt & Offline-to-Online Storefront Link Utility (₹0 SMS Cost)
+// 📲 WhatsApp Digital Bill, Counter POS Receipt & Storefront Utility (Universal Unicode Safe)
 
 export function toWhatsAppPhone(rawPhone) {
   if (!rawPhone) return '';
@@ -8,6 +8,54 @@ export function toWhatsAppPhone(rawPhone) {
   if (digits.length === 11 && digits.startsWith('0')) return `91${digits.slice(1)}`;
   if (digits.length === 12 && digits.startsWith('91')) return digits;
   return digits.length >= 10 ? digits : '';
+}
+
+/**
+ * Detects if current environment is a mobile phone or tablet.
+ */
+export function isMobileDevice() {
+  if (typeof navigator === 'undefined') return false;
+  return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
+    navigator.userAgent || navigator.vendor || ''
+  );
+}
+
+/**
+ * Normalizes text to prevent emoji corruption / tofu boxes:
+ * - Strips invisible variation selectors (U+FE0E & U+FE0F) that render as '?' in a rotated square
+ * - Replaces modern Unicode 11-13 emojis that cause tofu on older OS fonts (🪙 Coin, 🧾 Receipt)
+ * - Normalizes line breaks
+ */
+export function sanitizeWhatsAppText(text) {
+  if (!text) return '';
+  return String(text)
+    .replace(/[\uFE0E\uFE0F]/g, '')
+    .replace(/\uD83E\uDDFE/g, '📋') // 🧾 (Receipt, Unicode 11) -> 📋 (Clipboard, universal)
+    .replace(/\uD83E\uDE99/g, '⭐') // 🪙 (Coin, Unicode 13) -> ⭐ (Star, universal)
+    .replace(/\uD83D\uDECD/g, '🛒') // 🛍 (Shopping bag) -> 🛒 (Shopping cart, universal)
+    .replace(/\uD83C\uDFF7/g, '🔖') // 🏷 (Tag) -> 🔖 (Bookmark/tag, universal)
+    .replace(/\r\n/g, '\n');
+}
+
+/**
+ * Builds safe direct WhatsApp URL that bypasses wa.me's emoji-mangling 302 redirect.
+ */
+export function getWhatsAppUrl(rawPhone, messageText = '') {
+  const cleanPhone = toWhatsAppPhone(rawPhone);
+  const safeText = sanitizeWhatsAppText(messageText);
+  const encoded = encodeURIComponent(safeText);
+
+  // Mobile: api.whatsapp.com directly triggers WhatsApp native app via Universal/App Links
+  if (isMobileDevice()) {
+    return cleanPhone
+      ? `https://api.whatsapp.com/send/?phone=${cleanPhone}&text=${encoded}`
+      : `https://api.whatsapp.com/send/?text=${encoded}`;
+  }
+
+  // Desktop / PC: direct web.whatsapp.com (instant load, zero redirects, flawless emojis)
+  return cleanPhone
+    ? `https://web.whatsapp.com/send?phone=${cleanPhone}&text=${encoded}`
+    : `https://web.whatsapp.com/send?text=${encoded}`;
 }
 
 export function getPublicBillUrl(orderId, shopId = '', pincode = '') {
@@ -86,19 +134,19 @@ export function buildPosCounterBillWhatsApp(order, shopData, extra = {}) {
   const storeUrl = getShopStorefrontUrl(shopId, pincode);
 
   const lines = [
-    `🧾 *SMART DIGITAL BILL • #${shortId}*`,
+    `📋 *SMART DIGITAL BILL • #${shortId}*`,
     `🏪 *${shopName}*`,
     ``,
     `Namaste *${customerName}* ji! 🙏`,
     `Thank you for visiting *${shopName}* today. Here is your itemized bill:`,
     ``,
-    `🛍️ *Items (${itemCount}):*`,
+    `🛒 *Items (${itemCount}):*`,
     itemsText,
     ``,
   ];
 
   if (discount > 0) {
-    lines.push(`🏷️ *Counter Discount: -₹${discount}*`);
+    lines.push(`🔖 *Counter Discount: -₹${discount}*`);
   }
   lines.push(`💰 *Total Bill: ₹${total}* (${payLabel})`);
 
@@ -106,7 +154,7 @@ export function buildPosCounterBillWhatsApp(order, shopData, extra = {}) {
     lines.push(`🎉 *Total Saved on MRP Today: ₹${savings}!*`);
   }
   if (coinsEarned > 0) {
-    lines.push(`🪙 *Loyalty Reward: +${coinsEarned} Coins Earned!* (Wallet: ${totalCoins} Coins)`);
+    lines.push(`⭐ *Loyalty Reward: +${coinsEarned} Coins Earned!* (Wallet: ${totalCoins} Coins)`);
   }
 
   if (billUrl) {
@@ -120,13 +168,13 @@ export function buildPosCounterBillWhatsApp(order, shopData, extra = {}) {
   if (storeUrl) {
     lines.push(
       ``,
-      `🚀 *Order from ${shopName} Online Next Time!*`,
-      `Skip the counter wait — browse our live prices, upload your handwritten parchi, & use your Loyalty Coins from home:`,
+      `🛒 *Order from ${shopName} Online Next Time!*`,
+      `Skip the counter wait — browse live prices, upload your handwritten parchi, & use your Loyalty Coins from home:`,
       storeUrl
     );
   }
 
-  return lines.join('\n');
+  return sanitizeWhatsAppText(lines.join('\n'));
 }
 
 export function buildShopToCustomerWhatsApp(order, shopData, mode = 'ready') {
@@ -146,8 +194,8 @@ export function buildShopToCustomerWhatsApp(order, shopData, mode = 'ready') {
   const billUrl = getPublicBillUrl(orderId, shopId, pincode);
 
   if (mode === 'ready') {
-    return [
-      `🛍️ *ORDER READY FOR PICKUP!*`,
+    const lines = [
+      `🛒 *ORDER READY FOR PICKUP!*`,
       `🏪 *${shopName}*`,
       ``,
       `Namaste *${customerName}* ji! 🙏`,
@@ -161,11 +209,12 @@ export function buildShopToCustomerWhatsApp(order, shopData, mode = 'ready') {
       ...(billUrl ? [``, `📄 *View Web Receipt:*`, billUrl] : []),
       ``,
       `_Please show Token #${shortId} at the shop counter to collect your bag!_`,
-    ].join('\n');
+    ];
+    return sanitizeWhatsAppText(lines.join('\n'));
   }
 
-  return [
-    `🧾 *DIGITAL BILL / ORDER RECEIPT*`,
+  const lines = [
+    `📋 *DIGITAL BILL / ORDER RECEIPT*`,
     `🏪 *${shopName}*`,
     ``,
     `👤 Customer: *${customerName}*`,
@@ -179,7 +228,8 @@ export function buildShopToCustomerWhatsApp(order, shopData, mode = 'ready') {
     ...(billUrl ? [``, `📄 *View Web Receipt & Reorder Online:*`, billUrl] : []),
     ``,
     `_Thank you for shopping with ${shopName} on PackItOut!_ 🙏`,
-  ].join('\n');
+  ];
+  return sanitizeWhatsAppText(lines.join('\n'));
 }
 
 export function buildCustomerToShopWhatsApp(order, customerUser) {
@@ -192,7 +242,7 @@ export function buildCustomerToShopWhatsApp(order, customerUser) {
   const total = Number(order?.totalAmount || 0);
   const payLabel = getPaymentSummary(order);
 
-  return [
+  const lines = [
     `🛒 *New PackItOut Order #${shortId}*`,
     `🏪 *${shopName}*`,
     ``,
@@ -206,14 +256,14 @@ export function buildCustomerToShopWhatsApp(order, customerUser) {
     `🔑 *Pickup Token: #${shortId}*`,
     ``,
     `_Please let me know once my order is packed & ready for pickup!_ 🙏`,
-  ].join('\n');
+  ];
+  return sanitizeWhatsAppText(lines.join('\n'));
 }
 
 export function openWhatsAppChat(rawPhone, messageText) {
-  const cleanPhone = toWhatsAppPhone(rawPhone);
-  const encoded = encodeURIComponent(messageText || '');
-  const url = cleanPhone
-    ? `https://wa.me/${cleanPhone}?text=${encoded}`
-    : `https://wa.me/?text=${encoded}`;
-  window.open(url, '_blank', 'noopener,noreferrer');
+  const url = getWhatsAppUrl(rawPhone, messageText);
+  if (typeof window !== 'undefined') {
+    window.open(url, '_blank', 'noopener,noreferrer');
+  }
 }
+

@@ -10,6 +10,7 @@ import MyComplaintsModal from './components/UserDashboard/MyComplaintsModal';
 import ParchiBillModal from './components/UserDashboard/ParchiBillModal';
 import RequestItemModal from './components/UserDashboard/RequestItemModal.jsx';
 import ChatIcon from './ui/ChatIcon.jsx';
+import { openWhatsAppChat } from './utils/whatsappShare.js';
 export default function UserDashboard({ user, onExit, onLogout, onUserUpdate }) {
   const triggerToast = useToast();
 
@@ -88,8 +89,7 @@ export default function UserDashboard({ user, onExit, onLogout, onUserUpdate }) 
       if (navigator.share) {
         await navigator.share(shareData);
       } else {
-        const text = encodeURIComponent(`${shareData.text} ${shareData.url}`);
-        window.open(`https://wa.me/?text=${text}`, '_blank');
+        openWhatsAppChat('', `${shareData.text} ${shareData.url}`);
       }
     } catch (err) {
       console.log('Error sharing:', err);

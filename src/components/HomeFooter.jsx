@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import StorefrontIcon from '../ui/StorefrontIcon.jsx';
+import { openWhatsAppChat } from '../utils/whatsappShare.js';
 
 const BRAND_GREEN = '#16a34a';
 const BRAND_BLACK = '#0f172a';
@@ -84,8 +85,7 @@ export default function HomeFooter({ signInNudge = null }) {
   };
 
   const handleOpenWhatsAppSupport = () => {
-    const text = encodeURIComponent('Namaste PackItOut team! I have a question about shopping / orders on PackItOut.');
-    window.open(`https://wa.me/919999999999?text=${text}`, '_blank', 'noopener,noreferrer');
+    openWhatsAppChat('919999999999', 'Namaste PackItOut team! I have a question about shopping / orders on PackItOut.');
   };
 
   return (

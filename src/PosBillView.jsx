@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { BASE_URL } from './utils/api.js';
 import { cdnImage } from './utils/cloudinaryUrl.js';
 import { useToast } from './ui/DialogProvider.jsx';
-import { toWhatsAppPhone } from './utils/whatsappShare.js';
+import { toWhatsAppPhone, getWhatsAppUrl } from './utils/whatsappShare.js';
 import { downloadReceiptPdf, downloadReceiptImage } from './utils/billReceiptGenerator.js';
 
 export default function PosBillView({ orderId, onSetCartAndGo, onGoToShopStore }) {
@@ -296,7 +296,7 @@ export default function PosBillView({ orderId, onSetCartAndGo, onGoToShopStore }
               </a>
               {cleanShopPhone && (
                 <a
-                  href={`https://wa.me/${cleanShopPhone}?text=${encodeURIComponent(`Namaste ${shop.name || 'Store'} ji, regarding my bill #${bill.shortId}`)}`}
+                  href={getWhatsAppUrl(cleanShopPhone, `Namaste ${shop.name || 'Store'} ji, regarding my bill #${bill.shortId}`)}
                   target="_blank"
                   rel="noopener noreferrer"
                   style={{

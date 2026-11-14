@@ -3,6 +3,7 @@ import { useToast, useConfirm } from './ui/DialogProvider.jsx';
 import { useBaskets } from './utils/useBaskets.js';
 import { cdnImage } from './utils/cloudinaryUrl.js';
 import { BASE_URL } from './utils/api.js';
+import { openWhatsAppChat } from './utils/whatsappShare.js';
 
 const EMOJIS = ['❤️','🛒','🌶️','🥛','🍞','🍗','🧼','🍪','🍎','🥦'];
 
@@ -55,8 +56,7 @@ export default function ManageBaskets({ onBack, onAddToCart, cart, setCart }) {
       if (navigator.share) {
         await navigator.share(shareData);
       } else {
-        const text = encodeURIComponent(`${shareData.text} ${shareData.url}`);
-        window.open(`https://wa.me/?text=${text}`, '_blank');
+        openWhatsAppChat('', `${shareData.text} ${shareData.url}`);
       }
     } catch (err) {
       toast("Failed to share basket.", "error");

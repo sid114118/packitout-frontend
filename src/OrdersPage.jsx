@@ -104,8 +104,7 @@ export default function OrdersPage({ user, onExit, onAddToCart, cart, setCart })
       if (navigator.share) {
         await navigator.share(shareData);
       } else {
-        const text = encodeURIComponent(`${shareData.text} ${shareData.url}`);
-        window.open(`https://wa.me/?text=${text}`, '_blank');
+        openWhatsAppChat('', `${shareData.text} ${shareData.url}`);
       }
     } catch (err) {
       triggerToast("Failed to share basket.", "error");
