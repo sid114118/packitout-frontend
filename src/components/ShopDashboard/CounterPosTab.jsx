@@ -11,9 +11,7 @@ import {
 import {
   sendBillToCustomerWhatsApp,
   downloadReceiptPdf,
-  downloadReceiptImage,
   createReceiptPdfFile,
-  createReceiptImageFile,
   downloadFileBlob,
 } from '../../utils/billReceiptGenerator.js';
 
@@ -598,7 +596,7 @@ export default function CounterPosTab({
       }
 
       if (sendWhatsApp && cleanPhone) {
-        sendBillToCustomerWhatsApp(createdOrder, shopData, { format: 'whatsapp', toast });
+        sendBillToCustomerWhatsApp(createdOrder, shopData, { toast });
       }
     } catch {
       toast('Network error while saving counter bill', 'error');
@@ -790,7 +788,7 @@ export default function CounterPosTab({
             <button
               type="button"
               onClick={() => {
-                sendBillToCustomerWhatsApp(lastCompletedBill.order, shopData, { format: 'whatsapp', toast });
+                sendBillToCustomerWhatsApp(lastCompletedBill.order, shopData, { toast });
               }}
               style={{
                 padding: '8px 14px',
@@ -804,7 +802,7 @@ export default function CounterPosTab({
                 boxShadow: '0 2px 8px rgba(22, 163, 74, 0.25)',
               }}
             >
-              📲 WhatsApp Bill (Send Link)
+              📲 Send PDF Bill on WhatsApp
             </button>
             <button
               type="button"
@@ -829,29 +827,6 @@ export default function CounterPosTab({
               }}
             >
               📄 Download PDF
-            </button>
-            <button
-              type="button"
-              onClick={async () => {
-                try {
-                  await downloadReceiptImage(lastCompletedBill.order, shopData);
-                  toast('🖼️ Bill Image Downloaded!', 'success');
-                } catch {
-                  toast('Could not download image', 'error');
-                }
-              }}
-              style={{
-                padding: '8px 12px',
-                background: '#ffffff',
-                color: '#334155',
-                border: '1px solid #cbd5e1',
-                borderRadius: '10px',
-                fontWeight: 800,
-                fontSize: '0.82rem',
-                cursor: 'pointer',
-              }}
-            >
-              🖼️ Save Image
             </button>
             <button
               type="button"
@@ -1789,12 +1764,12 @@ export default function CounterPosTab({
                     <button
                       type="button"
                       onClick={() => {
-                        sendBillToCustomerWhatsApp(po, shopData, { format: 'whatsapp', toast });
+                        sendBillToCustomerWhatsApp(po, shopData, { toast });
                       }}
                       style={{ padding: '6px 10px', borderRadius: '8px', border: '1px solid #86efac', background: '#f0fdf4', color: '#15803d', fontWeight: 800, fontSize: '0.74rem', cursor: 'pointer' }}
-                      title="Send Bill Link & Store Link on WhatsApp"
+                      title="Send PDF Bill on WhatsApp"
                     >
-                      📲 WhatsApp Link
+                      📲 WhatsApp PDF
                     </button>
                     <button
                       type="button"
@@ -1811,21 +1786,6 @@ export default function CounterPosTab({
                       title="Download Official PDF Receipt"
                     >
                       📄 PDF Bill
-                    </button>
-                    <button
-                      type="button"
-                      onClick={async () => {
-                        try {
-                          await downloadReceiptImage(po, shopData);
-                          toast('🖼️ Bill Image Downloaded!', 'success');
-                        } catch {
-                          toast('Could not download image', 'error');
-                        }
-                      }}
-                      style={{ padding: '6px 10px', borderRadius: '8px', border: '1px solid #cbd5e1', background: '#ffffff', color: '#475569', fontWeight: 800, fontSize: '0.74rem', cursor: 'pointer' }}
-                      title="Download Bill Image (PNG)"
-                    >
-                      🖼️ Image
                     </button>
                     <a
                       href={getPublicBillUrl(po._id, shopData._id, shopData.pincode)}

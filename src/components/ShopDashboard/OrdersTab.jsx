@@ -7,7 +7,7 @@ import ChatIcon from '../../ui/ChatIcon.jsx';
 import { shopFetch } from '../../utils/api.js';
 import { useToast } from '../../ui/DialogProvider.jsx';
 import { buildShopToCustomerWhatsApp, openWhatsAppChat } from '../../utils/whatsappShare.js';
-import { sendBillToCustomerWhatsApp, downloadReceiptPdf, downloadReceiptImage } from '../../utils/billReceiptGenerator.js';
+import { sendBillToCustomerWhatsApp, downloadReceiptPdf } from '../../utils/billReceiptGenerator.js';
 
 const formatArrivedAgo = (isoDate) => {
   if (!isoDate) return '';
@@ -259,7 +259,7 @@ export default function OrdersTab({ orders, updateOrderStatus, markOrderPaid, sh
                 <button
                   type="button"
                   onClick={() => {
-                    sendBillToCustomerWhatsApp(order, shopData, { format: 'whatsapp', toast });
+                    sendBillToCustomerWhatsApp(order, shopData, { toast });
                   }}
                   style={{
                     padding: '5px 10px',
@@ -274,10 +274,10 @@ export default function OrdersTab({ orders, updateOrderStatus, markOrderPaid, sh
                     alignItems: 'center',
                     gap: '4px',
                   }}
-                  title="Send Bill Link & Store Link on WhatsApp"
+                  title="Send PDF Bill on WhatsApp"
                 >
                   <span>📲</span>
-                  <span>WhatsApp Bill</span>
+                  <span>WhatsApp PDF</span>
                 </button>
                 <button
                   type="button"
@@ -307,34 +307,6 @@ export default function OrdersTab({ orders, updateOrderStatus, markOrderPaid, sh
                 >
                   <span>📄</span>
                   <span>PDF Bill</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={async () => {
-                    try {
-                      await downloadReceiptImage(order, shopData);
-                      toast('🖼️ Bill Image Downloaded!', 'success');
-                    } catch {
-                      toast('Could not download image', 'error');
-                    }
-                  }}
-                  style={{
-                    padding: '5px 8px',
-                    backgroundColor: '#ffffff',
-                    color: '#475569',
-                    border: '1px solid #cbd5e1',
-                    borderRadius: '8px',
-                    fontSize: '0.74rem',
-                    fontWeight: 800,
-                    cursor: 'pointer',
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '3px',
-                  }}
-                  title="Download Bill Image (PNG)"
-                >
-                  <span>🖼️</span>
-                  <span>Image</span>
                 </button>
                 {isActive && (
                   <button

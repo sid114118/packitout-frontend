@@ -3,7 +3,7 @@ import { BASE_URL } from './utils/api.js';
 import { cdnImage } from './utils/cloudinaryUrl.js';
 import { useToast } from './ui/DialogProvider.jsx';
 import { toWhatsAppPhone, getWhatsAppUrl } from './utils/whatsappShare.js';
-import { downloadReceiptPdf, downloadReceiptImage } from './utils/billReceiptGenerator.js';
+import { downloadReceiptPdf } from './utils/billReceiptGenerator.js';
 
 export default function PosBillView({ orderId, onSetCartAndGo, onGoToShopStore }) {
   const toast = useToast();
@@ -454,65 +454,36 @@ export default function PosBillView({ orderId, onSetCartAndGo, onGoToShopStore }
             <div style={{ fontSize: '0.74rem', color: '#64748b', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
               Save Your Official Receipt
             </div>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
-              <button
-                type="button"
-                onClick={async () => {
-                  try {
-                    toast('Generating official PDF bill…', 'info');
-                    await downloadReceiptPdf(bill, bill.shop);
-                    toast('📄 Official PDF Bill Downloaded!', 'success');
-                  } catch {
-                    toast('Could not generate PDF bill. Printing receipt…', 'error');
-                    window.print();
-                  }
-                }}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: '6px',
-                  padding: '11px 12px',
-                  background: '#eff6ff',
-                  color: '#1d4ed8',
-                  border: '1.5px solid #bfdbfe',
-                  borderRadius: '12px',
-                  fontWeight: 800,
-                  fontSize: '0.82rem',
-                  cursor: 'pointer',
-                }}
-              >
-                📄 Download PDF Bill
-              </button>
-              <button
-                type="button"
-                onClick={async () => {
-                  try {
-                    toast('Saving bill image…', 'info');
-                    await downloadReceiptImage(bill, bill.shop);
-                    toast('🖼️ Bill Image Downloaded!', 'success');
-                  } catch {
-                    toast('Could not download image', 'error');
-                  }
-                }}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: '6px',
-                  padding: '11px 12px',
-                  background: '#ffffff',
-                  color: '#334155',
-                  border: '1.5px solid #cbd5e1',
-                  borderRadius: '12px',
-                  fontWeight: 800,
-                  fontSize: '0.82rem',
-                  cursor: 'pointer',
-                }}
-              >
-                🖼️ Save Image
-              </button>
-            </div>
+            <button
+              type="button"
+              onClick={async () => {
+                try {
+                  toast('Generating official PDF bill…', 'info');
+                  await downloadReceiptPdf(bill, bill.shop);
+                  toast('📄 Official PDF Bill Downloaded!', 'success');
+                } catch {
+                  toast('Could not generate PDF bill. Printing receipt…', 'error');
+                  window.print();
+                }
+              }}
+              style={{
+                width: '100%',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '8px',
+                padding: '13px 16px',
+                background: '#eff6ff',
+                color: '#1d4ed8',
+                border: '1.5px solid #93c5fd',
+                borderRadius: '12px',
+                fontWeight: 800,
+                fontSize: '0.88rem',
+                cursor: 'pointer',
+              }}
+            >
+              📄 Download Official PDF Bill
+            </button>
           </div>
 
           {/* 🚀 OFFLINE-TO-ONLINE CONVERSION ACTION CARD */}
