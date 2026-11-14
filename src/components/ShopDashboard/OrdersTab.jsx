@@ -7,7 +7,7 @@ import ChatIcon from '../../ui/ChatIcon.jsx';
 import { shopFetch } from '../../utils/api.js';
 import { useToast } from '../../ui/DialogProvider.jsx';
 import { buildShopToCustomerWhatsApp, openWhatsAppChat } from '../../utils/whatsappShare.js';
-import { sendBillToCustomerWhatsApp, createReceiptPdfFile, downloadFileBlob } from '../../utils/billReceiptGenerator.js';
+import { sendBillToCustomerWhatsApp, downloadReceiptPdf, downloadReceiptImage } from '../../utils/billReceiptGenerator.js';
 
 const formatArrivedAgo = (isoDate) => {
   if (!isoDate) return '';
@@ -259,7 +259,7 @@ export default function OrdersTab({ orders, updateOrderStatus, markOrderPaid, sh
                 <button
                   type="button"
                   onClick={() => {
-                    sendBillToCustomerWhatsApp(order, shopData, { format: 'image', toast });
+                    sendBillToCustomerWhatsApp(order, shopData, { format: 'whatsapp', toast });
                   }}
                   style={{
                     padding: '5px 10px',
@@ -274,19 +274,18 @@ export default function OrdersTab({ orders, updateOrderStatus, markOrderPaid, sh
                     alignItems: 'center',
                     gap: '4px',
                   }}
-                  title="Send Bill Image with Storefront link on WhatsApp"
+                  title="Send Bill Link & Store Link on WhatsApp"
                 >
-                  <span>🧾</span>
-                  <span>WhatsApp Bill Image</span>
+                  <span>📲</span>
+                  <span>WhatsApp Bill</span>
                 </button>
                 <button
                   type="button"
                   onClick={async () => {
                     try {
                       toast('Generating PDF bill…', 'info');
-                      const pdfRes = await createReceiptPdfFile(order, shopData);
-                      downloadFileBlob(pdfRes.blob, pdfRes.filename);
-                      toast('📄 PDF Bill Downloaded!');
+                      await downloadReceiptPdf(order, shopData);
+                      toast('📄 PDF Bill Downloaded!', 'success');
                     } catch {
                       toast('Could not generate PDF bill', 'error');
                     }
@@ -304,10 +303,38 @@ export default function OrdersTab({ orders, updateOrderStatus, markOrderPaid, sh
                     alignItems: 'center',
                     gap: '3px',
                   }}
-                  title="Download PDF Bill"
+                  title="Download Official PDF Bill"
                 >
                   <span>📄</span>
-                  <span>PDF</span>
+                  <span>PDF Bill</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={async () => {
+                    try {
+                      await downloadReceiptImage(order, shopData);
+                      toast('🖼️ Bill Image Downloaded!', 'success');
+                    } catch {
+                      toast('Could not download image', 'error');
+                    }
+                  }}
+                  style={{
+                    padding: '5px 8px',
+                    backgroundColor: '#ffffff',
+                    color: '#475569',
+                    border: '1px solid #cbd5e1',
+                    borderRadius: '8px',
+                    fontSize: '0.74rem',
+                    fontWeight: 800,
+                    cursor: 'pointer',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '3px',
+                  }}
+                  title="Download Bill Image (PNG)"
+                >
+                  <span>🖼️</span>
+                  <span>Image</span>
                 </button>
                 {isActive && (
                   <button

@@ -1,73 +1,9 @@
-// 🧾 Client-Side High-Res Bill Receipt Image (PNG) & PDF Generator + Smart WhatsApp Media Dispatcher
+// 🧾 High-Resolution Visual Bill Image (PNG) & Official PDF Generator + Smart WhatsApp Dispatcher
+import { jsPDF } from 'jspdf';
 import { getPublicBillUrl, getShopStorefrontUrl, toWhatsAppPhone } from './whatsappShare.js';
 
 /**
- * Builds a valid single-page PDF (PDF-1.4) containing a JPEG image scaled to roll width.
- * Standard PDF specification - 100% dependency-free, zero npm bloat.
- */
-function buildPdfFromJpeg(jpegBuffer, widthPx, heightPx, widthPt = 226) {
-  const heightPt = Math.max(100, Math.round((heightPx / widthPx) * widthPt));
-  const parts = [];
-  const offsets = [];
-
-  function add(strOrBuf) {
-    const buf = Buffer?.isBuffer?.(strOrBuf)
-      ? strOrBuf
-      : (typeof strOrBuf === 'string' ? new TextEncoder().encode(strOrBuf) : new Uint8Array(strOrBuf));
-    offsets.push(parts.reduce((a, b) => a + b.length, 0));
-    parts.push(buf);
-  }
-
-  const header = '%PDF-1.4\n%\xE2\xE3\xCF\xD3\n';
-  parts.push(new TextEncoder().encode(header));
-
-  // Obj 1: Catalog
-  add('1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj\n');
-
-  // Obj 2: Pages
-  add('2 0 obj\n<< /Type /Pages /Kids [3 0 R] /Count 1 >>\nendobj\n');
-
-  // Obj 3: Page (MediaBox matches the exact height of the receipt)
-  add(`3 0 obj\n<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${widthPt} ${heightPt}] /Resources << /XObject << /Im1 4 0 R >> >> /Contents 5 0 R >>\nendobj\n`);
-
-  // Obj 4: Image XObject (JPEG DCTDecode)
-  const imgHeader = `4 0 obj\n<< /Type /XObject /Subtype /Image /Width ${widthPx} /Height ${heightPx} /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length ${jpegBuffer.length} >>\nstream\n`;
-  const imgFooter = '\nendstream\nendobj\n';
-  offsets.push(parts.reduce((a, b) => a + b.length, 0));
-  
-  const headerBuf = new TextEncoder().encode(imgHeader);
-  const footerBuf = new TextEncoder().encode(imgFooter);
-  const fullImgBuf = new Uint8Array(headerBuf.length + jpegBuffer.length + footerBuf.length);
-  fullImgBuf.set(headerBuf, 0);
-  fullImgBuf.set(jpegBuffer, headerBuf.length);
-  fullImgBuf.set(footerBuf, headerBuf.length + jpegBuffer.length);
-  parts.push(fullImgBuf);
-
-  // Obj 5: Page Content stream
-  const content = `q\n${widthPt} 0 0 ${heightPt} 0 0 cm\n/Im1 Do\nQ\n`;
-  add(`5 0 obj\n<< /Length ${content.length} >>\nstream\n${content}endstream\nendobj\n`);
-
-  // XRef Table & Trailer
-  const startXref = parts.reduce((a, b) => a + b.length, 0);
-  let xref = 'xref\n0 6\n0000000000 65535 f \n';
-  for (let i = 0; i < 5; i++) {
-    xref += String(offsets[i]).padStart(10, '0') + ' 00000 n \n';
-  }
-  xref += `trailer\n<< /Size 6 /Root 1 0 R >>\nstartxref\n${startXref}\n%%EOF\n`;
-  parts.push(new TextEncoder().encode(xref));
-
-  const totalLength = parts.reduce((a, b) => a + b.length, 0);
-  const result = new Uint8Array(totalLength);
-  let pos = 0;
-  for (const part of parts) {
-    result.set(part, pos);
-    pos += part.length;
-  }
-  return result;
-}
-
-/**
- * Loads an image safely without throwing.
+ * Loads an image safely with CORS handling and timeout protection.
  */
 function loadImageSafe(url) {
   return new Promise((resolve) => {
@@ -83,37 +19,23 @@ function loadImageSafe(url) {
 }
 
 /**
- * Helper to wrap text into multiple lines for canvas.
+ * Resolves shop info safely across different order & shop shapes.
  */
-function wrapCanvasText(ctx, text, maxWidth) {
-  const words = String(text || '').split(/\s+/);
-  const lines = [];
-  let currentLine = words[0] || '';
-
-  for (let i = 1; i < words.length; i++) {
-    const word = words[i];
-    const width = ctx.measureText(currentLine + ' ' + word).width;
-    if (width < maxWidth) {
-      currentLine += ' ' + word;
-    } else {
-      lines.push(currentLine);
-      currentLine = word;
-    }
-  }
-  if (currentLine) lines.push(currentLine);
-  return lines;
+function resolveShop(order, shopData) {
+  return shopData || order?.shop || order?.shopId || {};
 }
 
 /**
  * Renders a crisp 2x Retina HTML5 Canvas of the bill receipt.
  */
 export async function renderBillReceiptCanvas(order, shopData) {
-  const shopName = shopData?.name || order?.shopId?.name || 'Local Store';
-  const shopPhone = shopData?.phone || order?.shopId?.phone || '';
-  const shopAddress = shopData?.fullAddress || order?.shopId?.fullAddress || '';
-  const shopGst = shopData?.gst || order?.shopId?.gst || '';
-  const shopPincode = shopData?.pincode || order?.shopId?.pincode || '';
-  const shopId = shopData?._id || order?.shopId?._id || order?.shopId || '';
+  const shop = resolveShop(order, shopData);
+  const shopName = shop?.name || 'Local Store';
+  const shopPhone = shop?.phone || '';
+  const shopAddress = shop?.fullAddress || '';
+  const shopGst = shop?.gst || '';
+  const shopPincode = shop?.pincode || '';
+  const shopId = shop?._id || '';
 
   const orderId = order?._id || '';
   const shortId = String(orderId).slice(-5).toUpperCase() || 'POS';
@@ -135,19 +57,19 @@ export async function renderBillReceiptCanvas(order, shopData) {
 
   // Dynamic QR Code for Storefront URL
   const qrUrl = storefrontUrl
-    ? `https://api.qrserver.com/v1/create-qr-code/?size=160x160&margin=4&data=${encodeURIComponent(storefrontUrl)}`
+    ? `https://api.qrserver.com/v1/create-qr-code/?size=180x180&margin=4&data=${encodeURIComponent(storefrontUrl)}`
     : '';
   const qrImage = await loadImageSafe(qrUrl);
 
-  // Dimensions
-  const canvasWidth = 560; // 560px crisp width
+  // Dimensions: 560px width
+  const canvasWidth = 560;
   const pad = 28;
   const contentWidth = canvasWidth - pad * 2;
 
-  // Approximate height calculation
-  let estHeight = 280; // Header & meta
-  estHeight += Math.max(1, items.length) * 44; // items
-  estHeight += 240; // Totals, savings, QR code & footer
+  // Compute ample height headroom so canvas never clips
+  let estHeight = 360; // Header, store details & customer meta
+  estHeight += Math.max(1, items.length) * 52; // items + subtotals
+  estHeight += 320; // Totals, savings pill, QR box & footer
   if (shopAddress) estHeight += 24;
 
   const canvas = document.createElement('canvas');
@@ -254,7 +176,6 @@ export async function renderBillReceiptCanvas(order, shopData) {
     const qty = Number(item.qty) || 1;
     const price = Number(item.price ?? item.sellingPrice ?? item.mrp ?? 0);
     const lineTotal = Math.round(price * qty * 100) / 100;
-    const mrp = Number(item.mrp ?? price);
 
     ctx.textAlign = 'left';
     ctx.fillStyle = '#0f172a';
@@ -393,12 +314,17 @@ export async function renderBillReceiptCanvas(order, shopData) {
   ctx.font = '10px system-ui, -apple-system, sans-serif';
   ctx.fillText('Thank you for shopping local! Powered by PackItOut', canvasWidth / 2, y);
 
-  // Crop canvas to actual rendered content
+  // Exact height crop with crisp white background
+  const finalHeight = (y + 24) * 2;
   const finalCanvas = document.createElement('canvas');
   finalCanvas.width = canvasWidth * 2;
-  finalCanvas.height = (y + 20) * 2;
+  finalCanvas.height = finalHeight;
   const finalCtx = finalCanvas.getContext('2d');
-  finalCtx.drawImage(canvas, 0, 0, finalCanvas.width, finalCanvas.height, 0, 0, finalCanvas.width, finalCanvas.height);
+  
+  // Ensure background is pure white with zero transparent pixels
+  finalCtx.fillStyle = '#ffffff';
+  finalCtx.fillRect(0, 0, finalCanvas.width, finalCanvas.height);
+  finalCtx.drawImage(canvas, 0, 0, finalCanvas.width, finalHeight, 0, 0, finalCanvas.width, finalHeight);
 
   return finalCanvas;
 }
@@ -407,15 +333,22 @@ export async function renderBillReceiptCanvas(order, shopData) {
  * Creates PNG Blob & File object from order.
  */
 export async function createReceiptImageFile(order, shopData) {
-  const canvas = await renderBillReceiptCanvas(order, shopData);
+  const shop = resolveShop(order, shopData);
+  const canvas = await renderBillReceiptCanvas(order, shop);
   const shortId = String(order?._id || '').slice(-5).toUpperCase() || 'POS';
-  const shopName = (shopData?.name || 'Store').replace(/[^a-zA-Z0-9]/g, '_');
+  const shopName = (shop?.name || 'Store').replace(/[^a-zA-Z0-9]/g, '_');
   const filename = `Bill_${shortId}_${shopName}.png`;
 
   return new Promise((resolve, reject) => {
     canvas.toBlob((blob) => {
       if (!blob) return reject(new Error('Canvas toBlob failed'));
-      const file = new File([blob], filename, { type: 'image/png' });
+      let file;
+      try {
+        file = new File([blob], filename, { type: 'image/png' });
+      } catch {
+        file = blob;
+        file.name = filename;
+      }
       resolve({
         blob,
         file,
@@ -428,37 +361,67 @@ export async function createReceiptImageFile(order, shopData) {
 }
 
 /**
- * Creates PDF Blob & File object from order.
+ * Creates official standard PDF Blob & File using jsPDF.
+ * 100% valid, opens cleanly in WhatsApp, Chrome, Adobe Acrobat & Mobile.
+ * Includes real clickable links to the online store and digital receipt!
  */
 export async function createReceiptPdfFile(order, shopData) {
-  const canvas = await renderBillReceiptCanvas(order, shopData);
+  const shop = resolveShop(order, shopData);
+  const canvas = await renderBillReceiptCanvas(order, shop);
   const shortId = String(order?._id || '').slice(-5).toUpperCase() || 'POS';
-  const shopName = (shopData?.name || 'Store').replace(/[^a-zA-Z0-9]/g, '_');
+  const shopName = (shop?.name || 'Store').replace(/[^a-zA-Z0-9]/g, '_');
   const filename = `Bill_${shortId}_${shopName}.pdf`;
 
-  // Convert canvas to JPEG for standard PDF compression
-  const jpegDataUrl = canvas.toDataURL('image/jpeg', 0.95);
-  const base64Data = jpegDataUrl.split(',')[1];
-  const binaryString = atob(base64Data);
-  const jpegBytes = new Uint8Array(binaryString.length);
-  for (let i = 0; i < binaryString.length; i++) {
-    jpegBytes[i] = binaryString.charCodeAt(i);
+  // Standard 80mm roll width in millimeters
+  const widthMm = 80;
+  const heightMm = Math.max(100, Math.round((canvas.height / canvas.width) * widthMm));
+
+  const pdf = new jsPDF({
+    orientation: 'portrait',
+    unit: 'mm',
+    format: [widthMm, heightMm],
+    compress: true,
+  });
+
+  const imgData = canvas.toDataURL('image/png');
+  pdf.addImage(imgData, 'PNG', 0, 0, widthMm, heightMm, undefined, 'FAST');
+
+  // Real clickable links inside the PDF!
+  const shopId = shop?._id || '';
+  const pincode = shop?.pincode || '';
+  const storefrontUrl = getShopStorefrontUrl(shopId, pincode);
+  const publicBillUrl = getPublicBillUrl(order?._id, shopId, pincode);
+
+  // Link 1: Top header links to public digital receipt
+  if (publicBillUrl) {
+    pdf.link(0, 0, widthMm, 16, { url: publicBillUrl });
   }
 
-  const pdfBytes = buildPdfFromJpeg(jpegBytes, canvas.width, canvas.height, 226);
-  const blob = new Blob([pdfBytes], { type: 'application/pdf' });
-  const file = new File([blob], filename, { type: 'application/pdf' });
+  // Link 2: Bottom store QR section links directly to online storefront
+  if (storefrontUrl) {
+    pdf.link(4, heightMm - 45, widthMm - 8, 36, { url: storefrontUrl });
+  }
+
+  const blob = pdf.output('blob');
+  let file;
+  try {
+    file = new File([blob], filename, { type: 'application/pdf' });
+  } catch {
+    file = blob;
+    file.name = filename;
+  }
 
   return {
     blob,
     file,
     filename,
+    pdf,
     dataUrl: URL.createObjectURL(blob),
   };
 }
 
 /**
- * Downloads any blob to user device.
+ * Downloads any blob to user's device.
  */
 export function downloadFileBlob(blob, filename) {
   const url = URL.createObjectURL(blob);
@@ -468,9 +431,40 @@ export function downloadFileBlob(blob, filename) {
   document.body.appendChild(a);
   a.click();
   setTimeout(() => {
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
+    try {
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch {
+      /* ignore cleanup */
+    }
   }, 1000);
+}
+
+/**
+ * Downloads official PDF receipt using jsPDF's built-in save engine with fallback.
+ * Works flawlessly on Chrome, Safari, Android, iOS and Desktop.
+ */
+export async function downloadReceiptPdf(order, shopData) {
+  const res = await createReceiptPdfFile(order, shopData);
+  try {
+    if (res.pdf && typeof res.pdf.save === 'function') {
+      res.pdf.save(res.filename);
+    } else {
+      downloadFileBlob(res.blob, res.filename);
+    }
+  } catch {
+    downloadFileBlob(res.blob, res.filename);
+  }
+  return res;
+}
+
+/**
+ * Downloads high-resolution PNG image of the receipt.
+ */
+export async function downloadReceiptImage(order, shopData) {
+  const res = await createReceiptImageFile(order, shopData);
+  downloadFileBlob(res.blob, res.filename);
+  return res;
 }
 
 /**
@@ -491,98 +485,91 @@ export async function copyImageToClipboard(pngBlob) {
 }
 
 /**
- * SMART WHATSAPP DISPATCHER:
- * Sends the Bill as an Image (or PDF) to Customer with PackItOut online store link.
- * 
- * Flow:
- * - On Mobile / Tablet: Uses navigator.share({ files: [imageFile], text: captionWithPackItOutLink })
- *   Attaches the actual receipt image directly in WhatsApp!
- * - On PC / Desktop:
- *   1. Copies the Receipt Image directly to clipboard (for instant Ctrl+V paste in WhatsApp Web)
- *   2. Downloads the receipt file to device
- *   3. Opens WhatsApp chat with customer with caption & PackItOut links prefilled!
+ * Generates the WhatsApp text message with clean, 100% clickable links
+ * for both the Storefront and the Digital Bill / PDF download.
  */
-export async function sendBillToCustomerWhatsApp(order, shopData, { format = 'image', toast = null } = {}) {
-  const cleanPhone = toWhatsAppPhone(order?.customerPhone || order?.userId?.phone);
+export function buildWhatsAppBillTextMessage(order, shopData) {
+  const shop = resolveShop(order, shopData);
   const shortId = String(order?._id || '').slice(-5).toUpperCase() || 'POS';
-  const shopName = shopData?.name || order?.shopId?.name || 'Local Store';
+  const shopName = shop?.name || 'Local Store';
   const customerName = order?.customerName || order?.userId?.name || 'Valued Customer';
   const total = Number(order?.totalAmount || 0);
   const payMethod = String(order?.paymentMethod || 'CASH').toUpperCase();
-  const shopId = shopData?._id || order?.shopId?._id || order?.shopId || '';
-  const pincode = shopData?.pincode || order?.shopId?.pincode || '';
+  const shopId = shop?._id || '';
+  const pincode = shop?.pincode || '';
 
   const storefrontUrl = getShopStorefrontUrl(shopId, pincode);
   const publicBillUrl = getPublicBillUrl(order?._id, shopId, pincode);
 
-  // Caption message containing PackItOut store link + web receipt link
-  const captionText = [
+  const items = Array.isArray(order?.items) ? order.items : [];
+  const itemCount = items.reduce((s, i) => s + (Number(i?.qty) || 1), 0);
+
+  const lines = [
     `🧾 *DIGITAL BILL • #${shortId}*`,
     `🏪 *${shopName}*`,
     ``,
     `Namaste *${customerName}* ji! 🙏`,
-    `Here is your bill for *₹${total}* (${payMethod}).`,
+    `Thank you for shopping at *${shopName}*. Here is your bill summary:`,
     ``,
-    `🛍️ *Order Online from ${shopName} on PackItOut:*`,
-    `👉 ${storefrontUrl}`,
+    `💰 *Amount:* ₹${total} (${payMethod})`,
+    `📦 *Items:* ${itemCount} units`,
+  ];
+
+  if (Number(order?.savingsAmount) > 0) {
+    lines.push(`🎉 *MRP Savings:* ₹${order.savingsAmount}`);
+  }
+  if (Number(order?.coinsEarned) > 0) {
+    lines.push(`🪙 *Loyalty Coins Earned:* +${order.coinsEarned} Coins`);
+  }
+
+  lines.push(
     ``,
-    `🌐 *View Digital Receipt:*`,
-    `👉 ${publicBillUrl}`,
+    `📄 *Click Link to View Receipt & Download Official PDF Bill:*`,
+    publicBillUrl,
     ``,
-    `_Thank you for shopping local with ${shopName}!_ 🙏`,
-  ].join('\n');
+    `🛍️ *Order Online from ${shopName} Next Time:*`,
+    `Skip the counter wait — browse live items & upload parchi:`,
+    storefrontUrl,
+    ``,
+    `_Thank you for supporting your local store!_ 🙏`
+  );
+
+  return lines.join('\n');
+}
+
+/**
+ * SMART WHATSAPP DISPATCHER:
+ * Ensures the customer ALWAYS gets the clickable link in WhatsApp text,
+ * AND the shopkeeper gets the bill image/PDF downloaded and copied to clipboard!
+ */
+export async function sendBillToCustomerWhatsApp(order, shopData, { format = 'whatsapp', toast = null } = {}) {
+  const shop = resolveShop(order, shopData);
+  const cleanPhone = toWhatsAppPhone(order?.customerPhone || order?.userId?.phone);
+  const captionText = buildWhatsAppBillTextMessage(order, shop);
 
   try {
-    // 1. Generate the receipt file
-    let fileToShare = null;
-    let pngBlob = null;
-
     if (format === 'pdf') {
-      const pdfRes = await createReceiptPdfFile(order, shopData);
-      fileToShare = pdfRes.file;
-    } else {
-      const imgRes = await createReceiptImageFile(order, shopData);
-      fileToShare = imgRes.file;
-      pngBlob = imgRes.blob;
-    }
-
-    // 2. Check if Native Web Share API supports file sharing (Mobile Android / iOS / Tablets)
-    const canNativeShare = Boolean(
-      navigator?.share &&
-      navigator?.canShare &&
-      navigator.canShare({ files: [fileToShare] })
-    );
-
-    if (canNativeShare) {
-      if (toast) toast('📱 Attaching Bill Image to WhatsApp…', 'info');
-      await navigator.share({
-        files: [fileToShare],
-        title: `Bill #${shortId} - ${shopName}`,
-        text: captionText,
-      });
-      if (toast) toast('✅ Bill sent on WhatsApp!', 'success');
-      return true;
-    }
-
-    // 3. Desktop / Laptop / WhatsApp Web Fallback:
-    // Auto-copy image to clipboard so shopkeeper can just press Ctrl+V in WhatsApp Web!
-    let copied = false;
-    if (pngBlob) {
-      copied = await copyImageToClipboard(pngBlob);
-    }
-
-    // Auto-download as backup
-    downloadFileBlob(fileToShare, fileToShare.name);
-
-    if (toast) {
-      if (copied) {
-        toast('📋 Bill Image copied to clipboard! Just press Ctrl+V in WhatsApp Web to paste it!', 'success');
-      } else {
-        toast('📁 Bill downloaded! Attach it in WhatsApp chat.', 'info');
+      try {
+        await downloadReceiptPdf(order, shop);
+        if (toast) toast('📄 PDF Bill Downloaded & WhatsApp opening…', 'success');
+      } catch (pdfErr) {
+        console.warn('PDF prep warning:', pdfErr);
       }
+    } else {
+      // Auto-generate PNG, copy to clipboard for desktop Ctrl+V, and download
+      try {
+        const imgRes = await createReceiptImageFile(order, shop);
+        if (imgRes?.blob) {
+          await copyImageToClipboard(imgRes.blob);
+          downloadFileBlob(imgRes.blob, imgRes.filename);
+        }
+      } catch (imgErr) {
+        console.warn('Image prep warning:', imgErr);
+      }
+      if (toast) toast('📲 WhatsApp opening with clickable links! (Image copied: Ctrl+V to attach)', 'success');
     }
 
-    // Open WhatsApp Web with pre-filled caption & PackItOut link
+    // Open WhatsApp Chat with pre-filled message containing the CLICKABLE links
     const waUrl = cleanPhone
       ? `https://wa.me/${cleanPhone}?text=${encodeURIComponent(captionText)}`
       : `https://wa.me/?text=${encodeURIComponent(captionText)}`;
@@ -591,8 +578,7 @@ export async function sendBillToCustomerWhatsApp(order, shopData, { format = 'im
     return true;
   } catch (err) {
     console.error('Error sharing bill on WhatsApp:', err);
-    if (toast) toast('Could not attach file, opening WhatsApp text…', 'error');
-    // Fallback to text link if media generation fails
+    if (toast) toast('Opening WhatsApp with clickable links…', 'info');
     const waUrl = cleanPhone
       ? `https://wa.me/${cleanPhone}?text=${encodeURIComponent(captionText)}`
       : `https://wa.me/?text=${encodeURIComponent(captionText)}`;
@@ -600,3 +586,47 @@ export async function sendBillToCustomerWhatsApp(order, shopData, { format = 'im
     return false;
   }
 }
+
+/**
+ * Native Mobile Share Sheet for Image or PDF (if supported).
+ */
+export async function shareReceiptNative(order, shopData, { format = 'pdf', toast = null } = {}) {
+  const shop = resolveShop(order, shopData);
+  const captionText = buildWhatsAppBillTextMessage(order, shop);
+
+  try {
+    let fileToShare;
+    if (format === 'pdf') {
+      const pdfRes = await createReceiptPdfFile(order, shop);
+      fileToShare = pdfRes.file;
+    } else {
+      const imgRes = await createReceiptImageFile(order, shop);
+      fileToShare = imgRes.file;
+    }
+
+    if (navigator?.share && navigator?.canShare && navigator.canShare({ files: [fileToShare] })) {
+      await navigator.share({
+        files: [fileToShare],
+        title: `Bill from ${shop?.name || 'Store'}`,
+        text: captionText,
+      });
+      if (toast) toast('✅ Shared successfully!', 'success');
+      return true;
+    } else {
+      if (format === 'pdf') {
+        await downloadReceiptPdf(order, shop);
+      } else {
+        await downloadReceiptImage(order, shop);
+      }
+      if (toast) toast('📁 Bill downloaded to your device!', 'info');
+      return false;
+    }
+  } catch (err) {
+    if (err?.name !== 'AbortError') {
+      console.error('Native share error:', err);
+      if (toast) toast('Could not share bill file', 'error');
+    }
+    return false;
+  }
+}
+

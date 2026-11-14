@@ -3,7 +3,7 @@ import { BASE_URL } from './utils/api.js';
 import { cdnImage } from './utils/cloudinaryUrl.js';
 import { useToast } from './ui/DialogProvider.jsx';
 import { toWhatsAppPhone } from './utils/whatsappShare.js';
-import { createReceiptPdfFile, downloadFileBlob } from './utils/billReceiptGenerator.js';
+import { downloadReceiptPdf, downloadReceiptImage } from './utils/billReceiptGenerator.js';
 
 export default function PosBillView({ orderId, onSetCartAndGo, onGoToShopStore }) {
   const toast = useToast();
@@ -195,9 +195,8 @@ export default function PosBillView({ orderId, onSetCartAndGo, onGoToShopStore }
               onClick={async () => {
                 try {
                   toast('Generating PDF bill…', 'info');
-                  const pdfRes = await createReceiptPdfFile(bill, bill.shop);
-                  downloadFileBlob(pdfRes.blob, pdfRes.filename);
-                  toast('📄 PDF Bill Downloaded!');
+                  await downloadReceiptPdf(bill, bill.shop);
+                  toast('📄 PDF Bill Downloaded!', 'success');
                 } catch {
                   window.print();
                 }
@@ -447,6 +446,72 @@ export default function PosBillView({ orderId, onSetCartAndGo, onGoToShopStore }
                 <span style={{ fontSize: '1.05rem', fontWeight: 900, color: '#0f172a' }}>Grand Total</span>
                 <span style={{ fontSize: '1.35rem', fontWeight: 900, color: '#16a34a' }}>₹{bill.totalAmount}</span>
               </div>
+            </div>
+          </div>
+
+          {/* 📥 OFFICIAL RECEIPT DOWNLOADS */}
+          <div className="no-print" style={{ margin: '0 16px 14px', padding: '14px', borderRadius: '16px', background: '#f8fafc', border: '1px solid #e2e8f0', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            <div style={{ fontSize: '0.74rem', color: '#64748b', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+              Save Your Official Receipt
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+              <button
+                type="button"
+                onClick={async () => {
+                  try {
+                    toast('Generating official PDF bill…', 'info');
+                    await downloadReceiptPdf(bill, bill.shop);
+                    toast('📄 Official PDF Bill Downloaded!', 'success');
+                  } catch {
+                    toast('Could not generate PDF bill. Printing receipt…', 'error');
+                    window.print();
+                  }
+                }}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '6px',
+                  padding: '11px 12px',
+                  background: '#eff6ff',
+                  color: '#1d4ed8',
+                  border: '1.5px solid #bfdbfe',
+                  borderRadius: '12px',
+                  fontWeight: 800,
+                  fontSize: '0.82rem',
+                  cursor: 'pointer',
+                }}
+              >
+                📄 Download PDF Bill
+              </button>
+              <button
+                type="button"
+                onClick={async () => {
+                  try {
+                    toast('Saving bill image…', 'info');
+                    await downloadReceiptImage(bill, bill.shop);
+                    toast('🖼️ Bill Image Downloaded!', 'success');
+                  } catch {
+                    toast('Could not download image', 'error');
+                  }
+                }}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '6px',
+                  padding: '11px 12px',
+                  background: '#ffffff',
+                  color: '#334155',
+                  border: '1.5px solid #cbd5e1',
+                  borderRadius: '12px',
+                  fontWeight: 800,
+                  fontSize: '0.82rem',
+                  cursor: 'pointer',
+                }}
+              >
+                🖼️ Save Image
+              </button>
             </div>
           </div>
 
