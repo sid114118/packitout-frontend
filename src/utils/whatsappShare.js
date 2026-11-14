@@ -45,17 +45,14 @@ export function getWhatsAppUrl(rawPhone, messageText = '') {
   const safeText = sanitizeWhatsAppText(messageText);
   const encoded = encodeURIComponent(safeText);
 
-  // Mobile: api.whatsapp.com directly triggers WhatsApp native app via Universal/App Links
-  if (isMobileDevice()) {
-    return cleanPhone
-      ? `https://api.whatsapp.com/send/?phone=${cleanPhone}&text=${encoded}`
-      : `https://api.whatsapp.com/send/?text=${encoded}`;
-  }
-
-  // Desktop / PC: direct web.whatsapp.com (instant load, zero redirects, flawless emojis)
+  // Works seamlessly across all devices & setups:
+  // - On Mobile: launches WhatsApp mobile app directly via Universal/App Links
+  // - On PC with WhatsApp Desktop installed: prompts to open WhatsApp PC app directly
+  // - On PC with WhatsApp Web: offers 1-click 'Continue to Chat' / 'use WhatsApp Web'
+  // - Completely eliminates wa.me 302 redirect emoji corruption
   return cleanPhone
-    ? `https://web.whatsapp.com/send?phone=${cleanPhone}&text=${encoded}`
-    : `https://web.whatsapp.com/send?text=${encoded}`;
+    ? `https://api.whatsapp.com/send/?phone=${cleanPhone}&text=${encoded}`
+    : `https://api.whatsapp.com/send/?text=${encoded}`;
 }
 
 export function getPublicBillUrl(orderId, shopId = '', pincode = '') {
