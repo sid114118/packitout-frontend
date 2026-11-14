@@ -15,6 +15,7 @@ import ShopLocationBanner from './components/ShopDashboard/ShopLocationBanner';
 import RequestsTab from './components/ShopDashboard/RequestsTab.jsx';
 import CombosTab from './components/ShopDashboard/CombosTab.jsx';
 import CounterPosTab from './components/ShopDashboard/CounterPosTab.jsx';
+import KhataTab from './components/ShopDashboard/KhataTab.jsx';
 import { cdnImage } from './utils/cloudinaryUrl.js';
 import { shopFetch, BASE_URL } from './utils/api.js';
 import { playArrivalBell } from './utils/orderAlarm.js';
@@ -32,6 +33,18 @@ export default function ShopDashboard({ user, onExit }) {
   const [parchiBill, setParchiBill] = useState([]);
   const [photoModalOpen, setPhotoModalOpen] = useState(false);
   const [profileModalOpen, setProfileModalOpen] = useState(false);
+  const [khataSummary, setKhataSummary] = useState(null);
+  const [khataFocusPhone, setKhataFocusPhone] = useState('');
+  const [khataRefreshSignal, setKhataRefreshSignal] = useState(0);
+
+  const fetchKhataSummary = async () => {
+    try {
+      const res = await shopFetch(shopData, `/shops/${shopData._id}/khata`);
+      if (!res.ok) return;
+      const data = await res.json();
+      if (data?.summary) setKhataSummary(data.summary);
+    } catch (err) { console.log(err); }
+  };
 
   // --- DATA FETCHING ---
   useEffect(() => {
@@ -40,6 +53,7 @@ export default function ShopDashboard({ user, onExit }) {
       await fetchOrders();
       await fetchMasterCatalog();
       await fetchParchis();
+      await fetchKhataSummary();
     };
     fetchAllData();
 
@@ -47,6 +61,15 @@ export default function ShopDashboard({ user, onExit }) {
     // Native EventSource doesn't support custom headers, so we pass the token in the query string
     const sseUrl = `${BASE_URL}/shop-events/${shopData._id}?token=${shopData.sessionToken || ''}`;
     const eventSource = new EventSource(sseUrl);
+    let khataTimeout;
+    eventSource.addEventListener('refresh_khata', () => {
+      clearTimeout(khataTimeout);
+      khataTimeout = setTimeout(() => {
+        fetchKhataSummary();
+        fetchOrders();
+        setKhataRefreshSignal(s => s + 1);
+      }, 400);
+    });
 
     let ordersTimeout;
     let parchisTimeout;
@@ -67,7 +90,7 @@ export default function ShopDashboard({ user, onExit }) {
     });
     eventSource.addEventListener('refresh_parchis', () => {
       clearTimeout(parchisTimeout);
-      parchisTimeout = setTimeout(fetchParchis, 500);
+
     });
 
     eventSource.onerror = (err) => {
@@ -77,6 +100,7 @@ export default function ShopDashboard({ user, onExit }) {
     return () => {
       clearTimeout(ordersTimeout);
       clearTimeout(parchisTimeout);
+      clearTimeout(khataTimeout);
       eventSource.close();
     };
   }, [shopData._id]);
@@ -373,6 +397,24 @@ export default function ShopDashboard({ user, onExit }) {
       <div style={{ display: 'flex', backgroundColor: '#1e293b', padding: '10px 15px', gap: '10px', overflowX: 'auto', whiteSpace: 'nowrap', borderBottom: '1px solid #334155' }}>
         <button onClick={() => setActiveTab("orders")} style={tabStyle(activeTab === "orders")}>📦 Live Orders ({orders.filter(o => o?.orderSource !== 'POS').length})</button>
         <button onClick={() => setActiveTab("pos")} style={{ ...tabStyle(activeTab === "pos"), backgroundColor: activeTab === "pos" ? '#059669' : '#064e3b', color: '#fff', border: '1px solid #34d399' }}>⚡ Counter POS {shopData.canUseCounterPos ? '🟢' : '🔒'}</button>
+        <button
+          onClick={() => setActiveTab("khata")}
+          style={{
+            ...tabStyle(activeTab === "khata"),
+            backgroundColor: activeTab === "khata" ? '#d97706' : '#451a03',
+            color: '#fff',
+            border: '1px solid #f59e0b',
+          }}
+        >
+          📒 Khata Book
+          {(khataSummary?.pendingVerificationCount || 0) > 0 ? (
+            <span style={badgeStyle}>{khataSummary.pendingVerificationCount}</span>
+          ) : (khataSummary?.totalReceivable || 0) > 0 ? (
+            <span style={{ backgroundColor: 'rgba(251,191,36,0.22)', color: '#fde68a', padding: '2px 7px', borderRadius: '10px', fontSize: '0.7rem', fontWeight: 900 }}>
+              ₹{Math.round(khataSummary.totalReceivable)}
+            </span>
+          ) : null}
+        </button>
         <button onClick={() => setActiveTab("parchis")} style={tabStyle(activeTab === "parchis")}>🧾 Parchis {parchiRequests.length > 0 && <span style={badgeStyle}>{parchiRequests.length}</span>}</button>
         <button onClick={() => setActiveTab("inventory")} style={tabStyle(activeTab === "inventory")}>📊 Manage Inventory</button>
         <button onClick={() => setActiveTab("combos")} style={{ ...tabStyle(activeTab === "combos"), backgroundColor: activeTab === "combos" ? '#d97706' : '#78350f', color: '#fff', border: '1px solid #f59e0b' }}>🎁 Combos Offers ✨</button>
@@ -383,16 +425,39 @@ export default function ShopDashboard({ user, onExit }) {
 
       <ShopLocationBanner shopData={shopData} onShopUpdated={setShopData} />
 
-      <div style={{ padding: '15px', maxWidth: activeTab === "pos" ? '1140px' : '800px', margin: '0 auto' }}>
+      <div style={{ padding: '15px', maxWidth: (activeTab === "pos" || activeTab === "khata") ? '1140px' : '800px', margin: '0 auto' }}>
         {activeTab === "pos" && (
           <CounterPosTab
             shopData={shopData}
             masterCatalog={masterCatalog}
             orders={orders}
+            khataSummary={khataSummary}
+            onOpenKhataBook={(phone = '') => {
+              setKhataFocusPhone(phone || '');
+              setActiveTab("khata");
+            }}
+            onKhataChanged={() => {
+              fetchKhataSummary();
+              fetchOrders();
+              setKhataRefreshSignal(s => s + 1);
+            }}
             onBillCreated={(updatedShop, createdOrder) => {
               if (updatedShop) setShopData({ ...updatedShop, sessionToken: shopData.sessionToken });
               if (createdOrder) setOrders(prev => [createdOrder, ...prev]);
             }}
+          />
+        )}
+        {activeTab === "khata" && (
+          <KhataTab
+            shopData={shopData}
+            focusPhone={khataFocusPhone}
+            onClearFocusPhone={() => setKhataFocusPhone('')}
+            onKhataSummaryChange={(sum) => {
+              setKhataSummary(sum);
+              fetchOrders();
+            }}
+            onQuickPosBill={() => setActiveTab("pos")}
+            refreshSignal={khataRefreshSignal}
           />
         )}
         {activeTab === "orders" && <OrdersTab orders={orders} updateOrderStatus={updateOrderStatus} markOrderPaid={markOrderPaid} shopData={shopData} refreshOrders={fetchOrders} />}

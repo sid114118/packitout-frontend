@@ -98,7 +98,12 @@ function formatOrderItemsList(items = []) {
 function getPaymentSummary(order) {
   const method = String(order?.paymentMethod || '').toUpperCase();
   const isPaid = order?.paymentStatus === 'Paid' || order?.paymentStatus === 'Success';
-  if (method === 'KHATA') {
+  const paidNow = Number(order?.khataSnapshot?.paidNow ?? order?.paidAmount ?? 0);
+  const addedDue = Number(order?.khataSnapshot?.addedDue ?? order?.khataAmount ?? 0);
+
+  if (method === 'KHATA' || addedDue > 0) {
+    if (isPaid) return '✅ Khata Settled (Paid in Full)';
+    if (paidNow > 0) return `⚖️ Split: Paid ₹${paidNow} (${order?.paidVia || 'CASH'}) + ₹${addedDue || order?.totalAmount} Khata Due`;
     return '📒 Recorded in Store Khata (Due)';
   }
   if (isPaid) {
@@ -130,6 +135,14 @@ export function buildPosCounterBillWhatsApp(order, shopData, extra = {}) {
   const billUrl = getPublicBillUrl(orderId, shopId, pincode);
   const storeUrl = getShopStorefrontUrl(shopId, pincode);
 
+  const snap = order?.khataSnapshot || {};
+  const addedDue = Number(snap.addedDue ?? order?.khataAmount ?? (order?.paymentMethod === 'KHATA' ? total : 0));
+  const previousDue = Number(snap.previousDue ?? 0);
+  const paidNow = Number(snap.paidNow ?? order?.paidAmount ?? 0);
+  const paidVia = snap.paidVia || order?.paidVia || 'CASH';
+  const newTotalDue = Number(snap.newTotalDue ?? (addedDue > 0 ? previousDue + addedDue : previousDue));
+  const isFirstKhata = Boolean(snap.isFirstKhata) && addedDue > 0;
+
   const lines = [
     `📋 *SMART DIGITAL BILL • #${shortId}*`,
     `🏪 *${shopName}*`,
@@ -146,6 +159,20 @@ export function buildPosCounterBillWhatsApp(order, shopData, extra = {}) {
     lines.push(`🔖 *Counter Discount: -₹${discount}*`);
   }
   lines.push(`💰 *Total Bill: ₹${total}* (${payLabel})`);
+
+  if (addedDue > 0) {
+    lines.push(``);
+    lines.push(isFirstKhata ? `📒 *NEW KHATA ACCOUNT OPENED (FIRST ENTRY)*` : `📒 *STORE KHATA LEDGER SUMMARY*`);
+    lines.push(`• Previous Khata Due: ₹${previousDue}`);
+    if (paidNow > 0) {
+      lines.push(`• Paid Now (${paidVia}): ₹${paidNow}`);
+    }
+    lines.push(`• Added to Khata Today: +₹${addedDue}`);
+    lines.push(`• *Net Total Khata Payable: ₹${newTotalDue}*`);
+  } else if (previousDue > 0) {
+    lines.push(``);
+    lines.push(`📒 *Previous Khata Balance Reminder:* ₹${previousDue} pending at store.`);
+  }
 
   if (savings > 0) {
     lines.push(`🎉 *Total Saved on MRP Today: ₹${savings}!*`);

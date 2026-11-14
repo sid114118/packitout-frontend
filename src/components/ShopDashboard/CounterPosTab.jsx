@@ -13,6 +13,7 @@ import {
   downloadReceiptPdf,
   createReceiptPdfFile,
   downloadFileBlob,
+  extractKhataMeta,
 } from '../../utils/billReceiptGenerator.js';
 
 const LOOSE_PRESETS = [
@@ -42,6 +43,9 @@ export default function CounterPosTab({
   masterCatalog = [],
   orders = [],
   onBillCreated,
+  khataSummary = null,
+  onOpenKhataBook = null,
+  onKhataChanged = null,
 }) {
   const toast = useToast();
   const posEnabled = Boolean(shopData?.canUseCounterPos);
@@ -58,6 +62,15 @@ export default function CounterPosTab({
   const [customerLookup, setCustomerLookup] = useState(null);
   const [isLookingUpCustomer, setIsLookingUpCustomer] = useState(false);
   const [redeemCoins, setRedeemCoins] = useState(false);
+
+  // --- SPLIT KHATA & QUICK SETTLE STATE ---
+  const [khataSplitEnabled, setKhataSplitEnabled] = useState(false);
+  const [khataPaidNow, setKhataPaidNow] = useState('');
+  const [khataPaidVia, setKhataPaidVia] = useState('CASH'); // CASH | UPI
+  const [quickSettleTarget, setQuickSettleTarget] = useState(null);
+  const [quickSettleAmt, setQuickSettleAmt] = useState('');
+  const [quickSettleMode, setQuickSettleMode] = useState('CASH');
+  const [isSettlingKhata, setIsSettlingKhata] = useState(false);
 
   // --- QUICK CUSTOM / LOOSE ITEM STATE ---
   const [customName, setCustomName] = useState('');
@@ -314,6 +327,10 @@ export default function CounterPosTab({
 
       // Escape: Close modals or clear search
       if (e.key === 'Escape') {
+        if (quickSettleTarget) {
+          setQuickSettleTarget(null);
+          return;
+        }
         if (printingOrder) {
           setPrintingOrder(null);
           return;
@@ -368,6 +385,25 @@ export default function CounterPosTab({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [posEnabled, scannerListening, validInventory, masterCatalog, printingOrder, showFullscreenUpi, showShortcutsModal, searchQuery]);
 
+  const refreshCustomerLookup = async (cleanPhone) => {
+    if (!/^[6-9]\d{9}$/.test(cleanPhone) || !posEnabled || !shopData?._id) return;
+    setIsLookingUpCustomer(true);
+    try {
+      const res = await shopFetch(shopData, `/shops/${shopData._id}/pos-customer/${cleanPhone}`);
+      if (res.ok) {
+        const data = await res.json();
+        setCustomerLookup(data);
+        const autoName = data.user?.name || data.khata?.customerName || '';
+        if (autoName && !customerName.trim()) {
+          setCustomerName(autoName);
+        }
+      }
+    } catch {
+      /* ignore */
+    }
+    setIsLookingUpCustomer(false);
+  };
+
   // --- AUTOMATIC CRM LOOKUP ON 10-DIGIT PHONE ---
   useEffect(() => {
     const clean = customerPhone.replace(/\D/g, '').slice(-10);
@@ -385,8 +421,9 @@ export default function CounterPosTab({
         if (res.ok && !cancelled) {
           const data = await res.json();
           setCustomerLookup(data);
-          if (data.found && data.user?.name && !customerName.trim()) {
-            setCustomerName(data.user.name);
+          const autoName = data.user?.name || data.khata?.customerName || '';
+          if (autoName && !customerName.trim()) {
+            setCustomerName(autoName);
           }
         }
       } catch {
@@ -465,6 +502,32 @@ export default function CounterPosTab({
     };
   }, [cashTendered, totals.finalTotal]);
 
+  // Live Khata ledger impact & split payment preview
+  const khataPreview = useMemo(() => {
+    const billTotal = totals.finalTotal;
+    const rawPaid = khataSplitEnabled ? Math.max(0, Number(khataPaidNow) || 0) : 0;
+    const paidNowNum = Math.min(billTotal, Math.round(rawPaid * 100) / 100);
+    const addedToKhata = Math.max(0, Math.round((billTotal - paidNowNum) * 100) / 100);
+    const prevBalance = Number(customerLookup?.khata?.currentBalance || 0);
+    const newTotalKhataPayable = Math.round((prevBalance + addedToKhata) * 100) / 100;
+    const hasAccount = Boolean(customerLookup?.khata?.hasAccount);
+    const isFirstTimeKhata = !hasAccount;
+    const creditLimit = Number(customerLookup?.khata?.creditLimit || 0);
+    const willExceedLimit = creditLimit > 0 && newTotalKhataPayable > creditLimit;
+    const isOverLimitNow = creditLimit > 0 && prevBalance >= creditLimit;
+    return {
+      paidNowNum,
+      addedToKhata,
+      prevBalance,
+      newTotalKhataPayable,
+      hasAccount,
+      isFirstTimeKhata,
+      creditLimit,
+      willExceedLimit,
+      isOverLimitNow,
+    };
+  }, [totals.finalTotal, khataSplitEnabled, khataPaidNow, customerLookup]);
+
   // --- TODAY'S STATS ---
   const posOrders = useMemo(() => {
     return (orders || []).filter(o => o && o.orderSource === 'POS');
@@ -474,29 +537,53 @@ export default function CounterPosTab({
     const startOfToday = new Date();
     startOfToday.setHours(0, 0, 0, 0);
 
-    let revenue = 0;
+    let collectedTotal = 0;
+    let totalBilledToday = 0;
     let count = 0;
     let cashTotal = 0;
     let upiTotal = 0;
+    let khataGivenToday = 0;
+    let khataBillsCount = 0;
     let convertedCount = 0;
 
     for (const o of posOrders) {
       const dt = new Date(o.createdAt);
       if (dt >= startOfToday && !/cancel|reject/i.test(o.status || '')) {
         const amt = Number(o.totalAmount) || 0;
-        revenue += amt;
+        totalBilledToday += amt;
         count += 1;
-        if (o.paymentMethod === 'UPI') upiTotal += amt;
-        else if (o.paymentMethod === 'CASH') cashTotal += amt;
+
+        if (o.paymentMethod === 'UPI') {
+          upiTotal += amt;
+          collectedTotal += amt;
+        } else if (o.paymentMethod === 'CASH') {
+          cashTotal += amt;
+          collectedTotal += amt;
+        } else if (o.paymentMethod === 'KHATA') {
+          const splitPaid = Math.max(0, Number(o.paidAmount) || 0);
+          const khataAmt = o.khataAmount != null
+            ? Math.max(0, Number(o.khataAmount) || 0)
+            : Math.max(0, amt - splitPaid);
+          khataGivenToday += khataAmt;
+          khataBillsCount += 1;
+          if (splitPaid > 0) {
+            collectedTotal += splitPaid;
+            if (o.paidVia === 'UPI') upiTotal += splitPaid;
+            else cashTotal += splitPaid;
+          }
+        }
         if (o.convertedToOnlineUser) convertedCount += 1;
       }
     }
 
     return {
-      revenue: Math.round(revenue),
+      collectedTotal: Math.round(collectedTotal),
+      totalBilledToday: Math.round(totalBilledToday),
       count,
       cashTotal: Math.round(cashTotal),
       upiTotal: Math.round(upiTotal),
+      khataGivenToday: Math.round(khataGivenToday),
+      khataBillsCount,
       convertedCount,
     };
   }, [posOrders]);
@@ -537,10 +624,31 @@ export default function CounterPosTab({
     }
 
     const cleanPhone = customerPhone.replace(/\D/g, '').slice(-10);
-    if (sendWhatsApp && !/^[6-9]\d{9}$/.test(cleanPhone)) {
+    const isValidPhone = /^[6-9]\d{9}$/.test(cleanPhone);
+
+    if (sendWhatsApp && !isValidPhone) {
       toast('Enter a valid 10-digit customer WhatsApp number to send the bill + store link!', 'error');
       playPosBeep(false);
       return;
+    }
+
+    if (paymentMethod === 'KHATA') {
+      if (!isValidPhone) {
+        toast('Enter customer 10-digit mobile number to record Khata Due!', 'error');
+        playPosBeep(false);
+        return;
+      }
+      const effectiveName = customerName.trim() || customerLookup?.user?.name || customerLookup?.khata?.customerName || '';
+      if (!effectiveName) {
+        toast('Enter customer Name to open/record Khata ledger!', 'error');
+        playPosBeep(false);
+        return;
+      }
+      if (khataSplitEnabled && khataPreview.paidNowNum >= totals.finalTotal && totals.finalTotal > 0) {
+        toast('Paid Now equals full bill — choose Cash or UPI instead of Khata!', 'error');
+        playPosBeep(false);
+        return;
+      }
     }
 
     setIsSubmitting(true);
@@ -549,9 +657,15 @@ export default function CounterPosTab({
         items: billItems,
         discountAmount: Number(discountAmount) || 0,
         paymentMethod,
-        customerPhone: /^[6-9]\d{9}$/.test(cleanPhone) ? cleanPhone : '',
+        customerPhone: isValidPhone ? cleanPhone : '',
         customerName: customerName.trim(),
         redeemCoins,
+        ...(paymentMethod === 'KHATA'
+          ? {
+              paidNowAmount: khataSplitEnabled ? khataPreview.paidNowNum : 0,
+              paidNowVia: khataPaidVia,
+            }
+          : {}),
       };
 
       const res = await shopFetch(shopData, `/shops/${shopData._id}/pos-bills`, {
@@ -574,6 +688,7 @@ export default function CounterPosTab({
         convertedToOnlineUser: data.convertedToOnlineUser,
         coinsEarned: data.coinsEarned,
         customer: data.customer,
+        khataAccount: data.khataAccount,
       });
 
       // Reset live counter
@@ -584,12 +699,25 @@ export default function CounterPosTab({
       setCustomerName('');
       setCustomerLookup(null);
       setRedeemCoins(false);
+      setKhataSplitEnabled(false);
+      setKhataPaidNow('');
+      setKhataPaidVia('CASH');
 
       if (onBillCreated) {
         onBillCreated(data.shop, createdOrder);
       }
+      if (onKhataChanged && (paymentMethod === 'KHATA' || data.khataAccount)) {
+        onKhataChanged(data.khataAccount);
+      }
 
-      if (data.convertedToOnlineUser) {
+      const meta = extractKhataMeta(createdOrder);
+      if (meta.scenario === 'FIRST_KHATA') {
+        toast(`🆕 First Khata Opened & ₹${meta.addedToKhata} Recorded!`);
+      } else if (meta.scenario === 'REPEAT_KHATA' && meta.paidNow > 0) {
+        toast(`⚖️ Split Bill Saved: ₹${meta.paidNow} Paid + ₹${meta.addedToKhata} Khata!`);
+      } else if (meta.scenario === 'REPEAT_KHATA') {
+        toast(`📒 +₹${meta.addedToKhata} Added to Khata (Total Due: ₹${meta.netKhataPayable})`);
+      } else if (data.convertedToOnlineUser) {
         toast(`🎉 Walk-in Customer Converted to Online Store (+${data.coinsEarned} Coins)!`);
       } else {
         toast(`✅ Counter Bill #${String(createdOrder._id).slice(-5).toUpperCase()} Completed!`);
@@ -603,6 +731,56 @@ export default function CounterPosTab({
       playPosBeep(false);
     }
     setIsSubmitting(false);
+  };
+
+  // --- INLINE QUICK SETTLE KHATA AT COUNTER ---
+  const handleQuickSettleSubmit = async (e) => {
+    e.preventDefault();
+    if (!quickSettleTarget) return;
+    const amt = Math.round((Number(quickSettleAmt) || 0) * 100) / 100;
+    if (amt <= 0) {
+      toast('Enter valid collection amount (> ₹0)', 'error');
+      playPosBeep(false);
+      return;
+    }
+    if (amt > quickSettleTarget.currentBalance) {
+      toast(`Amount cannot exceed pending Khata balance ₹${quickSettleTarget.currentBalance}`, 'error');
+      playPosBeep(false);
+      return;
+    }
+    setIsSettlingKhata(true);
+    try {
+      const res = await shopFetch(shopData, `/shops/${shopData._id}/khata/record-payment`, {
+        method: 'POST',
+        body: JSON.stringify({
+          accountId: quickSettleTarget.accountId,
+          phone: quickSettleTarget.customerPhone,
+          amount: amt,
+          mode: quickSettleMode,
+          note: 'Quick settled at Counter POS',
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        toast(data.error || 'Could not record Khata payment', 'error');
+        playPosBeep(false);
+        setIsSettlingKhata(false);
+        return;
+      }
+      playPosBeep(true);
+      toast(`✅ ₹${amt} Khata Jama Recorded! Remaining Due: ₹${data.account?.currentBalance ?? 0}`);
+      const settledPhone = quickSettleTarget.customerPhone;
+      setQuickSettleTarget(null);
+      setQuickSettleAmt('');
+      if (onKhataChanged) onKhataChanged(data.account);
+      if (settledPhone && customerPhone.replace(/\D/g, '').slice(-10) === settledPhone) {
+        refreshCustomerLookup(settledPhone);
+      }
+    } catch {
+      toast('Network error while recording Khata payment', 'error');
+      playPosBeep(false);
+    }
+    setIsSettlingKhata(false);
   };
 
   // --- ADMIN GATE SCREEN IF NOT ENABLED ---
@@ -623,10 +801,13 @@ export default function CounterPosTab({
     );
   }
 
-  // Dynamic UPI Intent URI and QR image
+  // Dynamic UPI Intent URI and QR image (supports full UPI OR Split Khata upfront UPI)
   const hasShopUpi = Boolean(shopData?.upiId && String(shopData.upiId).includes('@'));
-  const upiIntentUri = hasShopUpi && totals.finalTotal > 0
-    ? `upi://pay?pa=${encodeURIComponent(shopData.upiId)}&pn=${encodeURIComponent(shopData.name || 'Store')}&am=${totals.finalTotal}&cu=INR&tn=${encodeURIComponent(`Store Bill #${Date.now().toString().slice(-4)}`)}`
+  const activeUpiAmount = paymentMethod === 'UPI'
+    ? totals.finalTotal
+    : (paymentMethod === 'KHATA' && khataSplitEnabled && khataPaidVia === 'UPI' ? khataPreview.paidNowNum : 0);
+  const upiIntentUri = hasShopUpi && activeUpiAmount > 0
+    ? `upi://pay?pa=${encodeURIComponent(shopData.upiId)}&pn=${encodeURIComponent(shopData.name || 'Store')}&am=${activeUpiAmount}&cu=INR&tn=${encodeURIComponent(`Store Bill #${Date.now().toString().slice(-4)}`)}`
     : '';
   const upiQrImageUrl = upiIntentUri
     ? `https://api.qrserver.com/v1/create-qr-code/?size=220x220&margin=8&data=${encodeURIComponent(upiIntentUri)}`
@@ -643,19 +824,19 @@ export default function CounterPosTab({
         borderRadius: '18px',
         boxShadow: '0 10px 30px rgba(15, 23, 42, 0.22)',
         display: 'grid',
-        gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))',
+        gridTemplateColumns: 'repeat(auto-fit, minmax(165px, 1fr))',
         gap: '14px',
         alignItems: 'center',
       }}>
         <div>
           <div style={{ fontSize: '0.72rem', color: '#94a3b8', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.6px' }}>
-            ⚡ Today's Counter Sales
+            ⚡ Collected Today
           </div>
           <div style={{ fontSize: '1.6rem', fontWeight: 900, color: '#34d399', marginTop: '2px', letterSpacing: '-0.5px' }}>
-            ₹{todayStats.revenue}
+            ₹{todayStats.collectedTotal}
           </div>
-          <div style={{ fontSize: '0.74rem', color: '#cbd5e1' }}>
-            {todayStats.count} Walk-in Bill{todayStats.count !== 1 ? 's' : ''} Today
+          <div style={{ fontSize: '0.72rem', color: '#cbd5e1' }}>
+            {todayStats.count} Bill{todayStats.count !== 1 ? 's' : ''} • Billed ₹{todayStats.totalBilledToday}
           </div>
         </div>
 
@@ -668,6 +849,41 @@ export default function CounterPosTab({
           </div>
           <div style={{ fontSize: '0.88rem', fontWeight: 800, color: '#38bdf8' }}>
             UPI: <strong style={{ color: '#7dd3fc' }}>₹{todayStats.upiTotal}</strong>
+          </div>
+        </div>
+
+        <div>
+          <div style={{ fontSize: '0.72rem', color: '#94a3b8', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.6px' }}>
+            📒 Khata & Udhaar
+          </div>
+          <div style={{ fontSize: '1rem', fontWeight: 900, color: '#fbbf24', marginTop: '3px' }}>
+            Today: +₹{todayStats.khataGivenToday}
+            <span style={{ fontSize: '0.72rem', color: '#cbd5e1', fontWeight: 700, marginLeft: '5px' }}>
+              ({todayStats.khataBillsCount})
+            </span>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '3px', flexWrap: 'wrap' }}>
+            <span style={{ fontSize: '0.72rem', color: '#fde68a', fontWeight: 700 }}>
+              Market Due: ₹{Math.round(Number(khataSummary?.totalReceivable || 0))}
+            </span>
+            {onOpenKhataBook && (
+              <button
+                type="button"
+                onClick={() => onOpenKhataBook('')}
+                style={{
+                  padding: '2px 7px',
+                  borderRadius: '6px',
+                  border: '1px solid #f59e0b',
+                  background: 'rgba(245, 158, 11, 0.2)',
+                  color: '#fde68a',
+                  fontSize: '0.68rem',
+                  fontWeight: 900,
+                  cursor: 'pointer',
+                }}
+              >
+                Ledger ›
+              </button>
+            )}
           </div>
         </div>
 
@@ -749,120 +965,158 @@ export default function CounterPosTab({
       </div>
 
       {/* 🎉 POST-CHECKOUT SUCCESS NOTIFICATION BANNER */}
-      {lastCompletedBill && (
-        <div style={{
-          background: 'linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%)',
-          border: '2px solid #10b981',
-          borderRadius: '16px',
-          padding: '14px 18px',
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          flexWrap: 'wrap',
-          gap: '12px',
-          boxShadow: '0 4px 16px rgba(16, 185, 129, 0.15)',
-        }}>
-          <div>
-            <div style={{ fontWeight: 900, color: '#065f46', fontSize: '0.98rem', display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-              <span>✅ Bill #{String(lastCompletedBill.order._id).slice(-5).toUpperCase()} Completed • ₹{lastCompletedBill.order.totalAmount} ({lastCompletedBill.order.paymentMethod})</span>
-              {lastCompletedBill.convertedToOnlineUser && (
-                <span style={{ background: '#059669', color: '#fff', padding: '2px 8px', borderRadius: '999px', fontSize: '0.72rem', fontWeight: 800 }}>
-                  🚀 Online Customer Created!
-                </span>
+      {lastCompletedBill && (() => {
+        const meta = extractKhataMeta(lastCompletedBill.order);
+        const custPhone = lastCompletedBill.order.customerPhone || lastCompletedBill.order.userId?.phone || '';
+        const isKhata = meta.scenario === 'FIRST_KHATA' || meta.scenario === 'REPEAT_KHATA';
+        return (
+          <div style={{
+            background: isKhata
+              ? 'linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%)'
+              : 'linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%)',
+            border: isKhata ? '2px solid #f59e0b' : '2px solid #10b981',
+            borderRadius: '16px',
+            padding: '14px 18px',
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            flexWrap: 'wrap',
+            gap: '12px',
+            boxShadow: isKhata ? '0 4px 16px rgba(245, 158, 11, 0.16)' : '0 4px 16px rgba(16, 185, 129, 0.15)',
+          }}>
+            <div>
+              <div style={{ fontWeight: 900, color: isKhata ? '#92400e' : '#065f46', fontSize: '0.98rem', display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                <span>✅ Bill #{String(lastCompletedBill.order._id).slice(-5).toUpperCase()} Saved • ₹{lastCompletedBill.order.totalAmount} ({lastCompletedBill.order.paymentMethod})</span>
+                {meta.scenario === 'FIRST_KHATA' && (
+                  <span style={{ background: '#7c3aed', color: '#fff', padding: '2px 8px', borderRadius: '999px', fontSize: '0.72rem', fontWeight: 900 }}>
+                    🆕 FIRST KHATA ACCOUNT OPENED
+                  </span>
+                )}
+                {meta.scenario === 'REPEAT_KHATA' && (
+                  <span style={{ background: '#d97706', color: '#fff', padding: '2px 8px', borderRadius: '999px', fontSize: '0.72rem', fontWeight: 900 }}>
+                    📒 +₹{meta.addedToKhata} • Total Khata Due: ₹{meta.netKhataPayable}
+                  </span>
+                )}
+                {meta.scenario === 'PAID_WITH_OLD_KHATA' && (
+                  <span style={{ background: '#b45309', color: '#fff', padding: '2px 8px', borderRadius: '999px', fontSize: '0.72rem', fontWeight: 800 }}>
+                    ℹ️ Paid Today • Prior Khata Due: ₹{meta.previousBalance}
+                  </span>
+                )}
+                {lastCompletedBill.convertedToOnlineUser && (
+                  <span style={{ background: '#059669', color: '#fff', padding: '2px 8px', borderRadius: '999px', fontSize: '0.72rem', fontWeight: 800 }}>
+                    🚀 Online Customer Created!
+                  </span>
+                )}
+              </div>
+              {isKhata && meta.paidNow > 0 && (
+                <div style={{ fontSize: '0.78rem', color: '#78350f', fontWeight: 800, marginTop: '3px' }}>
+                  ⚖️ Split Settlement: ₹{meta.paidNow} Paid ({meta.paidVia}) • ₹{meta.addedToKhata} Added to Khata • Net Khata Payable: ₹{meta.netKhataPayable}
+                </div>
               )}
+              <div style={{ fontSize: '0.78rem', color: isKhata ? '#b45309' : '#047857', marginTop: '3px', display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+                <span>
+                  Digital Web Bill:{' '}
+                  <a
+                    href={getPublicBillUrl(lastCompletedBill.order._id, shopData._id, shopData.pincode)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{ color: isKhata ? '#92400e' : '#047857', fontWeight: 800, textDecoration: 'underline' }}
+                  >
+                    {getPublicBillUrl(lastCompletedBill.order._id, shopData._id, shopData.pincode)}
+                  </a>
+                </span>
+                {(isKhata || meta.scenario === 'PAID_WITH_OLD_KHATA') && onOpenKhataBook && custPhone && (
+                  <button
+                    type="button"
+                    onClick={() => onOpenKhataBook(custPhone)}
+                    style={{ background: '#fff', border: '1px solid #d97706', color: '#92400e', padding: '2px 8px', borderRadius: '6px', fontSize: '0.72rem', fontWeight: 900, cursor: 'pointer' }}
+                  >
+                    📒 View Customer Khata ›
+                  </button>
+                )}
+              </div>
             </div>
-            <div style={{ fontSize: '0.78rem', color: '#047857', marginTop: '3px' }}>
-              Digital Web Bill:{' '}
-              <a
-                href={getPublicBillUrl(lastCompletedBill.order._id, shopData._id, shopData.pincode)}
-                target="_blank"
-                rel="noopener noreferrer"
-                style={{ color: '#047857', fontWeight: 800, textDecoration: 'underline' }}
-              >
-                {getPublicBillUrl(lastCompletedBill.order._id, shopData._id, shopData.pincode)}
-              </a>
-            </div>
-          </div>
 
-          <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-            <button
-              type="button"
-              onClick={() => {
-                sendBillToCustomerWhatsApp(lastCompletedBill.order, shopData, { toast });
-              }}
-              style={{
-                padding: '8px 14px',
-                background: '#16a34a',
-                color: '#fff',
-                border: 'none',
-                borderRadius: '10px',
-                fontWeight: 800,
-                fontSize: '0.82rem',
-                cursor: 'pointer',
-                boxShadow: '0 2px 8px rgba(22, 163, 74, 0.25)',
-              }}
-            >
-              📲 Send PDF Bill on WhatsApp
-            </button>
-            <button
-              type="button"
-              onClick={async () => {
-                try {
-                  toast('Generating PDF bill…', 'info');
-                  await downloadReceiptPdf(lastCompletedBill.order, shopData);
-                  toast('📄 PDF Bill Downloaded!', 'success');
-                } catch {
-                  toast('Could not generate PDF bill', 'error');
-                }
-              }}
-              style={{
-                padding: '8px 12px',
-                background: '#eff6ff',
-                color: '#1d4ed8',
-                border: '1px solid #93c5fd',
-                borderRadius: '10px',
-                fontWeight: 800,
-                fontSize: '0.82rem',
-                cursor: 'pointer',
-              }}
-            >
-              📄 Download PDF
-            </button>
-            <button
-              type="button"
-              onClick={() => setPrintingOrder(lastCompletedBill.order)}
-              style={{
-                padding: '8px 14px',
-                background: '#0f172a',
-                color: '#fff',
-                border: 'none',
-                borderRadius: '10px',
-                fontWeight: 800,
-                fontSize: '0.82rem',
-                cursor: 'pointer',
-              }}
-            >
-              🖨️ Print Receipt
-            </button>
-            <button
-              type="button"
-              onClick={() => setLastCompletedBill(null)}
-              style={{
-                padding: '8px 12px',
-                background: 'transparent',
-                color: '#065f46',
-                border: '1px solid #6ee7b7',
-                borderRadius: '10px',
-                fontWeight: 700,
-                fontSize: '0.8rem',
-                cursor: 'pointer',
-              }}
-            >
-              ✕ Dismiss
-            </button>
+            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+              <button
+                type="button"
+                onClick={() => {
+                  sendBillToCustomerWhatsApp(lastCompletedBill.order, shopData, { toast });
+                }}
+                style={{
+                  padding: '8px 14px',
+                  background: '#16a34a',
+                  color: '#fff',
+                  border: 'none',
+                  borderRadius: '10px',
+                  fontWeight: 800,
+                  fontSize: '0.82rem',
+                  cursor: 'pointer',
+                  boxShadow: '0 2px 8px rgba(22, 163, 74, 0.25)',
+                }}
+              >
+                📲 Send PDF Bill on WhatsApp
+              </button>
+              <button
+                type="button"
+                onClick={async () => {
+                  try {
+                    toast('Generating PDF bill…', 'info');
+                    await downloadReceiptPdf(lastCompletedBill.order, shopData);
+                    toast('📄 PDF Bill Downloaded!', 'success');
+                  } catch {
+                    toast('Could not generate PDF bill', 'error');
+                  }
+                }}
+                style={{
+                  padding: '8px 12px',
+                  background: '#eff6ff',
+                  color: '#1d4ed8',
+                  border: '1px solid #93c5fd',
+                  borderRadius: '10px',
+                  fontWeight: 800,
+                  fontSize: '0.82rem',
+                  cursor: 'pointer',
+                }}
+              >
+                📄 Download PDF
+              </button>
+              <button
+                type="button"
+                onClick={() => setPrintingOrder(lastCompletedBill.order)}
+                style={{
+                  padding: '8px 14px',
+                  background: '#0f172a',
+                  color: '#fff',
+                  border: 'none',
+                  borderRadius: '10px',
+                  fontWeight: 800,
+                  fontSize: '0.82rem',
+                  cursor: 'pointer',
+                }}
+              >
+                🖨️ Print Receipt
+              </button>
+              <button
+                type="button"
+                onClick={() => setLastCompletedBill(null)}
+                style={{
+                  padding: '8px 12px',
+                  background: 'transparent',
+                  color: isKhata ? '#92400e' : '#065f46',
+                  border: `1px solid ${isKhata ? '#fcd34d' : '#6ee7b7'}`,
+                  borderRadius: '10px',
+                  fontWeight: 700,
+                  fontSize: '0.8rem',
+                  cursor: 'pointer',
+                }}
+              >
+                ✕ Dismiss
+              </button>
+            </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
 
       {/* ⚡ 2. MAIN POS WORKSPACE: 2-COLUMN SPLIT */}
       <div style={{
@@ -1378,15 +1632,19 @@ export default function CounterPosTab({
 
           {/* 🌐 WALK-IN CUSTOMER & CRM PANEL */}
           <div style={{
-            background: 'linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%)',
-            border: '1.5px solid #60a5fa',
+            background: paymentMethod === 'KHATA'
+              ? 'linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%)'
+              : 'linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%)',
+            border: paymentMethod === 'KHATA' ? '1.5px solid #f59e0b' : '1.5px solid #60a5fa',
             borderRadius: '12px',
             padding: '10px 12px',
             marginBottom: '10px',
           }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
-              <span style={{ fontSize: '0.78rem', fontWeight: 900, color: '#1e3a8a' }}>
-                📲 Customer Phone (Offline → Online Converter)
+              <span style={{ fontSize: '0.78rem', fontWeight: 900, color: paymentMethod === 'KHATA' ? '#92400e' : '#1e3a8a' }}>
+                {paymentMethod === 'KHATA'
+                  ? '📒 Customer Mobile & Name (Required for Khata)'
+                  : '📲 Customer Phone (Offline → Online Converter)'}
               </span>
               {isLookingUpCustomer && (
                 <span style={{ fontSize: '0.7rem', color: '#2563eb', fontWeight: 700 }}>Checking…</span>
@@ -1397,13 +1655,13 @@ export default function CounterPosTab({
               <input
                 type="tel"
                 maxLength={10}
-                placeholder="📞 10-Digit WhatsApp No."
+                placeholder={paymentMethod === 'KHATA' ? '📞 10-Digit Phone *' : '📞 10-Digit WhatsApp No.'}
                 value={customerPhone}
                 onChange={(e) => setCustomerPhone(e.target.value.replace(/\D/g, '').slice(0, 10))}
                 style={{
                   padding: '8px 10px',
                   borderRadius: '8px',
-                  border: '2px solid #3b82f6',
+                  border: paymentMethod === 'KHATA' ? '2px solid #d97706' : '2px solid #3b82f6',
                   fontWeight: 800,
                   fontSize: '0.86rem',
                   background: '#fff',
@@ -1411,13 +1669,13 @@ export default function CounterPosTab({
               />
               <input
                 type="text"
-                placeholder="👤 Name (Optional)"
+                placeholder={paymentMethod === 'KHATA' ? '👤 Full Name *' : '👤 Name (Optional)'}
                 value={customerName}
                 onChange={(e) => setCustomerName(e.target.value)}
                 style={{
                   padding: '8px 10px',
                   borderRadius: '8px',
-                  border: '1px solid #93c5fd',
+                  border: paymentMethod === 'KHATA' ? '1.5px solid #f59e0b' : '1px solid #93c5fd',
                   fontWeight: 700,
                   fontSize: '0.84rem',
                   background: '#fff',
@@ -1425,32 +1683,120 @@ export default function CounterPosTab({
               />
             </div>
 
-            {/* Live Customer Status Badge */}
-            {customerLookup && (
-              <div style={{ marginTop: '6px', padding: '6px 10px', borderRadius: '8px', background: customerLookup.found ? '#ecfdf5' : '#fef3c7', border: `1px solid ${customerLookup.found ? '#34d399' : '#fcd34d'}`, fontSize: '0.74rem' }}>
-                {customerLookup.found ? (
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '4px' }}>
-                    <span style={{ color: '#065f46', fontWeight: 800 }}>
-                      ⭐ Returning Customer: <strong>{customerLookup.user.name}</strong> • {customerLookup.pastOrdersCount} visits • 🪙 {customerLookup.user.coins} Coins
-                    </span>
-                    {customerLookup.user.coins >= 10 && (
-                      <label style={{ display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer', fontWeight: 900, color: '#047857', background: '#fff', padding: '2px 6px', borderRadius: '6px', border: '1px solid #10b981' }}>
-                        <input
-                          type="checkbox"
-                          checked={redeemCoins}
-                          onChange={(e) => setRedeemCoins(e.target.checked)}
-                        />
-                        Use Coins (-₹{totals.coinDiscount})
-                      </label>
+            {/* Live Customer Status Badge + Khata Status Strip */}
+            {customerLookup && (() => {
+              const kh = customerLookup.khata;
+              const clean = customerPhone.replace(/\D/g, '').slice(-10);
+              return (
+                <div style={{ marginTop: '6px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                  <div style={{ padding: '6px 10px', borderRadius: '8px', background: customerLookup.found ? '#ecfdf5' : '#fef3c7', border: `1px solid ${customerLookup.found ? '#34d399' : '#fcd34d'}`, fontSize: '0.74rem' }}>
+                    {customerLookup.found ? (
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '4px' }}>
+                        <span style={{ color: '#065f46', fontWeight: 800 }}>
+                          ⭐ Returning Customer: <strong>{customerLookup.user.name}</strong> • {customerLookup.pastOrdersCount} visits • 🪙 {customerLookup.user.coins} Coins
+                        </span>
+                        {customerLookup.user.coins >= 10 && (
+                          <label style={{ display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer', fontWeight: 900, color: '#047857', background: '#fff', padding: '2px 6px', borderRadius: '6px', border: '1px solid #10b981' }}>
+                            <input
+                              type="checkbox"
+                              checked={redeemCoins}
+                              onChange={(e) => setRedeemCoins(e.target.checked)}
+                            />
+                            Use Coins (-₹{totals.coinDiscount})
+                          </label>
+                        )}
+                      </div>
+                    ) : (
+                      <div style={{ color: '#92400e', fontWeight: 800 }}>
+                        🚀 <strong>First-Time Walk-in!</strong> Saving will auto-create their Online Account, set <strong>{shopData.name}</strong> as primary & gift <strong>+{totals.estimatedCoinsEarned} Coins</strong>!
+                      </div>
                     )}
                   </div>
-                ) : (
-                  <div style={{ color: '#92400e', fontWeight: 800 }}>
-                    🚀 <strong>First-Time Walk-in!</strong> Saving will auto-create their Online Account, set <strong>{shopData.name}</strong> as primary & gift <strong>+{totals.estimatedCoinsEarned} Coins</strong>!
-                  </div>
-                )}
-              </div>
-            )}
+
+                  {/* LIVE KHATA ACCOUNT STRIP */}
+                  {kh?.hasAccount && kh.currentBalance > 0 && (
+                    <div style={{
+                      padding: '7px 10px',
+                      borderRadius: '8px',
+                      background: kh.creditLimit > 0 && kh.currentBalance >= kh.creditLimit ? '#fef2f2' : '#fffbeb',
+                      border: `1.5px solid ${kh.creditLimit > 0 && kh.currentBalance >= kh.creditLimit ? '#ef4444' : '#f59e0b'}`,
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                      flexWrap: 'wrap',
+                      gap: '6px',
+                      fontSize: '0.74rem',
+                    }}>
+                      <div>
+                        <span style={{ fontWeight: 900, color: kh.creditLimit > 0 && kh.currentBalance >= kh.creditLimit ? '#b91c1c' : '#92400e' }}>
+                          📒 Pending Khata Due: ₹{kh.currentBalance}
+                        </span>
+                        {kh.creditLimit > 0 && kh.currentBalance >= kh.creditLimit && (
+                          <span style={{ marginLeft: '6px', background: '#dc2626', color: '#fff', padding: '1px 6px', borderRadius: '4px', fontSize: '0.66rem', fontWeight: 900 }}>
+                            ⚠️ OVER LIMIT (₹{kh.creditLimit})
+                          </span>
+                        )}
+                        {kh.pendingVerificationCount > 0 && (
+                          <span style={{ marginLeft: '6px', background: '#fef08a', color: '#854d0e', padding: '1px 6px', borderRadius: '4px', fontSize: '0.66rem', fontWeight: 900 }}>
+                            ⏳ {kh.pendingVerificationCount} UPI Approval Pending
+                          </span>
+                        )}
+                      </div>
+                      <div style={{ display: 'flex', gap: '5px' }}>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setQuickSettleTarget({
+                              accountId: kh.accountId,
+                              customerName: kh.customerName || customerName.trim() || customerLookup?.user?.name || 'Customer',
+                              customerPhone: clean,
+                              currentBalance: Number(kh.currentBalance || 0),
+                            });
+                            setQuickSettleAmt(String(kh.currentBalance || ''));
+                            setQuickSettleMode('CASH');
+                          }}
+                          style={{ padding: '3px 8px', borderRadius: '6px', border: 'none', background: '#16a34a', color: '#fff', fontWeight: 900, fontSize: '0.7rem', cursor: 'pointer' }}
+                        >
+                          💰 Quick Settle
+                        </button>
+                        {onOpenKhataBook && (
+                          <button
+                            type="button"
+                            onClick={() => onOpenKhataBook(clean)}
+                            style={{ padding: '3px 8px', borderRadius: '6px', border: '1px solid #d97706', background: '#fff', color: '#92400e', fontWeight: 800, fontSize: '0.7rem', cursor: 'pointer' }}
+                          >
+                            📒 Ledger ›
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {kh?.hasAccount && kh.currentBalance === 0 && (
+                    <div style={{ padding: '5px 10px', borderRadius: '8px', background: '#f0fdf4', border: '1px solid #86efac', display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.72rem' }}>
+                      <span style={{ color: '#166534', fontWeight: 800 }}>
+                        📒 Past Khata Customer • ₹0 All Cleared ✅ (Settled: ₹{kh.totalSettled || 0})
+                      </span>
+                      {onOpenKhataBook && (
+                        <button
+                          type="button"
+                          onClick={() => onOpenKhataBook(clean)}
+                          style={{ padding: '2px 7px', borderRadius: '6px', border: '1px solid #16a34a', background: '#fff', color: '#166534', fontWeight: 800, fontSize: '0.68rem', cursor: 'pointer' }}
+                        >
+                          History ›
+                        </button>
+                      )}
+                    </div>
+                  )}
+
+                  {!kh?.hasAccount && paymentMethod === 'KHATA' && (
+                    <div style={{ padding: '6px 10px', borderRadius: '8px', background: '#f5f3ff', border: '1px solid #c4b5fd', color: '#5b21b6', fontWeight: 800, fontSize: '0.72rem' }}>
+                      🆕 First-Time Khata Customer — Bill &amp; PDF will clearly stamp <strong>&quot;NEW KHATA ACCOUNT OPENED (FIRST ENTRY)&quot;</strong>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
           </div>
 
           {/* 💳 PAYMENT METHOD & CASH TENDERED CALCULATOR */}
@@ -1594,6 +1940,173 @@ export default function CounterPosTab({
                 )}
               </div>
             )}
+
+            {/* 📒 KHATA DUE & SPLIT SETTLEMENT PANEL */}
+            {paymentMethod === 'KHATA' && (
+              <div style={{ marginTop: '8px', padding: '10px 12px', borderRadius: '12px', background: '#fffbeb', border: '1.5px solid #f59e0b' }}>
+                <div style={{ display: 'flex', gap: '6px', marginBottom: '8px' }}>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setKhataSplitEnabled(false);
+                      setKhataPaidNow('');
+                    }}
+                    style={{
+                      flex: 1,
+                      padding: '6px 8px',
+                      borderRadius: '8px',
+                      border: !khataSplitEnabled ? '2px solid #d97706' : '1px solid #fcd34d',
+                      background: !khataSplitEnabled ? '#d97706' : '#fff',
+                      color: !khataSplitEnabled ? '#fff' : '#92400e',
+                      fontWeight: 900,
+                      fontSize: '0.74rem',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    📒 Full Khata (₹{totals.finalTotal})
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setKhataSplitEnabled(true)}
+                    style={{
+                      flex: 1,
+                      padding: '6px 8px',
+                      borderRadius: '8px',
+                      border: khataSplitEnabled ? '2px solid #2563eb' : '1px solid #cbd5e1',
+                      background: khataSplitEnabled ? '#2563eb' : '#fff',
+                      color: khataSplitEnabled ? '#fff' : '#334155',
+                      fontWeight: 900,
+                      fontSize: '0.74rem',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    ⚖️ Split: Pay Now + Rest Khata
+                  </button>
+                </div>
+
+                {khataSplitEnabled && (
+                  <div style={{ padding: '8px', background: '#fff', borderRadius: '8px', border: '1px solid #fde68a', marginBottom: '8px' }}>
+                    <div style={{ display: 'flex', gap: '6px', alignItems: 'center', marginBottom: '6px' }}>
+                      <input
+                        type="number"
+                        min="0"
+                        max={totals.finalTotal}
+                        placeholder="Paid now (₹)"
+                        value={khataPaidNow}
+                        onChange={(e) => setKhataPaidNow(e.target.value)}
+                        style={{ flex: 1, padding: '6px 8px', borderRadius: '6px', border: '1.5px solid #2563eb', fontWeight: 900, fontSize: '0.84rem' }}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setKhataPaidVia('CASH')}
+                        style={{
+                          padding: '6px 10px',
+                          borderRadius: '6px',
+                          border: khataPaidVia === 'CASH' ? '2px solid #16a34a' : '1px solid #cbd5e1',
+                          background: khataPaidVia === 'CASH' ? '#dcfce7' : '#fff',
+                          color: '#166534',
+                          fontWeight: 800,
+                          fontSize: '0.74rem',
+                          cursor: 'pointer',
+                        }}
+                      >
+                        💵 Cash
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setKhataPaidVia('UPI')}
+                        style={{
+                          padding: '6px 10px',
+                          borderRadius: '6px',
+                          border: khataPaidVia === 'UPI' ? '2px solid #2563eb' : '1px solid #cbd5e1',
+                          background: khataPaidVia === 'UPI' ? '#dbeafe' : '#fff',
+                          color: '#1e40af',
+                          fontWeight: 800,
+                          fontSize: '0.74rem',
+                          cursor: 'pointer',
+                        }}
+                      >
+                        📱 UPI
+                      </button>
+                    </div>
+                    {totals.finalTotal > 0 && (
+                      <div style={{ display: 'flex', gap: '5px', flexWrap: 'wrap' }}>
+                        {[
+                          { label: '25%', val: Math.round(totals.finalTotal * 0.25) },
+                          { label: '50%', val: Math.round(totals.finalTotal * 0.5) },
+                          { label: '₹100', val: Math.min(totals.finalTotal, 100) },
+                          { label: '₹500', val: Math.min(totals.finalTotal, 500) },
+                        ].map((q) => (
+                          <button
+                            key={q.label}
+                            type="button"
+                            onClick={() => setKhataPaidNow(String(q.val))}
+                            style={{ padding: '2px 8px', borderRadius: '5px', border: '1px solid #cbd5e1', background: '#f8fafc', fontSize: '0.7rem', fontWeight: 800, cursor: 'pointer' }}
+                          >
+                            {q.label} (₹{q.val})
+                          </button>
+                        ))}
+                      </div>
+                    )}
+
+                    {khataPaidVia === 'UPI' && khataPreview.paidNowNum > 0 && hasShopUpi && (
+                      <div style={{ marginTop: '8px', padding: '8px', borderRadius: '8px', background: '#eff6ff', border: '1px dashed #3b82f6', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        <img
+                          src={upiQrImageUrl}
+                          alt="Split UPI QR"
+                          style={{ width: '68px', height: '68px', borderRadius: '6px', background: '#fff', border: '1px solid #bfdbfe' }}
+                        />
+                        <div style={{ flex: 1 }}>
+                          <div style={{ fontWeight: 900, fontSize: '0.78rem', color: '#1e3a8a' }}>
+                            Scan Split Pay: ₹{khataPreview.paidNowNum}
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => setShowFullscreenUpi(true)}
+                            style={{ marginTop: '4px', padding: '3px 8px', borderRadius: '5px', border: '1px solid #3b82f6', background: '#fff', color: '#1d4ed8', fontWeight: 800, fontSize: '0.68rem', cursor: 'pointer' }}
+                          >
+                            🔍 Fullscreen QR
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* LIVE KHATA LEDGER IMPACT PREVIEW */}
+                <div style={{ fontSize: '0.76rem', color: '#78350f', display: 'flex', flexDirection: 'column', gap: '3px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <span>Previous Pending Khata:</span>
+                    <strong>₹{khataPreview.prevBalance}</strong>
+                  </div>
+                  {khataSplitEnabled && khataPreview.paidNowNum > 0 && (
+                    <div style={{ display: 'flex', justifyContent: 'space-between', color: '#15803d', fontWeight: 800 }}>
+                      <span>Paid Now ({khataPaidVia}):</span>
+                      <span>₹{khataPreview.paidNowNum} ✅</span>
+                    </div>
+                  )}
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 800 }}>
+                    <span>Added to Khata Today:</span>
+                    <span style={{ color: '#b45309' }}>+₹{khataPreview.addedToKhata}</span>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', borderTop: '1px dashed #d97706', paddingTop: '4px', marginTop: '2px', fontSize: '0.84rem', fontWeight: 900, color: '#92400e' }}>
+                    <span>Net Total Khata Payable:</span>
+                    <span>₹{khataPreview.newTotalKhataPayable}</span>
+                  </div>
+                  {khataPreview.willExceedLimit && (
+                    <div style={{ marginTop: '4px', padding: '4px 8px', borderRadius: '6px', background: '#fee2e2', color: '#b91c1c', fontWeight: 900, fontSize: '0.72rem' }}>
+                      ⚠️ Exceeds Credit Limit of ₹{khataPreview.creditLimit} (can still save if you approve)
+                    </div>
+                  )}
+                  {(!/^[6-9]\d{9}$/.test(customerPhone.replace(/\D/g, '').slice(-10)) ||
+                    (!customerName.trim() && !customerLookup?.user?.name && !customerLookup?.khata?.customerName)) && (
+                    <div style={{ marginTop: '4px', padding: '4px 8px', borderRadius: '6px', background: '#fef2f2', color: '#b91c1c', fontWeight: 800, fontSize: '0.71rem' }}>
+                      ⚠️ Enter 10-digit Mobile Number &amp; Customer Name above to record Khata.
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
 
           {/* 🚀 CHECKOUT ACTION BUTTONS */}
@@ -1607,17 +2120,25 @@ export default function CounterPosTab({
                 padding: '13px',
                 borderRadius: '12px',
                 border: 'none',
-                background: billItems.length === 0 ? '#94a3b8' : 'linear-gradient(135deg, #16a34a 0%, #15803d 100%)',
+                background: billItems.length === 0
+                  ? '#94a3b8'
+                  : paymentMethod === 'KHATA'
+                    ? 'linear-gradient(135deg, #d97706 0%, #b45309 100%)'
+                    : 'linear-gradient(135deg, #16a34a 0%, #15803d 100%)',
                 color: '#ffffff',
                 fontWeight: 900,
-                fontSize: '0.94rem',
+                fontSize: '0.92rem',
                 cursor: billItems.length === 0 ? 'not-allowed' : 'pointer',
                 boxShadow: billItems.length === 0 ? 'none' : '0 6px 18px rgba(22, 163, 74, 0.3)',
               }}
             >
               {isSubmitting
                 ? '⏳ Saving Counter Bill…'
-                : `📲 Complete & Send WhatsApp Bill (₹${totals.finalTotal})`}
+                : paymentMethod === 'KHATA'
+                  ? (khataSplitEnabled && khataPreview.paidNowNum > 0
+                      ? `⚖️ Save Split Bill (₹${khataPreview.paidNowNum} + ₹${khataPreview.addedToKhata} Khata)`
+                      : `📒 Save Khata Bill (+₹${totals.finalTotal}) & WhatsApp`)
+                  : `📲 Complete & Send WhatsApp Bill (₹${totals.finalTotal})`}
             </button>
 
             <button
@@ -1719,6 +2240,26 @@ export default function CounterPosTab({
               const custName = po.userId?.name || po.customerName || 'Walk-in Customer';
               const custPhone = po.userId?.phone || po.customerPhone || '';
               const itemCount = Array.isArray(po.items) ? po.items.reduce((s, i) => s + (Number(i?.qty) || 1), 0) : 0;
+              const khataMeta = extractKhataMeta(po);
+              const isKhataBill = po.paymentMethod === 'KHATA';
+              const isKhataSettled = isKhataBill && po.paymentStatus === 'Paid';
+              const isSplitKhata = isKhataBill && (Number(po.paidAmount) || 0) > 0 && khataMeta.addedToKhata > 0;
+              let payBadgeText = po.paymentMethod || 'CASH';
+              let payBadgeBg = po.paymentMethod === 'UPI' ? '#dbeafe' : '#dcfce7';
+              let payBadgeFg = po.paymentMethod === 'UPI' ? '#1e40af' : '#15803d';
+              if (isKhataSettled) {
+                payBadgeText = '✅ KHATA SETTLED';
+                payBadgeBg = '#dcfce7';
+                payBadgeFg = '#15803d';
+              } else if (isSplitKhata) {
+                payBadgeText = `⚖️ SPLIT: ₹${po.paidAmount} Paid / ₹${khataMeta.addedToKhata} Khata`;
+                payBadgeBg = '#fef3c7';
+                payBadgeFg = '#92400e';
+              } else if (isKhataBill) {
+                payBadgeText = `📒 KHATA DUE (₹${khataMeta.addedToKhata || po.totalAmount})`;
+                payBadgeBg = '#fef3c7';
+                payBadgeFg = '#92400e';
+              }
               return (
                 <div
                   key={po._id}
@@ -1744,11 +2285,16 @@ export default function CounterPosTab({
                         borderRadius: '999px',
                         fontSize: '0.68rem',
                         fontWeight: 800,
-                        background: po.paymentMethod === 'UPI' ? '#dbeafe' : po.paymentMethod === 'KHATA' ? '#fef3c7' : '#dcfce7',
-                        color: po.paymentMethod === 'UPI' ? '#1e40af' : po.paymentMethod === 'KHATA' ? '#92400e' : '#15803d',
+                        background: payBadgeBg,
+                        color: payBadgeFg,
                       }}>
-                        {po.paymentMethod || 'CASH'}
+                        {payBadgeText}
                       </span>
+                      {khataMeta.scenario === 'FIRST_KHATA' && (
+                        <span style={{ padding: '2px 7px', borderRadius: '999px', fontSize: '0.66rem', fontWeight: 900, background: '#f5f3ff', color: '#6d28d9', border: '1px solid #ddd6fe' }}>
+                          🆕 1st Khata
+                        </span>
+                      )}
                       {po.convertedToOnlineUser && (
                         <span style={{ padding: '2px 8px', borderRadius: '999px', fontSize: '0.68rem', fontWeight: 800, background: '#ecfdf5', color: '#047857', border: '1px solid #6ee7b7' }}>
                           🚀 Converted
@@ -1761,6 +2307,16 @@ export default function CounterPosTab({
                   </div>
 
                   <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                    {(isKhataBill || khataMeta.scenario === 'PAID_WITH_OLD_KHATA') && onOpenKhataBook && custPhone && (
+                      <button
+                        type="button"
+                        onClick={() => onOpenKhataBook(custPhone)}
+                        style={{ padding: '6px 9px', borderRadius: '8px', border: '1px solid #f59e0b', background: '#fffbeb', color: '#92400e', fontWeight: 800, fontSize: '0.72rem', cursor: 'pointer' }}
+                        title="Open Customer Khata Ledger"
+                      >
+                        📒 Khata
+                      </button>
+                    )}
                     <button
                       type="button"
                       onClick={() => {
@@ -1899,6 +2455,71 @@ export default function CounterPosTab({
                 )}
               </div>
 
+              {/* KHATA LEDGER BLOCK ON THERMAL PRINT */}
+              {(() => {
+                const km = extractKhataMeta(printingOrder);
+                if (km.scenario === 'NORMAL') return null;
+                return (
+                  <div style={{ fontSize: '0.74rem', borderBottom: '1px dashed #000', paddingBottom: '8px', marginBottom: '8px' }}>
+                    {km.scenario === 'FIRST_KHATA' && (
+                      <>
+                        <div style={{ fontWeight: 900, textAlign: 'center', marginBottom: '4px' }}>
+                          *** NEW KHATA ACCOUNT (FIRST ENTRY) ***
+                        </div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                          <span>Previous Khata:</span>
+                          <span>Rs.0</span>
+                        </div>
+                        {km.paidNow > 0 && (
+                          <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                            <span>Paid Now ({km.paidVia}):</span>
+                            <span>Rs.{km.paidNow}</span>
+                          </div>
+                        )}
+                        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                          <span>Added to Khata:</span>
+                          <span>+Rs.{km.addedToKhata}</span>
+                        </div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 900, marginTop: '3px', borderTop: '1px dotted #000', paddingTop: '3px' }}>
+                          <span>NET KHATA DUE:</span>
+                          <span>Rs.{km.netKhataPayable}</span>
+                        </div>
+                      </>
+                    )}
+                    {km.scenario === 'REPEAT_KHATA' && (
+                      <>
+                        <div style={{ fontWeight: 900, textAlign: 'center', marginBottom: '4px' }}>
+                          *** KHATA ACCOUNT SUMMARY ***
+                        </div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                          <span>Previous Pending:</span>
+                          <span>Rs.{km.previousBalance}</span>
+                        </div>
+                        {km.paidNow > 0 && (
+                          <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                            <span>Paid Now ({km.paidVia}):</span>
+                            <span>Rs.{km.paidNow}</span>
+                          </div>
+                        )}
+                        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                          <span>Added This Bill:</span>
+                          <span>+Rs.{km.addedToKhata}</span>
+                        </div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 900, marginTop: '3px', borderTop: '1px dotted #000', paddingTop: '3px' }}>
+                          <span>{km.isSettled ? 'KHATA SETTLED:' : 'TOTAL KHATA DUE:'}</span>
+                          <span>Rs.{km.isSettled ? 0 : km.netKhataPayable}</span>
+                        </div>
+                      </>
+                    )}
+                    {km.scenario === 'PAID_WITH_OLD_KHATA' && (
+                      <div style={{ textAlign: 'center', fontWeight: 900 }}>
+                        NOTE: Prior Unpaid Khata Balance: Rs.{km.previousBalance}
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
+
               {/* QR / Online Store Footer */}
               <div style={{ textAlign: 'center', fontSize: '0.72rem', marginBottom: '10px' }}>
                 <div>Order Online from {shopData.name}:</div>
@@ -1933,7 +2554,7 @@ export default function CounterPosTab({
       )}
 
       {/* ================= 📱 FULLSCREEN SCAN-TO-PAY UPI QR MODAL ================= */}
-      {showFullscreenUpi && totals.finalTotal > 0 && hasShopUpi && (
+      {showFullscreenUpi && activeUpiAmount > 0 && hasShopUpi && (
         <div
           onClick={() => setShowFullscreenUpi(false)}
           style={{
@@ -1963,7 +2584,7 @@ export default function CounterPosTab({
               ⚡ Instant UPI Counter Pay
             </div>
             <div style={{ fontSize: '2rem', fontWeight: 900, color: '#0f172a', margin: '4px 0 12px' }}>
-              ₹{totals.finalTotal}
+              ₹{activeUpiAmount}
             </div>
 
             <div style={{ background: '#f8fafc', padding: '14px', borderRadius: '16px', border: '2px solid #e2e8f0', display: 'inline-block', marginBottom: '14px' }}>
@@ -2078,6 +2699,123 @@ export default function CounterPosTab({
               Got it
             </button>
           </div>
+        </div>
+      )}
+
+      {/* ================= 💰 INLINE QUICK SETTLE KHATA MODAL ================= */}
+      {quickSettleTarget && (
+        <div
+          onClick={() => setQuickSettleTarget(null)}
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(15, 23, 42, 0.72)',
+            zIndex: 9999,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '16px',
+          }}
+        >
+          <form
+            onSubmit={handleQuickSettleSubmit}
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              background: '#ffffff',
+              borderRadius: '20px',
+              padding: '22px',
+              maxWidth: '380px',
+              width: '100%',
+              boxShadow: '0 25px 60px rgba(0,0,0,0.35)',
+            }}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+              <h3 style={{ margin: 0, fontSize: '1.08rem', color: '#0f172a', fontWeight: 900 }}>
+                💰 Collect Old Khata Due
+              </h3>
+              <button
+                type="button"
+                onClick={() => setQuickSettleTarget(null)}
+                style={{ border: 'none', background: 'transparent', fontSize: '1.15rem', cursor: 'pointer', color: '#64748b' }}
+              >
+                ✕
+              </button>
+            </div>
+            <div style={{ padding: '10px 12px', borderRadius: '10px', background: '#fffbeb', border: '1px solid #fcd34d', marginBottom: '12px', fontSize: '0.82rem' }}>
+              <div style={{ fontWeight: 900, color: '#92400e' }}>
+                {quickSettleTarget.customerName} ({quickSettleTarget.customerPhone})
+              </div>
+              <div style={{ color: '#b45309', fontWeight: 800, marginTop: '2px' }}>
+                Total Pending Khata Balance: <strong>₹{quickSettleTarget.currentBalance}</strong>
+              </div>
+            </div>
+
+            <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 800, color: '#334155', marginBottom: '5px' }}>
+              Amount Received Today (₹)
+            </label>
+            <div style={{ display: 'flex', gap: '6px', marginBottom: '10px' }}>
+              <input
+                type="number"
+                min="1"
+                step="0.01"
+                max={quickSettleTarget.currentBalance}
+                value={quickSettleAmt}
+                onChange={(e) => setQuickSettleAmt(e.target.value)}
+                required
+                style={{ flex: 1, padding: '10px 12px', borderRadius: '10px', border: '2px solid #16a34a', fontWeight: 900, fontSize: '1rem' }}
+              />
+              <button
+                type="button"
+                onClick={() => setQuickSettleAmt(String(quickSettleTarget.currentBalance))}
+                style={{ padding: '0 12px', borderRadius: '10px', border: '1px solid #86efac', background: '#f0fdf4', color: '#15803d', fontWeight: 800, fontSize: '0.78rem', cursor: 'pointer' }}
+              >
+                Full ₹{quickSettleTarget.currentBalance}
+              </button>
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: '14px' }}>
+              {[
+                { id: 'CASH', label: '💵 Cash Received' },
+                { id: 'UPI', label: '📱 UPI Received' },
+              ].map((m) => (
+                <button
+                  key={m.id}
+                  type="button"
+                  onClick={() => setQuickSettleMode(m.id)}
+                  style={{
+                    padding: '9px',
+                    borderRadius: '10px',
+                    border: quickSettleMode === m.id ? '2px solid #16a34a' : '1px solid #cbd5e1',
+                    background: quickSettleMode === m.id ? '#dcfce7' : '#fff',
+                    color: quickSettleMode === m.id ? '#166534' : '#334155',
+                    fontWeight: 900,
+                    fontSize: '0.8rem',
+                    cursor: 'pointer',
+                  }}
+                >
+                  {m.label}
+                </button>
+              ))}
+            </div>
+
+            <button
+              type="submit"
+              disabled={isSettlingKhata}
+              style={{
+                width: '100%',
+                padding: '12px',
+                borderRadius: '12px',
+                border: 'none',
+                background: 'linear-gradient(135deg, #16a34a 0%, #15803d 100%)',
+                color: '#fff',
+                fontWeight: 900,
+                fontSize: '0.92rem',
+                cursor: isSettlingKhata ? 'wait' : 'pointer',
+              }}
+            >
+              {isSettlingKhata ? 'Saving Jama Entry…' : `✅ Record ₹${quickSettleAmt || 0} Payment`}
+            </button>
+          </form>
         </div>
       )}
 

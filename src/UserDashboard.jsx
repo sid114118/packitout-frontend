@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useToast } from './ui/DialogProvider.jsx';
-import { userFetch } from './utils/api.js';
+import { userFetch, BASE_URL } from './utils/api.js';
 
 import ProfileHeader from './components/UserDashboard/ProfileHeader';
 import AddressBook from './components/UserDashboard/AddressBook';
@@ -8,6 +8,7 @@ import TermsModal from './components/UserDashboard/TermsModal';
 import ComplaintModal from './components/UserDashboard/ComplaintModal';
 import MyComplaintsModal from './components/UserDashboard/MyComplaintsModal';
 import ParchiBillModal from './components/UserDashboard/ParchiBillModal';
+import MyKhataModal from './components/UserDashboard/MyKhataModal.jsx';
 import RequestItemModal from './components/UserDashboard/RequestItemModal.jsx';
 import ChatIcon from './ui/ChatIcon.jsx';
 import { openWhatsAppChat } from './utils/whatsappShare.js';
@@ -34,6 +35,34 @@ export default function UserDashboard({ user, onExit, onLogout, onUserUpdate }) 
   const [showRequestItem, setShowRequestItem] = useState(false);
   const [showMyComplaints, setShowMyComplaints] = useState(false);
   const [showParchiBills, setShowParchiBills] = useState(false);
+  const [khataInfo, setKhataInfo] = useState(null);
+  const [showMyKhata, setShowMyKhata] = useState(false);
+
+  const fetchUserKhata = async () => {
+    if (!user?._id) return;
+    try {
+      const res = await userFetch(user, `/users/${user._id}/khata`);
+      if (!res.ok) return;
+      const data = await res.json();
+      setKhataInfo(data);
+    } catch {}
+  };
+
+  useEffect(() => {
+    fetchUserKhata();
+    if (!user?._id || !user?.sessionToken) return;
+    const sseUrl = `${BASE_URL.replace(/\/api$/, '')}/user-events/${user._id}?token=${user.sessionToken}`;
+    const eventSource = new EventSource(sseUrl);
+    let khataTimer;
+    eventSource.addEventListener('refresh_khata', () => {
+      clearTimeout(khataTimer);
+      khataTimer = setTimeout(fetchUserKhata, 400);
+    });
+    return () => {
+      clearTimeout(khataTimer);
+      eventSource.close();
+    };
+  }, [user?._id, user?.sessionToken]);
 
   // Fetch shops in this user's pincode so the "Primary shop" dropdown has
   // real options. Without this the select is permanently empty.
@@ -130,6 +159,53 @@ export default function UserDashboard({ user, onExit, onLogout, onUserUpdate }) 
           </span>
           <span style={{ color: '#94a3b8', fontSize: '1.2rem' }}>›</span>
         </button>
+
+        {/* Conditional Store Khata Passbook (ONLY visible if user uses Khata) */}
+        {khataInfo?.hasAnyKhata === true && (
+          <button
+            onClick={() => setShowMyKhata(true)}
+            style={{
+              width: '100%', marginBottom: '10px',
+              padding: '16px',
+              background: '#fff',
+              border: khataInfo.totalPendingAcrossShops > 0 ? '1.5px solid #f59e0b' : '1px solid #e2e8f0',
+              borderRadius: '16px',
+              display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+              cursor: 'pointer', boxShadow: '0 4px 14px rgba(15,23,42,0.04)',
+            }}
+          >
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '12px' }}>
+              <span style={{
+                width: '38px', height: '38px', borderRadius: '12px',
+                background: 'linear-gradient(135deg, #fffbeb, #fde68a)',
+                display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                fontSize: '1.1rem',
+              }}>📒</span>
+              <span style={{ display: 'inline-flex', flexDirection: 'column', alignItems: 'flex-start' }}>
+                <span style={{ fontWeight: 800, color: '#0f172a', fontSize: '0.95rem' }}>My Store Khata</span>
+                <span style={{ fontSize: '0.74rem', color: '#64748b', fontWeight: 600 }}>
+                  View digital passbook, bills &amp; pay dues via UPI
+                </span>
+              </span>
+            </span>
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+              {khataInfo.totalPendingAcrossShops > 0 ? (
+                <span style={{ background: '#fef3c7', color: '#b45309', border: '1px solid #f59e0b', padding: '3px 9px', borderRadius: '999px', fontWeight: 900, fontSize: '0.74rem' }}>
+                  ₹{Math.round(khataInfo.totalPendingAcrossShops)} Due
+                </span>
+              ) : khataInfo.pendingVerificationCount > 0 ? (
+                <span style={{ background: '#fef08a', color: '#854d0e', border: '1px solid #facc15', padding: '3px 9px', borderRadius: '999px', fontWeight: 900, fontSize: '0.72rem' }}>
+                  ⏳ Verify Pending
+                </span>
+              ) : (
+                <span style={{ background: '#dcfce7', color: '#15803d', border: '1px solid #86efac', padding: '3px 9px', borderRadius: '999px', fontWeight: 900, fontSize: '0.72rem' }}>
+                  ₹0 Settled ✅
+                </span>
+              )}
+              <span style={{ color: '#94a3b8', fontSize: '1.2rem' }}>›</span>
+            </span>
+          </button>
+        )}
 
         {/* Parchi bills awaiting payment */}
         <button
@@ -297,6 +373,7 @@ export default function UserDashboard({ user, onExit, onLogout, onUserUpdate }) 
       <ComplaintModal open={showComplaint} onClose={() => setShowComplaint(false)} user={user} />
       <MyComplaintsModal open={showMyComplaints} onClose={() => setShowMyComplaints(false)} user={user} />
       <ParchiBillModal open={showParchiBills} onClose={() => setShowParchiBills(false)} user={user} />
+      <MyKhataModal open={showMyKhata} onClose={() => setShowMyKhata(false)} user={user} onKhataUpdated={fetchUserKhata} />
       {showRequestItem && <RequestItemModal user={user} onClose={() => setShowRequestItem(false)} />}
     </div>
   );

@@ -3,9 +3,12 @@ import ViewReviewModal from './ViewReviewModal';
 import OrderTimeline from './OrderTimeline';
 import { cdnImage } from '../../utils/cloudinaryUrl.js';
 import ChatIcon from '../../ui/ChatIcon.jsx';
+import { extractKhataMeta, downloadReceiptPdf } from '../../utils/billReceiptGenerator.js';
+import { useToast } from '../../ui/DialogProvider.jsx';
 
 export default function ReceiptModal({ selectedOrder, setSelectedOrder, onReorderItem, user, onReviewsDeleted, onCustomerArrived, onOpenChat }) {
   const [isViewReviewModalOpen, setIsViewReviewModalOpen] = useState(false);
+  const toast = useToast();
 
   if (!selectedOrder) return null;
 
@@ -15,6 +18,10 @@ export default function ReceiptModal({ selectedOrder, setSelectedOrder, onReorde
   const isReady = statusStr.includes('ready');
   const isArrived = Boolean(selectedOrder.customerArrivedAt);
   const isAlreadyReviewed = selectedOrder.isReviewed === true;
+  const khata = extractKhataMeta(selectedOrder);
+  const isPaymentPaid = selectedOrder.paymentStatus === 'Paid' || selectedOrder.paymentStatus === 'Success';
+  const showPaidWatermark = khata.isKhataBill ? isPaymentPaid : isDelivered;
+  const showKhataWatermark = khata.isKhataBill && !isPaymentPaid && !isCancelled;
 
   return (
     <>
@@ -60,7 +67,9 @@ export default function ReceiptModal({ selectedOrder, setSelectedOrder, onReorde
               
               {/* PRINTER HEADER */}
               <div style={{ textAlign: 'center', marginBottom: '10px' }}>
-                <span style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: '800', letterSpacing: '2px', textTransform: 'uppercase' }}>CASH RECEIPT</span>
+                <span style={{ fontSize: '0.75rem', color: khata.isKhataBill ? '#b45309' : '#64748b', fontWeight: '800', letterSpacing: '2px', textTransform: 'uppercase' }}>
+                  {khata.isKhataBill ? 'STORE KHATA RECEIPT' : 'CASH RECEIPT'}
+                </span>
                 <h3 style={{ margin: '8px 0 4px 0', color: '#0f172a', fontSize: '1.6rem', fontWeight: '900', textTransform: 'uppercase' }}>
                   {selectedOrder.shopId?.name || "LOCAL SHOP"}
                 </h3>
@@ -86,10 +95,15 @@ export default function ReceiptModal({ selectedOrder, setSelectedOrder, onReorde
 
               <div className="dashed-line"></div>
 
-              {/* 🏆 VERIFIED / PAID WATERMARK STAMP */}
-              {isDelivered && (
+              {/* 🏆 VERIFIED / PAID / KHATA DUE WATERMARK STAMP */}
+              {showPaidWatermark && (
                 <div style={{ position: 'absolute', top: '25%', left: '50%', transform: 'translate(-50%, -50%) rotate(-20deg)', color: 'rgba(22, 163, 74, 0.15)', border: '6px solid rgba(22, 163, 74, 0.15)', padding: '10px 20px', borderRadius: '12px', fontSize: '2.5rem', fontWeight: '900', letterSpacing: '6px', zIndex: 0, pointerEvents: 'none', textTransform: 'uppercase' }}>
                   VERIFIED<br/><span style={{ fontSize: '1.2rem', display: 'block', textAlign: 'center', letterSpacing: '2px', marginTop: '4px' }}>PAID</span>
+                </div>
+              )}
+              {showKhataWatermark && (
+                <div style={{ position: 'absolute', top: '25%', left: '50%', transform: 'translate(-50%, -50%) rotate(-20deg)', color: 'rgba(217, 119, 6, 0.18)', border: '6px solid rgba(217, 119, 6, 0.18)', padding: '10px 20px', borderRadius: '12px', fontSize: '2.1rem', fontWeight: '900', letterSpacing: '4px', zIndex: 0, pointerEvents: 'none', textTransform: 'uppercase', textAlign: 'center' }}>
+                  KHATA<br/><span style={{ fontSize: '1.1rem', display: 'block', letterSpacing: '2px', marginTop: '4px' }}>{khata.isSplit ? 'PARTIAL DUE' : 'DUE'}</span>
                 </div>
               )}
 
@@ -184,8 +198,56 @@ export default function ReceiptModal({ selectedOrder, setSelectedOrder, onReorde
                 </span>
               </div>
 
+              {/* 📒 KHATA SUMMARY BOX INSIDE RECEIPT */}
+              {(khata.addedDue > 0 || khata.previousDue > 0) && (
+                <div style={{
+                  marginTop: '10px',
+                  padding: '10px 12px',
+                  borderRadius: '10px',
+                  background: khata.addedDue > 0 ? '#fffbeb' : '#eff6ff',
+                  border: `1px solid ${khata.addedDue > 0 ? '#fcd34d' : '#bfdbfe'}`,
+                  fontSize: '0.78rem',
+                  color: khata.addedDue > 0 ? '#78350f' : '#1e3a8a',
+                }}>
+                  <div style={{ fontWeight: 900, marginBottom: '4px' }}>
+                    {khata.isFirstKhata
+                      ? '🆕 FIRST KHATA ENTRY • ACCOUNT OPENED'
+                      : khata.addedDue > 0
+                        ? '📒 STORE KHATA LEDGER SUMMARY'
+                        : 'ℹ️ PREVIOUS KHATA BALANCE REMINDER'}
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <span>Previous Khata Due</span>
+                    <strong>₹{khata.previousDue}</strong>
+                  </div>
+                  {khata.paidNow > 0 && khata.addedDue > 0 && (
+                    <div style={{ display: 'flex', justifyContent: 'space-between', color: '#15803d', fontWeight: 700 }}>
+                      <span>Paid Now ({khata.paidVia})</span>
+                      <strong>-₹{khata.paidNow}</strong>
+                    </div>
+                  )}
+                  {khata.addedDue > 0 && (
+                    <>
+                      <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                        <span>Added to Khata</span>
+                        <strong>+₹{khata.addedDue}</strong>
+                      </div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '4px', paddingTop: '4px', borderTop: '1px dashed #d97706', fontWeight: 900, color: '#991b1b' }}>
+                        <span>Net Khata At Billing</span>
+                        <span>₹{khata.newTotalDue}</span>
+                      </div>
+                    </>
+                  )}
+                  {khata.isKhataBill && (
+                    <div style={{ marginTop: '4px', fontWeight: 800, color: isPaymentPaid ? '#15803d' : '#b45309' }}>
+                      Status: {isPaymentPaid ? '✅ This Bill Settled' : '⏳ Khata Payment Pending'}
+                    </div>
+                  )}
+                </div>
+              )}
+
               {/* PRINTER FOOTER */}
-              <div style={{ textAlign: 'center', marginTop: '25px' }}>
+              <div style={{ textAlign: 'center', marginTop: '20px' }}>
                 <div style={{ fontSize: '0.8rem', color: '#94a3b8', fontWeight: '600' }}>
                   Thank you for shopping with us!
                 </div>
@@ -196,6 +258,36 @@ export default function ReceiptModal({ selectedOrder, setSelectedOrder, onReorde
 
           {/* 🌟 FLOATING ACTIONS BELOW THE RECEIPT */}
           <div style={{ marginTop: '25px', width: '100%', display: 'flex', flexDirection: 'column', gap: '10px', alignItems: 'center' }}>
+             <button
+               type="button"
+               onClick={async () => {
+                 try {
+                   toast('Generating PDF bill…', 'info');
+                   await downloadReceiptPdf(selectedOrder, selectedOrder.shopId);
+                   toast('📄 Official PDF Bill Downloaded!', 'success');
+                 } catch {
+                   toast('Could not download PDF bill', 'error');
+                 }
+               }}
+               style={{
+                 width: '100%',
+                 padding: '12px',
+                 background: '#ffffff',
+                 color: '#1d4ed8',
+                 border: 'none',
+                 borderRadius: '12px',
+                 fontSize: '0.92rem',
+                 fontWeight: '800',
+                 cursor: 'pointer',
+                 display: 'flex',
+                 alignItems: 'center',
+                 justifyContent: 'center',
+                 gap: '8px',
+                 boxShadow: '0 4px 14px rgba(0,0,0,0.18)',
+               }}
+             >
+               📄 Download Official PDF Bill
+             </button>
              
              {/* 📍 "I'm at the Shop" counter arrival button / banner - Only when ready or arrived */}
              {!isDelivered && !isCancelled && (isReady || isArrived) && (

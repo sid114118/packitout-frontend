@@ -3,6 +3,7 @@ import { useBaskets } from './utils/useBaskets.js';
 import { useToast, useConfirm } from './ui/DialogProvider.jsx';
 import NotificationBell from './NotificationBell';
 import ReceiptModal from './components/UserDashboard/ReceiptModal';
+import MyKhataModal from './components/UserDashboard/MyKhataModal.jsx';
 import OrderReviewModal from './components/UserDashboard/OrderReviewModal';
 import OrderChatDrawer from './components/Chat/OrderChatDrawer.jsx';
 import ChatIcon from './ui/ChatIcon.jsx';
@@ -77,6 +78,18 @@ export default function OrdersPage({ user, onExit, onAddToCart, cart, setCart })
   const { baskets, saveBaskets } = useBaskets();
   const [checkoutBasketId, setCheckoutBasketId] = useState(null);
   const [chatOrder, setChatOrder] = useState(null);
+  const [khataInfo, setKhataInfo] = useState(null);
+  const [showMyKhata, setShowMyKhata] = useState(false);
+
+  const fetchUserKhata = async () => {
+    if (!user?._id) return;
+    try {
+      const res = await userFetch(user, `/users/${user._id}/khata`);
+      if (!res.ok) return;
+      const data = await res.json();
+      setKhataInfo(data);
+    } catch {}
+  };
 
   const handleShareBasket = async (basket) => {
     try {
@@ -186,6 +199,7 @@ export default function OrdersPage({ user, onExit, onAddToCart, cart, setCart })
 
   useEffect(() => {
     fetchOrders();
+    fetchUserKhata();
     
     // Connect to SSE for real-time updates when the shop accepts/packs orders
     if (!user || !user.sessionToken) return;
@@ -193,6 +207,7 @@ export default function OrdersPage({ user, onExit, onAddToCart, cart, setCart })
     const eventSource = new EventSource(sseUrl);
     
     let sseTimeout;
+    let khataSseTimeout;
     eventSource.addEventListener('refresh_orders', () => {
       clearTimeout(sseTimeout);
       sseTimeout = setTimeout(() => {
@@ -205,9 +220,17 @@ export default function OrdersPage({ user, onExit, onAddToCart, cart, setCart })
         fetchOrders();
       }, 400);
     });
+    eventSource.addEventListener('refresh_khata', () => {
+      clearTimeout(khataSseTimeout);
+      khataSseTimeout = setTimeout(() => {
+        fetchUserKhata();
+        fetchOrders();
+      }, 400);
+    });
     
     return () => {
       clearTimeout(sseTimeout);
+      clearTimeout(khataSseTimeout);
       eventSource.close();
     };
   }, [user._id, user.sessionToken]);
@@ -450,6 +473,49 @@ export default function OrdersPage({ user, onExit, onAddToCart, cart, setCart })
 
       {/* ── CONTENT PULLED UP ───────────────────────────── */}
       <div style={{ padding: '0 14px', maxWidth: '600px', margin: '0 auto', marginTop: '-36px', position: 'relative', zIndex: 2 }}>
+
+        {/* CONDITIONAL KHATA DUE BANNER (ONLY IF USER ACTUALLY USES KHATA & HAS DUES OR PENDING VERIFY) */}
+        {khataInfo?.hasAnyKhata === true && (khataInfo.totalPendingAcrossShops > 0 || khataInfo.pendingVerificationCount > 0) && (
+          <div style={{
+            background: 'linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%)',
+            border: '2px solid #f59e0b',
+            borderRadius: '18px',
+            padding: '12px 15px',
+            marginBottom: '12px',
+            boxShadow: '0 10px 24px rgba(245, 158, 11, 0.18)',
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            flexWrap: 'wrap',
+            gap: '10px',
+          }}>
+            <div>
+              <div style={{ fontWeight: 900, color: '#92400e', fontSize: '0.94rem' }}>
+                📒 Store Khata Due: ₹{Math.round(khataInfo.totalPendingAcrossShops || 0)}
+              </div>
+              <div style={{ fontSize: '0.74rem', color: '#b45309', fontWeight: 700, marginTop: '2px' }}>
+                Across {khataInfo.activeShopsCount || 1} store{(khataInfo.activeShopsCount || 1) === 1 ? '' : 's'}
+                {khataInfo.pendingVerificationCount > 0 ? ` • ⏳ ${khataInfo.pendingVerificationCount} UPI claim(s) verifying` : ''}
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => setShowMyKhata(true)}
+              style={{
+                padding: '8px 13px',
+                borderRadius: '11px',
+                border: 'none',
+                background: '#d97706',
+                color: '#fff',
+                fontWeight: 900,
+                fontSize: '0.78rem',
+                cursor: 'pointer',
+              }}
+            >
+              Open Passbook &amp; Pay ›
+            </button>
+          </div>
+        )}
 
         {/* STATS STRIP */}
         {orders.length > 0 && (
@@ -725,6 +791,15 @@ export default function OrdersPage({ user, onExit, onAddToCart, cart, setCart })
           // Close the receipt modal too — the order just became review-able again,
           // user can tap Rate from the order card if they want.
           setSelectedOrder(null);
+        }}
+      />
+      <MyKhataModal
+        open={showMyKhata}
+        onClose={() => setShowMyKhata(false)}
+        user={user}
+        onKhataUpdated={() => {
+          fetchUserKhata();
+          fetchOrders();
         }}
       />
       <OrderReviewModal
@@ -1007,6 +1082,23 @@ function OrderCard({ order, onOpen, onCancel, onReview, onReorderItem, onCustome
               {order.adjustedDelta > 0 ? `(+₹${order.adjustedDelta} adjusted in chat)` : `(-₹${Math.abs(order.adjustedDelta)} adjusted in chat)`}
             </div>
           ) : null}
+          {order.paymentMethod === 'KHATA' && (
+            <div style={{ marginTop: '4px' }}>
+              {order.paymentStatus === 'Paid' ? (
+                <span style={{ display: 'inline-block', padding: '2px 8px', borderRadius: '999px', fontSize: '0.68rem', fontWeight: 900, background: '#dcfce7', color: '#15803d', border: '1px solid #86efac' }}>
+                  ✅ Khata Settled
+                </span>
+              ) : (Number(order.paidAmount) || 0) > 0 ? (
+                <span style={{ display: 'inline-block', padding: '2px 8px', borderRadius: '999px', fontSize: '0.68rem', fontWeight: 900, background: '#fef3c7', color: '#92400e', border: '1px solid #fcd34d' }}>
+                  ⚖️ ₹{order.paidAmount} Paid · ₹{order.khataAmount ?? Math.max(0, (Number(order.totalAmount) || 0) - Number(order.paidAmount))} Khata
+                </span>
+              ) : (
+                <span style={{ display: 'inline-block', padding: '2px 8px', borderRadius: '999px', fontSize: '0.68rem', fontWeight: 900, background: '#fef3c7', color: '#92400e', border: '1px solid #fcd34d' }}>
+                  📒 Added to Store Khata{order.khataSnapshot?.isFirstTimeKhata ? ' (1st Entry)' : ''}
+                </span>
+              )}
+            </div>
+          )}
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
           {live && (

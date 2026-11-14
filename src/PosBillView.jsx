@@ -3,7 +3,7 @@ import { BASE_URL } from './utils/api.js';
 import { cdnImage } from './utils/cloudinaryUrl.js';
 import { useToast } from './ui/DialogProvider.jsx';
 import { toWhatsAppPhone, getWhatsAppUrl } from './utils/whatsappShare.js';
-import { downloadReceiptPdf } from './utils/billReceiptGenerator.js';
+import { downloadReceiptPdf, extractKhataMeta } from './utils/billReceiptGenerator.js';
 
 export default function PosBillView({ orderId, onSetCartAndGo, onGoToShopStore }) {
   const toast = useToast();
@@ -149,6 +149,13 @@ export default function PosBillView({ orderId, onSetCartAndGo, onGoToShopStore }
   const isPaid = bill.paymentStatus === 'Paid' || bill.paymentStatus === 'Success';
   const payMethod = String(bill.paymentMethod || 'CASH').toUpperCase();
   const cleanShopPhone = toWhatsAppPhone(shop.phone);
+  const khata = extractKhataMeta(bill);
+  const liveKhataDue = bill.currentLiveKhataDue !== null && bill.currentLiveKhataDue !== undefined
+    ? Number(bill.currentLiveKhataDue)
+    : khata.newTotalDue;
+  const khataPayUpiUri = liveKhataDue > 0 && shop.upiId && String(shop.upiId).includes('@')
+    ? `upi://pay?pa=${encodeURIComponent(shop.upiId)}&pn=${encodeURIComponent(shop.name || 'Store')}&am=${liveKhataDue}&cu=INR&tn=${encodeURIComponent(`Khata Bill #${bill.shortId}`)}`
+    : '';
 
   return (
     <div style={{ minHeight: '100vh', background: 'linear-gradient(180deg, #090d16 0%, #1e293b 240px, #f1f5f9 240px)', padding: '20px 14px 100px', fontFamily: 'system-ui, -apple-system, sans-serif' }}>
@@ -341,7 +348,11 @@ export default function PosBillView({ orderId, onSetCartAndGo, onGoToShopStore }
                 color: isPaid ? '#15803d' : '#b45309',
                 border: `1px solid ${isPaid ? '#86efac' : '#fde68a'}`,
               }}>
-                {isPaid ? `✅ Paid (${payMethod})` : `⏳ ${payMethod === 'KHATA' ? 'Khata Due' : 'Payment Pending'}`}
+                {isPaid
+                  ? (khata.isKhataBill ? '✅ Khata Settled (Paid)' : `✅ Paid (${payMethod})`)
+                  : (khata.isSplit
+                    ? `⚖️ Split: Paid ₹${khata.paidNow} + ₹${khata.addedDue} Khata`
+                    : (khata.isFirstKhata ? '🆕 First Khata Due' : (payMethod === 'KHATA' ? '📒 Khata Due' : '⏳ Payment Pending')))}
               </span>
             </div>
           </div>
@@ -448,6 +459,125 @@ export default function PosBillView({ orderId, onSetCartAndGo, onGoToShopStore }
               </div>
             </div>
           </div>
+
+          {/* 📒 KHATA LEDGER SUMMARY & LIVE BALANCE CARD */}
+          {(khata.addedDue > 0 || khata.previousDue > 0) && (
+            <div style={{
+              margin: '0 16px 14px',
+              padding: '14px 16px',
+              borderRadius: '16px',
+              background: khata.addedDue > 0
+                ? 'linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%)'
+                : 'linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%)',
+              border: `1.5px solid ${khata.addedDue > 0 ? '#f59e0b' : '#60a5fa'}`,
+            }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '8px', flexWrap: 'wrap', marginBottom: '10px' }}>
+                <div style={{ fontWeight: 900, fontSize: '0.84rem', color: khata.addedDue > 0 ? '#92400e' : '#1e3a8a', textTransform: 'uppercase', letterSpacing: '0.4px' }}>
+                  {khata.scenario === 'FIRST_KHATA'
+                    ? '🆕 First Khata Entry • Account Opened'
+                    : khata.scenario === 'REPEAT_KHATA'
+                      ? '📒 Store Khata Ledger Summary'
+                      : 'ℹ️ Pending Store Khata Balance Reminder'}
+                </div>
+                {khata.isSettled && khata.addedDue > 0 && (
+                  <span style={{ background: '#16a34a', color: '#fff', padding: '2px 8px', borderRadius: '999px', fontSize: '0.7rem', fontWeight: 900 }}>
+                    ✅ This Bill Settled
+                  </span>
+                )}
+              </div>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '5px', fontSize: '0.84rem', color: khata.addedDue > 0 ? '#78350f' : '#1e40af' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <span>Previous Khata Balance</span>
+                  <strong>₹{khata.previousDue}</strong>
+                </div>
+                {khata.addedDue > 0 ? (
+                  <>
+                    {khata.paidNow > 0 && (
+                      <div style={{ display: 'flex', justifyContent: 'space-between', color: '#15803d', fontWeight: 700 }}>
+                        <span>Paid Now at Counter ({khata.paidVia})</span>
+                        <strong>-₹{khata.paidNow}</strong>
+                      </div>
+                    )}
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 700 }}>
+                      <span>Added to Khata from This Bill</span>
+                      <strong>+₹{khata.addedDue}</strong>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '7px', marginTop: '4px', borderTop: '1px dashed #d97706', fontSize: '0.96rem', fontWeight: 900, color: '#991b1b' }}>
+                      <span>Net Total Khata at Billing</span>
+                      <span>₹{khata.newTotalDue}</span>
+                    </div>
+                  </>
+                ) : (
+                  <div style={{ fontSize: '0.78rem', fontWeight: 600, marginTop: '2px' }}>
+                    Today&apos;s bill (#{bill.shortId}) was paid in full via {payMethod}. Your previous Khata balance of <strong>₹{khata.previousDue}</strong> remains recorded at {shop.name || 'the store'}.
+                  </div>
+                )}
+              </div>
+
+              {bill.currentLiveKhataDue !== null && bill.currentLiveKhataDue !== undefined && (
+                <div style={{
+                  marginTop: '10px',
+                  padding: '8px 10px',
+                  borderRadius: '10px',
+                  background: liveKhataDue === 0 ? '#dcfce7' : '#ffffff',
+                  border: `1px solid ${liveKhataDue === 0 ? '#86efac' : '#fcd34d'}`,
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  fontSize: '0.8rem',
+                  fontWeight: 800,
+                  color: liveKhataDue === 0 ? '#15803d' : '#0f172a',
+                }}>
+                  <span>Live Store Khata Balance Now:</span>
+                  <span style={{ fontSize: '0.95rem', fontWeight: 900, color: liveKhataDue === 0 ? '#15803d' : '#b45309' }}>
+                    {liveKhataDue === 0 ? '₹0 (All Dues Cleared ✅)' : `₹${liveKhataDue}`}
+                  </span>
+                </div>
+              )}
+
+              {khataPayUpiUri && liveKhataDue > 0 && (
+                <div className="no-print" style={{ marginTop: '10px', display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                  <a
+                    href={khataPayUpiUri}
+                    style={{
+                      flex: 1,
+                      minWidth: '180px',
+                      textAlign: 'center',
+                      padding: '10px 12px',
+                      borderRadius: '10px',
+                      background: 'linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%)',
+                      color: '#fff',
+                      fontWeight: 900,
+                      fontSize: '0.84rem',
+                      textDecoration: 'none',
+                      boxShadow: '0 4px 12px rgba(37, 99, 235, 0.25)',
+                    }}
+                  >
+                    📱 Pay ₹{liveKhataDue} Khata via UPI App
+                  </a>
+                  {cleanShopPhone && (
+                    <a
+                      href={getWhatsAppUrl(cleanShopPhone, `Namaste ${shop.name || 'Store'} ji, I have paid ₹${liveKhataDue} towards my Store Khata (${bill.customerPhone || bill.customerName}). Please update my Khata!`)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      style={{
+                        padding: '10px 12px',
+                        borderRadius: '10px',
+                        background: '#16a34a',
+                        color: '#fff',
+                        fontWeight: 800,
+                        fontSize: '0.8rem',
+                        textDecoration: 'none',
+                      }}
+                    >
+                      💬 Notify Shopkeeper
+                    </a>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
 
           {/* 📥 OFFICIAL RECEIPT DOWNLOADS */}
           <div className="no-print" style={{ margin: '0 16px 14px', padding: '14px', borderRadius: '16px', background: '#f8fafc', border: '1px solid #e2e8f0', display: 'flex', flexDirection: 'column', gap: '8px' }}>

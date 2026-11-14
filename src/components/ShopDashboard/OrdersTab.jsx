@@ -92,7 +92,19 @@ export default function OrdersTab({ orders, updateOrderStatus, markOrderPaid, sh
     const isPaid = order.paymentStatus === 'Paid' || order.paymentStatus === 'Success';
     const isUpiPending = order.paymentMethod === 'UPI' && order.paymentStatus === 'PendingVerification';
     let payBadge = { label: '✋ Collect at Pickup', bg: '#ffedd5', fg: '#c2410c', border: '#fed7aa' };
-    if (isPaid && order.paymentMethod === 'UPI') payBadge = { label: '💳 UPI Received', bg: '#d1fae5', fg: '#059669', border: '#a7f3d0' };
+    if (order.paymentMethod === 'KHATA') {
+      const paidUpfront = Number(order.paidAmount) || 0;
+      const khataAmt = order.khataAmount != null
+        ? Number(order.khataAmount)
+        : Math.max(0, (Number(order.totalAmount) || 0) - paidUpfront);
+      if (isPaid) {
+        payBadge = { label: '✅ Khata Settled', bg: '#d1fae5', fg: '#059669', border: '#a7f3d0' };
+      } else if (paidUpfront > 0) {
+        payBadge = { label: `⚖️ Split: ₹${paidUpfront} Paid / ₹${khataAmt} Khata`, bg: '#fef3c7', fg: '#92400e', border: '#fde68a' };
+      } else {
+        payBadge = { label: '📒 Khata Due', bg: '#fef3c7', fg: '#92400e', border: '#fde68a' };
+      }
+    } else if (isPaid && order.paymentMethod === 'UPI') payBadge = { label: '💳 UPI Received', bg: '#d1fae5', fg: '#059669', border: '#a7f3d0' };
     else if (isPaid) payBadge = { label: '💵 Paid in Person', bg: '#d1fae5', fg: '#059669', border: '#a7f3d0' };
     else if (isUpiPending) payBadge = { label: '⏳ Awaiting UPI', bg: '#fef9c3', fg: '#854d0e', border: '#fde68a' };
 
@@ -412,13 +424,13 @@ export default function OrdersTab({ orders, updateOrderStatus, markOrderPaid, sh
                   }
                 }
                 return (
-                  <div 
-                    key={idx} 
-                    style={{ 
-                      backgroundColor: '#fffbeb', 
-                      border: '1.5px solid #fde68a', 
-                      borderRadius: '12px', 
-                      padding: '12px 14px', 
+                  <div
+                    key={idx}
+                    style={{
+                      backgroundColor: '#fffbeb',
+                      border: '1.5px solid #fde68a',
+                      borderRadius: '12px',
+                      padding: '12px 14px',
                       marginBottom: '10px',
                       boxShadow: '0 2px 8px rgba(245, 158, 11, 0.08)'
                     }}
@@ -762,8 +774,8 @@ export default function OrdersTab({ orders, updateOrderStatus, markOrderPaid, sh
                   >
                     {isArrived
                       ? (!isPaid && order.paymentMethod === 'POP'
-                          ? `💵 Collect ₹${order.totalAmount} & Hand Over (Token #${shortId}) ✅`
-                          : `📦 Hand Over Order (Token #${shortId}) ✅`)
+                        ? `💵 Collect ₹${order.totalAmount} & Hand Over (Token #${shortId}) ✅`
+                        : `📦 Hand Over Order (Token #${shortId}) ✅`)
                       : '✅ Mark as Picked Up'}
                   </button>
 
