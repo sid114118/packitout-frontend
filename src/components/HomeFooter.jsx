@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import StorefrontIcon from '../ui/StorefrontIcon.jsx';
 
-const BRAND = '#16a34a';
-const BRAND_DARK = '#15803d';
+const BRAND_GREEN = '#16a34a';
+const BRAND_BLACK = '#0f172a';
+const PARCHI_RED = '#ff4757'; // Matches the top parchi banner in home page
 
 const TRUST_HIGHLIGHTS = [
   {
@@ -10,7 +11,7 @@ const TRUST_HIGHLIGHTS = [
     title: '10-Min Quick Pickup',
     subtitle: 'Packed & ready without counter wait',
     icon: (
-      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={BRAND} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={BRAND_GREEN} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
         <path d="M13 2 4 14h7l-1 8 9-12h-7l1-8z" />
       </svg>
     ),
@@ -19,7 +20,7 @@ const TRUST_HIGHLIGHTS = [
     key: 'local',
     title: '100% Local Dukaan',
     subtitle: 'Direct from verified neighbourhood shops',
-    icon: <StorefrontIcon size={22} color={BRAND} />,
+    icon: <StorefrontIcon size={22} color={BRAND_GREEN} />,
   },
   {
     key: 'coins',
@@ -37,7 +38,7 @@ const TRUST_HIGHLIGHTS = [
     title: 'Order via Parchi',
     subtitle: 'Upload handwritten list in 1 tap',
     icon: (
-      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={BRAND} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={PARCHI_RED} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
         <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
         <polyline points="14 2 14 8 20 8" />
         <line x1="16" y1="13" x2="8" y2="13" />
@@ -48,8 +49,23 @@ const TRUST_HIGHLIGHTS = [
   },
 ];
 
-export default function HomeFooter({ endMessage = "You're all caught up", signInNudge = null }) {
-  const [activeModal, setActiveModal] = useState(null); // 'privacy' | 'terms' | 'refund' | 'faq' | 'support'
+export default function HomeFooter({ signInNudge = null }) {
+  const [activeModal, setActiveModal] = useState(null); // 'privacy' | 'terms' | 'refund' | 'faq'
+  
+  // Accordion state: all 4 link sections are collapsed by default
+  const [expandedSections, setExpandedSections] = useState({
+    shop: false,
+    account: false,
+    dukaan: false,
+    help: false,
+  });
+
+  const toggleSection = (key) => {
+    setExpandedSections(prev => ({
+      ...prev,
+      [key]: !prev[key],
+    }));
+  };
 
   const scrollTop = () => {
     if (typeof window !== 'undefined') {
@@ -68,47 +84,23 @@ export default function HomeFooter({ endMessage = "You're all caught up", signIn
   };
 
   const handleOpenWhatsAppSupport = () => {
-    const text = encodeURIComponent('Namaste PackItOut team! I have a question about my orders / shopping on PackItOut.');
+    const text = encodeURIComponent('Namaste PackItOut team! I have a question about shopping / orders on PackItOut.');
     window.open(`https://wa.me/919999999999?text=${text}`, '_blank', 'noopener,noreferrer');
   };
 
   return (
-    <footer style={{ background: '#f3f4f6', padding: '10px 14px 125px', fontFamily: 'system-ui, -apple-system, sans-serif' }}>
-      
-      {/* 1. END OF FEED DIVIDER */}
-      <div style={{
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        gap: '12px',
-        padding: '16px 0 22px',
-        color: '#94a3b8',
-        fontSize: '0.74rem',
-        fontWeight: 800,
-        letterSpacing: '0.6px',
-        textTransform: 'uppercase',
-      }}>
-        <span style={{ flex: 1, height: '1px', background: 'linear-gradient(to right, transparent, #cbd5e1)' }} />
-        <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
-          <svg width="14" height="14" viewBox="0 0 24 24" fill={BRAND} aria-hidden="true">
-            <path d="M12 2l2.9 6.6 7.1.6-5.4 4.7 1.7 7-6.3-3.9-6.3 3.9 1.7-7L2 9.2l7.1-.6L12 2z" />
-          </svg>
-          {endMessage}
-        </span>
-        <span style={{ flex: 1, height: '1px', background: 'linear-gradient(to left, transparent, #cbd5e1)' }} />
-      </div>
+    <footer style={{
+      background: '#ffffff',
+      borderTop: '2px solid #e2e8f0',
+      width: '100%',
+      padding: '24px 16px 130px',
+      boxSizing: 'border-box',
+      fontFamily: 'system-ui, -apple-system, sans-serif',
+      marginTop: '10px',
+    }}>
+      <div style={{ maxWidth: '1000px', margin: '0 auto' }}>
 
-      {/* 2. MAIN FOOTER CARD */}
-      <div style={{
-        background: '#ffffff',
-        borderRadius: '24px',
-        padding: '28px 20px 22px',
-        border: '1px solid #e2e8f0',
-        boxShadow: '0 10px 30px rgba(15,23,42,0.06)',
-        boxSizing: 'border-box',
-      }}>
-
-        {/* TOP STRIP: APP LOGO + BRAND IDENTITY + BACK TO TOP */}
+        {/* TOP STRIP: APP LOGO + CUSTOM BRAND COLORING (Pack[green] It[black] Out[red]) + BACK TO TOP */}
         <div style={{
           display: 'flex',
           justifyContent: 'space-between',
@@ -116,17 +108,17 @@ export default function HomeFooter({ endMessage = "You're all caught up", signIn
           flexWrap: 'wrap',
           gap: '14px',
           borderBottom: '1px solid #f1f5f9',
-          paddingBottom: '20px',
+          paddingBottom: '18px',
           marginBottom: '20px',
         }}>
-          {/* Logo & Tagline */}
+          {/* Logo & Custom Wordmark */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
             <div style={{
-              width: '52px',
-              height: '52px',
-              borderRadius: '16px',
+              width: '50px',
+              height: '50px',
+              borderRadius: '14px',
               overflow: 'hidden',
-              boxShadow: '0 8px 18px rgba(22,163,74,0.28)',
+              boxShadow: '0 6px 16px rgba(22,163,74,0.22)',
               border: '2px solid #bbf7d0',
               background: '#fff',
               flexShrink: 0,
@@ -139,36 +131,21 @@ export default function HomeFooter({ endMessage = "You're all caught up", signIn
                 alt="PackItOut Logo"
                 style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                 onError={(e) => {
-                  // Fallback to Storefront icon if image fails to load
                   e.currentTarget.style.display = 'none';
                 }}
               />
             </div>
 
             <div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <span style={{
-                  fontSize: '1.45rem',
-                  fontWeight: 900,
-                  letterSpacing: '-0.5px',
-                  color: '#0f172a',
-                }}>
-                  Pack<span style={{ color: BRAND }}>It</span>Out
-                </span>
-                <span style={{
-                  background: '#dcfce7',
-                  color: '#15803d',
-                  padding: '2px 8px',
-                  borderRadius: '999px',
-                  fontSize: '0.65rem',
-                  fontWeight: 900,
-                  letterSpacing: '0.4px',
-                  textTransform: 'uppercase',
-                }}>
-                  Official
+              {/* Wordmark: Pack (Green) It (Black) Out (Red) - OFFICIAL removed */}
+              <div style={{ display: 'flex', alignItems: 'center' }}>
+                <span style={{ fontSize: '1.55rem', fontWeight: 900, letterSpacing: '-0.5px', lineHeight: 1.1 }}>
+                  <span style={{ color: BRAND_GREEN }}>Pack</span>
+                  <span style={{ color: BRAND_BLACK }}>It</span>
+                  <span style={{ color: PARCHI_RED }}>Out</span>
                 </span>
               </div>
-              <div style={{ fontSize: '0.78rem', color: '#64748b', fontWeight: 600, marginTop: '2px' }}>
+              <div style={{ fontSize: '0.78rem', color: '#64748b', fontWeight: 600, marginTop: '3px' }}>
                 Aapka Digital Kirana & Local Shopping Partner
               </div>
             </div>
@@ -201,21 +178,21 @@ export default function HomeFooter({ endMessage = "You're all caught up", signIn
           </button>
         </div>
 
-        {/* 3. TRUST HIGHLIGHT PILLS */}
+        {/* TRUST HIGHLIGHTS ROW */}
         <div style={{
           display: 'grid',
           gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))',
           gap: '10px',
-          marginBottom: '24px',
+          marginBottom: '22px',
         }}>
           {TRUST_HIGHLIGHTS.map(b => (
             <div
               key={b.key}
               style={{
                 padding: '12px 10px',
-                background: '#f0fdf4',
-                border: '1px solid #dcfce7',
-                borderRadius: '16px',
+                background: '#f8fafc',
+                border: '1px solid #e2e8f0',
+                borderRadius: '14px',
                 display: 'flex',
                 flexDirection: 'column',
                 alignItems: 'center',
@@ -231,7 +208,8 @@ export default function HomeFooter({ endMessage = "You're all caught up", signIn
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                boxShadow: '0 2px 6px rgba(22,163,74,0.12)',
+                boxShadow: '0 2px 6px rgba(0,0,0,0.06)',
+                border: '1px solid #e2e8f0',
               }}>
                 {b.icon}
               </div>
@@ -248,14 +226,14 @@ export default function HomeFooter({ endMessage = "You're all caught up", signIn
         {/* Sign In Nudge for Guests */}
         {signInNudge && (
           <div style={{
-            padding: '14px 16px',
+            padding: '12px 16px',
             background: 'linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%)',
             border: '1.5px solid #86efac',
-            borderRadius: '16px',
+            borderRadius: '14px',
             color: '#065f46',
             fontSize: '0.84rem',
             fontWeight: 800,
-            marginBottom: '22px',
+            marginBottom: '20px',
             display: 'flex',
             justifyContent: 'space-between',
             alignItems: 'center',
@@ -268,7 +246,7 @@ export default function HomeFooter({ endMessage = "You're all caught up", signIn
               onClick={() => handleNav('#account')}
               style={{
                 padding: '6px 14px',
-                background: BRAND,
+                background: BRAND_GREEN,
                 color: '#fff',
                 border: 'none',
                 borderRadius: '8px',
@@ -282,233 +260,399 @@ export default function HomeFooter({ endMessage = "You're all caught up", signIn
           </div>
         )}
 
-        {/* 4. MULTI-COLUMN NAVIGATION LINKS (Like Top E-Commerce Apps) */}
+        {/* COLLAPSIBLE / ACCORDION LINK SECTIONS (Hidden until expanded) */}
         <div style={{
           display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))',
-          gap: '20px 16px',
-          marginBottom: '26px',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
+          gap: '10px',
+          marginBottom: '24px',
         }}>
-          {/* COLUMN 1: SHOP & EXPLORE */}
-          <div>
-            <div style={{ fontSize: '0.78rem', fontWeight: 900, color: '#0f172a', textTransform: 'uppercase', letterSpacing: '0.6px', marginBottom: '10px', display: 'flex', alignItems: 'center', gap: '5px' }}>
-              <span>🛍️</span> Shop & Explore
-            </div>
-            <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '8px' }}>
-              <li>
-                <button
-                  type="button"
-                  onClick={() => handleNav('#nearby')}
-                  style={{ background: 'none', border: 'none', padding: 0, color: '#475569', fontSize: '0.82rem', fontWeight: 600, cursor: 'pointer', textAlign: 'left' }}
-                >
-                  🏪 Nearby Stores
-                </button>
-              </li>
-              <li>
-                <button
-                  type="button"
-                  onClick={() => handleNav('#cart')}
-                  style={{ background: 'none', border: 'none', padding: 0, color: '#475569', fontSize: '0.82rem', fontWeight: 600, cursor: 'pointer', textAlign: 'left' }}
-                >
-                  🛒 Shopping Cart
-                </button>
-              </li>
-              <li>
-                <button
-                  type="button"
-                  onClick={() => handleNav('#baskets')}
-                  style={{ background: 'none', border: 'none', padding: 0, color: '#475569', fontSize: '0.82rem', fontWeight: 600, cursor: 'pointer', textAlign: 'left' }}
-                >
-                  🧺 Shared Baskets
-                </button>
-              </li>
-              <li>
-                <button
-                  type="button"
-                  onClick={scrollTop}
-                  style={{ background: 'none', border: 'none', padding: 0, color: '#475569', fontSize: '0.82rem', fontWeight: 600, cursor: 'pointer', textAlign: 'left' }}
-                >
-                  📝 Upload Parchi / List
-                </button>
-              </li>
-              <li>
-                <button
-                  type="button"
-                  onClick={scrollTop}
-                  style={{ background: 'none', border: 'none', padding: 0, color: '#475569', fontSize: '0.82rem', fontWeight: 600, cursor: 'pointer', textAlign: 'left' }}
-                >
-                  🏷️ Deals & Combos
-                </button>
-              </li>
-            </ul>
+
+          {/* 1. SHOP & EXPLORE ACCORDION */}
+          <div style={{
+            background: '#f8fafc',
+            border: '1px solid #e2e8f0',
+            borderRadius: '14px',
+            overflow: 'hidden',
+          }}>
+            <button
+              type="button"
+              onClick={() => toggleSection('shop')}
+              style={{
+                width: '100%',
+                padding: '14px 16px',
+                background: 'transparent',
+                border: 'none',
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                cursor: 'pointer',
+                textAlign: 'left',
+              }}
+            >
+              <span style={{ fontSize: '0.88rem', fontWeight: 900, color: '#0f172a', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <span>🛍️</span> Shop & Explore
+              </span>
+              <svg
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="#64748b"
+                strokeWidth="2.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                style={{
+                  transform: expandedSections.shop ? 'rotate(180deg)' : 'rotate(0deg)',
+                  transition: 'transform 0.2s ease',
+                  flexShrink: 0,
+                }}
+              >
+                <polyline points="6 9 12 15 18 9" />
+              </svg>
+            </button>
+
+            {expandedSections.shop && (
+              <div style={{ padding: '0 16px 14px', borderTop: '1px solid #e2e8f0', paddingTop: '10px' }}>
+                <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                  <li>
+                    <button
+                      type="button"
+                      onClick={() => handleNav('#nearby')}
+                      style={{ background: 'none', border: 'none', padding: 0, color: '#475569', fontSize: '0.84rem', fontWeight: 600, cursor: 'pointer', textAlign: 'left' }}
+                    >
+                      🏪 Nearby Stores
+                    </button>
+                  </li>
+                  <li>
+                    <button
+                      type="button"
+                      onClick={() => handleNav('#cart')}
+                      style={{ background: 'none', border: 'none', padding: 0, color: '#475569', fontSize: '0.84rem', fontWeight: 600, cursor: 'pointer', textAlign: 'left' }}
+                    >
+                      🛒 Shopping Cart
+                    </button>
+                  </li>
+                  <li>
+                    <button
+                      type="button"
+                      onClick={() => handleNav('#baskets')}
+                      style={{ background: 'none', border: 'none', padding: 0, color: '#475569', fontSize: '0.84rem', fontWeight: 600, cursor: 'pointer', textAlign: 'left' }}
+                    >
+                      🧺 Shared Baskets
+                    </button>
+                  </li>
+                  <li>
+                    <button
+                      type="button"
+                      onClick={scrollTop}
+                      style={{ background: 'none', border: 'none', padding: 0, color: '#475569', fontSize: '0.84rem', fontWeight: 600, cursor: 'pointer', textAlign: 'left' }}
+                    >
+                      📝 Upload Parchi / List
+                    </button>
+                  </li>
+                  <li>
+                    <button
+                      type="button"
+                      onClick={scrollTop}
+                      style={{ background: 'none', border: 'none', padding: 0, color: '#475569', fontSize: '0.84rem', fontWeight: 600, cursor: 'pointer', textAlign: 'left' }}
+                    >
+                      🏷️ Deals & Combos
+                    </button>
+                  </li>
+                </ul>
+              </div>
+            )}
           </div>
 
-          {/* COLUMN 2: CUSTOMER ACCOUNT */}
-          <div>
-            <div style={{ fontSize: '0.78rem', fontWeight: 900, color: '#0f172a', textTransform: 'uppercase', letterSpacing: '0.6px', marginBottom: '10px', display: 'flex', alignItems: 'center', gap: '5px' }}>
-              <span>👤</span> My Account
-            </div>
-            <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '8px' }}>
-              <li>
-                <button
-                  type="button"
-                  onClick={() => handleNav('#account')}
-                  style={{ background: 'none', border: 'none', padding: 0, color: '#475569', fontSize: '0.82rem', fontWeight: 600, cursor: 'pointer', textAlign: 'left' }}
-                >
-                  👤 Profile & Addresses
-                </button>
-              </li>
-              <li>
-                <button
-                  type="button"
-                  onClick={() => handleNav('#orders')}
-                  style={{ background: 'none', border: 'none', padding: 0, color: '#475569', fontSize: '0.82rem', fontWeight: 600, cursor: 'pointer', textAlign: 'left' }}
-                >
-                  📦 Order History & Status
-                </button>
-              </li>
-              <li>
-                <button
-                  type="button"
-                  onClick={() => handleNav('#account')}
-                  style={{ background: 'none', border: 'none', padding: 0, color: '#475569', fontSize: '0.82rem', fontWeight: 600, cursor: 'pointer', textAlign: 'left' }}
-                >
-                  🪙 Loyalty Coins Wallet
-                </button>
-              </li>
-              <li>
-                <button
-                  type="button"
-                  onClick={() => handleNav('#account')}
-                  style={{ background: 'none', border: 'none', padding: 0, color: '#475569', fontSize: '0.82rem', fontWeight: 600, cursor: 'pointer', textAlign: 'left' }}
-                >
-                  🎁 Refer & Earn Rewards
-                </button>
-              </li>
-            </ul>
+          {/* 2. MY ACCOUNT ACCORDION */}
+          <div style={{
+            background: '#f8fafc',
+            border: '1px solid #e2e8f0',
+            borderRadius: '14px',
+            overflow: 'hidden',
+          }}>
+            <button
+              type="button"
+              onClick={() => toggleSection('account')}
+              style={{
+                width: '100%',
+                padding: '14px 16px',
+                background: 'transparent',
+                border: 'none',
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                cursor: 'pointer',
+                textAlign: 'left',
+              }}
+            >
+              <span style={{ fontSize: '0.88rem', fontWeight: 900, color: '#0f172a', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <span>👤</span> My Account
+              </span>
+              <svg
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="#64748b"
+                strokeWidth="2.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                style={{
+                  transform: expandedSections.account ? 'rotate(180deg)' : 'rotate(0deg)',
+                  transition: 'transform 0.2s ease',
+                  flexShrink: 0,
+                }}
+              >
+                <polyline points="6 9 12 15 18 9" />
+              </svg>
+            </button>
+
+            {expandedSections.account && (
+              <div style={{ padding: '0 16px 14px', borderTop: '1px solid #e2e8f0', paddingTop: '10px' }}>
+                <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                  <li>
+                    <button
+                      type="button"
+                      onClick={() => handleNav('#account')}
+                      style={{ background: 'none', border: 'none', padding: 0, color: '#475569', fontSize: '0.84rem', fontWeight: 600, cursor: 'pointer', textAlign: 'left' }}
+                    >
+                      👤 Profile & Addresses
+                    </button>
+                  </li>
+                  <li>
+                    <button
+                      type="button"
+                      onClick={() => handleNav('#orders')}
+                      style={{ background: 'none', border: 'none', padding: 0, color: '#475569', fontSize: '0.84rem', fontWeight: 600, cursor: 'pointer', textAlign: 'left' }}
+                    >
+                      📦 Order History & Status
+                    </button>
+                  </li>
+                  <li>
+                    <button
+                      type="button"
+                      onClick={() => handleNav('#account')}
+                      style={{ background: 'none', border: 'none', padding: 0, color: '#475569', fontSize: '0.84rem', fontWeight: 600, cursor: 'pointer', textAlign: 'left' }}
+                    >
+                      🪙 Loyalty Coins Wallet
+                    </button>
+                  </li>
+                  <li>
+                    <button
+                      type="button"
+                      onClick={() => handleNav('#account')}
+                      style={{ background: 'none', border: 'none', padding: 0, color: '#475569', fontSize: '0.84rem', fontWeight: 600, cursor: 'pointer', textAlign: 'left' }}
+                    >
+                      🎁 Refer & Earn Rewards
+                    </button>
+                  </li>
+                </ul>
+              </div>
+            )}
           </div>
 
-          {/* COLUMN 3: FOR SHOPKEEPERS & PARTNERS */}
-          <div>
-            <div style={{ fontSize: '0.78rem', fontWeight: 900, color: '#0f172a', textTransform: 'uppercase', letterSpacing: '0.6px', marginBottom: '10px', display: 'flex', alignItems: 'center', gap: '5px' }}>
-              <span>🏪</span> For Dukaan
-            </div>
-            <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '8px' }}>
-              <li>
-                <button
-                  type="button"
-                  onClick={() => handleNav('#shop')}
-                  style={{ background: 'none', border: 'none', padding: 0, color: '#475569', fontSize: '0.82rem', fontWeight: 600, cursor: 'pointer', textAlign: 'left' }}
-                >
-                  🏪 Shop Owner Login
-                </button>
-              </li>
-              <li>
-                <button
-                  type="button"
-                  onClick={() => handleNav('#shop')}
-                  style={{ background: 'none', border: 'none', padding: 0, color: '#475569', fontSize: '0.82rem', fontWeight: 600, cursor: 'pointer', textAlign: 'left' }}
-                >
-                  ⚡ Counter POS Billing
-                </button>
-              </li>
-              <li>
-                <button
-                  type="button"
-                  onClick={() => handleNav('#shop')}
-                  style={{ background: 'none', border: 'none', padding: 0, color: '#475569', fontSize: '0.82rem', fontWeight: 600, cursor: 'pointer', textAlign: 'left' }}
-                >
-                  📈 Sell Online with Us
-                </button>
-              </li>
-              <li>
-                <button
-                  type="button"
-                  onClick={() => handleNav('#admin')}
-                  style={{ background: 'none', border: 'none', padding: 0, color: '#64748b', fontSize: '0.78rem', fontWeight: 600, cursor: 'pointer', textAlign: 'left' }}
-                >
-                  👨‍💼 Admin Portal
-                </button>
-              </li>
-            </ul>
+          {/* 3. FOR DUKAAN ACCORDION (Admin Panel removed) */}
+          <div style={{
+            background: '#f8fafc',
+            border: '1px solid #e2e8f0',
+            borderRadius: '14px',
+            overflow: 'hidden',
+          }}>
+            <button
+              type="button"
+              onClick={() => toggleSection('dukaan')}
+              style={{
+                width: '100%',
+                padding: '14px 16px',
+                background: 'transparent',
+                border: 'none',
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                cursor: 'pointer',
+                textAlign: 'left',
+              }}
+            >
+              <span style={{ fontSize: '0.88rem', fontWeight: 900, color: '#0f172a', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <span>🏪</span> For Dukaan
+              </span>
+              <svg
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="#64748b"
+                strokeWidth="2.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                style={{
+                  transform: expandedSections.dukaan ? 'rotate(180deg)' : 'rotate(0deg)',
+                  transition: 'transform 0.2s ease',
+                  flexShrink: 0,
+                }}
+              >
+                <polyline points="6 9 12 15 18 9" />
+              </svg>
+            </button>
+
+            {expandedSections.dukaan && (
+              <div style={{ padding: '0 16px 14px', borderTop: '1px solid #e2e8f0', paddingTop: '10px' }}>
+                <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                  <li>
+                    <button
+                      type="button"
+                      onClick={() => handleNav('#shop')}
+                      style={{ background: 'none', border: 'none', padding: 0, color: '#475569', fontSize: '0.84rem', fontWeight: 600, cursor: 'pointer', textAlign: 'left' }}
+                    >
+                      🏪 Shop Owner Login
+                    </button>
+                  </li>
+                  <li>
+                    <button
+                      type="button"
+                      onClick={() => handleNav('#shop')}
+                      style={{ background: 'none', border: 'none', padding: 0, color: '#475569', fontSize: '0.84rem', fontWeight: 600, cursor: 'pointer', textAlign: 'left' }}
+                    >
+                      ⚡ Counter POS Billing
+                    </button>
+                  </li>
+                  <li>
+                    <button
+                      type="button"
+                      onClick={() => handleNav('#shop')}
+                      style={{ background: 'none', border: 'none', padding: 0, color: '#475569', fontSize: '0.84rem', fontWeight: 600, cursor: 'pointer', textAlign: 'left' }}
+                    >
+                      📈 Sell Online with PackItOut
+                    </button>
+                  </li>
+                </ul>
+              </div>
+            )}
           </div>
 
-          {/* COLUMN 4: HELP & LEGAL POLICIES */}
-          <div>
-            <div style={{ fontSize: '0.78rem', fontWeight: 900, color: '#0f172a', textTransform: 'uppercase', letterSpacing: '0.6px', marginBottom: '10px', display: 'flex', alignItems: 'center', gap: '5px' }}>
-              <span>🛡️</span> Help & Legal
-            </div>
-            <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '8px' }}>
-              <li>
-                <button
-                  type="button"
-                  onClick={handleOpenWhatsAppSupport}
-                  style={{ background: 'none', border: 'none', padding: 0, color: '#16a34a', fontSize: '0.82rem', fontWeight: 700, cursor: 'pointer', textAlign: 'left' }}
-                >
-                  💬 WhatsApp Support
-                </button>
-              </li>
-              <li>
-                <button
-                  type="button"
-                  onClick={() => setActiveModal('faq')}
-                  style={{ background: 'none', border: 'none', padding: 0, color: '#475569', fontSize: '0.82rem', fontWeight: 600, cursor: 'pointer', textAlign: 'left' }}
-                >
-                  ❓ FAQs & How It Works
-                </button>
-              </li>
-              <li>
-                <button
-                  type="button"
-                  onClick={() => setActiveModal('privacy')}
-                  style={{ background: 'none', border: 'none', padding: 0, color: '#475569', fontSize: '0.82rem', fontWeight: 600, cursor: 'pointer', textAlign: 'left' }}
-                >
-                  🔒 Privacy Policy
-                </button>
-              </li>
-              <li>
-                <button
-                  type="button"
-                  onClick={() => setActiveModal('terms')}
-                  style={{ background: 'none', border: 'none', padding: 0, color: '#475569', fontSize: '0.82rem', fontWeight: 600, cursor: 'pointer', textAlign: 'left' }}
-                >
-                  📜 Terms & Conditions
-                </button>
-              </li>
-              <li>
-                <button
-                  type="button"
-                  onClick={() => setActiveModal('refund')}
-                  style={{ background: 'none', border: 'none', padding: 0, color: '#475569', fontSize: '0.82rem', fontWeight: 600, cursor: 'pointer', textAlign: 'left' }}
-                >
-                  🔄 Refund & Cancellation
-                </button>
-              </li>
-            </ul>
+          {/* 4. HELP & LEGAL ACCORDION */}
+          <div style={{
+            background: '#f8fafc',
+            border: '1px solid #e2e8f0',
+            borderRadius: '14px',
+            overflow: 'hidden',
+          }}>
+            <button
+              type="button"
+              onClick={() => toggleSection('help')}
+              style={{
+                width: '100%',
+                padding: '14px 16px',
+                background: 'transparent',
+                border: 'none',
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                cursor: 'pointer',
+                textAlign: 'left',
+              }}
+            >
+              <span style={{ fontSize: '0.88rem', fontWeight: 900, color: '#0f172a', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <span>🛡️</span> Help & Legal
+              </span>
+              <svg
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="#64748b"
+                strokeWidth="2.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                style={{
+                  transform: expandedSections.help ? 'rotate(180deg)' : 'rotate(0deg)',
+                  transition: 'transform 0.2s ease',
+                  flexShrink: 0,
+                }}
+              >
+                <polyline points="6 9 12 15 18 9" />
+              </svg>
+            </button>
+
+            {expandedSections.help && (
+              <div style={{ padding: '0 16px 14px', borderTop: '1px solid #e2e8f0', paddingTop: '10px' }}>
+                <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                  <li>
+                    <button
+                      type="button"
+                      onClick={handleOpenWhatsAppSupport}
+                      style={{ background: 'none', border: 'none', padding: 0, color: BRAND_GREEN, fontSize: '0.84rem', fontWeight: 700, cursor: 'pointer', textAlign: 'left' }}
+                    >
+                      💬 WhatsApp Support
+                    </button>
+                  </li>
+                  <li>
+                    <button
+                      type="button"
+                      onClick={() => setActiveModal('faq')}
+                      style={{ background: 'none', border: 'none', padding: 0, color: '#475569', fontSize: '0.84rem', fontWeight: 600, cursor: 'pointer', textAlign: 'left' }}
+                    >
+                      ❓ FAQs & How It Works
+                    </button>
+                  </li>
+                  <li>
+                    <button
+                      type="button"
+                      onClick={() => setActiveModal('privacy')}
+                      style={{ background: 'none', border: 'none', padding: 0, color: '#475569', fontSize: '0.84rem', fontWeight: 600, cursor: 'pointer', textAlign: 'left' }}
+                    >
+                      🔒 Privacy Policy
+                    </button>
+                  </li>
+                  <li>
+                    <button
+                      type="button"
+                      onClick={() => setActiveModal('terms')}
+                      style={{ background: 'none', border: 'none', padding: 0, color: '#475569', fontSize: '0.84rem', fontWeight: 600, cursor: 'pointer', textAlign: 'left' }}
+                    >
+                      📜 Terms & Conditions
+                    </button>
+                  </li>
+                  <li>
+                    <button
+                      type="button"
+                      onClick={() => setActiveModal('refund')}
+                      style={{ background: 'none', border: 'none', padding: 0, color: '#475569', fontSize: '0.84rem', fontWeight: 600, cursor: 'pointer', textAlign: 'left' }}
+                    >
+                      🔄 Refund & Cancellation
+                    </button>
+                  </li>
+                </ul>
+              </div>
+            )}
           </div>
+
         </div>
 
-        {/* 5. APP INSTALL & HIGHLIGHT BANNER */}
+        {/* 5. APP INSTALL BANNER (Non-Black Emerald Gradient) */}
         <div style={{
-          background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)',
+          background: 'linear-gradient(135deg, #15803d 0%, #16a34a 55%, #22c55e 100%)',
           borderRadius: '16px',
-          padding: '16px 18px',
-          color: '#fff',
+          padding: '16px 20px',
+          color: '#ffffff',
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
           flexWrap: 'wrap',
           gap: '12px',
-          marginBottom: '20px',
+          marginBottom: '22px',
+          boxShadow: '0 6px 20px rgba(22, 163, 74, 0.28)',
         }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <span style={{ fontSize: '1.8rem' }}>📲</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <span style={{ fontSize: '2rem' }}>📱</span>
             <div>
-              <div style={{ fontWeight: 900, fontSize: '0.92rem', color: '#34d399' }}>
+              <div style={{ fontWeight: 900, fontSize: '0.96rem', color: '#ffffff' }}>
                 PackItOut Fast Web App
               </div>
-              <div style={{ fontSize: '0.74rem', color: '#cbd5e1', marginTop: '2px' }}>
-                Add to your home screen for 1-tap reordering & real-time order alerts.
+              <div style={{ fontSize: '0.78rem', color: '#dcfce7', marginTop: '2px', fontWeight: 600 }}>
+                Install on your phone for instant reorders & real-time updates!
               </div>
             </div>
           </div>
@@ -521,39 +665,48 @@ export default function HomeFooter({ endMessage = "You're all caught up", signIn
               }
             }}
             style={{
-              padding: '8px 14px',
+              padding: '9px 18px',
               borderRadius: '10px',
               border: 'none',
-              background: 'linear-gradient(135deg, #16a34a 0%, #15803d 100%)',
-              color: '#fff',
-              fontWeight: 800,
-              fontSize: '0.8rem',
+              background: '#ffffff',
+              color: '#15803d',
+              fontWeight: 900,
+              fontSize: '0.82rem',
               cursor: 'pointer',
-              boxShadow: '0 4px 12px rgba(22, 163, 74, 0.35)',
+              boxShadow: '0 3px 10px rgba(0,0,0,0.12)',
             }}
           >
             Install App ⚡
           </button>
         </div>
 
-        {/* 6. COPYRIGHT & BHARAT BADGE */}
+        {/* 6. COPYRIGHT & PROMINENT BHARAT PRIDE TEXT (Bigger Font) */}
         <div style={{
           borderTop: '1px solid #f1f5f9',
-          paddingTop: '16px',
+          paddingTop: '18px',
           display: 'flex',
-          justifyContent: 'space-between',
+          flexDirection: 'column',
           alignItems: 'center',
-          flexWrap: 'wrap',
+          justifyContent: 'center',
           gap: '8px',
-          fontSize: '0.72rem',
-          color: '#94a3b8',
-          fontWeight: 600,
+          textAlign: 'center',
         }}>
-          <div>
-            © {new Date().getFullYear()} <strong>PackItOut</strong> Technologies Pvt. Ltd. All rights reserved.
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '4px', color: '#64748b', fontWeight: 700 }}>
+          {/* Prominent, Bigger Font Bharat Pride text as requested */}
+          <div style={{
+            fontSize: '0.95rem',
+            color: '#1e293b',
+            fontWeight: 800,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '6px',
+            flexWrap: 'wrap',
+          }}>
             <span>Made with ❤️ for Indian Local Dukaan & Smart Shoppers 🇮🇳</span>
+          </div>
+
+          <div style={{ fontSize: '0.75rem', color: '#94a3b8', fontWeight: 600 }}>
+            © {new Date().getFullYear()} <strong>PackItOut</strong> Technologies Pvt. Ltd. All rights reserved.
           </div>
         </div>
 
