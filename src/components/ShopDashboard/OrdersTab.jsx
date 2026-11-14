@@ -7,6 +7,7 @@ import ChatIcon from '../../ui/ChatIcon.jsx';
 import { shopFetch } from '../../utils/api.js';
 import { useToast } from '../../ui/DialogProvider.jsx';
 import { buildShopToCustomerWhatsApp, openWhatsAppChat } from '../../utils/whatsappShare.js';
+import { sendBillToCustomerWhatsApp, createReceiptPdfFile, downloadFileBlob } from '../../utils/billReceiptGenerator.js';
 
 const formatArrivedAgo = (isoDate) => {
   if (!isoDate) return '';
@@ -258,8 +259,7 @@ export default function OrdersTab({ orders, updateOrderStatus, markOrderPaid, sh
                 <button
                   type="button"
                   onClick={() => {
-                    const msg = buildShopToCustomerWhatsApp(order, shopData, 'bill');
-                    openWhatsAppChat(order.userId.phone, msg);
+                    sendBillToCustomerWhatsApp(order, shopData, { format: 'image', toast });
                   }}
                   style={{
                     padding: '5px 10px',
@@ -274,10 +274,40 @@ export default function OrdersTab({ orders, updateOrderStatus, markOrderPaid, sh
                     alignItems: 'center',
                     gap: '4px',
                   }}
-                  title="Send itemized digital bill to customer on WhatsApp"
+                  title="Send Bill Image with Storefront link on WhatsApp"
                 >
                   <span>🧾</span>
-                  <span>WhatsApp Bill</span>
+                  <span>WhatsApp Bill Image</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={async () => {
+                    try {
+                      toast('Generating PDF bill…', 'info');
+                      const pdfRes = await createReceiptPdfFile(order, shopData);
+                      downloadFileBlob(pdfRes.blob, pdfRes.filename);
+                      toast('📄 PDF Bill Downloaded!');
+                    } catch {
+                      toast('Could not generate PDF bill', 'error');
+                    }
+                  }}
+                  style={{
+                    padding: '5px 8px',
+                    backgroundColor: '#eff6ff',
+                    color: '#1d4ed8',
+                    border: '1px solid #93c5fd',
+                    borderRadius: '8px',
+                    fontSize: '0.74rem',
+                    fontWeight: 800,
+                    cursor: 'pointer',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '3px',
+                  }}
+                  title="Download PDF Bill"
+                >
+                  <span>📄</span>
+                  <span>PDF</span>
                 </button>
                 {isActive && (
                   <button

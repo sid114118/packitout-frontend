@@ -3,6 +3,7 @@ import { BASE_URL } from './utils/api.js';
 import { cdnImage } from './utils/cloudinaryUrl.js';
 import { useToast } from './ui/DialogProvider.jsx';
 import { toWhatsAppPhone } from './utils/whatsappShare.js';
+import { createReceiptPdfFile, downloadFileBlob } from './utils/billReceiptGenerator.js';
 
 export default function PosBillView({ orderId, onSetCartAndGo, onGoToShopStore }) {
   const toast = useToast();
@@ -191,6 +192,30 @@ export default function PosBillView({ orderId, onSetCartAndGo, onGoToShopStore }
               {copiedLink ? '✓ Copied' : '🔗 Share'}
             </button>
             <button
+              onClick={async () => {
+                try {
+                  toast('Generating PDF bill…', 'info');
+                  const pdfRes = await createReceiptPdfFile(bill, bill.shop);
+                  downloadFileBlob(pdfRes.blob, pdfRes.filename);
+                  toast('📄 PDF Bill Downloaded!');
+                } catch {
+                  window.print();
+                }
+              }}
+              style={{
+                background: 'rgba(255,255,255,0.12)',
+                color: '#fff',
+                border: '1px solid rgba(255,255,255,0.22)',
+                padding: '8px 12px',
+                borderRadius: '10px',
+                fontWeight: 800,
+                fontSize: '0.82rem',
+                cursor: 'pointer',
+              }}
+            >
+              📄 PDF Bill
+            </button>
+            <button
               onClick={() => window.print()}
               style={{
                 background: 'rgba(255,255,255,0.12)',
@@ -203,7 +228,7 @@ export default function PosBillView({ orderId, onSetCartAndGo, onGoToShopStore }
                 cursor: 'pointer',
               }}
             >
-              🖨️ PDF / Print
+              🖨️ Print
             </button>
           </div>
         </div>

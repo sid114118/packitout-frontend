@@ -8,6 +8,12 @@ import {
   getPublicBillUrl,
   getShopStorefrontUrl,
 } from '../../utils/whatsappShare.js';
+import {
+  sendBillToCustomerWhatsApp,
+  createReceiptPdfFile,
+  createReceiptImageFile,
+  downloadFileBlob,
+} from '../../utils/billReceiptGenerator.js';
 
 const LOOSE_PRESETS = [
   { label: '🍬 Sugar (Chini)', name: 'Loose Sugar (Chini)', qnty: '1 kg', emoji: '🍬', defaultPrice: 44 },
@@ -590,14 +596,7 @@ export default function CounterPosTab({
       }
 
       if (sendWhatsApp && cleanPhone) {
-        const msg = buildPosCounterBillWhatsApp(createdOrder, shopData, {
-          customerName: createdOrder.customerName,
-          savingsAmount: createdOrder.savingsAmount,
-          discountAmount: createdOrder.discountAmount,
-          coinsEarned: data.coinsEarned,
-          totalCoins: data.customer?.coins,
-        });
-        openWhatsAppChat(cleanPhone, msg);
+        sendBillToCustomerWhatsApp(createdOrder, shopData, { format: 'image', toast });
       }
     } catch {
       toast('Network error while saving counter bill', 'error');
@@ -789,11 +788,7 @@ export default function CounterPosTab({
             <button
               type="button"
               onClick={() => {
-                const msg = buildPosCounterBillWhatsApp(lastCompletedBill.order, shopData, {
-                  coinsEarned: lastCompletedBill.coinsEarned,
-                  totalCoins: lastCompletedBill.customer?.coins,
-                });
-                openWhatsAppChat(lastCompletedBill.order.customerPhone, msg);
+                sendBillToCustomerWhatsApp(lastCompletedBill.order, shopData, { format: 'image', toast });
               }}
               style={{
                 padding: '8px 14px',
@@ -807,7 +802,32 @@ export default function CounterPosTab({
                 boxShadow: '0 2px 8px rgba(22, 163, 74, 0.25)',
               }}
             >
-              📲 Send WhatsApp + Store Link
+              📲 WhatsApp Bill Image + Link
+            </button>
+            <button
+              type="button"
+              onClick={async () => {
+                try {
+                  toast('Generating PDF bill…', 'info');
+                  const pdfRes = await createReceiptPdfFile(lastCompletedBill.order, shopData);
+                  downloadFileBlob(pdfRes.blob, pdfRes.filename);
+                  toast('📄 PDF Bill Downloaded!');
+                } catch {
+                  toast('Could not generate PDF bill', 'error');
+                }
+              }}
+              style={{
+                padding: '8px 12px',
+                background: '#eff6ff',
+                color: '#1d4ed8',
+                border: '1px solid #93c5fd',
+                borderRadius: '10px',
+                fontWeight: 800,
+                fontSize: '0.82rem',
+                cursor: 'pointer',
+              }}
+            >
+              📄 Download PDF
             </button>
             <button
               type="button"
@@ -1745,12 +1765,28 @@ export default function CounterPosTab({
                     <button
                       type="button"
                       onClick={() => {
-                        const msg = buildPosCounterBillWhatsApp(po, shopData);
-                        openWhatsAppChat(custPhone, msg);
+                        sendBillToCustomerWhatsApp(po, shopData, { format: 'image', toast });
                       }}
                       style={{ padding: '6px 10px', borderRadius: '8px', border: '1px solid #86efac', background: '#f0fdf4', color: '#15803d', fontWeight: 800, fontSize: '0.74rem', cursor: 'pointer' }}
+                      title="Send Bill Image with Store Link on WhatsApp"
                     >
-                      📲 WhatsApp
+                      📲 WhatsApp Image
+                    </button>
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        try {
+                          const pdfRes = await createReceiptPdfFile(po, shopData);
+                          downloadFileBlob(pdfRes.blob, pdfRes.filename);
+                          toast('📄 PDF Bill Downloaded!');
+                        } catch {
+                          toast('Could not generate PDF bill', 'error');
+                        }
+                      }}
+                      style={{ padding: '6px 10px', borderRadius: '8px', border: '1px solid #cbd5e1', background: '#ffffff', color: '#1d4ed8', fontWeight: 800, fontSize: '0.74rem', cursor: 'pointer' }}
+                      title="Download PDF Receipt"
+                    >
+                      📄 PDF
                     </button>
                     <a
                       href={getPublicBillUrl(po._id, shopData._id, shopData.pincode)}
