@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { userFetch, BASE_URL } from '../../utils/api.js';
 import { useToast } from '../../ui/DialogProvider.jsx';
 import { openWhatsAppChat } from '../../utils/whatsappShare.js';
@@ -27,11 +27,22 @@ export default function MyKhataModal({ open, onClose, user, onKhataUpdated }) {
   const [txFilter, setTxFilter] = useState('ALL'); // ALL | BILLS | PAYMENTS
   const [expandedTxId, setExpandedTxId] = useState(null);
 
+  const userRef = useRef(user);
+  const toastRef = useRef(toast);
+  const onKhataUpdatedRef = useRef(onKhataUpdated);
+  userRef.current = user;
+  toastRef.current = toast;
+  onKhataUpdatedRef.current = onKhataUpdated;
+
   const fetchOverview = useCallback(async (silent = false) => {
-    if (!user?._id) return;
+    const u = userRef.current;
+    if (!u?._id) {
+      setLoadingOverview(false);
+      return;
+    }
     if (!silent) setLoadingOverview(true);
     try {
-      const res = await userFetch(user, `/users/${user._id}/khata`);
+      const res = await userFetch(u, `/users/${u._id}/khata`);
       if (res.ok) {
         const data = await res.json();
         const list = Array.isArray(data.accounts) ? data.accounts : [];
@@ -44,16 +55,21 @@ export default function MyKhataModal({ open, onClose, user, onKhataUpdated }) {
         });
       }
     } catch {
-      if (!silent) toast('Could not load store Khata accounts', 'error');
+      if (!silent) toastRef.current?.('Could not load store Khata accounts', 'error');
+    } finally {
+      if (!silent) setLoadingOverview(false);
     }
-    if (!silent) setLoadingOverview(false);
-  }, [user, toast]);
+  }, [user?._id]);
 
   const fetchDetail = useCallback(async (accountId, silent = false) => {
-    if (!user?._id || !accountId) return;
+    const u = userRef.current;
+    if (!u?._id || !accountId) {
+      setLoadingDetail(false);
+      return;
+    }
     if (!silent) setLoadingDetail(true);
     try {
-      const res = await userFetch(user, `/users/${user._id}/khata/${accountId}`);
+      const res = await userFetch(u, `/users/${u._id}/khata/${accountId}`);
       if (res.ok) {
         const data = await res.json();
         setDetailAccount(data.account);
@@ -67,10 +83,11 @@ export default function MyKhataModal({ open, onClose, user, onKhataUpdated }) {
         }
       }
     } catch {
-      if (!silent) toast('Could not load shop passbook', 'error');
+      if (!silent) toastRef.current?.('Could not load shop passbook', 'error');
+    } finally {
+      if (!silent) setLoadingDetail(false);
     }
-    if (!silent) setLoadingDetail(false);
-  }, [user, toast]);
+  }, [user?._id]);
 
   useEffect(() => {
     if (!open || !user?._id) return;
@@ -93,14 +110,14 @@ export default function MyKhataModal({ open, onClose, user, onKhataUpdated }) {
       timer = setTimeout(() => {
         fetchOverview(true);
         if (selectedAccountId) fetchDetail(selectedAccountId, true);
-        if (onKhataUpdated) onKhataUpdated();
+        if (onKhataUpdatedRef.current) onKhataUpdatedRef.current();
       }, 350);
     });
     return () => {
       clearTimeout(timer);
       eventSource.close();
     };
-  }, [open, user?._id, user?.sessionToken, selectedAccountId, fetchOverview, fetchDetail, onKhataUpdated]);
+  }, [open, user?._id, user?.sessionToken, selectedAccountId, fetchOverview, fetchDetail]);
 
   const filteredTransactions = useMemo(() => {
     if (txFilter === 'BILLS') {
@@ -542,7 +559,7 @@ export default function MyKhataModal({ open, onClose, user, onKhataUpdated }) {
                           const isPending = tx.verificationStatus === 'PendingVerification';
                           const isRejected = tx.verificationStatus === 'Rejected';
                           const linkedOrder = tx.orderId && typeof tx.orderId === 'object' ? tx.orderId : null;
-                          const isFirstEntry = tx._id === oldestCreditTxId || linkedOrder?.khataSnapshot?.isFirstTimeKhata;
+                          const isFirstEntry = tx._id === oldestCreditTxId || Boolean(linkedOrder?.khataSnapshot?.isFirstKhata || linkedOrder?.khataSnapshot?.isFirstTimeKhata);
                           const isExpanded = expandedTxId === tx._id;
 
                           return (
@@ -641,7 +658,7 @@ export default function MyKhataModal({ open, onClose, user, onKhataUpdated }) {
                                       <div style={{ borderTop: '1px solid #e2e8f0', marginTop: '5px', paddingTop: '5px', color: '#475569', fontWeight: 800 }}>
                                         Bill Total: ₹{r2(linkedOrder.totalAmount)}
                                         {m.paidNow > 0 ? ` • Paid Upfront (${m.paidVia}): ₹${m.paidNow}` : ''}
-                                        {` • Added to Khata: ₹${m.addedToKhata}`}
+                                        {` • Added to Khata: ₹${m.addedDue}`}
                                       </div>
                                     );
                                   })()}

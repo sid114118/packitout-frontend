@@ -6,6 +6,7 @@ import {
   toWhatsAppPhone,
   openWhatsAppChat,
   sanitizeWhatsAppText,
+  isMobileDevice,
 } from './whatsappShare.js';
 
 /**
@@ -78,12 +79,16 @@ export function extractKhataMeta(order) {
     scenario,
     isKhataBill,
     isFirstKhata,
+    isFirstTimeKhata: isFirstKhata,
     isSplit,
     previousDue,
+    previousBalance: previousDue,
     paidNow,
     paidVia,
     addedDue,
+    addedToKhata: addedDue,
     newTotalDue,
+    netKhataPayable: newTotalDue,
     settledAmount,
     isSettled,
   };
@@ -498,7 +503,29 @@ export async function downloadReceiptPdf(order, shopData) {
  * - Desktop: saves vector PDF cleanly + opens WhatsApp Web/App with caption & links
  */
 async function dispatchPdfViaWhatsApp({ pdfRes, cleanPhone, shareTitle, captionText, toast, docLabel = 'PDF' }) {
-  if (navigator?.share && navigator?.canShare && pdfRes?.file) {
+  // When customer's phone number is known, NEVER use navigator.share() because
+  // the OS Share Sheet cannot pre-select a target phone number and forces the
+  // user to pick WhatsApp and search/select the contact every time.
+  // Instead: save PDF locally AND open WhatsApp directly inside cleanPhone's chat
+  // with pre-filled bill + 1-tap auto-PDF download link!
+  if (cleanPhone) {
+    try {
+      if (pdfRes?.pdf && typeof pdfRes.pdf.save === 'function') {
+        pdfRes.pdf.save(pdfRes.filename);
+      } else if (pdfRes?.blob) {
+        downloadFileBlob(pdfRes.blob, pdfRes.filename);
+      }
+    } catch {
+      if (pdfRes?.blob) downloadFileBlob(pdfRes.blob, pdfRes.filename);
+    }
+
+    if (toast) toast(`📲 Opening ${cleanPhone.slice(-10)} on WhatsApp & saved ${docLabel}!`, 'success');
+    openWhatsAppChat(cleanPhone, captionText);
+    return true;
+  }
+
+  // Only when NO customer phone number is provided, try mobile Web Share sheet
+  if (isMobileDevice() && navigator?.share && navigator?.canShare && pdfRes?.file) {
     try {
       if (navigator.canShare({ files: [pdfRes.file] })) {
         await navigator.share({
@@ -506,7 +533,7 @@ async function dispatchPdfViaWhatsApp({ pdfRes, cleanPhone, shareTitle, captionT
           title: shareTitle,
           text: captionText,
         });
-        if (toast) toast(`✅ ${docLabel} sent via WhatsApp!`, 'success');
+        if (toast) toast(`✅ ${docLabel} shared via WhatsApp!`, 'success');
         return true;
       }
     } catch (shareErr) {
@@ -526,7 +553,7 @@ async function dispatchPdfViaWhatsApp({ pdfRes, cleanPhone, shareTitle, captionT
   }
 
   if (toast) toast(`📄 ${docLabel} Downloaded & WhatsApp opening…`, 'success');
-  openWhatsAppChat(cleanPhone, captionText);
+  openWhatsAppChat('', captionText);
   return true;
 }
 
@@ -547,6 +574,7 @@ export function buildWhatsAppBillTextMessage(order, shopData) {
 
   const storefrontUrl = getShopStorefrontUrl(shopId, pincode);
   const publicBillUrl = getPublicBillUrl(order?._id, shopId, pincode);
+  const pdfBillUrl = getPublicBillUrl(order?._id, shopId, pincode, { autoPdf: true });
 
   const items = Array.isArray(order?.items) ? order.items : [];
   const itemCount = items.reduce((s, i) => s + (Number(i?.qty) || 1), 0);
@@ -603,8 +631,8 @@ export function buildWhatsAppBillTextMessage(order, shopData) {
 
   lines.push(
     ``,
-    `📄 *Click Link to View Receipt & Download Official PDF Bill:*`,
-    publicBillUrl,
+    `📄 *Click to Download Official PDF Bill:*`,
+    pdfBillUrl || publicBillUrl,
     ``,
     `🛒 *Order Online from ${shopName} Next Time:*`,
     `Skip the counter wait — browse live items & upload parchi:`,

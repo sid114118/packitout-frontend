@@ -724,7 +724,11 @@ export default function CounterPosTab({
       }
 
       if (sendWhatsApp && cleanPhone) {
-        sendBillToCustomerWhatsApp(createdOrder, shopData, { toast });
+        sendBillToCustomerWhatsApp(
+          { ...createdOrder, customerPhone: createdOrder.customerPhone || cleanPhone },
+          shopData,
+          { toast }
+        );
       }
     } catch {
       toast('Network error while saving counter bill', 'error');
@@ -1041,7 +1045,18 @@ export default function CounterPosTab({
               <button
                 type="button"
                 onClick={() => {
-                  sendBillToCustomerWhatsApp(lastCompletedBill.order, shopData, { toast });
+                  sendBillToCustomerWhatsApp(
+                    {
+                      ...lastCompletedBill.order,
+                      customerPhone:
+                        lastCompletedBill.order.customerPhone ||
+                        lastCompletedBill.order.userId?.phone ||
+                        lastCompletedBill.customer?.phone ||
+                        '',
+                    },
+                    shopData,
+                    { toast }
+                  );
                 }}
                 style={{
                   padding: '8px 14px',
@@ -2320,7 +2335,11 @@ export default function CounterPosTab({
                     <button
                       type="button"
                       onClick={() => {
-                        sendBillToCustomerWhatsApp(po, shopData, { toast });
+                        sendBillToCustomerWhatsApp(
+                          { ...po, customerPhone: po.customerPhone || po.userId?.phone || '' },
+                          shopData,
+                          { toast }
+                        );
                       }}
                       style={{ padding: '6px 10px', borderRadius: '8px', border: '1px solid #86efac', background: '#f0fdf4', color: '#15803d', fontWeight: 800, fontSize: '0.74rem', cursor: 'pointer' }}
                       title="Send PDF Bill on WhatsApp"

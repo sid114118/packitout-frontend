@@ -450,12 +450,10 @@ export default function ShopDashboard({ user, onExit }) {
         {activeTab === "khata" && (
           <KhataTab
             shopData={shopData}
+            orders={orders}
             focusPhone={khataFocusPhone}
             onClearFocusPhone={() => setKhataFocusPhone('')}
-            onKhataSummaryChange={(sum) => {
-              setKhataSummary(sum);
-              fetchOrders();
-            }}
+            onKhataSummaryChange={setKhataSummary}
             onQuickPosBill={() => setActiveTab("pos")}
             refreshSignal={khataRefreshSignal}
           />

@@ -1094,7 +1094,7 @@ function OrderCard({ order, onOpen, onCancel, onReview, onReorderItem, onCustome
                 </span>
               ) : (
                 <span style={{ display: 'inline-block', padding: '2px 8px', borderRadius: '999px', fontSize: '0.68rem', fontWeight: 900, background: '#fef3c7', color: '#92400e', border: '1px solid #fcd34d' }}>
-                  📒 Added to Store Khata{order.khataSnapshot?.isFirstTimeKhata ? ' (1st Entry)' : ''}
+                  📒 Added to Store Khata{(order.khataSnapshot?.isFirstKhata || order.khataSnapshot?.isFirstTimeKhata) ? ' (1st Entry)' : ''}
                 </span>
               )}
             </div>

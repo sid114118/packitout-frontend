@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { shopFetch } from '../../utils/api.js';
 import { useToast } from '../../ui/DialogProvider.jsx';
 import {
@@ -12,8 +12,75 @@ import { getPublicBillUrl } from '../../utils/whatsappShare.js';
 
 const r2 = (n) => Math.round((Number(n) || 0) * 100) / 100;
 
+function buildFallbackKhataFromOrders(orders = []) {
+  const byCustomer = new Map();
+  const todayStart = new Date();
+  todayStart.setHours(0, 0, 0, 0);
+  let todayCreditGiven = 0;
+
+  for (const o of orders) {
+    if (!o || /cancel|reject/i.test(o.status || '')) continue;
+    const isKhata = o.paymentMethod === 'KHATA' || Number(o.khataAmount || 0) > 0;
+    if (!isKhata) continue;
+    const phone = String(o.customerPhone || o.userId?.phone || '').replace(/\D/g, '').slice(-10) || String(o._id);
+    const name = o.customerName || o.userId?.name || 'Walk-in Customer';
+    const amt = o.khataAmount != null ? r2(o.khataAmount) : Math.max(0, r2((Number(o.totalAmount) || 0) - (Number(o.paidAmount) || 0)));
+    const settled = o.paymentStatus === 'Paid' ? amt : r2(o.khataSettledAmount || 0);
+    const pending = Math.max(0, r2(amt - settled));
+
+    if (o.createdAt && new Date(o.createdAt) >= todayStart) {
+      todayCreditGiven += amt;
+    }
+
+    if (!byCustomer.has(phone)) {
+      byCustomer.set(phone, {
+        _id: `fallback_${phone}`,
+        customerPhone: phone,
+        customerName: name,
+        currentBalance: 0,
+        totalCreditGiven: 0,
+        totalSettled: 0,
+        creditLimit: 0,
+        notes: '',
+        pendingVerificationCount: 0,
+        lastTransactionAt: o.createdAt,
+        _orders: [],
+      });
+    }
+    const entry = byCustomer.get(phone);
+    entry.totalCreditGiven = r2(entry.totalCreditGiven + amt);
+    entry.totalSettled = r2(entry.totalSettled + settled);
+    entry.currentBalance = r2(entry.currentBalance + pending);
+    if (o.createdAt && (!entry.lastTransactionAt || new Date(o.createdAt) > new Date(entry.lastTransactionAt))) {
+      entry.lastTransactionAt = o.createdAt;
+    }
+    entry._orders.push(o);
+  }
+
+  const accounts = Array.from(byCustomer.values()).sort((a, b) => b.currentBalance - a.currentBalance);
+  const totalReceivable = r2(accounts.reduce((s, a) => s + a.currentBalance, 0));
+  const activeCustomersCount = accounts.filter((a) => a.currentBalance > 0).length;
+  return {
+    summary: {
+      totalReceivable,
+      activeCustomersCount,
+      settledCustomersCount: accounts.length - activeCustomersCount,
+      totalCustomersCount: accounts.length,
+      overLimitCount: 0,
+      pendingVerificationCount: 0,
+      todayCreditGiven: r2(todayCreditGiven),
+      todayCollected: 0,
+      todayCashCollected: 0,
+      todayUpiCollected: 0,
+    },
+    pendingApprovals: [],
+    accounts,
+  };
+}
+
 export default function KhataTab({
   shopData,
+  orders = [],
   focusPhone = '',
   onClearFocusPhone,
   onKhataSummaryChange,
@@ -86,11 +153,29 @@ export default function KhataTab({
 
   const hasShopUpi = Boolean(shopData?.upiId && String(shopData.upiId).includes('@'));
 
+  // Stable refs prevent infinite fetch/loading loops when parent callbacks re-render
+  const shopDataRef = useRef(shopData);
+  const ordersRef = useRef(orders);
+  const onKhataSummaryChangeRef = useRef(onKhataSummaryChange);
+  const onClearFocusPhoneRef = useRef(onClearFocusPhone);
+  const toastRef = useRef(toast);
+  const hasLoadedOnceRef = useRef(false);
+
+  shopDataRef.current = shopData;
+  ordersRef.current = orders;
+  onKhataSummaryChangeRef.current = onKhataSummaryChange;
+  onClearFocusPhoneRef.current = onClearFocusPhone;
+  toastRef.current = toast;
+
   const fetchKhataOverview = useCallback(async (silent = false) => {
-    if (!shopData?._id) return null;
-    if (!silent) setLoading(true);
+    const shop = shopDataRef.current;
+    if (!shop?._id) {
+      setLoading(false);
+      return null;
+    }
+    if (!silent && !hasLoadedOnceRef.current) setLoading(true);
     try {
-      const res = await shopFetch(shopData, `/shops/${shopData._id}/khata`);
+      const res = await shopFetch(shop, `/shops/${shop._id}/khata`);
       if (res.ok) {
         const data = await res.json();
         setKhataData({
@@ -98,24 +183,62 @@ export default function KhataTab({
           pendingApprovals: Array.isArray(data.pendingApprovals) ? data.pendingApprovals : [],
           accounts: Array.isArray(data.accounts) ? data.accounts : [],
         });
-        if (onKhataSummaryChange && data.summary) {
-          onKhataSummaryChange(data.summary);
+        if (onKhataSummaryChangeRef.current && data.summary) {
+          onKhataSummaryChangeRef.current(data.summary);
         }
-        if (!silent) setLoading(false);
         return data;
       }
+      // Graceful fallback if API route is not live yet or temporary server error
+      const fallback = buildFallbackKhataFromOrders(ordersRef.current);
+      setKhataData(fallback);
+      if (onKhataSummaryChangeRef.current) {
+        onKhataSummaryChangeRef.current(fallback.summary);
+      }
+      return fallback;
     } catch {
-      if (!silent) toast('Could not load Khata ledger', 'error');
+      const fallback = buildFallbackKhataFromOrders(ordersRef.current);
+      setKhataData(fallback);
+      if (!silent && fallback.accounts.length === 0) {
+        toastRef.current?.('Could not load Khata ledger', 'error');
+      }
+      return fallback;
+    } finally {
+      hasLoadedOnceRef.current = true;
+      setLoading(false);
     }
-    if (!silent) setLoading(false);
-    return null;
-  }, [shopData, onKhataSummaryChange, toast]);
+  }, [shopData?._id]);
 
   const fetchAccountDetail = useCallback(async (accountId, silent = false) => {
-    if (!accountId || !shopData?._id) return null;
+    const shop = shopDataRef.current;
+    if (!accountId || !shop?._id) {
+      setLoadingDetail(false);
+      return null;
+    }
+    if (String(accountId).startsWith('fallback_')) {
+      const phoneKey = String(accountId).replace(/^fallback_/, '');
+      const fallback = buildFallbackKhataFromOrders(ordersRef.current);
+      const matchAcc = fallback.accounts.find((a) => a.customerPhone === phoneKey) || null;
+      const txns = (matchAcc?._orders || []).map((o) => {
+        const meta = extractKhataMeta(o);
+        return {
+          _id: `ftx_${o._id}`,
+          type: 'CREDIT_BILL',
+          amount: meta.addedDue || r2(o.totalAmount),
+          balanceAfter: matchAcc.currentBalance,
+          verificationStatus: 'Confirmed',
+          createdAt: o.createdAt,
+          orderId: o,
+          note: `Counter Bill #${String(o._id || '').slice(-5).toUpperCase()}`,
+        };
+      });
+      setDetailAccount(matchAcc);
+      setDetailTransactions(txns);
+      setLoadingDetail(false);
+      return { account: matchAcc, transactions: txns };
+    }
     if (!silent) setLoadingDetail(true);
     try {
-      const res = await shopFetch(shopData, `/shops/${shopData._id}/khata/${accountId}`);
+      const res = await shopFetch(shop, `/shops/${shop._id}/khata/${accountId}`);
       if (res.ok) {
         const data = await res.json();
         setDetailAccount(data.account);
@@ -128,29 +251,35 @@ export default function KhataTab({
           setJamaAmount(bal > 0 ? String(bal) : '');
           setActiveActionPanel(bal > 0 ? 'COLLECT' : 'NONE');
         }
-        if (!silent) setLoadingDetail(false);
         return data;
       }
     } catch {
-      if (!silent) toast('Could not load customer passbook', 'error');
+      if (!silent) toastRef.current?.('Could not load customer passbook', 'error');
+    } finally {
+      setLoadingDetail(false);
     }
-    if (!silent) setLoadingDetail(false);
     return null;
-  }, [shopData, toast]);
+  }, [shopData?._id]);
 
   useEffect(() => {
-    fetchKhataOverview(refreshSignal > 0);
-    if (selectedAccountId && refreshSignal > 0) {
+    hasLoadedOnceRef.current = false;
+    fetchKhataOverview(false);
+  }, [shopData?._id, fetchKhataOverview]);
+
+  useEffect(() => {
+    if (refreshSignal <= 0) return;
+    fetchKhataOverview(true);
+    if (selectedAccountId) {
       fetchAccountDetail(selectedAccountId, true);
     }
-  }, [fetchKhataOverview, fetchAccountDetail, refreshSignal, selectedAccountId]);
+  }, [refreshSignal, fetchKhataOverview, fetchAccountDetail, selectedAccountId]);
 
   // Handle focusPhone navigation from Counter POS
   useEffect(() => {
     if (!focusPhone || loading) return;
     const clean = String(focusPhone).replace(/\D/g, '').slice(-10);
     if (!clean) {
-      if (onClearFocusPhone) onClearFocusPhone();
+      if (onClearFocusPhoneRef.current) onClearFocusPhoneRef.current();
       return;
     }
     const match = khataData.accounts.find((a) => a.customerPhone === clean);
@@ -160,8 +289,8 @@ export default function KhataTab({
     } else {
       setSearchQuery(clean);
     }
-    if (onClearFocusPhone) onClearFocusPhone();
-  }, [focusPhone, loading, khataData.accounts, fetchAccountDetail, onClearFocusPhone]);
+    if (onClearFocusPhoneRef.current) onClearFocusPhoneRef.current();
+  }, [focusPhone, loading, khataData.accounts, fetchAccountDetail]);
 
   const openPassbook = (acc) => {
     setSelectedAccountId(acc._id);
@@ -1391,7 +1520,7 @@ export default function KhataTab({
                         const isPending = tx.verificationStatus === 'PendingVerification';
                         const isRejected = tx.verificationStatus === 'Rejected';
                         const linkedOrder = tx.orderId && typeof tx.orderId === 'object' ? tx.orderId : null;
-                        const isFirstEntry = tx._id === oldestCreditTxId || linkedOrder?.khataSnapshot?.isFirstTimeKhata;
+                        const isFirstEntry = tx._id === oldestCreditTxId || Boolean(linkedOrder?.khataSnapshot?.isFirstKhata || linkedOrder?.khataSnapshot?.isFirstTimeKhata);
                         const isExpanded = expandedTxId === tx._id;
 
                         return (
@@ -1555,7 +1684,7 @@ export default function KhataTab({
                                     <div style={{ borderTop: '1px solid #e2e8f0', marginTop: '5px', paddingTop: '5px', color: '#475569', fontWeight: 800 }}>
                                       Bill Total: ₹{r2(linkedOrder.totalAmount)}
                                       {m.paidNow > 0 ? ` • Paid Upfront (${m.paidVia}): ₹${m.paidNow}` : ''}
-                                      {` • Added to Khata: ₹${m.addedToKhata}`}
+                                      {` • Added to Khata: ₹${m.addedDue}`}
                                       {linkedOrder.khataSettledAmount > 0 ? ` • Settled Later: ₹${r2(linkedOrder.khataSettledAmount)}` : ''}
                                     </div>
                                   );

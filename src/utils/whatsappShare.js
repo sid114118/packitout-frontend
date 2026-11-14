@@ -55,7 +55,7 @@ export function getWhatsAppUrl(rawPhone, messageText = '') {
     : `https://api.whatsapp.com/send/?text=${encoded}`;
 }
 
-export function getPublicBillUrl(orderId, shopId = '', pincode = '') {
+export function getPublicBillUrl(orderId, shopId = '', pincode = '', { autoPdf = false } = {}) {
   if (!orderId) return '';
   const origin = typeof window !== 'undefined' && window.location?.origin
     ? window.location.origin
@@ -63,6 +63,7 @@ export function getPublicBillUrl(orderId, shopId = '', pincode = '') {
   const params = new URLSearchParams();
   if (shopId) params.set('s', String(shopId));
   if (pincode) params.set('pin', String(pincode));
+  if (autoPdf) params.set('pdf', '1');
   const qs = params.toString() ? `?${params.toString()}` : '';
   return `${origin}/#/bill/${orderId}${qs}`;
 }
@@ -286,8 +287,21 @@ export function buildCustomerToShopWhatsApp(order, customerUser) {
 
 export function openWhatsAppChat(rawPhone, messageText) {
   const url = getWhatsAppUrl(rawPhone, messageText);
-  if (typeof window !== 'undefined') {
-    window.open(url, '_blank', 'noopener,noreferrer');
+  if (typeof window === 'undefined') return;
+  const win = window.open(url, '_blank', 'noopener,noreferrer');
+  if (!win) {
+    try {
+      const a = document.createElement('a');
+      a.href = url;
+      a.target = '_blank';
+      a.rel = 'noopener noreferrer';
+      a.style.display = 'none';
+      document.body.appendChild(a);
+      a.click();
+      setTimeout(() => {
+        try { document.body.removeChild(a); } catch {}
+      }, 1000);
+    } catch {}
   }
 }
 

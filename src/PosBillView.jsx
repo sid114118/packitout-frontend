@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { BASE_URL } from './utils/api.js';
 import { cdnImage } from './utils/cloudinaryUrl.js';
 import { useToast } from './ui/DialogProvider.jsx';
@@ -11,6 +11,15 @@ export default function PosBillView({ orderId, onSetCartAndGo, onGoToShopStore }
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [copiedLink, setCopiedLink] = useState(false);
+  const autoPdfTriggeredRef = useRef(false);
+
+  useEffect(() => {
+    if (!bill || autoPdfTriggeredRef.current) return;
+    if (typeof window !== 'undefined' && window.location.href.includes('pdf=1')) {
+      autoPdfTriggeredRef.current = true;
+      downloadReceiptPdf(bill, bill.shop).catch(() => {});
+    }
+  }, [bill]);
 
   useEffect(() => {
     let cancelled = false;
