@@ -6,7 +6,7 @@ import ReceiptModal from './components/UserDashboard/ReceiptModal';
 import OrderReviewModal from './components/UserDashboard/OrderReviewModal';
 import OrderChatDrawer from './components/Chat/OrderChatDrawer.jsx';
 import ChatIcon from './ui/ChatIcon.jsx';
-import { buildCustomerToShopWhatsApp, openWhatsAppChat } from './utils/whatsappShare.js';
+import { openWhatsAppChat } from './utils/whatsappShare.js';
 import { cdnImage } from './utils/cloudinaryUrl.js';
 import StorefrontIcon from './ui/StorefrontIcon.jsx';
 import { userFetch, BASE_URL } from './utils/api.js';
@@ -1055,31 +1055,15 @@ function OrderCard({ order, onOpen, onCancel, onReview, onReorderItem, onCustome
             </button>
           )}
           {order.shopId?.phone && (
-            <>
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  const msg = buildCustomerToShopWhatsApp(order);
-                  openWhatsAppChat(order.shopId.phone, msg);
-                }}
-                aria-label="Send order on WhatsApp"
-                title="Send order bill to shopkeeper on WhatsApp"
-                className="op-press"
-                style={{ background: '#ecfdf5', color: '#15803d', padding: '6px 10px', borderRadius: '10px', fontSize: '0.78rem', fontWeight: 800, border: '1px solid #86efac', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
-              >
-                📲 WA Bill
-              </button>
-              <a
-                href={`tel:${order.shopId.phone}`}
-                onClick={(e) => e.stopPropagation()}
-                aria-label="Call shop"
-                className="op-press"
-                style={{ background: '#f8fafc', color: '#0f172a', padding: '6px 10px', borderRadius: '10px', textDecoration: 'none', fontSize: '0.78rem', fontWeight: 800, border: '1px solid #e2e8f0', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
-              >
-                📞
-              </a>
-            </>
+            <a
+              href={`tel:${order.shopId.phone}`}
+              onClick={(e) => e.stopPropagation()}
+              aria-label="Call shop"
+              className="op-press"
+              style={{ background: '#f8fafc', color: '#0f172a', padding: '6px 10px', borderRadius: '10px', textDecoration: 'none', fontSize: '0.78rem', fontWeight: 800, border: '1px solid #e2e8f0', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
+            >
+              📞
+            </a>
           )}
           {isDelivered && !order.isReviewed && (
             <button
