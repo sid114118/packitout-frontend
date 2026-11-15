@@ -499,28 +499,15 @@ export async function downloadReceiptPdf(order, shopData) {
 
 /**
  * Shared PDF WhatsApp Dispatcher:
- * - Mobile: attaches pure vector PDF via Web Share API
- * - Desktop: saves vector PDF cleanly + opens WhatsApp Web/App with caption & links
+ * - Directly opens WhatsApp chat for target phone number with pre-filled bill + 1-tap PDF link
+ * - Never forces an unwanted file download dialog when the user intends to message WhatsApp!
  */
-async function dispatchPdfViaWhatsApp({ pdfRes, cleanPhone, shareTitle, captionText, toast, docLabel = 'PDF' }) {
-  // When customer's phone number is known, NEVER use navigator.share() because
-  // the OS Share Sheet cannot pre-select a target phone number and forces the
-  // user to pick WhatsApp and search/select the contact every time.
-  // Instead: save PDF locally AND open WhatsApp directly inside cleanPhone's chat
-  // with pre-filled bill + 1-tap auto-PDF download link!
+async function dispatchPdfViaWhatsApp({ pdfRes, cleanPhone, shareTitle, captionText, toast, docLabel = 'PDF', targetWindow = null }) {
+  // When customer's phone number is known, open WhatsApp directly inside cleanPhone's chat
+  // with pre-filled bill details + 1-tap auto-PDF download link!
   if (cleanPhone) {
-    try {
-      if (pdfRes?.pdf && typeof pdfRes.pdf.save === 'function') {
-        pdfRes.pdf.save(pdfRes.filename);
-      } else if (pdfRes?.blob) {
-        downloadFileBlob(pdfRes.blob, pdfRes.filename);
-      }
-    } catch {
-      if (pdfRes?.blob) downloadFileBlob(pdfRes.blob, pdfRes.filename);
-    }
-
-    if (toast) toast(`📲 Opening ${cleanPhone.slice(-10)} on WhatsApp & saved ${docLabel}!`, 'success');
-    openWhatsAppChat(cleanPhone, captionText);
+    if (toast) toast(`📲 Opening +${cleanPhone} on WhatsApp!`, 'success');
+    openWhatsAppChat(cleanPhone, captionText, targetWindow);
     return true;
   }
 
@@ -542,18 +529,8 @@ async function dispatchPdfViaWhatsApp({ pdfRes, cleanPhone, shareTitle, captionT
     }
   }
 
-  try {
-    if (pdfRes?.pdf && typeof pdfRes.pdf.save === 'function') {
-      pdfRes.pdf.save(pdfRes.filename);
-    } else if (pdfRes?.blob) {
-      downloadFileBlob(pdfRes.blob, pdfRes.filename);
-    }
-  } catch {
-    if (pdfRes?.blob) downloadFileBlob(pdfRes.blob, pdfRes.filename);
-  }
-
-  if (toast) toast(`📄 ${docLabel} Downloaded & WhatsApp opening…`, 'success');
-  openWhatsAppChat('', captionText);
+  if (toast) toast(`📲 Opening WhatsApp…`, 'info');
+  openWhatsAppChat('', captionText, targetWindow);
   return true;
 }
 
@@ -649,7 +626,7 @@ export function buildWhatsAppBillTextMessage(order, shopData) {
  * 1. Generates 100% vector-text official PDF bill.
  * 2. On Mobile: attaches PDF via Share Sheet; on Desktop: downloads PDF + opens WhatsApp Chat.
  */
-export async function sendBillToCustomerWhatsApp(order, shopData, { toast = null } = {}) {
+export async function sendBillToCustomerWhatsApp(order, shopData, { toast = null, targetWindow = null } = {}) {
   const shop = resolveShop(order, shopData);
   const cleanPhone = toWhatsAppPhone(order?.customerPhone || order?.userId?.phone);
   const captionText = buildWhatsAppBillTextMessage(order, shop);
@@ -664,11 +641,12 @@ export async function sendBillToCustomerWhatsApp(order, shopData, { toast = null
       captionText,
       toast,
       docLabel: 'PDF Bill',
+      targetWindow,
     });
   } catch (err) {
     console.error('Error sharing PDF bill on WhatsApp:', err);
     if (toast) toast('Opening WhatsApp with clickable link…', 'info');
-    openWhatsAppChat(cleanPhone, captionText);
+    openWhatsAppChat(cleanPhone, captionText, targetWindow);
     return false;
   }
 }

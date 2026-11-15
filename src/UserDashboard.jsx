@@ -24,10 +24,20 @@ export default function UserDashboard({ user, onExit, onLogout, onUserUpdate }) 
   const [isEditingProfile, setIsEditingProfile] = useState(false);
   const [editForm, setEditForm] = useState({
     name: user?.name || "",
+    phone: user?.phone || "",
     pincode: user?.pincode || "",
     primaryShop: typeof user?.primaryShop === 'object' ? user.primaryShop?._id : (user?.primaryShop || ""),
   });
   const [nearbyShops, setNearbyShops] = useState([]);
+
+  useEffect(() => {
+    setEditForm({
+      name: user?.name || "",
+      phone: user?.phone || "",
+      pincode: user?.pincode || "",
+      primaryShop: typeof user?.primaryShop === 'object' ? user.primaryShop?._id : (user?.primaryShop || ""),
+    });
+  }, [user]);
 
   // Support modals (T&C + complaint form + my complaints + parchi bills) live at the bottom of the profile.
   const [showTerms, setShowTerms] = useState(false);
@@ -62,7 +72,7 @@ export default function UserDashboard({ user, onExit, onLogout, onUserUpdate }) 
       clearTimeout(khataTimer);
       eventSource.close();
     };
-  }, [user?._id, user?.sessionToken]);
+  }, [user?._id, user?.sessionToken, user?.phone]);
 
   // Fetch shops in this user's pincode so the "Primary shop" dropdown has
   // real options. Without this the select is permanently empty.
@@ -88,20 +98,48 @@ export default function UserDashboard({ user, onExit, onLogout, onUserUpdate }) 
   const handleSaveProfile = async (e) => {
     e.preventDefault();
     try {
+      const cleanPhone = String(editForm.phone || '').replace(/\D/g, '').slice(-10);
+      let phoneUpdated = false;
+      if (cleanPhone && cleanPhone !== (user?.phone || '')) {
+        if (!/^[6-9]\d{9}$/.test(cleanPhone)) {
+          triggerToast("Enter a valid 10-digit Indian mobile number", "error");
+          return;
+        }
+        const phoneRes = await userFetch(user, `/users/${user._id}/phone`, {
+          method: "POST",
+          body: JSON.stringify({ phone: cleanPhone })
+        });
+        if (!phoneRes.ok) {
+          const pData = await phoneRes.json().catch(() => ({}));
+          triggerToast(pData.error || "Failed to link mobile number", "error");
+          return;
+        }
+        phoneUpdated = true;
+      }
+
       const res = await userFetch(user, `/users/${user._id}`, {
         method: "PATCH",
-        body: JSON.stringify(editForm)
+        body: JSON.stringify({
+          name: editForm.name,
+          pincode: editForm.pincode,
+          primaryShop: editForm.primaryShop,
+        })
       });
       if (res.ok) {
         const updated = await res.json();
         // Server response strips sessionToken — preserve the in-memory one
         // so the next authenticated API call doesn't fail with 401.
-        const next = { ...updated, sessionToken: user.sessionToken };
+        const next = {
+          ...updated,
+          phone: phoneUpdated ? cleanPhone : (updated.phone || user?.phone),
+          sessionToken: user.sessionToken,
+        };
         // Push the new user up to App so the header/orders/etc. all refresh.
         if (onUserUpdate) onUserUpdate(next);
         setPrimaryShop(updated.primaryShop && typeof updated.primaryShop === 'object' ? updated.primaryShop : nearbyShops.find(s => s._id === updated.primaryShop) || null);
         setIsEditingProfile(false);
         triggerToast("Profile updated!");
+        fetchUserKhata();
       } else {
         triggerToast("Failed to update profile", "error");
       }

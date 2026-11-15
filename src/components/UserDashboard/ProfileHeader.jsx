@@ -256,6 +256,16 @@ export default function ProfileHeader({
               <Field label="Full name">
                 <input type="text" value={editForm.name} onChange={e => setEditForm({ ...editForm, name: e.target.value })} placeholder="Enter your name" required style={inputStyle} />
               </Field>
+              <Field label="Mobile phone (for WhatsApp bills & Khata)">
+                <input
+                  type="tel"
+                  maxLength={10}
+                  value={editForm.phone || ""}
+                  onChange={e => setEditForm({ ...editForm, phone: e.target.value.replace(/\D/g, '').slice(0, 10) })}
+                  placeholder="10-digit mobile number"
+                  style={inputStyle}
+                />
+              </Field>
               <Field label="Pincode">
                 <input type="text" value={editForm.pincode} onChange={e => setEditForm({ ...editForm, pincode: e.target.value })} placeholder="6-digit pincode" required style={inputStyle} />
               </Field>
@@ -284,6 +294,7 @@ export default function ProfileHeader({
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column' }}>
               <InfoRow label="Name" value={editForm.name || '—'} />
+              <InfoRow label="Phone" value={user?.phone || editForm.phone || '—'} />
               <InfoRow label="Pincode" value={editForm.pincode || '—'} />
               <InfoRow
                 label="Primary shop"

@@ -651,6 +651,29 @@ export default function CounterPosTab({
       }
     }
 
+    // Defeat popup blockers: synchronously open target tab during user click before async API roundtrip
+    let waWindow = null;
+    if (sendWhatsApp && isValidPhone) {
+      try {
+        waWindow = window.open('', '_blank');
+        if (waWindow && waWindow.document) {
+          waWindow.document.write(`
+            <!DOCTYPE html>
+            <html>
+            <head><title>Opening WhatsApp...</title><meta charset="utf-8"></head>
+            <body style="font-family:system-ui,-apple-system,sans-serif;display:flex;align-items:center;justify-content:center;height:90vh;margin:0;background:#f8fafc;color:#0f172a;">
+              <div style="text-align:center;padding:26px;border-radius:18px;background:white;box-shadow:0 8px 24px rgba(0,0,0,0.08);max-width:340px;">
+                <div style="font-size:38px;margin-bottom:12px;">💬</div>
+                <h3 style="margin:0 0 8px;font-size:1.1rem;color:#0f172a;">Opening WhatsApp...</h3>
+                <p style="margin:0;color:#64748b;font-size:0.86rem;">Preparing customer bill (+91 ${cleanPhone})</p>
+              </div>
+            </body>
+            </html>
+          `);
+        }
+      } catch {}
+    }
+
     setIsSubmitting(true);
     try {
       const payload = {
@@ -675,6 +698,9 @@ export default function CounterPosTab({
 
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
+        if (waWindow && !waWindow.closed) {
+          try { waWindow.close(); } catch {}
+        }
         toast(data.error || 'Failed to create counter bill', 'error');
         playPosBeep(false);
         setIsSubmitting(false);
@@ -727,10 +753,13 @@ export default function CounterPosTab({
         sendBillToCustomerWhatsApp(
           { ...createdOrder, customerPhone: createdOrder.customerPhone || cleanPhone },
           shopData,
-          { toast }
+          { toast, targetWindow: waWindow }
         );
       }
     } catch {
+      if (waWindow && !waWindow.closed) {
+        try { waWindow.close(); } catch {}
+      }
       toast('Network error while saving counter bill', 'error');
       playPosBeep(false);
     }

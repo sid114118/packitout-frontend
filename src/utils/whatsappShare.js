@@ -285,10 +285,26 @@ export function buildCustomerToShopWhatsApp(order, customerUser) {
   return sanitizeWhatsAppText(lines.join('\n'));
 }
 
-export function openWhatsAppChat(rawPhone, messageText) {
+export function openWhatsAppChat(rawPhone, messageText, targetWindow = null) {
   const url = getWhatsAppUrl(rawPhone, messageText);
   if (typeof window === 'undefined') return;
-  const win = window.open(url, '_blank', 'noopener,noreferrer');
+
+  // 1. If caller pre-opened a window during user click gesture, navigate it directly (defeats popup blockers 100%)
+  if (targetWindow && !targetWindow.closed) {
+    try {
+      targetWindow.location.href = url;
+      if (typeof targetWindow.focus === 'function') targetWindow.focus();
+      return;
+    } catch {}
+  }
+
+  // 2. Direct window.open attempt
+  let win = null;
+  try {
+    win = window.open(url, '_blank', 'noopener,noreferrer');
+  } catch {}
+
+  // 3. Fallback for popup blocker
   if (!win) {
     try {
       const a = document.createElement('a');
@@ -301,7 +317,11 @@ export function openWhatsAppChat(rawPhone, messageText) {
       setTimeout(() => {
         try { document.body.removeChild(a); } catch {}
       }, 1000);
-    } catch {}
+    } catch {
+      try {
+        window.location.href = url;
+      } catch {}
+    }
   }
 }
 
