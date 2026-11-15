@@ -51,8 +51,8 @@ export function getWhatsAppUrl(rawPhone, messageText = '') {
   // - On PC with WhatsApp Web: offers 1-click 'Continue to Chat' / 'use WhatsApp Web'
   // - Completely eliminates wa.me 302 redirect emoji corruption
   return cleanPhone
-    ? `https://api.whatsapp.com/send/?phone=${cleanPhone}&text=${encoded}`
-    : `https://api.whatsapp.com/send/?text=${encoded}`;
+    ? `https://api.whatsapp.com/send?phone=${cleanPhone}&text=${encoded}`
+    : `https://api.whatsapp.com/send?text=${encoded}`;
 }
 
 export function getPublicBillUrl(orderId, shopId = '', pincode = '', { autoPdf = false } = {}) {

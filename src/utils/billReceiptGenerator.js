@@ -535,87 +535,68 @@ async function dispatchPdfViaWhatsApp({ pdfRes, cleanPhone, shareTitle, captionT
 }
 
 /**
- * Generates the WhatsApp text message with clean, 100% clickable links
+ * Generates the clean WhatsApp PDF bill text message
  * covering normal bills, First-Time Khata, Repeat/Split Khata, and Old Khata Reminders.
  */
 export function buildWhatsAppBillTextMessage(order, shopData) {
   const shop = resolveShop(order, shopData);
   const shortId = String(order?._id || '').slice(-5).toUpperCase() || 'POS';
   const shopName = shop?.name || 'Local Store';
-  const customerName = order?.customerName || order?.userId?.name || 'Valued Customer';
+  const customerName = order?.customerName || order?.userId?.name || 'Customer';
   const total = Number(order?.totalAmount || 0);
   const payMethod = String(order?.paymentMethod || 'CASH').toUpperCase();
   const shopId = shop?._id || '';
   const pincode = shop?.pincode || '';
   const khata = extractKhataMeta(order);
 
-  const storefrontUrl = getShopStorefrontUrl(shopId, pincode);
-  const publicBillUrl = getPublicBillUrl(order?._id, shopId, pincode);
   const pdfBillUrl = getPublicBillUrl(order?._id, shopId, pincode, { autoPdf: true });
 
-  const items = Array.isArray(order?.items) ? order.items : [];
-  const itemCount = items.reduce((s, i) => s + (Number(i?.qty) || 1), 0);
-
-  let payLine = `💰 *Amount:* ₹${total} (${payMethod})`;
+  let payStatus = `Paid (${payMethod})`;
   if (khata.isKhataBill) {
-    if (khata.isSettled) payLine = `💰 *Bill Amount:* ₹${total} (✅ Khata Settled)`;
-    else if (khata.isSplit) payLine = `💰 *Bill Amount:* ₹${total} (Paid ₹${khata.paidNow} ${khata.paidVia} + ₹${khata.addedDue} Khata)`;
-    else payLine = `💰 *Bill Amount:* ₹${total} (📒 Khata Due)`;
+    if (khata.isSettled) payStatus = `Khata Settled ✅`;
+    else if (khata.isSplit) payStatus = `Paid ₹${khata.paidNow} ${khata.paidVia} + ₹${khata.addedDue} Khata Due`;
+    else payStatus = `Khata Due`;
   }
 
   const lines = [
-    `📋 *DIGITAL BILL • #${shortId}*`,
+    `📄 *OFFICIAL PDF BILL • #${shortId}*`,
     `🏪 *${shopName}*`,
     ``,
-    `Namaste *${customerName}* ji! 🙏`,
-    `Thank you for shopping at *${shopName}*. Here is your bill summary:`,
-    ``,
-    payLine,
-    `📦 *Items:* ${itemCount} units`,
+    `👤 Customer: *${customerName}*`,
+    `💰 *Bill Total:* ₹${total} (${payStatus})`,
   ];
 
   if (khata.scenario === 'FIRST_KHATA') {
     lines.push(
       ``,
-      `📒 *FIRST KHATA ENTRY • ACCOUNT OPENED*`,
-      `• Previous Khata Balance: ₹0`,
+      `📒 *Khata Account Opened (First Bill)*`,
+      `• Previous Khata: ₹0`,
       ...(khata.paidNow > 0 ? [`• Paid Now (${khata.paidVia}): ₹${khata.paidNow}`] : []),
       `• Added to Khata Today: +₹${khata.addedDue}`,
-      `• *Total Net Khata Payable: ₹${khata.newTotalDue}*`,
+      `• *Total Net Khata Due: ₹${khata.newTotalDue}*`
     );
   } else if (khata.scenario === 'REPEAT_KHATA') {
     lines.push(
       ``,
-      `📒 *STORE KHATA LEDGER UPDATE*`,
-      `• Previous Pending Khata: ₹${khata.previousDue}`,
+      `📒 *Khata Ledger Update*`,
+      `• Previous Khata: ₹${khata.previousDue}`,
       ...(khata.paidNow > 0 ? [`• Paid Now (${khata.paidVia}): ₹${khata.paidNow}`] : []),
       `• Added to Khata Today: +₹${khata.addedDue}`,
-      `• *Total Net Khata Payable: ₹${khata.newTotalDue}*`,
+      `• *Total Net Khata Due: ₹${khata.newTotalDue}*`
     );
   } else if (khata.scenario === 'PAID_WITH_OLD_KHATA') {
     lines.push(
       ``,
-      `ℹ️ *Reminder:* Today's bill is Paid in Full. Pending Store Khata Balance: *₹${khata.previousDue}*`
+      `ℹ️ *Previous Khata Balance:* ₹${khata.previousDue} pending at store.`
     );
-  }
-
-  if (Number(order?.savingsAmount) > 0) {
-    lines.push(`🎉 *MRP Savings:* ₹${order.savingsAmount}`);
-  }
-  if (Number(order?.coinsEarned) > 0) {
-    lines.push(`⭐ *Loyalty Coins Earned:* +${order.coinsEarned} Coins`);
   }
 
   lines.push(
     ``,
-    `📄 *Click to Download Official PDF Bill:*`,
-    pdfBillUrl || publicBillUrl,
+    `📥 *Download / View Official PDF Bill:*`,
+    pdfBillUrl,
     ``,
-    `🛒 *Order Online from ${shopName} Next Time:*`,
-    `Skip the counter wait — browse live items & upload parchi:`,
-    storefrontUrl,
-    ``,
-    `_Thank you for supporting your local store!_ 🙏`
+    `_Thank you for shopping at ${shopName}!_ 🙏`
   );
 
   return sanitizeWhatsAppText(lines.join('\n'));
@@ -623,14 +604,21 @@ export function buildWhatsAppBillTextMessage(order, shopData) {
 
 /**
  * SMART PDF-ONLY WHATSAPP DISPATCHER:
- * 1. Generates 100% vector-text official PDF bill.
- * 2. On Mobile: attaches PDF via Share Sheet; on Desktop: downloads PDF + opens WhatsApp Chat.
+ * 1. Directly opens WhatsApp chat with target customer phone number and official PDF bill link.
+ * 2. On Mobile when phone is unknown: uses Web Share Sheet with attached vector PDF file.
  */
 export async function sendBillToCustomerWhatsApp(order, shopData, { toast = null, targetWindow = null } = {}) {
   const shop = resolveShop(order, shopData);
   const cleanPhone = toWhatsAppPhone(order?.customerPhone || order?.userId?.phone);
   const captionText = buildWhatsAppBillTextMessage(order, shop);
   const shortId = String(order?._id || '').slice(-5).toUpperCase() || 'POS';
+
+  // If customer's phone number is known, immediately open WhatsApp directly with their number and PDF bill
+  if (cleanPhone) {
+    if (toast) toast(`📲 Opening +${cleanPhone} on WhatsApp!`, 'success');
+    openWhatsAppChat(cleanPhone, captionText, targetWindow);
+    return true;
+  }
 
   try {
     const pdfRes = await createReceiptPdfFile(order, shop);
@@ -645,7 +633,7 @@ export async function sendBillToCustomerWhatsApp(order, shopData, { toast = null
     });
   } catch (err) {
     console.error('Error sharing PDF bill on WhatsApp:', err);
-    if (toast) toast('Opening WhatsApp with clickable link…', 'info');
+    if (toast) toast('Opening WhatsApp…', 'info');
     openWhatsAppChat(cleanPhone, captionText, targetWindow);
     return false;
   }
