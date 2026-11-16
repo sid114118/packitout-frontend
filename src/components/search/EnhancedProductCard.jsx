@@ -91,9 +91,6 @@ export default function EnhancedProductCard({
   if (item.isVeg === true) tags.push('Veg');
   const displayTags = tags.slice(0, 2);
 
-  // Derive rating (4.0 - 4.9) and reviews
-  const rating = Number(item.rating || item.averageRating || 4.3).toFixed(1);
-  const reviewCount = item.reviewCount || item.reviewsCount || Math.floor(((item.mrp || 150) * 17) % 3500) + 240;
 
   const handleAddClick = (e) => {
     e.stopPropagation();
@@ -513,28 +510,12 @@ export default function EnhancedProductCard({
         </div>
       )}
 
-      {/* RATING & REVIEWS */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginTop: 'auto', marginBottom: '4px' }}>
-        <span style={{ color: '#eab308', fontSize: '0.82rem' }}>★</span>
-        <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#1e293b' }}>
-          {rating}
-        </span>
-        <span style={{ fontSize: '0.7rem', color: '#94a3b8' }}>
-          ({reviewCount.toLocaleString()})
-        </span>
-      </div>
-
-      {/* DELIVERY TIME & STOCK */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.7rem', color: '#64748b' }}>
-        <span style={{ display: 'flex', alignItems: 'center', gap: '3px' }}>
-          <span>⏱</span> 22 mins
-        </span>
-        {activeVariant.stockCount > 0 && activeVariant.stockCount <= 5 && (
-          <span style={{ color: '#ef4444', fontWeight: 700 }}>
-            {activeVariant.stockCount} left
-          </span>
-        )}
-      </div>
+      {/* LOW STOCK BADGE */}
+      {activeVariant.stockCount > 0 && activeVariant.stockCount <= 5 && (
+        <div style={{ fontSize: '0.7rem', color: '#ef4444', fontWeight: 700, marginTop: 'auto' }}>
+          {activeVariant.stockCount} left
+        </div>
+      )}
     </div>
   );
 }

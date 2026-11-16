@@ -4,6 +4,8 @@ import { ModernProductCard } from './FeedComponents.jsx';
 import { cdnImage } from '../utils/cloudinaryUrl.js';
 import { useRankingConfig } from '../ui/RankingProvider.jsx';
 import { applyBrandPriority } from '../utils/rankingSort.js';
+import SearchFilterBar from '../components/search/SearchFilterBar.jsx';
+import { extractDynamicFilters, applyFiltersAndSort } from '../utils/dynamicFilterExtractor.js';
 
 export default function ProductListView({ 
   title, 
@@ -21,6 +23,8 @@ export default function ProductListView({
   const { config: rankingConfig } = useRankingConfig();
   const [selectedSub, setSelectedSub] = useState("All");
   const [selectedBrand, setSelectedBrand] = useState("All Brands");
+  const [activeFilters, setActiveFilters] = useState({});
+  const [activeSort, setActiveSort] = useState('relevance');
 
   // 🚀 LAZY LOADING STATE: Only load 16 items at a time!
   const [visibleCount, setVisibleCount] = useState(16);
@@ -53,15 +57,17 @@ export default function ProductListView({
     return () => { document.body.style.overflow = ''; };
   }, []);
 
-  // 🚀 RESET VISIBLE COUNT when changing subcategories
+  // 🚀 RESET FILTERS & VISIBLE COUNT when changing subcategories
   useEffect(() => {
     setVisibleCount(16);
     setSelectedBrand("All Brands");
+    setActiveFilters({});
+    setActiveSort('relevance');
   }, [selectedSub]);
 
   useEffect(() => {
     setVisibleCount(16);
-  }, [selectedBrand]);
+  }, [selectedBrand, activeFilters, activeSort]);
 
   // 🚀 KEEP VARIANTS GROUPED FOR THE LIST / CATEGORY VIEW
   const sourceItems = useMemo(() => {
@@ -144,28 +150,20 @@ export default function ProductListView({
     return sourceItems.filter(item => String(item[groupingKey] || "").trim() === selectedSub);
   }, [sourceItems, selectedSub, groupingKey]);
 
-  // 🏷️ BRAND CHIPS — derived from items in the current subcategory.
-  // Only show when sidebar isn't already grouping by brand AND there are 2+ brands.
-  const brandsInView = useMemo(() => {
-    if (groupingKey === "brand") return [];
-    const isValid = (v) => v && String(v).trim() && String(v).trim().toLowerCase() !== "nan";
-    const set = new Set();
-    filteredItems.forEach(item => {
-      if (isValid(item.brand)) set.add(String(item.brand).trim());
-    });
-    if (set.size < 2) return [];
-    return ["All Brands", ...Array.from(set).sort((a, b) => a.localeCompare(b))];
-  }, [filteredItems, groupingKey]);
+  // 🏷️ Dynamic filter pills (Brand, Gender, Grain Type, Price per unit, etc.)
+  const dynamicFiltersData = useMemo(() => {
+    const contextName = (selectedSub && selectedSub !== "All") ? selectedSub : (title || "");
+    return extractDynamicFilters(filteredItems, "", contextName);
+  }, [filteredItems, selectedSub, title]);
 
-  const showBrandBar = brandsInView.length > 0;
-  const activeBrand = showBrandBar ? selectedBrand : "All Brands";
-
+  // 🚀 Apply Filters (brand, price, gender, etc.) and Sorting (low to high, discount, etc.)
   const finalItems = useMemo(() => {
-    const base = (!showBrandBar || activeBrand === "All Brands")
-      ? filteredItems
-      : filteredItems.filter(item => String(item.brand || "").trim() === activeBrand);
-    return applyBrandPriority(base, rankingConfig);
-  }, [filteredItems, activeBrand, showBrandBar, rankingConfig]);
+    const filtered = applyFiltersAndSort(filteredItems, activeFilters, activeSort);
+    if (activeSort === 'relevance') {
+      return applyBrandPriority(filtered, rankingConfig);
+    }
+    return filtered;
+  }, [filteredItems, activeFilters, activeSort, rankingConfig]);
 
   // ⚡ INFINITE SCROLL HANDLER ⚡
   const handleScroll = (e) => {
@@ -207,8 +205,45 @@ export default function ProductListView({
           <h2 style={{ margin: 0, color: '#0f172a', fontSize: '1.15rem', fontWeight: '800', letterSpacing: '-0.3px' }}>{title}</h2>
         </div>
         {onSearchClick && (
-          <button onClick={onSearchClick} style={{ background: 'none', border: 'none', fontSize: '1.2rem', cursor: 'pointer', color: '#0f172a' }}>🔍</button>
+          <button
+            onClick={onSearchClick}
+            aria-label="Search"
+            style={{
+              background: '#f8fafc',
+              border: '1px solid #e2e8f0',
+              borderRadius: '50%',
+              width: '36px',
+              height: '36px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              cursor: 'pointer',
+              color: '#0f172a',
+              padding: 0
+            }}
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#334155" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <circle cx="11" cy="11" r="7" />
+              <line x1="21" y1="21" x2="16.65" y2="16.65" />
+            </svg>
+          </button>
         )}
+      </div>
+
+      {/* 🎛️ CONTEXT-AWARE DYNAMIC FILTER & SORT BAR */}
+      <div style={{ flexShrink: 0, zIndex: 90, borderBottom: '1px solid #e2e8f0' }}>
+        <SearchFilterBar
+          filterPills={dynamicFiltersData.filterPills}
+          activeFilters={activeFilters}
+          activeSort={activeSort}
+          priceRange={dynamicFiltersData.priceRange}
+          onFilterChange={setActiveFilters}
+          onSortChange={setActiveSort}
+          onClearFilters={() => {
+            setActiveFilters({});
+            setActiveSort('relevance');
+          }}
+        />
       </div>
 
       {/* 🌟 SPLIT-SCREEN CONTENT AREA 🌟 */}
@@ -254,76 +289,28 @@ export default function ProductListView({
           style={{ flex: 1, overflowY: 'auto', padding: '12px' }}
           onScroll={handleScroll} // ⚡ Scroll listener attached!
         >
-          {/* 🏷️ BRAND FILTER CHIPS — sticky at top of grid */}
-          {showBrandBar && (
-            <div
-              className="hide-scroll"
-              style={{
-                position: 'sticky',
-                top: '-12px',
-                marginInline: '-12px',
-                marginTop: '-12px',
-                marginBottom: '10px',
-                padding: '10px 12px',
-                background: 'rgba(244, 246, 248, 0.95)',
-                backdropFilter: 'saturate(180%) blur(8px)',
-                WebkitBackdropFilter: 'saturate(180%) blur(8px)',
-                borderBottom: '1px solid #e2e8f0',
-                zIndex: 5,
-                display: 'flex',
-                gap: '8px',
-                overflowX: 'auto',
-                scrollbarWidth: 'none'
-              }}
-            >
-              {brandsInView.map((brand) => {
-                const isActive = activeBrand === brand;
-                const isAll = brand === "All Brands";
-                return (
-                  <button
-                    key={brand}
-                    onClick={() => setSelectedBrand(brand)}
-                    style={{
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: '6px',
-                      padding: '7px 14px',
-                      borderRadius: '999px',
-                      border: isActive ? '1px solid #16a34a' : '1px solid #e2e8f0',
-                      background: isActive ? '#16a34a' : '#fff',
-                      color: isActive ? '#fff' : '#0f172a',
-                      fontSize: '0.78rem',
-                      fontWeight: 700,
-                      cursor: 'pointer',
-                      whiteSpace: 'nowrap',
-                      flexShrink: 0,
-                      boxShadow: isActive ? '0 2px 8px rgba(22, 163, 74, 0.25)' : '0 1px 2px rgba(0,0,0,0.03)',
-                      fontFamily: 'inherit',
-                      transition: 'all 0.15s ease'
-                    }}
-                  >
-                    {isAll && <span aria-hidden="true">🏷️</span>}
-                    <span>{brand}</span>
-                  </button>
-                );
-              })}
-            </div>
-          )}
-
           {finalItems.length === 0 ? (
             <div style={{ textAlign: 'center', padding: '40px 20px', color: '#94a3b8' }}>
-              <div style={{ fontSize: '2.5rem', marginBottom: '10px' }}>🔍</div>
-              <div style={{ fontWeight: '700' }}>No items found</div>
-              {showBrandBar && activeBrand !== "All Brands" && (
+              <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '12px' }}>
+                <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                  <circle cx="11" cy="11" r="7" />
+                  <line x1="21" y1="21" x2="16.65" y2="16.65" />
+                </svg>
+              </div>
+              <div style={{ fontWeight: '700', color: '#475569' }}>No items match your selected filters</div>
+              {(Object.keys(activeFilters).length > 0 || activeSort !== 'relevance') && (
                 <button
-                  onClick={() => setSelectedBrand("All Brands")}
+                  onClick={() => {
+                    setActiveFilters({});
+                    setActiveSort('relevance');
+                  }}
                   style={{
                     marginTop: '12px', padding: '8px 16px', borderRadius: '999px',
                     border: '1px solid #16a34a', background: '#fff', color: '#16a34a',
                     fontWeight: 700, fontSize: '0.8rem', cursor: 'pointer', fontFamily: 'inherit'
                   }}
                 >
-                  Show all brands
+                  Clear all filters
                 </button>
               )}
             </div>
