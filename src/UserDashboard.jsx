@@ -219,12 +219,7 @@ export default function UserDashboard({ user, onExit, onLogout, onUserUpdate }) 
                 display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
                 fontSize: '1.1rem',
               }}>📒</span>
-              <span style={{ display: 'inline-flex', flexDirection: 'column', alignItems: 'flex-start' }}>
-                <span style={{ fontWeight: 800, color: '#0f172a', fontSize: '0.95rem' }}>My Store Khata</span>
-                <span style={{ fontSize: '0.74rem', color: '#64748b', fontWeight: 600 }}>
-                  View digital passbook, bills &amp; pay dues via UPI
-                </span>
-              </span>
+              <span style={{ fontWeight: 800, color: '#0f172a', fontSize: '0.95rem' }}>My Store Khata</span>
             </span>
             <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
               {khataInfo.totalPendingAcrossShops > 0 ? (
@@ -235,11 +230,7 @@ export default function UserDashboard({ user, onExit, onLogout, onUserUpdate }) 
                 <span style={{ background: '#fef08a', color: '#854d0e', border: '1px solid #facc15', padding: '3px 9px', borderRadius: '999px', fontWeight: 900, fontSize: '0.72rem' }}>
                   ⏳ Verify Pending
                 </span>
-              ) : (
-                <span style={{ background: '#dcfce7', color: '#15803d', border: '1px solid #86efac', padding: '3px 9px', borderRadius: '999px', fontWeight: 900, fontSize: '0.72rem' }}>
-                  ₹0 Settled ✅
-                </span>
-              )}
+              ) : null}
               <span style={{ color: '#94a3b8', fontSize: '1.2rem' }}>›</span>
             </span>
           </button>

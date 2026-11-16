@@ -295,14 +295,14 @@ export function openWhatsAppChat(rawPhone, messageText, targetWindow = null) {
       targetWindow.location.href = url;
       if (typeof targetWindow.focus === 'function') targetWindow.focus();
       return;
-    } catch {}
+    } catch { }
   }
 
   // 2. Direct window.open attempt
   let win = null;
   try {
     win = window.open(url, '_blank', 'noopener,noreferrer');
-  } catch {}
+  } catch { }
 
   // 3. Fallback for popup blocker
   if (!win) {
@@ -315,12 +315,12 @@ export function openWhatsAppChat(rawPhone, messageText, targetWindow = null) {
       document.body.appendChild(a);
       a.click();
       setTimeout(() => {
-        try { document.body.removeChild(a); } catch {}
+        try { document.body.removeChild(a); } catch { }
       }, 1000);
     } catch {
       try {
         window.location.href = url;
-      } catch {}
+      } catch { }
     }
   }
 }

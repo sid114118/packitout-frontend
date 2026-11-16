@@ -656,7 +656,7 @@ export default function CounterPosTab({
     if (sendWhatsApp && isValidPhone) {
       try {
         waWindow = window.open('about:blank', '_blank');
-      } catch {}
+      } catch { }
     }
 
     setIsSubmitting(true);
@@ -670,9 +670,9 @@ export default function CounterPosTab({
         redeemCoins,
         ...(paymentMethod === 'KHATA'
           ? {
-              paidNowAmount: khataSplitEnabled ? khataPreview.paidNowNum : 0,
-              paidNowVia: khataPaidVia,
-            }
+            paidNowAmount: khataSplitEnabled ? khataPreview.paidNowNum : 0,
+            paidNowVia: khataPaidVia,
+          }
           : {}),
       };
 
@@ -684,7 +684,7 @@ export default function CounterPosTab({
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
         if (waWindow && !waWindow.closed) {
-          try { waWindow.close(); } catch {}
+          try { waWindow.close(); } catch { }
         }
         toast(data.error || 'Failed to create counter bill', 'error');
         playPosBeep(false);
@@ -743,7 +743,7 @@ export default function CounterPosTab({
       }
     } catch {
       if (waWindow && !waWindow.closed) {
-        try { waWindow.close(); } catch {}
+        try { waWindow.close(); } catch { }
       }
       toast('Network error while saving counter bill', 'error');
       playPosBeep(false);
@@ -2129,10 +2129,10 @@ export default function CounterPosTab({
                   )}
                   {(!/^[6-9]\d{9}$/.test(customerPhone.replace(/\D/g, '').slice(-10)) ||
                     (!customerName.trim() && !customerLookup?.user?.name && !customerLookup?.khata?.customerName)) && (
-                    <div style={{ marginTop: '4px', padding: '4px 8px', borderRadius: '6px', background: '#fef2f2', color: '#b91c1c', fontWeight: 800, fontSize: '0.71rem' }}>
-                      ⚠️ Enter 10-digit Mobile Number &amp; Customer Name above to record Khata.
-                    </div>
-                  )}
+                      <div style={{ marginTop: '4px', padding: '4px 8px', borderRadius: '6px', background: '#fef2f2', color: '#b91c1c', fontWeight: 800, fontSize: '0.71rem' }}>
+                        ⚠️ Enter 10-digit Mobile Number &amp; Customer Name above to record Khata.
+                      </div>
+                    )}
                 </div>
               </div>
             )}
@@ -2165,8 +2165,8 @@ export default function CounterPosTab({
                 ? '⏳ Saving Counter Bill…'
                 : paymentMethod === 'KHATA'
                   ? (khataSplitEnabled && khataPreview.paidNowNum > 0
-                      ? `⚖️ Save Split Bill (₹${khataPreview.paidNowNum} + ₹${khataPreview.addedToKhata} Khata)`
-                      : `📒 Save Khata Bill (+₹${totals.finalTotal}) & WhatsApp`)
+                    ? `⚖️ Save Split Bill (₹${khataPreview.paidNowNum} + ₹${khataPreview.addedToKhata} Khata)`
+                    : `📒 Save Khata Bill (+₹${totals.finalTotal}) & WhatsApp`)
                   : `📲 Complete & Send WhatsApp Bill (₹${totals.finalTotal})`}
             </button>
 
