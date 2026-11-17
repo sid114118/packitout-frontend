@@ -6,7 +6,7 @@
     "dev": "vite",
     "build": "vite build",
     "test:frontend": "vitest run src",
-    "test:backend": "node --test packitout-api/tests/catalogSearchService.test.js packitout-api/tests/attributeExtractor.test.js packitout-api/tests/unitPriceCalculator.test.js",
+    "test:backend": "node --test packitout-api/tests/grocerySearchEngine.test.js packitout-api/tests/catalogSearchService.test.js packitout-api/tests/attributeExtractor.test.js packitout-api/tests/unitPriceCalculator.test.js",
     "test:all": "npm run test:frontend && npm run test:backend"
   },
   "dependencies": {

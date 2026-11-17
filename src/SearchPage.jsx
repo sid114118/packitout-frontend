@@ -11,6 +11,11 @@ import { applyBrandPriority } from './utils/rankingSort.js';
 import { trackEvent } from './utils/analyticsEngine.js';
 import VoiceSearchModal from './components/VoiceSearchModal.jsx';
 import { translateDevanagari } from './utils/voiceSearchCleaner.js';
+import {
+  expandQueryTokens,
+  calculateGroceryRelevance,
+  classifyProduct
+} from './utils/grocerySearchEngine.js';
 
 const BASE_URL = (import.meta.env.VITE_API_BASE || "https://darkslategrey-snail-415133.hostingersite.com");
 
@@ -299,51 +304,68 @@ export default function SearchPage({
   const rawSearchResults = useMemo(() => {
     const q = normalizedQuery;
     if (q.length === 0) return [];
-    const results = fuse.search(q);
 
-    // Deduplicate by familyId so multi-variant families only produce 1 consolidated card
-    const seenFamilyIds = new Set();
-    const matches = [];
+    const qContext = expandQueryTokens(q);
+    const familyMap = new Map(); // famId -> { product, relevanceScore }
 
-    for (const r of results) {
-      const it = r.item;
-      const famId = it._familyId || String(it._id);
-      if (!seenFamilyIds.has(famId)) {
-        seenFamilyIds.add(famId);
-        matches.push(it);
+    const considerItem = (it) => {
+      if (!it) return;
+      const famId = it._familyId || String(it._id || '');
+      if (!famId) return;
+
+      const healed = classifyProduct(it);
+      const product = healed ? { ...it, ...healed } : it;
+
+      const relevanceScore = calculateGroceryRelevance(product, qContext);
+      if (relevanceScore > 0) {
+        const existing = familyMap.get(famId);
+        if (!existing || relevanceScore > existing.relevanceScore) {
+          familyMap.set(famId, { product, relevanceScore });
+        }
       }
+    };
+
+    // 1. Fuse.js search with primary query
+    const results = fuse.search(q);
+    for (const r of results) {
+      considerItem(r.item);
     }
 
-    // Fast token scan across any remaining items beyond 2,500
-    const tokens = q.toLowerCase().split(/\s+/).filter(Boolean);
-    if (flatItems.length > 2500 && tokens.length > 0) {
-      for (let i = 2500; i < flatItems.length; i++) {
-        const it = flatItems[i];
-        if (!it) continue;
-        const famId = it._familyId || String(it._id);
-        if (seenFamilyIds.has(famId)) continue;
-
-        const tagsStr = Array.isArray(it.searchTags) ? it.searchTags.join(' ') : (it.searchTags || '');
-        const hay = `${it.name || ''} ${it.brand || ''} ${it.category || ''} ${it.subCategory || ''} ${it.barcode || ''} ${tagsStr}`.toLowerCase();
-        if (tokens.every(t => hay.includes(t))) {
-          seenFamilyIds.add(famId);
-          matches.push(it);
-          if (matches.length >= 80) break;
+    // 2. Search Fuse with key expanded tokens (e.g. kaju -> cashew, chawal -> rice)
+    if (qContext.expandedTokens && qContext.expandedTokens.size > 0) {
+      for (const expTok of qContext.expandedTokens) {
+        if (expTok !== q.toLowerCase() && expTok.length >= 4) {
+          const synResults = fuse.search(expTok);
+          for (const sr of synResults) {
+            considerItem(sr.item);
+          }
         }
       }
     }
 
-    // Merge server-side search results cleanly
+    // 3. Scan flatItems with token & synonym matching
+    for (let i = 0; i < flatItems.length; i++) {
+      considerItem(flatItems[i]);
+    }
+
+    // 4. Merge server-side search results cleanly
     for (const sItem of serverResults) {
       if (sItem && sItem._id) {
-        const famId = sItem.itemGroupId || String(sItem._id);
-        if (!seenFamilyIds.has(famId)) {
-          seenFamilyIds.add(famId);
-          matches.push(sItem);
-        }
+        considerItem(sItem);
       }
     }
 
+    const candidateMatches = Array.from(familyMap.values());
+
+    // 5. Sort by grocery relevance score (pure core promotion + derivative demotion)
+    candidateMatches.sort((a, b) => {
+      if (b.relevanceScore !== a.relevanceScore) {
+        return b.relevanceScore - a.relevanceScore;
+      }
+      return String(a.product.name || '').localeCompare(String(b.product.name || ''));
+    });
+
+    const matches = candidateMatches.map(c => c.product);
     return applyBrandPriority(matches, rankingConfig);
   }, [normalizedQuery, fuse, flatItems, serverResults, rankingConfig]);
 
