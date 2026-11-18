@@ -26,7 +26,23 @@ export default function ShopDashboard({ user, onExit }) {
   const [activeTab, setActiveTab] = useState("orders");
   const [orders, setOrders] = useState([]);
   const [masterCatalog, setMasterCatalog] = useState([]);
+  const [isCatalogLoading, setIsCatalogLoading] = useState(true);
+  const [catalogError, setCatalogError] = useState(null);
+  const [isInventoryLoading, setIsInventoryLoading] = useState(() => {
+    const inv = user?.inventory;
+    if (!Array.isArray(inv) || inv.length === 0) return true;
+    return !inv.some(i => i && i.product && typeof i.product === 'object' && i.product._id);
+  });
   const [shopData, setShopData] = useState(user);
+
+  // Safely merge updated shop payloads while always preserving the sessionToken in memory
+  const updateShopDataSafe = (updated) => {
+    if (!updated) return;
+    setShopData(prev => ({
+      ...updated,
+      sessionToken: updated.sessionToken || prev?.sessionToken || user?.sessionToken,
+    }));
+  };
 
   const [parchiRequests, setParchiRequests] = useState([]);
   const [selectedParchi, setSelectedParchi] = useState(null);
@@ -49,11 +65,13 @@ export default function ShopDashboard({ user, onExit }) {
   // --- DATA FETCHING ---
   useEffect(() => {
     const fetchAllData = async () => {
-      await refreshShopData();
-      await fetchOrders();
-      await fetchMasterCatalog();
-      await fetchParchis();
-      await fetchKhataSummary();
+      await Promise.allSettled([
+        refreshShopData(),
+        fetchOrders(),
+        fetchMasterCatalog(),
+        fetchParchis(),
+        fetchKhataSummary(),
+      ]);
     };
     fetchAllData();
 
@@ -90,7 +108,7 @@ export default function ShopDashboard({ user, onExit }) {
     });
     eventSource.addEventListener('refresh_parchis', () => {
       clearTimeout(parchisTimeout);
-
+      parchisTimeout = setTimeout(fetchParchis, 500);
     });
 
     eventSource.onerror = (err) => {
@@ -118,20 +136,34 @@ export default function ShopDashboard({ user, onExit }) {
   };
 
   const fetchMasterCatalog = async () => {
+    setIsCatalogLoading(true);
+    setCatalogError(null);
     try {
       const res = await fetch(`${BASE_URL}/master-products`);
-      setMasterCatalog(await res.json());
-    } catch (err) { console.log(err); }
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
+      setMasterCatalog(Array.isArray(data) ? data : (data?.items || []));
+    } catch (err) {
+      console.log(err);
+      setCatalogError(err.message || "Failed to load catalog");
+    } finally {
+      setIsCatalogLoading(false);
+    }
   };
 
   const refreshShopData = async () => {
+    setIsInventoryLoading(true);
     try {
       const res = await fetch(`${BASE_URL}/shops/${shopData._id}/menu`);
       if (res.ok) {
         const updated = await res.json();
-        setShopData(prev => ({ ...updated, sessionToken: prev?.sessionToken || shopData.sessionToken }));
+        updateShopDataSafe(updated);
       }
-    } catch (err) { console.log(err); }
+    } catch (err) {
+      console.log(err);
+    } finally {
+      setIsInventoryLoading(false);
+    }
   };
 
   const fetchParchis = async () => {
@@ -423,7 +455,7 @@ export default function ShopDashboard({ user, onExit }) {
         <button onClick={() => setActiveTab("complaints")} style={tabStyle(activeTab === "complaints")}>📣 Complaints</button>
       </div>
 
-      <ShopLocationBanner shopData={shopData} onShopUpdated={setShopData} />
+      <ShopLocationBanner shopData={shopData} onShopUpdated={updateShopDataSafe} />
 
       <div style={{ padding: '15px', maxWidth: (activeTab === "pos" || activeTab === "khata") ? '1140px' : '800px', margin: '0 auto' }}>
         {activeTab === "pos" && (
@@ -442,7 +474,7 @@ export default function ShopDashboard({ user, onExit }) {
               setKhataRefreshSignal(s => s + 1);
             }}
             onBillCreated={(updatedShop, createdOrder) => {
-              if (updatedShop) setShopData({ ...updatedShop, sessionToken: shopData.sessionToken });
+              if (updatedShop) updateShopDataSafe(updatedShop);
               if (createdOrder) setOrders(prev => [createdOrder, ...prev]);
             }}
           />
@@ -460,7 +492,19 @@ export default function ShopDashboard({ user, onExit }) {
         )}
         {activeTab === "orders" && <OrdersTab orders={orders} updateOrderStatus={updateOrderStatus} markOrderPaid={markOrderPaid} shopData={shopData} refreshOrders={fetchOrders} />}
         {activeTab === "parchis" && <ParchiTab parchiRequests={parchiRequests} selectedParchi={selectedParchi} setSelectedParchi={setSelectedParchi} parchiBill={parchiBill} setParchiBill={setParchiBill} handleAddToBill={handleAddToBill} handleSendBill={handleSendBill} shopData={shopData} />}
-        {activeTab === "inventory" && <InventoryTab shopData={shopData} masterCatalog={masterCatalog} handleInventoryUpdate={handleInventoryUpdate} handleInventoryRemove={handleInventoryRemove} onInventoryRefresh={refreshShopData} fetchMasterCatalog={fetchMasterCatalog} />}
+        {activeTab === "inventory" && (
+          <InventoryTab
+            shopData={shopData}
+            masterCatalog={masterCatalog}
+            isCatalogLoading={isCatalogLoading}
+            catalogError={catalogError}
+            isInventoryLoading={isInventoryLoading}
+            handleInventoryUpdate={handleInventoryUpdate}
+            handleInventoryRemove={handleInventoryRemove}
+            onInventoryRefresh={refreshShopData}
+            fetchMasterCatalog={fetchMasterCatalog}
+          />
+        )}
         {activeTab === "requests" && <RequestsTab shopData={shopData} />}
         {activeTab === "combos" && <CombosTab shopData={shopData} masterCatalog={masterCatalog} onComboRefresh={refreshShopData} />}
         {activeTab === "reviews" && <ShopReviews shopId={shopData._id} shopRating={shopData.rating} totalReviews={shopData.totalReviews} />}
@@ -471,14 +515,14 @@ export default function ShopDashboard({ user, onExit }) {
         open={photoModalOpen}
         onClose={() => setPhotoModalOpen(false)}
         shop={shopData}
-        onShopUpdated={(updated) => setShopData(updated)}
+        onShopUpdated={updateShopDataSafe}
       />
 
       <ShopProfileModal
         open={profileModalOpen}
         shop={shopData}
         onClose={() => setProfileModalOpen(false)}
-        onShopUpdated={(updated) => setShopData(updated)}
+        onShopUpdated={updateShopDataSafe}
       />
     </div>
   );

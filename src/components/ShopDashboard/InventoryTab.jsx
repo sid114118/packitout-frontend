@@ -6,28 +6,42 @@ import { shopFetch } from '../../utils/api.js';
 
 const BASE_URL = (import.meta.env.VITE_API_BASE || "https://darkslategrey-snail-415133.hostingersite.com");
 
-export default function InventoryTab({ shopData, masterCatalog, handleInventoryUpdate, handleInventoryRemove, onInventoryRefresh, fetchMasterCatalog }) {
+export default function InventoryTab({
+  shopData,
+  masterCatalog,
+  isCatalogLoading = false,
+  catalogError = null,
+  isInventoryLoading = false,
+  handleInventoryUpdate,
+  handleInventoryRemove,
+  onInventoryRefresh,
+  fetchMasterCatalog,
+}) {
   const toast = useToast();
   const confirmDialog = useConfirm();
   const askForValue = usePrompt();
-  // --- STATES FOR SEARCH & EDITING ---
   // --- STATES FOR SEARCH & EDITING ---
   const [searchMaster, setSearchMaster] = useState("");
   const [searchInventoryInput, setSearchInventoryInput] = useState("");
   const [appliedSearch, setAppliedSearch] = useState("");
   const [inventoryFilter, setInventoryFilter] = useState("all"); // 'all' | 'featured' | 'outOfStock'
   const [visibleCount, setVisibleCount] = useState(30);
+  const [visibleAvailableCount, setVisibleAvailableCount] = useState(40);
   const [isUpdatingRank, setIsUpdatingRank] = useState(false);
   const [isAddProductsOpen, setIsAddProductsOpen] = useState(false);
 
   useEffect(() => {
     setVisibleCount(30);
   }, [inventoryFilter, appliedSearch]);
-  
+
+  useEffect(() => {
+    setVisibleAvailableCount(40);
+  }, [searchMaster]);
+
   // States for Inline Price Editing
   const [editingId, setEditingId] = useState(null);
   const [tempPrice, setTempPrice] = useState("");
-  const [addingId, setAddingId] = useState(null); 
+  const [addingId, setAddingId] = useState(null);
 
   // 🚀 STATE FOR BULK IMPORT
   const [isImporting, setIsImporting] = useState(false);
@@ -43,10 +57,10 @@ export default function InventoryTab({ shopData, masterCatalog, handleInventoryU
     const file = e.target.files?.[0];
     if (!file) return;
     setIsUploadingImage(true);
-    
+
     const formData = new FormData();
     formData.append("image", file);
-    
+
     try {
       const res = await shopFetch(shopData, "/master-products/upload-image", {
         method: "POST",
@@ -79,14 +93,14 @@ export default function InventoryTab({ shopData, masterCatalog, handleInventoryU
         const errData = await res.json().catch(() => ({}));
         return toast(errData.error || "Failed to create custom product", 'error');
       }
-      
+
       const createdProduct = await res.json();
       toast("Custom product added to Master Catalog and your Store!");
       setNewProductForm(initialProductForm);
       setIsCreatingProduct(false);
 
       if (fetchMasterCatalog) await fetchMasterCatalog();
-      
+
       // Auto-add to inventory
       if (createdProduct && createdProduct._id) {
         await handleInventoryUpdate(createdProduct._id, createdProduct.mrp, true);
@@ -105,8 +119,13 @@ export default function InventoryTab({ shopData, masterCatalog, handleInventoryU
   const safeCatalog = masterCatalog || [];
 
   // --- DATA CALCULATIONS ---
-  const shopProductIds = safeInventory.map(i => i.product._id); 
-  const availableToAdd = safeCatalog.filter(m => !shopProductIds.includes(m._id));
+  const shopProductIdSet = useMemo(() => {
+    return new Set(safeInventory.map(i => String(i.product?._id || i.product || '')));
+  }, [safeInventory]);
+
+  const availableToAdd = useMemo(() => {
+    return safeCatalog.filter(m => m && !shopProductIdSet.has(String(m._id)));
+  }, [safeCatalog, shopProductIdSet]);
 
   // ⚡ FAST TOKENIZED MASTER CATALOG SEARCH
   const filteredAvailable = useMemo(() => {
@@ -740,7 +759,7 @@ export default function InventoryTab({ shopData, masterCatalog, handleInventoryU
         <div style={{ marginBottom: '25px', padding: '15px', backgroundColor: '#fdf4ff', borderRadius: '16px', border: '1px solid #f5d0fe' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
             <h4 style={{ margin: 0, color: '#a21caf', fontSize: '1.1rem', fontWeight: '800' }}>✨ Create Custom Product</h4>
-            <button 
+            <button
               onClick={() => setIsCreatingProduct(!isCreatingProduct)}
               style={{ backgroundColor: '#a21caf', color: '#fff', padding: '6px 12px', borderRadius: '8px', border: 'none', fontWeight: '800', cursor: 'pointer' }}
             >
@@ -751,18 +770,18 @@ export default function InventoryTab({ shopData, masterCatalog, handleInventoryU
           {isCreatingProduct && (
             <form onSubmit={handleCreateMasterProduct} style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: '10px' }}>
-                <input required type="text" placeholder="Name (e.g. Local Bread)" value={newProductForm.name} onChange={e => setNewProductForm({...newProductForm, name: e.target.value})} style={searchInputStyle} />
-                <input required type="text" placeholder="Brand" value={newProductForm.brand} onChange={e => setNewProductForm({...newProductForm, brand: e.target.value})} style={searchInputStyle} />
-                <select required value={newProductForm.category} onChange={e => setNewProductForm({...newProductForm, category: e.target.value})} style={searchInputStyle}>
+                <input required type="text" placeholder="Name (e.g. Local Bread)" value={newProductForm.name} onChange={e => setNewProductForm({ ...newProductForm, name: e.target.value })} style={searchInputStyle} />
+                <input required type="text" placeholder="Brand" value={newProductForm.brand} onChange={e => setNewProductForm({ ...newProductForm, brand: e.target.value })} style={searchInputStyle} />
+                <select required value={newProductForm.category} onChange={e => setNewProductForm({ ...newProductForm, category: e.target.value })} style={searchInputStyle}>
                   <option value="">Select Category</option>
                   {CATEGORIES.map(cat => <option key={cat} value={cat}>{cat}</option>)}
                 </select>
-                <input required type="number" placeholder="MRP (₹)" value={newProductForm.mrp} onChange={e => setNewProductForm({...newProductForm, mrp: e.target.value})} style={searchInputStyle} />
-                <input required type="text" placeholder="Quantity (e.g. 1 unit)" value={newProductForm.qnty} onChange={e => setNewProductForm({...newProductForm, qnty: e.target.value})} style={searchInputStyle} />
-                <input type="text" placeholder="Emoji (e.g. 🍞)" value={newProductForm.emoji} onChange={e => setNewProductForm({...newProductForm, emoji: e.target.value})} style={searchInputStyle} />
-                <input type="text" placeholder="Barcode (Optional)" value={newProductForm.barcode || ""} onChange={e => setNewProductForm({...newProductForm, barcode: e.target.value})} style={searchInputStyle} />
+                <input required type="number" placeholder="MRP (₹)" value={newProductForm.mrp} onChange={e => setNewProductForm({ ...newProductForm, mrp: e.target.value })} style={searchInputStyle} />
+                <input required type="text" placeholder="Quantity (e.g. 1 unit)" value={newProductForm.qnty} onChange={e => setNewProductForm({ ...newProductForm, qnty: e.target.value })} style={searchInputStyle} />
+                <input type="text" placeholder="Emoji (e.g. 🍞)" value={newProductForm.emoji} onChange={e => setNewProductForm({ ...newProductForm, emoji: e.target.value })} style={searchInputStyle} />
+                <input type="text" placeholder="Barcode (Optional)" value={newProductForm.barcode || ""} onChange={e => setNewProductForm({ ...newProductForm, barcode: e.target.value })} style={searchInputStyle} />
                 <div style={{ display: 'flex', gap: '5px', alignItems: 'center' }}>
-                  <input type="text" placeholder="Image URL (Optional)" value={newProductForm.image} onChange={e => setNewProductForm({...newProductForm, image: e.target.value})} style={{ ...searchInputStyle, flex: 1, marginBottom: 0 }} />
+                  <input type="text" placeholder="Image URL (Optional)" value={newProductForm.image} onChange={e => setNewProductForm({ ...newProductForm, image: e.target.value })} style={{ ...searchInputStyle, flex: 1, marginBottom: 0 }} />
                   <label style={{ cursor: isUploadingImage ? 'wait' : 'pointer', padding: '12px 10px', backgroundColor: '#e879f9', color: 'white', borderRadius: '8px', fontSize: '0.8rem', fontWeight: 'bold', whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', height: '100%' }}>
                     {isUploadingImage ? '⏳' : '📁 Upload'}
                     <input type="file" accept="image/*" onChange={handleImageUpload} style={{ display: 'none' }} disabled={isUploadingImage} />
@@ -783,8 +802,8 @@ export default function InventoryTab({ shopData, masterCatalog, handleInventoryU
       {/* 🚀 ADD NEW PRODUCTS SECTION (COLLAPSIBLE) */}
       {/* ========================================= */}
       <div style={{ marginBottom: '22px', borderRadius: '16px', border: '1.5px solid #bae6fd', backgroundColor: '#f0f9ff', overflow: 'hidden', boxShadow: '0 2px 8px rgba(2, 132, 199, 0.06)' }}>
-        
-        <button 
+
+        <button
           type="button"
           onClick={() => setIsAddProductsOpen(prev => !prev)}
           style={{
@@ -803,7 +822,7 @@ export default function InventoryTab({ shopData, masterCatalog, handleInventoryU
         >
           <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <span>➕</span>
-            <span>Add New Products to Store ({availableToAdd.length} catalog items)</span>
+            <span>Add New Products to Store ({isCatalogLoading ? 'Loading…' : `${availableToAdd.length} catalog items`})</span>
           </span>
           <span style={{ fontSize: '0.8rem', backgroundColor: 'rgba(255,255,255,0.2)', padding: '4px 10px', borderRadius: '20px' }}>
             {isAddProductsOpen ? '▲ Collapse' : '▼ Tap to Open'}
@@ -816,20 +835,20 @@ export default function InventoryTab({ shopData, masterCatalog, handleInventoryU
               <div style={{ fontSize: '0.85rem', color: '#0369a1', fontWeight: '700' }}>
                 Browse master catalog or bulk import into your store
               </div>
-              
+
               {/* ⚡ THE BULK IMPORT BUTTON ⚡ */}
-              <button 
-                onClick={handleBulkImport} 
-                disabled={isImporting}
-                style={{ 
-                  backgroundColor: '#0f172a', 
-                  color: '#fff', 
-                  padding: '8px 12px', 
-                  borderRadius: '8px', 
-                  fontWeight: '800', 
+              <button
+                onClick={handleBulkImport}
+                disabled={isImporting || isCatalogLoading || availableToAdd.length === 0}
+                style={{
+                  backgroundColor: (isImporting || isCatalogLoading || availableToAdd.length === 0) ? '#94a3b8' : '#0f172a',
+                  color: '#fff',
+                  padding: '8px 12px',
+                  borderRadius: '8px',
+                  fontWeight: '800',
                   fontSize: '0.8rem',
-                  border: 'none', 
-                  cursor: isImporting ? 'wait' : 'pointer',
+                  border: 'none',
+                  cursor: (isImporting || isCatalogLoading || availableToAdd.length === 0) ? 'not-allowed' : 'pointer',
                   display: 'flex',
                   alignItems: 'center',
                   boxShadow: '0 4px 10px rgba(0,0,0,0.1)'
@@ -838,55 +857,94 @@ export default function InventoryTab({ shopData, masterCatalog, handleInventoryU
                 {isImporting ? '⏳ Importing...' : '⚡ Bulk Import Catalog'}
               </button>
             </div>
-            
+
             {/* Search Master Catalog */}
-            <input 
-              type="text" 
-              placeholder="🔍 Search master catalog (e.g., Milk, Lay's)..." 
-              value={searchMaster} 
-              onChange={(e) => setSearchMaster(e.target.value)} 
-              style={searchInputStyle} 
+            <input
+              type="text"
+              placeholder="🔍 Search master catalog (e.g., Milk, Lay's)..."
+              value={searchMaster}
+              onChange={(e) => setSearchMaster(e.target.value)}
+              style={searchInputStyle}
             />
 
-            {availableToAdd.length === 0 ? (
-              <div style={{ fontSize: '0.9rem', color: '#0284c7', marginTop: '15px', fontWeight: 'bold', textAlign: 'center' }}>🎉 You have added every available product!</div>
-            ) : (
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: '10px', marginTop: '10px', maxHeight: '250px', overflowY: 'auto', paddingRight: '5px' }}>
-                {filteredAvailable.map(m => (
-                  <div key={m._id} style={{ backgroundColor: 'white', padding: '10px', borderRadius: '12px', border: '1px solid #bae6fd', textAlign: 'center', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
-                    
-                    {/* Product Info */}
-                    <div style={{ marginBottom: '10px' }}>
-                      <div style={{ fontSize: '24px', marginBottom: '5px' }}>{m.image ? <img src={cdnImage(m.image, 100)} alt="" loading="lazy" decoding="async" style={{ height: '30px', objectFit: 'contain'}} /> : m.emoji}</div>
-                      <div style={{ fontSize: '0.8rem', fontWeight: 'bold', color: '#0f172a', lineHeight: '1.2', height: '30px', overflow: 'hidden' }}>{m.name}</div>
-                      <div style={{ fontSize: '0.75rem', color: '#64748b', marginTop: '4px', fontWeight: '600' }}>MRP: ₹{m.mrp}</div>
-                    </div>
-
-                    {/* Inline Add Action */}
-                    {addingId === m._id ? (
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-                        <input type="number" placeholder={`₹${m.mrp}`} value={tempPrice} onChange={e => setTempPrice(e.target.value)} style={{ padding: '6px', borderRadius: '6px', border: '2px solid #0284c7', outline: 'none', fontSize: '0.9rem', textAlign: 'center', fontWeight: 'bold' }} autoFocus />
-                        <div style={{ display: 'flex', gap: '5px' }}>
-                          <button onClick={() => setAddingId(null)} style={{ flex: 1, padding: '6px', backgroundColor: '#f1f5f9', border: 'none', borderRadius: '6px', cursor: 'pointer' }}>❌</button>
-                          <button 
-                            onClick={() => { 
-                              handleInventoryUpdate(m._id, tempPrice || m.mrp, true); 
-                              setAddingId(null); 
-                              setTempPrice(""); 
-                            }} 
-                            style={{ flex: 1, padding: '6px', backgroundColor: '#0284c7', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold' }}>
-                            Save
-                          </button>
-                        </div>
-                      </div>
-                    ) : (
-                      <button onClick={() => { setAddingId(m._id); setTempPrice(m.mrp); }} style={{ width: '100%', padding: '8px 6px', backgroundColor: '#e0f2fe', color: '#0284c7', border: 'none', borderRadius: '8px', fontWeight: '800', cursor: 'pointer' }}>
-                        + Add to Store
-                      </button>
-                    )}
-                  </div>
-                ))}
+            {isCatalogLoading ? (
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '30px 10px', gap: '10px', color: '#0284c7' }}>
+                <div className="pio-spinner" style={{ width: '28px', height: '28px', border: '3px solid #bae6fd', borderTopColor: '#0284c7', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
+                <span style={{ fontSize: '0.88rem', fontWeight: '600' }}>Loading master catalog...</span>
               </div>
+            ) : catalogError ? (
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '24px 10px', gap: '10px', textAlign: 'center' }}>
+                <span style={{ fontSize: '0.88rem', color: '#dc2626', fontWeight: '600' }}>⚠️ Could not load master catalog ({catalogError})</span>
+                <button
+                  onClick={() => fetchMasterCatalog && fetchMasterCatalog()}
+                  style={{ padding: '8px 18px', backgroundColor: '#0284c7', color: 'white', border: 'none', borderRadius: '8px', fontWeight: '700', cursor: 'pointer', fontSize: '0.85rem' }}
+                >
+                  🔄 Retry Catalog
+                </button>
+              </div>
+            ) : availableToAdd.length === 0 ? (
+              <div style={{ fontSize: '0.9rem', color: '#0284c7', marginTop: '15px', fontWeight: 'bold', textAlign: 'center' }}>🎉 You have added every available product!</div>
+            ) : filteredAvailable.length === 0 ? (
+              <div style={{ fontSize: '0.88rem', color: '#64748b', marginTop: '15px', fontWeight: '600', textAlign: 'center' }}>No products found matching "{searchMaster}".</div>
+            ) : (
+              <>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: '10px', marginTop: '10px', maxHeight: '280px', overflowY: 'auto', paddingRight: '5px' }}>
+                  {filteredAvailable.slice(0, visibleAvailableCount).map(m => (
+                    <div key={m._id} style={{ backgroundColor: 'white', padding: '10px', borderRadius: '12px', border: '1px solid #bae6fd', textAlign: 'center', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+
+                      {/* Product Info */}
+                      <div style={{ marginBottom: '10px' }}>
+                        <div style={{ fontSize: '24px', marginBottom: '5px' }}>{m.image ? <img src={cdnImage(m.image, 100)} alt="" loading="lazy" decoding="async" style={{ height: '30px', objectFit: 'contain' }} /> : m.emoji}</div>
+                        <div style={{ fontSize: '0.8rem', fontWeight: 'bold', color: '#0f172a', lineHeight: '1.2', height: '30px', overflow: 'hidden' }}>{m.name}</div>
+                        <div style={{ fontSize: '0.75rem', color: '#64748b', marginTop: '4px', fontWeight: '600' }}>MRP: ₹{m.mrp}</div>
+                      </div>
+
+                      {/* Inline Add Action */}
+                      {addingId === m._id ? (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                          <input type="number" placeholder={`₹${m.mrp}`} value={tempPrice} onChange={e => setTempPrice(e.target.value)} style={{ padding: '6px', borderRadius: '6px', border: '2px solid #0284c7', outline: 'none', fontSize: '0.9rem', textAlign: 'center', fontWeight: 'bold' }} autoFocus />
+                          <div style={{ display: 'flex', gap: '5px' }}>
+                            <button onClick={() => setAddingId(null)} style={{ flex: 1, padding: '6px', backgroundColor: '#f1f5f9', border: 'none', borderRadius: '6px', cursor: 'pointer' }}>❌</button>
+                            <button
+                              onClick={() => {
+                                handleInventoryUpdate(m._id, tempPrice || m.mrp, true);
+                                setAddingId(null);
+                                setTempPrice("");
+                              }}
+                              style={{ flex: 1, padding: '6px', backgroundColor: '#0284c7', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold' }}>
+                              Save
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
+                        <button onClick={() => { setAddingId(m._id); setTempPrice(m.mrp); }} style={{ width: '100%', padding: '8px 6px', backgroundColor: '#e0f2fe', color: '#0284c7', border: 'none', borderRadius: '8px', fontWeight: '800', cursor: 'pointer' }}>
+                          + Add to Store
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                </div>
+                {filteredAvailable.length > visibleAvailableCount && (
+                  <button
+                    type="button"
+                    onClick={() => setVisibleAvailableCount(prev => prev + 40)}
+                    style={{
+                      width: '100%',
+                      marginTop: '10px',
+                      padding: '8px',
+                      backgroundColor: '#e0f2fe',
+                      color: '#0369a1',
+                      border: '1px solid #7dd3fc',
+                      borderRadius: '8px',
+                      fontWeight: '800',
+                      fontSize: '0.82rem',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    Show More Catalog Items ({filteredAvailable.length - visibleAvailableCount} more)
+                  </button>
+                )}
+              </>
             )}
           </div>
         )}
@@ -961,25 +1019,25 @@ export default function InventoryTab({ shopData, masterCatalog, handleInventoryU
           <span><strong>Shopkeeper's Picks Ranking:</strong> Use the ⬆️ and ⬇️ buttons below to order which item shows 1st, 2nd, etc. on the customer app home screen!</span>
         </div>
       )}
-      
+
       {/* Search Current Inventory with Dedicated Search & Clear Buttons */}
       <div style={{ display: 'flex', gap: '8px', marginBottom: '12px' }}>
         <div style={{ position: 'relative', flex: 1 }}>
-          <input 
-            type="text" 
-            placeholder={`Search in ${inventoryFilter === 'featured' ? 'Featured Picks' : inventoryFilter === 'outOfStock' ? 'Out of Stock' : 'Store'}...`} 
-            value={searchInventoryInput} 
-            onChange={(e) => setSearchInventoryInput(e.target.value)} 
+          <input
+            type="text"
+            placeholder={`Search in ${inventoryFilter === 'featured' ? 'Featured Picks' : inventoryFilter === 'outOfStock' ? 'Out of Stock' : 'Store'}...`}
+            value={searchInventoryInput}
+            onChange={(e) => setSearchInventoryInput(e.target.value)}
             onKeyDown={(e) => {
               if (e.key === 'Enter') {
                 setAppliedSearch(searchInventoryInput.trim());
                 setVisibleCount(30);
               }
             }}
-            style={{ ...searchInputStyle, paddingRight: searchInventoryInput ? '36px' : '14px', marginBottom: 0 }} 
+            style={{ ...searchInputStyle, paddingRight: searchInventoryInput ? '36px' : '14px', marginBottom: 0 }}
           />
           {searchInventoryInput && (
-            <button 
+            <button
               type="button"
               onClick={() => {
                 setSearchInventoryInput('');
@@ -1027,12 +1085,17 @@ export default function InventoryTab({ shopData, masterCatalog, handleInventoryU
         </div>
       )}
 
-      {filteredInventory.length === 0 ? (
+      {isInventoryLoading && safeInventory.length === 0 ? (
+        <div style={{ textAlign: 'center', padding: '40px 20px', backgroundColor: 'white', borderRadius: '16px', color: '#0284c7', fontWeight: '600', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px' }}>
+          <div className="pio-spinner" style={{ width: '28px', height: '28px', border: '3px solid #bae6fd', borderTopColor: '#0284c7', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
+          <span>Loading store inventory...</span>
+        </div>
+      ) : filteredInventory.length === 0 ? (
         <div style={{ textAlign: 'center', padding: '40px 20px', backgroundColor: 'white', borderRadius: '16px', color: '#64748b', fontWeight: '600' }}>
           <div style={{ fontSize: '2rem', marginBottom: '10px' }}>🔍</div>
           <div>No items match your {appliedSearch ? 'search query' : 'selected filter'}.</div>
           {(inventoryFilter !== 'all' || appliedSearch) && (
-            <button 
+            <button
               onClick={() => { setInventoryFilter('all'); setSearchInventoryInput(''); setAppliedSearch(''); }}
               style={{ marginTop: '12px', padding: '8px 16px', backgroundColor: '#f1f5f9', border: '1px solid #cbd5e1', borderRadius: '8px', cursor: 'pointer', fontWeight: '700', fontSize: '0.85rem' }}
             >
@@ -1049,7 +1112,7 @@ export default function InventoryTab({ shopData, masterCatalog, handleInventoryU
 
             return (
               <div key={item.product._id} style={{ ...cardStyle, border: item.isFeatured ? '2px solid #fde68a' : isOutOfStock ? '2px solid #fecaca' : '1px solid #e2e8f0', opacity: isOutOfStock ? 0.85 : 1, position: 'relative' }}>
-                
+
                 {/* 🌟 FEATURED RANK BADGE & REORDER CONTROLS */}
                 {item.isFeatured && (
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#fffbeb', padding: '8px 12px', borderRadius: '10px', marginBottom: '10px', border: '1px solid #fef3c7', flexWrap: 'wrap', gap: '8px' }}>
@@ -1139,7 +1202,7 @@ export default function InventoryTab({ shopData, masterCatalog, handleInventoryU
                   <div style={{ flex: 1 }}>
                     <div style={{ fontWeight: '800', color: '#0f172a', fontSize: '0.95rem', lineHeight: '1.2' }}>{item.product.name}</div>
                     <div style={{ fontSize: '0.75rem', color: '#64748b', marginBottom: '6px', fontWeight: '600' }}>{item.product.qnty} • MRP ₹{item.product.mrp}</div>
-                    
+
                     {/* Inline Price Editor */}
                     {editingId === item.product._id ? (
                       <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
@@ -1161,48 +1224,48 @@ export default function InventoryTab({ shopData, masterCatalog, handleInventoryU
 
                 {/* 🔴🟢 MASSIVE OUT OF STOCK & FEATURED TOGGLES */}
                 <div style={{ display: 'flex', gap: '10px', marginTop: '15px' }}>
-                  <button 
+                  <button
                     onClick={() => handleInventoryUpdate(item.product._id, item.sellingPrice, !item.inStock)}
-                    style={{ 
-                      flex: 1, 
-                      padding: '12px', 
-                      borderRadius: '10px', 
-                      fontWeight: '800', 
-                      fontSize: '0.85rem', 
-                      cursor: 'pointer', 
-                      display: 'flex', 
-                      justifyContent: 'center', 
-                      alignItems: 'center', 
-                      gap: '4px', 
-                      backgroundColor: item.inStock ? '#f0fdf4' : '#fef2f2', 
-                      color: item.inStock ? '#16a34a' : '#dc2626', 
-                      border: item.inStock ? '1px solid #bbf7d0' : '1px solid #fecaca', 
+                    style={{
+                      flex: 1,
+                      padding: '12px',
+                      borderRadius: '10px',
+                      fontWeight: '800',
+                      fontSize: '0.85rem',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      justifyContent: 'center',
+                      alignItems: 'center',
+                      gap: '4px',
+                      backgroundColor: item.inStock ? '#f0fdf4' : '#fef2f2',
+                      color: item.inStock ? '#16a34a' : '#dc2626',
+                      border: item.inStock ? '1px solid #bbf7d0' : '1px solid #fecaca',
                       transition: '0.2s',
                       boxShadow: item.inStock ? '0 4px 6px rgba(22, 163, 74, 0.05)' : 'none'
                     }}
                   >
                     {item.inStock ? "🟢 IN STOCK" : "🔴 OUT OF STOCK"}
                   </button>
-                  <button 
+                  <button
                     onClick={() => {
                       const nextFeatured = !item.isFeatured;
                       const nextRank = nextFeatured ? (featuredCount + 1) : 999;
                       handleInventoryUpdate(item.product._id, item.sellingPrice, item.inStock, nextFeatured, nextRank);
                     }}
-                    style={{ 
-                      flex: 1, 
-                      padding: '12px', 
-                      borderRadius: '10px', 
-                      fontWeight: '800', 
-                      fontSize: '0.85rem', 
-                      cursor: 'pointer', 
-                      display: 'flex', 
-                      justifyContent: 'center', 
-                      alignItems: 'center', 
-                      gap: '4px', 
-                      backgroundColor: item.isFeatured ? '#fffbeb' : '#f8fafc', 
-                      color: item.isFeatured ? '#d97706' : '#64748b', 
-                      border: item.isFeatured ? '1px solid #fde68a' : '1px solid #e2e8f0', 
+                    style={{
+                      flex: 1,
+                      padding: '12px',
+                      borderRadius: '10px',
+                      fontWeight: '800',
+                      fontSize: '0.85rem',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      justifyContent: 'center',
+                      alignItems: 'center',
+                      gap: '4px',
+                      backgroundColor: item.isFeatured ? '#fffbeb' : '#f8fafc',
+                      color: item.isFeatured ? '#d97706' : '#64748b',
+                      border: item.isFeatured ? '1px solid #fde68a' : '1px solid #e2e8f0',
                       transition: '0.2s',
                     }}
                   >
@@ -1265,4 +1328,4 @@ export default function InventoryTab({ shopData, masterCatalog, handleInventoryU
 // PREMIUM STYLING
 const searchInputStyle = { width: '100%', padding: '14px', borderRadius: '12px', border: '1px solid #cbd5e1', fontSize: '0.95rem', boxSizing: 'border-box', outline: 'none', backgroundColor: 'white', fontWeight: '500' };
 const cardStyle = { backgroundColor: 'white', padding: '16px', borderRadius: '16px', boxShadow: '0 4px 15px rgba(0,0,0,0.03)', display: 'flex', flexDirection: 'column', transition: '0.2s' };
-                               
+

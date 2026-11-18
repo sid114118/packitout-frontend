@@ -79,9 +79,15 @@ export default function ProductListView({
 
     const subs = new Set();
     sourceItems.forEach(item => {
-      if (isValid(item.subCategory)) subs.add(String(item.subCategory).trim());
+      if (isValid(item.subCategory)) {
+        const subStr = String(item.subCategory).trim();
+        const catStr = String(item.category || "").trim();
+        if (subStr.toLowerCase() !== catStr.toLowerCase()) {
+          subs.add(subStr);
+        }
+      }
     });
-    if (subs.size > 0) {
+    if (subs.size > 1) {
       return { subcategories: ["All", ...Array.from(subs)], groupingKey: "subCategory" };
     }
 
@@ -147,7 +153,7 @@ export default function ProductListView({
   // 🏷️ BRAND CHIPS — derived from items in the current subcategory.
   // Only show when sidebar isn't already grouping by brand AND there are 2+ brands.
   const brandsInView = useMemo(() => {
-    if (groupingKey === "brand") return [];
+    if (groupingKey === "brand" && hasSubcategories) return [];
     const isValid = (v) => v && String(v).trim() && String(v).trim().toLowerCase() !== "nan";
     const set = new Set();
     filteredItems.forEach(item => {

@@ -140,23 +140,13 @@ export default function GuestFeed({
 
     if (!hasCached) setLoading(true);
 
-    // ⚡ FAST FIRST PAINT: Fetch first 120 products immediately so the
-    // home page shows content in ~1–2s even on slow connections.
-    // Then fetch the full catalog in the background and merge it in.
-    fetch(`${BASE_URL}/master-products?limit=120&page=1`)
-      .then(res => res.ok ? res.json() : null)
-      .then(firstPage => {
-        const firstItems = firstPage?.items || (Array.isArray(firstPage) ? firstPage : null);
-        if (firstItems && firstItems.length > 0) {
-          processMasterData(firstItems);
-          setLoading(false);
-        }
-        // 🔄 Background: fetch full catalog and update cache + UI silently
-        return fetch(`${BASE_URL}/master-products`);
-      })
+    fetch(`${BASE_URL}/master-products`)
       .then(res => (res && res.ok) ? res.json() : null)
       .then(masterData => {
-        if (!Array.isArray(masterData)) return;
+        if (!Array.isArray(masterData)) {
+          if (!hasCached) setLoading(false);
+          return;
+        }
         try {
           localStorage.setItem(MASTER_KEY, JSON.stringify({ at: Date.now(), data: masterData }));
         } catch (e) {}
