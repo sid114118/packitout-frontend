@@ -106,20 +106,49 @@ export default function Cart({ cart, setCart, user, onUserUpdate, onBack, onChec
   // 🕵️ Fetch Target Shop
   // We determine the shop based on the items in the cart. If the cart is empty,
   // we fallback to primaryShopId.
-  const cartShopId = (cart && cart.length > 0 && cart[0].shopId) || user?.primaryShop?._id || user?.primaryShop || null;
+  const cartShopId = (cart && cart.length > 0 && cart[0].shopId) || user?.primaryShop?._id || user?.primaryShop || (() => {
+    try { return localStorage.getItem('packitout_guest_shop_id'); } catch { return null; }
+  })();
+
+  // Seed targetShop immediately from user.primaryShop or cached active shop so
+  // "Confirming shop details..." doesn't block the screen while fresh status loads!
   useEffect(() => {
-    if (cartShopId) {
-      setLoadingShops(true);
-      fetch(`${BASE_URL}/shops/${cartShopId}/menu/lean`)
-        .then(res => res.json())
-        .then(data => {
-          if (data && data._id) {
-            setTargetShop(data);
-          }
-          setLoadingShops(false);
-        })
-        .catch(() => setLoadingShops(false));
+    if (!cartShopId) {
+      setLoadingShops(false);
+      return;
     }
+
+    let seeded = false;
+    if (user?.primaryShop && typeof user.primaryShop === 'object' && String(user.primaryShop._id) === String(cartShopId) && user.primaryShop.name) {
+      setTargetShop(prev => prev || user.primaryShop);
+      setLoadingShops(false);
+      seeded = true;
+    } else {
+      try {
+        const activeRaw = localStorage.getItem('packitout_active_shop');
+        if (activeRaw) {
+          const parsed = JSON.parse(activeRaw);
+          if (parsed && String(parsed._id) === String(cartShopId) && parsed.name) {
+            setTargetShop(prev => prev || { ...parsed, isOpen: parsed.isOpen !== false });
+            setLoadingShops(false);
+            seeded = true;
+          }
+        }
+      } catch {}
+    }
+
+    if (!seeded) setLoadingShops(true);
+
+    // Use lightweight checkout-info endpoint (<15 KB) with fallback to menu/lean
+    fetch(`${BASE_URL}/shops/${cartShopId}/checkout-info`)
+      .then(res => (res.ok ? res.json() : fetch(`${BASE_URL}/shops/${cartShopId}/menu/lean`).then(r => r.json())))
+      .then(data => {
+        if (data && data._id) {
+          setTargetShop(data);
+        }
+        setLoadingShops(false);
+      })
+      .catch(() => setLoadingShops(false));
   }, [cartShopId]);
 
   // --- EMPTY CART UI (Premium Redesign) ---

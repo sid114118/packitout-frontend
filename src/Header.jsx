@@ -121,8 +121,8 @@ export default function Header({ user, onUserUpdate }) {
     }
 
     if (targetShopId) {
-      fetch(`${BASE_URL}/shops/${targetShopId}/menu/lean?t=${Date.now()}`)
-        .then(res => res.json())
+      fetch(`${BASE_URL}/shops/${targetShopId}/checkout-info`)
+        .then(res => (res.ok ? res.json() : fetch(`${BASE_URL}/shops/${targetShopId}/menu/lean`).then(r => r.json())))
         .then(data => {
           if (data && data.name) {
             if (!user) localStorage.setItem("packitout_guest_shop_name", data.name);

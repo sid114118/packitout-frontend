@@ -8,15 +8,23 @@ const saveFeedCache = (key, payload) => {
   try {
     localStorage.setItem(key, JSON.stringify(payload));
   } catch {
-    // If shop inventory is huge (e.g. 10,000+ items) and exceeds the 5MB localStorage quota,
-    // store a capped slice of items alongside the full pre-computed home shelves so instant paint still works!
+    // If shop inventory is huge (e.g. 5,000+ items) and exceeds the 5MB localStorage quota,
+    // strip heavy searchTags/barcode from cached items so ALL brands and categories still fit in localStorage!
     try {
-      const slimPayload = {
-        ...payload,
-        items: Array.isArray(payload.items) ? payload.items.slice(0, 300) : [],
-      };
-      localStorage.setItem(key, JSON.stringify(slimPayload));
-    } catch { /* ignore */ }
+      const slimItems = Array.isArray(payload.items)
+        ? payload.items.map(({ searchTags, barcode, variants, ...rest }) => ({
+            ...rest,
+            variants: Array.isArray(variants)
+              ? variants.map(({ searchTags: _st, barcode: _bc, ...vRest }) => vRest)
+              : undefined,
+          }))
+        : [];
+      localStorage.setItem(key, JSON.stringify({ ...payload, items: slimItems }));
+    } catch {
+      try {
+        localStorage.removeItem(key);
+      } catch { /* ignore */ }
+    }
   }
 };
 
@@ -32,14 +40,15 @@ const shuffleArray = (array) => {
 export default function useShopFeedData(user) {
   const shopId = typeof user?.primaryShop === 'object' ? user?.primaryShop?._id : user?.primaryShop;
   const userId = user?._id || 'guest';
-  const cacheKey = `packitout_feed_cache_v3_${shopId}`;
+  const cacheKey = `packitout_feed_cache_v4_${shopId}`;
 
   const [initialCache] = useState(() => {
     if (!shopId) return null;
     try {
-      // Clear legacy cache keys
+      // Clear legacy cache keys (including v3 which sliced items to first 300 Amul products)
       localStorage.removeItem(`packitout_feed_cache_${shopId}`);
       localStorage.removeItem(`packitout_feed_cache_v2_${shopId}`);
+      localStorage.removeItem(`packitout_feed_cache_v3_${shopId}`);
 
       const raw = localStorage.getItem(cacheKey);
       if (!raw) return null;
@@ -78,7 +87,7 @@ export default function useShopFeedData(user) {
 
       // 🏎️ PHASE 1: CRITICAL PATH (Fetch shop inventory and paint immediately)
       // menu/lean populates inventory.product with all feed & search fields (name, image, brand, category, subCategory, searchTags, mrp, etc.)
-      const shopData = await fetchJson(`${BASE_URL}/shops/${shopId}/menu/lean?t=${Date.now()}`);
+      const shopData = await fetchJson(`${BASE_URL}/shops/${shopId}/menu/lean`);
 
       if (cancelled) return;
 
@@ -94,7 +103,16 @@ export default function useShopFeedData(user) {
         combos: shopData.combos || []
       };
       setShopInfo(newShopInfo);
-      try { localStorage.setItem('packitout_active_shop', JSON.stringify({ _id: shopData._id, name: shopData.name, pincode: shopData.pincode })); } catch (e) {}
+      try {
+        localStorage.setItem('packitout_active_shop', JSON.stringify({
+          _id: shopData._id,
+          name: shopData.name,
+          pincode: shopData.pincode,
+          isOpen: shopData.isOpen,
+          acceptsPreOrders: shopData.acceptsPreOrders,
+          upiId: shopData.upiId,
+        }));
+      } catch (e) {}
 
       const masterMap = new Map();
 
