@@ -1,35 +1,26 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import Fuse from 'fuse.js';
 import { createPortal } from 'react-dom';
-import EnhancedProductCard from './components/search/EnhancedProductCard.jsx';
-import SearchAutocompleteOverlay from './components/search/SearchAutocompleteOverlay.jsx';
-import SearchFilterBar from './components/search/SearchFilterBar.jsx';
-import { getVisualSuggestions } from './utils/categoryThumbnailMap.js';
-import { extractDynamicFilters, applyFiltersAndSort } from './utils/dynamicFilterExtractor.js';
+import { ModernProductCard } from './ProductFeed/FeedComponents.jsx';
 import { useRankingConfig } from './ui/RankingProvider.jsx';
 import { applyBrandPriority } from './utils/rankingSort.js';
 import { trackEvent } from './utils/analyticsEngine.js';
 import VoiceSearchModal from './components/VoiceSearchModal.jsx';
 import { translateDevanagari } from './utils/voiceSearchCleaner.js';
-import {
-  expandQueryTokens,
-  calculateGroceryRelevance,
-  classifyProduct
-} from './utils/grocerySearchEngine.js';
 
 const BASE_URL = (import.meta.env.VITE_API_BASE || "https://darkslategrey-snail-415133.hostingersite.com");
 
 // Curated category prompts shown before the user types anything.
 // Each entry maps a friendly label to the search term we plug in.
 const POPULAR_CATEGORIES = [
-  { label: 'Milk',       query: 'milk',       emoji: '🥛' },
-  { label: 'Bread',      query: 'bread',      emoji: '🍞' },
-  { label: 'Eggs',       query: 'egg',        emoji: '🥚' },
-  { label: 'Chips',      query: 'chips',      emoji: '🍟' },
-  { label: 'Maggi',      query: 'maggi',      emoji: '🍜' },
-  { label: 'Cold drink', query: 'drink',      emoji: '🥤' },
-  { label: 'Chocolate',  query: 'chocolate',  emoji: '🍫' },
-  { label: 'Ice cream',  query: 'ice cream',  emoji: '🍦' },
+  { label: 'Milk',      query: 'milk',      emoji: '🥛' },
+  { label: 'Bread',     query: 'bread',     emoji: '🍞' },
+  { label: 'Eggs',      query: 'egg',       emoji: '🥚' },
+  { label: 'Chips',     query: 'chips',     emoji: '🍟' },
+  { label: 'Maggi',     query: 'maggi',     emoji: '🍜' },
+  { label: 'Cold drink',query: 'drink',     emoji: '🥤' },
+  { label: 'Chocolate', query: 'chocolate', emoji: '🍫' },
+  { label: 'Ice cream', query: 'ice cream', emoji: '🍦' },
 ];
 
 export default function SearchPage({
@@ -49,15 +40,15 @@ export default function SearchPage({
   const [recentSearches, setRecentSearches] = useState([]);
   const [isVoiceModalOpen, setIsVoiceModalOpen] = useState(autoStartVoice);
 
-  // Autocomplete overlay state
-  const [autocompleteSuggestions, setAutocompleteSuggestions] = useState([]);
-  const [isAutocompleteOpen, setIsAutocompleteOpen] = useState(false);
-
-  // Dynamic filter and sorting states
-  const [activeCategory, setActiveCategory] = useState("");
-  const [activeFilters, setActiveFilters] = useState({});
-  const [activeSort, setActiveSort] = useState("relevance");
-  const [serverFilterData, setServerFilterData] = useState(null);
+  const handleVoiceSearchResult = (cleanTerm) => {
+    if (cleanTerm && cleanTerm.trim()) {
+      const term = cleanTerm.trim();
+      setQuery(term);
+      setDebouncedQuery(term);
+      trackEvent('VOICE_SEARCH_SUCCESS', { query: term });
+      inputRef.current?.focus();
+    }
+  };
 
   // Lazy load results for long lists
   const [visibleCount, setVisibleCount] = useState(16);
@@ -68,7 +59,6 @@ export default function SearchPage({
   const inputRef = useRef(null);
   const BOTTOM_NAV_HEIGHT = '75px';
 
-  // Load recent searches from localStorage
   useEffect(() => {
     try {
       const savedSearches = localStorage.getItem('packitout_recent_searches');
@@ -179,38 +169,6 @@ export default function SearchPage({
     return null;
   })();
 
-  // 1. Smart Autocomplete suggestions fetch (immediate reactive fallback + async endpoint)
-  useEffect(() => {
-    const q = query.trim();
-    if (!q) {
-      setAutocompleteSuggestions([]);
-      setIsAutocompleteOpen(false);
-      return;
-    }
-
-    // Immediate reactive local suggestions with category thumbnails
-    const localSuggestions = getVisualSuggestions(q, flatItems, 8);
-    setAutocompleteSuggestions(localSuggestions);
-
-    let cancelled = false;
-    const shopParam = effectiveShopId ? `&shopId=${encodeURIComponent(effectiveShopId)}` : '';
-    fetch(`${BASE_URL}/catalog/autocomplete?q=${encodeURIComponent(q)}${shopParam}&limit=8`)
-      .then(r => (r.ok ? r.json() : null))
-      .then(data => {
-        if (cancelled || !data) return;
-        if (Array.isArray(data.suggestions) && data.suggestions.length > 0) {
-          setAutocompleteSuggestions(data.suggestions);
-        }
-      })
-      .catch(() => {
-        // Keep local fallback suggestions
-      });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [query, flatItems, effectiveShopId]);
-
   // Server-side search sync (for 10,000+ item catalogs where local cache is partial or paginated)
   useEffect(() => {
     const q = normalizedQuery;
@@ -221,23 +179,7 @@ export default function SearchPage({
     }
     let cancelled = false;
     setIsServerSearching(true);
-
-    const params = new URLSearchParams();
-    params.set('q', q);
-    params.set('limit', '40');
-    if (activeCategory) params.set('category', activeCategory);
-    if (activeFilters.category) params.set('category', activeFilters.category);
-    if (activeFilters.gender) params.set('gender', activeFilters.gender);
-    if (activeFilters.grainType) params.set('grainType', activeFilters.grainType);
-    if (activeFilters.brand) {
-      const b = Array.isArray(activeFilters.brand) ? activeFilters.brand.join(',') : activeFilters.brand;
-      params.set('brand', b);
-    }
-    if (activeFilters.minPrice !== undefined) params.set('minPrice', activeFilters.minPrice);
-    if (activeFilters.maxPrice !== undefined) params.set('maxPrice', activeFilters.maxPrice);
-    if (activeSort && activeSort !== 'relevance') params.set('sort', activeSort);
-
-    fetch(`${BASE_URL}/shops/${effectiveShopId}/search?${params.toString()}`)
+    fetch(`${BASE_URL}/shops/${effectiveShopId}/search?q=${encodeURIComponent(q)}&limit=40`)
       .then(r => (r.ok ? r.json() : null))
       .then(data => {
         if (cancelled) return;
@@ -251,37 +193,7 @@ export default function SearchPage({
     return () => {
       cancelled = true;
     };
-  }, [normalizedQuery, effectiveShopId, activeCategory, activeFilters, activeSort]);
-
-  // Context-aware dynamic filters fetch from backend API
-  useEffect(() => {
-    const q = (normalizedQuery || debouncedQuery).trim();
-    if (q.length < 2) {
-      setServerFilterData(null);
-      return;
-    }
-    let cancelled = false;
-    const params = new URLSearchParams();
-    params.set('q', q);
-    if (activeCategory) params.set('category', activeCategory);
-    if (effectiveShopId) params.set('shopId', effectiveShopId);
-
-    fetch(`${BASE_URL}/catalog/filters?${params.toString()}`)
-      .then(r => (r.ok ? r.json() : null))
-      .then(data => {
-        if (cancelled || !data) return;
-        if (Array.isArray(data.filterPills) && data.filterPills.length > 0) {
-          setServerFilterData(data);
-        }
-      })
-      .catch(() => {
-        // Keep dynamic local filter extraction
-      });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [normalizedQuery, debouncedQuery, activeCategory, effectiveShopId]);
+  }, [normalizedQuery, effectiveShopId]);
 
   const fuse = useMemo(() => {
     // Cap Fuse index to 2,500 items so 10,000+ catalogs never freeze the main thread
@@ -300,101 +212,66 @@ export default function SearchPage({
     });
   }, [flatItems]);
 
-  // Raw matched products for the query before active filters are applied
-  const rawSearchResults = useMemo(() => {
+  const displayItems = useMemo(() => {
     const q = normalizedQuery;
     if (q.length === 0) return [];
-
-    const qContext = expandQueryTokens(q);
-    const familyMap = new Map(); // famId -> { product, relevanceScore }
-
-    const considerItem = (it) => {
-      if (!it) return;
-      const famId = it._familyId || String(it._id || '');
-      if (!famId) return;
-
-      const healed = classifyProduct(it);
-      const product = healed ? { ...it, ...healed } : it;
-
-      const relevanceScore = calculateGroceryRelevance(product, qContext);
-      if (relevanceScore > 0) {
-        const existing = familyMap.get(famId);
-        if (!existing || relevanceScore > existing.relevanceScore) {
-          familyMap.set(famId, { product, relevanceScore });
-        }
-      }
-    };
-
-    // 1. Fuse.js search with primary query
     const results = fuse.search(q);
+
+    // Deduplicate by familyId so multi-variant families only produce 1 consolidated card
+    const seenFamilyIds = new Set();
+    const matches = [];
+
     for (const r of results) {
-      considerItem(r.item);
+      const it = r.item;
+      const famId = it._familyId || String(it._id);
+      if (!seenFamilyIds.has(famId)) {
+        seenFamilyIds.add(famId);
+        matches.push(it);
+      }
     }
 
-    // 2. Search Fuse with key expanded tokens (e.g. kaju -> cashew, chawal -> rice)
-    if (qContext.expandedTokens && qContext.expandedTokens.size > 0) {
-      for (const expTok of qContext.expandedTokens) {
-        if (expTok !== q.toLowerCase() && expTok.length >= 4) {
-          const synResults = fuse.search(expTok);
-          for (const sr of synResults) {
-            considerItem(sr.item);
-          }
+    // Fast token scan across any remaining items beyond 2,500
+    const tokens = q.toLowerCase().split(/\s+/).filter(Boolean);
+    if (flatItems.length > 2500 && tokens.length > 0) {
+      for (let i = 2500; i < flatItems.length; i++) {
+        const it = flatItems[i];
+        if (!it) continue;
+        const famId = it._familyId || String(it._id);
+        if (seenFamilyIds.has(famId)) continue;
+
+        const tagsStr = Array.isArray(it.searchTags) ? it.searchTags.join(' ') : (it.searchTags || '');
+        const hay = `${it.name || ''} ${it.brand || ''} ${it.category || ''} ${it.subCategory || ''} ${it.barcode || ''} ${tagsStr}`.toLowerCase();
+        if (tokens.every(t => hay.includes(t))) {
+          seenFamilyIds.add(famId);
+          matches.push(it);
+          if (matches.length >= 80) break;
         }
       }
     }
 
-    // 3. Scan flatItems with token & synonym matching
-    for (let i = 0; i < flatItems.length; i++) {
-      considerItem(flatItems[i]);
-    }
-
-    // 4. Merge server-side search results cleanly
+    // Merge server-side search results cleanly
     for (const sItem of serverResults) {
       if (sItem && sItem._id) {
-        considerItem(sItem);
+        const famId = sItem.itemGroupId || String(sItem._id);
+        if (!seenFamilyIds.has(famId)) {
+          seenFamilyIds.add(famId);
+          matches.push(sItem);
+        }
       }
     }
 
-    const candidateMatches = Array.from(familyMap.values());
-
-    // 5. Sort by grocery relevance score (pure core promotion + derivative demotion)
-    candidateMatches.sort((a, b) => {
-      if (b.relevanceScore !== a.relevanceScore) {
-        return b.relevanceScore - a.relevanceScore;
-      }
-      return String(a.product.name || '').localeCompare(String(b.product.name || ''));
-    });
-
-    const matches = candidateMatches.map(c => c.product);
     return applyBrandPriority(matches, rankingConfig);
   }, [normalizedQuery, fuse, flatItems, serverResults, rankingConfig]);
 
-  // Dynamically compute available filter pills and price range based on query and matches
-  const localDynamicFilters = useMemo(() => {
-    if (rawSearchResults.length === 0 && !query) {
-      return { filterPills: [], priceRange: { min: 0, max: 1000 } };
-    }
-    return extractDynamicFilters(rawSearchResults, normalizedQuery || query, activeCategory);
-  }, [rawSearchResults, normalizedQuery, query, activeCategory]);
-
-  const filterPills = (serverFilterData && Array.isArray(serverFilterData.filterPills) && serverFilterData.filterPills.length > 0)
-    ? serverFilterData.filterPills
-    : (localDynamicFilters.filterPills || []);
-
-  const priceRange = serverFilterData?.priceRange || localDynamicFilters.priceRange || { min: 0, max: 1000 };
-
-  // Final displayed items with active facet filtering and sorting applied
-  const displayItems = useMemo(() => {
-    if (rawSearchResults.length === 0) return [];
-    return applyFiltersAndSort(rawSearchResults, activeFilters, activeSort);
-  }, [rawSearchResults, activeFilters, activeSort]);
-
-  // Type-ahead chips while typing. Capped at 6 to keep UI tight.
+  // Type-ahead chips while typing. Pulls unique product names/brands that
+  // start with or contain the live (un-debounced) query so it feels instant.
+  // Capped at 6 to keep the UI tight.
   const liveSuggestions = useMemo(() => {
     const raw = translateDevanagari(query).trim().toLowerCase();
     if (raw.length === 0) return [];
     const seen = new Set();
     const out = [];
+    // Prioritize "starts with" over "contains"
     const startsWith = [];
     const contains = [];
     for (const item of flatItems) {
@@ -434,9 +311,6 @@ export default function SearchPage({
       return;
     }
 
-    // If query returned raw products but active filter narrowed it to 0, do not treat as missed term
-    if (rawSearchResults.length > 0) return;
-
     // We only log if the user actually settled on this term (debounced and server settled).
     if (loggedMissedTermsRef.current.has(term)) return;
     loggedMissedTermsRef.current.add(term);
@@ -457,10 +331,10 @@ export default function SearchPage({
         userId: savedUser._id || '',
         pincode: savedUser.pincode || '',
       }),
-    }).catch(() => { /* swallow */ });
+    }).catch(() => { /* swallow — analytics shouldn't break the UX */ });
 
     return () => { cancelled = true; };
-  }, [normalizedQuery, debouncedQuery, displayItems.length, rawSearchResults.length, isServerSearching]);
+  }, [normalizedQuery, debouncedQuery, displayItems.length, isServerSearching]);
 
   const safeCart = Array.isArray(cart) ? cart.filter(c => c !== null) : [];
   const cartTotalItems = safeCart.reduce((total, item) => total + (Number(item.qty) || 1), 0);
@@ -476,95 +350,10 @@ export default function SearchPage({
     try { localStorage.removeItem('packitout_recent_searches'); } catch {}
   };
 
-  const handleClearSearch = () => {
-    setQuery("");
-    setDebouncedQuery("");
-    setIsAutocompleteOpen(false);
-    setActiveCategory("");
-    setActiveFilters({});
-    setActiveSort("relevance");
-    inputRef.current?.focus();
-  };
-
-  // When clicking an autocomplete suggestion (e.g. "Powder", "Face powder", "Talcum powder")
-  const handleSelectSuggestion = (suggestion) => {
-    const selectedText = suggestion.text || suggestion.category || '';
-    setQuery(selectedText);
-    setDebouncedQuery(selectedText);
-    setIsAutocompleteOpen(false);
-
-    // Apply associated category or subCategory filter
-    if (suggestion.category) {
-      setActiveCategory(suggestion.category);
-      setActiveFilters({
-        category: suggestion.category,
-        ...(suggestion.subCategory && suggestion.type === 'subCategory' ? { subCategory: suggestion.subCategory } : {}),
-      });
-    } else {
-      setActiveCategory('');
-      setActiveFilters({});
-    }
-
-    if (selectedText.trim().length > 1) {
-      setRecentSearches(prev => {
-        const updated = [selectedText.trim(), ...prev.filter(q => q.toLowerCase() !== selectedText.toLowerCase())].slice(0, 5);
-        try { localStorage.setItem('packitout_recent_searches', JSON.stringify(updated)); } catch {}
-        return updated;
-      });
-    }
-
-    trackEvent('AUTOCOMPLETE_SUGGESTION_CLICK', {
-      id: suggestion.id,
-      text: suggestion.text,
-      category: suggestion.category,
-      type: suggestion.type,
-    });
-
-    inputRef.current?.blur();
-  };
-
-  const applySuggestion = (term, category = '') => {
+  const applySuggestion = (term) => {
     setQuery(term);
     setDebouncedQuery(term);
-    setIsAutocompleteOpen(false);
-    if (category) {
-      setActiveCategory(category);
-      setActiveFilters({ category });
-    } else {
-      setActiveCategory('');
-      setActiveFilters({});
-    }
     inputRef.current?.focus();
-  };
-
-  const handleVoiceSearchResult = (cleanTerm) => {
-    if (cleanTerm && cleanTerm.trim()) {
-      const term = cleanTerm.trim();
-      setQuery(term);
-      setDebouncedQuery(term);
-      setIsAutocompleteOpen(false);
-      setActiveCategory('');
-      setActiveFilters({});
-      trackEvent('VOICE_SEARCH_SUCCESS', { query: term });
-      inputRef.current?.focus();
-    }
-  };
-
-  const handleFilterChange = (newFilters) => {
-    setActiveFilters(newFilters);
-    setVisibleCount(16);
-  };
-
-  const handleSortChange = (newSortId) => {
-    setActiveSort(newSortId);
-    setVisibleCount(16);
-  };
-
-  const handleClearFilters = () => {
-    setActiveFilters({});
-    setActiveSort("relevance");
-    setActiveCategory("");
-    setVisibleCount(16);
   };
 
   const handleScroll = (e) => {
@@ -609,121 +398,83 @@ export default function SearchPage({
         }
       `}</style>
 
-      {/* SEARCH HEADER CONTAINER */}
+      {/* SEARCH HEADER */}
       <div style={{
-        position: 'sticky', top: 0,
+        padding: '15px', position: 'sticky', top: 0,
         backgroundColor: '#fff', zIndex: 2000,
         borderBottom: '1px solid #f1f5f9',
         boxShadow: '0 2px 4px rgba(0,0,0,0.02)',
       }}>
-        <div style={{ position: 'relative', padding: '12px 15px 10px' }}>
-          <div style={{
+        <div style={{
+          display: 'flex', alignItems: 'center',
+          backgroundColor: '#f1f5f9', borderRadius: '12px',
+          padding: '8px 12px',
+        }}>
+          <button onClick={onClose} style={{
+            background: 'none', border: 'none', fontSize: '1.4rem',
+            cursor: 'pointer', padding: '0 10px 0 0', color: '#475569',
             display: 'flex', alignItems: 'center',
-            backgroundColor: '#f1f5f9', borderRadius: '12px',
-            padding: '8px 12px',
-          }}>
-            <button onClick={onClose} style={{
-              background: 'none', border: 'none', fontSize: '1.4rem',
-              cursor: 'pointer', padding: '0 10px 0 0', color: '#475569',
-              display: 'flex', alignItems: 'center',
-            }}>←</button>
-            <input
-              ref={inputRef}
-              type="text"
-              placeholder='Search "Maggi", "Milk"…'
-              value={query}
-              onChange={(e) => {
-                const val = e.target.value;
-                setQuery(val);
-                if (val.trim().length > 0) {
-                  setIsAutocompleteOpen(true);
-                } else {
-                  setIsAutocompleteOpen(false);
-                }
-                setActiveCategory('');
-                setActiveFilters({});
-                setActiveSort('relevance');
-              }}
-              onFocus={() => {
-                if (query.trim().length > 0) {
-                  setIsAutocompleteOpen(true);
-                }
-              }}
-              onClick={() => {
-                inputRef.current?.focus();
-                if (query.trim().length > 0) {
-                  setIsAutocompleteOpen(true);
-                }
-              }}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') {
-                  setIsAutocompleteOpen(false);
-                  inputRef.current?.blur();
-                }
-              }}
-              style={{
-                border: 'none', outline: 'none', width: '100%',
-                fontSize: '1.05rem', fontWeight: 500,
-                backgroundColor: 'transparent', color: '#111827',
-                userSelect: 'auto', WebkitUserSelect: 'auto',
-                touchAction: 'manipulation',
-              }}
-            />
-            {query ? (
-              <button
-                onClick={handleClearSearch}
-                aria-label="Clear search"
-                style={{
-                  background: 'none', border: 'none', fontSize: '1.2rem',
-                  color: '#94a3b8', cursor: 'pointer', padding: '0 4px',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center'
-                }}
-              >✖</button>
-            ) : null}
-
-            <button
-              onClick={() => setIsVoiceModalOpen(true)}
-              aria-label="Search with Voice"
-              title="Search with Voice"
-              className="pio-press"
-              style={{
-                background: 'linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%)',
-                border: '1px solid #bbf7d0',
-                borderRadius: '9px',
-                padding: '6px 8px',
-                color: '#16a34a',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                marginLeft: '4px',
-                flexShrink: 0,
-                boxShadow: '0 2px 5px rgba(22, 163, 74, 0.12)',
-              }}
-            >
-              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.3" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z" />
-                <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
-                <line x1="12" x2="12" y1="19" y2="22" />
-              </svg>
-            </button>
-          </div>
-
-          {/* Floating visual autocomplete suggestions with category thumbnails */}
-          <SearchAutocompleteOverlay
-            isOpen={isAutocompleteOpen && autocompleteSuggestions.length > 0}
-            query={query}
-            suggestions={autocompleteSuggestions}
-            onSelectSuggestion={handleSelectSuggestion}
-            onClose={() => setIsAutocompleteOpen(false)}
+          }}>←</button>
+          <input
+            ref={inputRef}
+            type="text"
+            placeholder='Search "Maggi", "Milk"…'
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            onClick={() => inputRef.current?.focus()}
+            style={{
+              border: 'none', outline: 'none', width: '100%',
+              fontSize: '1.05rem', fontWeight: 500,
+              backgroundColor: 'transparent', color: '#111827',
+              userSelect: 'auto', WebkitUserSelect: 'auto',
+              touchAction: 'manipulation',
+            }}
           />
+          {query ? (
+            <button
+              onClick={() => { setQuery(""); setDebouncedQuery(""); inputRef.current?.focus(); }}
+              aria-label="Clear search"
+              style={{
+                background: 'none', border: 'none', fontSize: '1.2rem',
+                color: '#94a3b8', cursor: 'pointer', padding: '0 4px',
+                display: 'flex', alignItems: 'center', justifyContent: 'center'
+              }}
+            >✖</button>
+          ) : null}
+
+          <button
+            onClick={() => setIsVoiceModalOpen(true)}
+            aria-label="Search with Voice"
+            title="Search with Voice"
+            className="pio-press"
+            style={{
+              background: 'linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%)',
+              border: '1px solid #bbf7d0',
+              borderRadius: '9px',
+              padding: '6px 8px',
+              color: '#16a34a',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              marginLeft: '4px',
+              flexShrink: 0,
+              boxShadow: '0 2px 5px rgba(22, 163, 74, 0.12)',
+            }}
+          >
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.3" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z" />
+              <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
+              <line x1="12" x2="12" y1="19" y2="22" />
+            </svg>
+          </button>
         </div>
 
-        {/* Live type-ahead chips (shown when autocomplete overlay is closed but query is typed) */}
-        {!isAutocompleteOpen && query.trim().length > 0 && liveSuggestions.length > 0 && (
+        {/* Live type-ahead row — appears the instant the user starts typing */}
+        {query.trim().length > 0 && liveSuggestions.length > 0 && (
           <div className="hide-scroll" style={{
             display: 'flex', gap: '8px', overflowX: 'auto',
-            padding: '0 15px 10px',
+            marginTop: '10px', paddingBottom: '2px',
           }}>
             {liveSuggestions.map((s, i) => (
               <button
@@ -751,19 +502,6 @@ export default function SearchPage({
               </button>
             ))}
           </div>
-        )}
-
-        {/* Context-Aware Dynamic Filter Bar (Mounted directly below search header when on results view) */}
-        {query.trim().length > 0 && (
-          <SearchFilterBar
-            filterPills={filterPills}
-            activeFilters={activeFilters}
-            activeSort={activeSort}
-            priceRange={priceRange}
-            onFilterChange={handleFilterChange}
-            onSortChange={handleSortChange}
-            onClearFilters={handleClearFilters}
-          />
         )}
       </div>
 
@@ -923,64 +661,45 @@ export default function SearchPage({
               </svg>
             </div>
             <p style={{ fontWeight: 800, color: '#0f172a', margin: '0 0 6px' }}>
-              {rawSearchResults.length > 0 ? 'No products match your selected filters' : `No products for "${debouncedQuery}"`}
+              No products for "{debouncedQuery}"
             </p>
-            {rawSearchResults.length > 0 ? (
-              <div style={{ marginTop: '16px' }}>
-                <button
-                  type="button"
-                  onClick={handleClearFilters}
-                  style={{
-                    padding: '8px 18px',
-                    backgroundColor: '#16a34a',
-                    color: '#fff',
-                    border: 'none',
-                    borderRadius: '999px',
-                    fontWeight: 700,
-                    fontSize: '0.88rem',
-                    cursor: 'pointer',
-                  }}
-                >
-                  Clear filters
-                </button>
+            <p style={{ fontSize: '0.88rem', margin: 0, color: '#64748b', fontWeight: 500, maxWidth: '280px', marginLeft: 'auto', marginRight: 'auto' }}>
+              Thanks for letting us know — we'll look into stocking this soon.
+            </p>
+            <div style={{ marginTop: '20px' }}>
+              <div style={{ fontSize: '0.78rem', color: '#94a3b8', fontWeight: 700, letterSpacing: '0.4px', textTransform: 'uppercase', marginBottom: '10px' }}>
+                Try one of these
               </div>
-            ) : (
-              <>
-                <p style={{ fontSize: '0.88rem', margin: 0, color: '#64748b', fontWeight: 500, maxWidth: '280px', marginLeft: 'auto', marginRight: 'auto' }}>
-                  Thanks for letting us know — we'll look into stocking this soon.
-                </p>
-                <div style={{ marginTop: '20px' }}>
-                  <div style={{ fontSize: '0.78rem', color: '#94a3b8', fontWeight: 700, letterSpacing: '0.4px', textTransform: 'uppercase', marginBottom: '10px' }}>
-                    Try one of these
-                  </div>
-                  <div style={{ display: 'flex', justifyContent: 'center', flexWrap: 'wrap', gap: '8px' }}>
-                    {POPULAR_CATEGORIES.slice(0, 5).map(c => (
-                      <button key={c.query} onClick={() => applySuggestion(c.query)} style={{
-                        padding: '6px 12px', background: '#f1f5f9', border: '1px solid #e2e8f0',
-                        borderRadius: '999px', fontSize: '0.82rem', fontWeight: 700, color: '#0f172a',
-                        cursor: 'pointer',
-                      }}>{c.emoji} {c.label}</button>
-                    ))}
-                  </div>
-                </div>
-              </>
-            )}
+              <div style={{ display: 'flex', justifyContent: 'center', flexWrap: 'wrap', gap: '8px' }}>
+                {POPULAR_CATEGORIES.slice(0, 5).map(c => (
+                  <button key={c.query} onClick={() => applySuggestion(c.query)} style={{
+                    padding: '6px 12px', background: '#f1f5f9', border: '1px solid #e2e8f0',
+                    borderRadius: '999px', fontSize: '0.82rem', fontWeight: 700, color: '#0f172a',
+                    cursor: 'pointer',
+                  }}>{c.emoji} {c.label}</button>
+                ))}
+              </div>
+            </div>
           </div>
         ) : (
           <>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: '12px' }}>
               {displayItems.slice(0, visibleCount).map((item, index) => (
-                <EnhancedProductCard
-                  key={`${item._id || item._familyId}-${index}`}
+                <ModernProductCard
+                  key={`${item._id}-${index}`}
                   item={item}
-                  cart={safeCart}
-                  onQuickAdd={onQuickAdd}
-                  onRemoveFromCart={onRemoveFromCart}
+                  isCarousel={false}
+                  shopClosed={false}
                   onOpenDetails={onOpenDetails}
+                  onQuickAdd={onQuickAdd}
+                  cart={safeCart}
+                  onRemoveFromCart={onRemoveFromCart}
                 />
               ))}
             </div>
-            {/* Load more button */}
+            {/* Load more — without this, results beyond visibleCount (16) were
+                permanently hidden and customers couldn't find products that
+                only matched on a later page. */}
             {displayItems.length > visibleCount && (
               <button
                 onClick={() => setVisibleCount(c => c + 24)}

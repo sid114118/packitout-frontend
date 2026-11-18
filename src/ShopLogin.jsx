@@ -8,19 +8,14 @@ export default function ShopLogin({ onLogin }) {
 
   const handleLogin = async (e) => {
     e.preventDefault();
-    setError("");
-    try {
-      const res = await fetch(`${BASE_URL}/shop-login`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(form)
-      });
-      const data = await res.json();
-      if (res.ok) onLogin(data);
-      else setError(data?.error || "Invalid Phone or Password");
-    } catch {
-      setError("Network error. Please try again.");
-    }
+    const res = await fetch(`${BASE_URL}/shop-login`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(form)
+    });
+    const data = await res.json();
+    if (res.ok) onLogin(data);
+    else setError("Invalid Phone or Password");
   };
 
   return (

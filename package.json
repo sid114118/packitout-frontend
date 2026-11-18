@@ -4,10 +4,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
-    "test:frontend": "vitest run src",
-    "test:backend": "node --test packitout-api/tests/grocerySearchEngine.test.js packitout-api/tests/catalogSearchService.test.js packitout-api/tests/attributeExtractor.test.js packitout-api/tests/unitPriceCalculator.test.js",
-    "test:all": "npm run test:frontend && npm run test:backend"
+    "build": "vite build"
   },
   "dependencies": {
     "@capacitor-firebase/authentication": "^6.3.1",
@@ -27,14 +24,9 @@
   },
   "devDependencies": {
     "@capacitor/cli": "^6.2.2",
-    "@testing-library/dom": "^10.4.2",
-    "@testing-library/jest-dom": "^6.9.1",
-    "@testing-library/react": "^16.3.3",
     "@vitejs/plugin-react": "^4.2.1",
     "cloudinary": "^2.10.0",
     "dotenv": "^17.4.2",
-    "jsdom": "^24.1.3",
-    "vite": "^5.0.0",
-    "vitest": "^2.1.9"
+    "vite": "^5.0.0"
   }
 }

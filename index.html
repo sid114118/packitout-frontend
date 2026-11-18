@@ -19,44 +19,12 @@
   </head>
   <body style="margin: 0;">
     <div id="root"></div>
-    <script>
-      (function() {
-        function recoverChunk(msg) {
-          if (!msg) return false;
-          var str = String(msg);
-          if (str.indexOf('Failed to fetch dynamically imported module') !== -1 ||
-              str.indexOf('Importing a module script failed') !== -1 ||
-              str.indexOf('error loading dynamically imported module') !== -1) {
-            var lastReload = sessionStorage.getItem('pio_chunk_reload');
-            if (!lastReload || Date.now() - Number(lastReload) > 10000) {
-              sessionStorage.setItem('pio_chunk_reload', String(Date.now()));
-              window.location.reload(true);
-              return true;
-            }
-          }
-          return false;
-        }
-
-        window.addEventListener('error', function(event) {
-          if (recoverChunk(event && event.message)) return;
-          var root = document.getElementById('root');
-          if (root && (!root.innerHTML || root.innerHTML.trim() === '')) {
-            root.innerHTML = '<div style="font-family:system-ui,-apple-system,sans-serif;padding:40px 20px;text-align:center;max-width:400px;margin:60px auto;background:#fff;border-radius:20px;box-shadow:0 10px 25px rgba(0,0,0,0.08)">'
-              + '<div style="font-size:42px;margin-bottom:12px">⚠️</div>'
-              + '<h3 style="margin:0 0 8px;color:#0f172a;font-size:1.2rem">Temporary Loading Glitch</h3>'
-              + '<p style="color:#64748b;font-size:14px;margin:0 0 20px;line-height:1.5">A fresh update was published or connection paused. Tap below to reload fresh.</p>'
-              + '<button onclick="location.reload(true)" style="width:100%;background:#16a34a;color:#fff;border:none;padding:12px;border-radius:12px;font-weight:800;font-size:15px;cursor:pointer;margin-bottom:8px">🔄 Reload Page</button>'
-              + '<button onclick="localStorage.clear();sessionStorage.clear();location.reload(true)" style="width:100%;background:#fff;color:#475569;border:1px solid #cbd5e1;padding:10px;border-radius:12px;font-weight:700;font-size:13px;cursor:pointer">🧹 Reset Storage & Cache</button>'
-              + '</div>';
-          }
-        });
-
-        window.addEventListener('unhandledrejection', function(event) {
-          var reason = event && event.reason ? String(event.reason.message || event.reason) : '';
-          recoverChunk(reason);
-        });
-      })();
-    </script>
+    <!-- <script src="https://app.agenticservices.in/widget.js"
+  data-site-id="packitout"
+  data-bot-name="Ava"
+  data-color="#0056D2"
+  data-position="right"
+></script> -->
     <script type="module" src="/src/main.jsx"></script>
   </body>
 </html>
