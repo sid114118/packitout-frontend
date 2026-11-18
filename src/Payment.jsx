@@ -148,7 +148,7 @@ export default function Payment({ user, cart, targetShop, finalBill, useCoins, c
         customerPincode: user?.pincode
       });
       setStatus('✅ Order Placed Successfully!');
-      setTimeout(() => onCheckoutSuccess(), 1200);
+      setTimeout(() => onCheckoutSuccess(), 250);
     } catch (err) {
       setStatus(`❌ ${err.message || 'Failed to place order'}`);
       setTimeout(() => setStatus(''), 3500);
@@ -189,7 +189,7 @@ export default function Payment({ user, cart, targetShop, finalBill, useCoins, c
         customerPincode: user?.pincode
       });
       setStatus('✅ Order placed — the shop will confirm your UPI payment shortly.');
-      setTimeout(() => onCheckoutSuccess(), 1500);
+      setTimeout(() => onCheckoutSuccess(), 350);
     } catch (err) {
       setStatus(`❌ ${err.message || 'Failed to place order'}`);
       setTimeout(() => setStatus(''), 3500);

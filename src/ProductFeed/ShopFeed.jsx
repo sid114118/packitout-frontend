@@ -108,10 +108,10 @@ export default function ShopFeed({
     else onAddToCart(item);
   };
 
-  // 🚀 THE MAGIC SKELETON UI INSTEAD OF TEXT
+  // 🚀 THE MAGIC SKELETON UI INSTEAD OF TEXT (with Categories visible immediately so screen never looks blank!)
   if (loading) {
     return (
-      <div style={{ padding: '15px 0', maxWidth: '1000px', margin: '0 auto', overflowX: 'hidden', backgroundColor: '#f3f4f6', minHeight: '100vh' }}>
+      <div style={{ padding: '0', maxWidth: '1000px', margin: '0 auto', overflowX: 'hidden', backgroundColor: '#f3f4f6', minHeight: '100vh' }}>
         {isSearchOpen && (
           <SearchPage
             items={items}
@@ -125,8 +125,9 @@ export default function ShopFeed({
             autoStartVoice={autoStartVoiceSearch}
           />
         )}
+        <Categories onCategorySelect={onCategorySelect} onAddToCart={onAddToCart} shopItems={items} />
         {/* Fake Row Header Skeleton */}
-        <div style={{ padding: '0 15px', marginBottom: '15px' }}>
+        <div style={{ padding: '15px 15px 0', marginBottom: '15px' }}>
           <div className="skeleton-shimmer" style={{ width: '45%', height: '22px', borderRadius: '8px', backgroundColor: '#e2e8f0', marginBottom: '6px' }}></div>
           <div className="skeleton-shimmer" style={{ width: '25%', height: '14px', borderRadius: '6px', backgroundColor: '#e2e8f0' }}></div>
         </div>
