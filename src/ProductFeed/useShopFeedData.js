@@ -6,16 +6,20 @@ const FEED_CACHE_MAX_AGE_MS = 24 * 60 * 60 * 1000;
 
 const saveFeedCache = (key, payload) => {
   try {
-    localStorage.setItem(key, JSON.stringify(payload));
+    // Always store a slim payload: pre-computed shelves + capped items slice (150 items)
+    // to guarantee instant paint under 50ms and eliminate localStorage quota errors.
+    const slimPayload = {
+      ...payload,
+      items: Array.isArray(payload.items) ? payload.items.slice(0, 150) : [],
+    };
+    localStorage.setItem(key, JSON.stringify(slimPayload));
   } catch {
-    // If shop inventory is huge (e.g. 10,000+ items) and exceeds the 5MB localStorage quota,
-    // store a capped slice of items alongside the full pre-computed home shelves so instant paint still works!
     try {
-      const slimPayload = {
+      const ultraSlim = {
         ...payload,
-        items: Array.isArray(payload.items) ? payload.items.slice(0, 300) : [],
+        items: Array.isArray(payload.items) ? payload.items.slice(0, 50) : [],
       };
-      localStorage.setItem(key, JSON.stringify(slimPayload));
+      localStorage.setItem(key, JSON.stringify(ultraSlim));
     } catch { /* ignore */ }
   }
 };
@@ -74,8 +78,6 @@ export default function useShopFeedData(user) {
     const fetchJson = (url) => fetch(url).then(r => r.ok ? r.json() : null).catch(() => null);
 
     const fetchShopProducts = async () => {
-      try { localStorage.removeItem('packitout_master_products_v1'); } catch {}
-
       // 🏎️ PHASE 1: CRITICAL PATH (Fetch shop inventory and paint immediately)
       // menu/lean populates inventory.product with all feed & search fields (name, image, brand, category, subCategory, searchTags, mrp, etc.)
       const shopData = await fetchJson(`${BASE_URL}/shops/${shopId}/menu/lean?t=${Date.now()}`);

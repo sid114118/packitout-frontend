@@ -131,22 +131,42 @@ export default function ProductModal({ product, isOpen, onClose, onAddToCart, on
   };
 
   // 🚀 SAME-BRAND CAROUSEL — pulls up to 12 products from the same brand,
-  // excluding the current item. Drops the row entirely if there's nothing.
+  // excluding the current item. Early-break loop avoids scanning thousands of items.
   // ⚠️ Hooks must run on every render — declare before any early return.
   const moreFromBrand = useMemo(() => {
     const brand = selectedVariant?.brand;
     if (!brand || brand === "nan" || !Array.isArray(allItems)) return [];
-    return allItems
-      .filter(i => i && i.brand === brand && i._id !== selectedVariant._id && i.inStock !== false)
-      .slice(0, 12);
+    const targetBrand = String(brand).toLowerCase().trim();
+    const result = [];
+    for (let i = 0; i < allItems.length; i++) {
+      const item = allItems[i];
+      if (item && item._id !== selectedVariant._id && item.inStock !== false && String(item.brand || '').toLowerCase().trim() === targetBrand) {
+        result.push(item);
+        if (result.length >= 12) break;
+      }
+    }
+    return result;
   }, [allItems, selectedVariant?.brand, selectedVariant?._id]);
 
   // 🌐 EXPLORE MORE — same category first, then everything else.
+  // Single-pass extraction capped to a fast subset avoids allocating huge arrays on mobile.
   const exploreItems = useMemo(() => {
     if (!Array.isArray(allItems) || !selectedVariant) return [];
     const cat = selectedVariant.category;
-    const sameCat = allItems.filter(i => i && i._id !== selectedVariant._id && i.inStock !== false && i.category === cat);
-    const others  = allItems.filter(i => i && i._id !== selectedVariant._id && i.inStock !== false && i.category !== cat);
+    const sameCat = [];
+    const others = [];
+    const currentId = selectedVariant._id;
+
+    for (let i = 0; i < allItems.length; i++) {
+      const item = allItems[i];
+      if (!item || item._id === currentId || item.inStock === false) continue;
+      if (item.category === cat) {
+        sameCat.push(item);
+      } else if (others.length < 40) {
+        others.push(item);
+      }
+      if (sameCat.length >= 40 && others.length >= 40) break;
+    }
     return [...sameCat, ...others];
   }, [allItems, selectedVariant?._id, selectedVariant?.category]);
 

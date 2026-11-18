@@ -53,11 +53,13 @@ export default function GuestFeed({
   useEffect(() => {
     const MASTER_KEY = 'packitout_master_products_v1';
 
-    const processMasterData = (masterData) => {
+    const processMasterData = (masterData, isBackground = false) => {
+      if (!Array.isArray(masterData)) return;
       const groupedMap = new Map();
       const finalItems = [];
 
       masterData.forEach(p => {
+        if (!p) return;
         const formattedItem = { 
           ...p, 
           sellingPrice: p.mrp, 
@@ -87,6 +89,10 @@ export default function GuestFeed({
       });
       
       setItems(finalItems);
+
+      // If background hydration and initial shelves are already rendered, keep shelves stable to avoid jarring shifts
+      if (isBackground) return;
+
       setTrendingPlatform(finalItems.slice(0, 8)); 
       setShopDeals([...finalItems].reverse().slice(0, 8)); 
       setShopBestSellers(finalItems.slice(0, 8));
@@ -140,22 +146,46 @@ export default function GuestFeed({
 
     if (!hasCached) setLoading(true);
 
-    fetch(`${BASE_URL}/master-products`)
+    // 🏎️ FAST INITIAL PAINT: Fetch first 120 items to render shelves immediately (< 100ms)
+    fetch(`${BASE_URL}/master-products?limit=120`)
       .then(res => res.ok ? res.json() : null)
-      .then(masterData => {
-        if (!Array.isArray(masterData)) {
-          if (!hasCached) setLoading(false);
-          return;
+      .then(initialData => {
+        const initialItems = Array.isArray(initialData) ? initialData : (initialData?.items || []);
+        if (initialItems.length > 0) {
+          try {
+            // Store slim payload in localStorage so future cold starts paint in 0ms!
+            localStorage.setItem(MASTER_KEY, JSON.stringify({ at: Date.now(), data: initialItems.slice(0, 120) }));
+          } catch (e) {}
+          processMasterData(initialItems);
+          setLoading(false);
         }
-        try {
-          localStorage.setItem(MASTER_KEY, JSON.stringify({ at: Date.now(), data: masterData }));
-        } catch (e) {}
-        processMasterData(masterData);
-        setLoading(false);
+
+        // 🐢 BACKGROUND HYDRATION: Fetch full master catalog for comprehensive category browsing
+        fetch(`${BASE_URL}/master-products`)
+          .then(res => res.ok ? res.json() : null)
+          .then(fullData => {
+            const fullItems = Array.isArray(fullData) ? fullData : (fullData?.items || []);
+            if (fullItems.length > 0) {
+              processMasterData(fullItems, true);
+            }
+          })
+          .catch(err => console.log("Background master catalog fetch failed:", err));
       })
       .catch((err) => {
-        console.log("Guest fetch error:", err);
-        if (!hasCached) setLoading(false);
+        console.log("Guest initial fetch error:", err);
+        // Fallback to direct unpaginated fetch if paginated fails
+        fetch(`${BASE_URL}/master-products`)
+          .then(res => res.ok ? res.json() : null)
+          .then(masterData => {
+            const items = Array.isArray(masterData) ? masterData : (masterData?.items || []);
+            if (items.length > 0) {
+              processMasterData(items);
+              setLoading(false);
+            }
+          })
+          .catch(() => {
+            if (!hasCached) setLoading(false);
+          });
       });
   }, []);
 

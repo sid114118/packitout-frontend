@@ -22,7 +22,6 @@ export default function ProductListView({
   const BOTTOM_NAV_HEIGHT = '75px';
   const { config: rankingConfig } = useRankingConfig();
   const [selectedSub, setSelectedSub] = useState("All");
-  const [selectedBrand, setSelectedBrand] = useState("All Brands");
   const [activeFilters, setActiveFilters] = useState({});
   const [activeSort, setActiveSort] = useState('relevance');
 
@@ -60,14 +59,13 @@ export default function ProductListView({
   // 🚀 RESET FILTERS & VISIBLE COUNT when changing subcategories
   useEffect(() => {
     setVisibleCount(16);
-    setSelectedBrand("All Brands");
     setActiveFilters({});
     setActiveSort('relevance');
   }, [selectedSub]);
 
   useEffect(() => {
     setVisibleCount(16);
-  }, [selectedBrand, activeFilters, activeSort]);
+  }, [activeFilters, activeSort]);
 
   // 🚀 KEEP VARIANTS GROUPED FOR THE LIST / CATEGORY VIEW
   const sourceItems = useMemo(() => {

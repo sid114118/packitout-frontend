@@ -6,7 +6,17 @@ import { shopFetch } from '../../utils/api.js';
 
 const BASE_URL = (import.meta.env.VITE_API_BASE || "https://darkslategrey-snail-415133.hostingersite.com");
 
-export default function InventoryTab({ shopData, masterCatalog, handleInventoryUpdate, handleInventoryRemove, onInventoryRefresh, fetchMasterCatalog }) {
+export default function InventoryTab({ 
+  shopData, 
+  masterCatalog, 
+  isCatalogLoading = false,
+  catalogError = null,
+  isInventoryLoading = false,
+  handleInventoryUpdate, 
+  handleInventoryRemove, 
+  onInventoryRefresh, 
+  fetchMasterCatalog 
+}) {
   const toast = useToast();
   const confirmDialog = useConfirm();
   const askForValue = usePrompt();
@@ -105,8 +115,13 @@ export default function InventoryTab({ shopData, masterCatalog, handleInventoryU
   const safeCatalog = masterCatalog || [];
 
   // --- DATA CALCULATIONS ---
-  const shopProductIds = safeInventory.map(i => i.product._id); 
-  const availableToAdd = safeCatalog.filter(m => !shopProductIds.includes(m._id));
+  const shopProductIdSet = useMemo(() => {
+    return new Set(safeInventory.map(i => String(i.product?._id || i.product || '')));
+  }, [safeInventory]);
+
+  const availableToAdd = useMemo(() => {
+    return safeCatalog.filter(m => m && !shopProductIdSet.has(String(m._id)));
+  }, [safeCatalog, shopProductIdSet]);
 
   // ⚡ FAST TOKENIZED MASTER CATALOG SEARCH
   const filteredAvailable = useMemo(() => {
@@ -803,7 +818,7 @@ export default function InventoryTab({ shopData, masterCatalog, handleInventoryU
         >
           <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <span>➕</span>
-            <span>Add New Products to Store ({availableToAdd.length} catalog items)</span>
+            <span>Add New Products to Store ({isCatalogLoading ? 'Loading…' : `${availableToAdd.length} catalog items`})</span>
           </span>
           <span style={{ fontSize: '0.8rem', backgroundColor: 'rgba(255,255,255,0.2)', padding: '4px 10px', borderRadius: '20px' }}>
             {isAddProductsOpen ? '▲ Collapse' : '▼ Tap to Open'}
@@ -820,16 +835,16 @@ export default function InventoryTab({ shopData, masterCatalog, handleInventoryU
               {/* ⚡ THE BULK IMPORT BUTTON ⚡ */}
               <button 
                 onClick={handleBulkImport} 
-                disabled={isImporting}
+                disabled={isImporting || isCatalogLoading || availableToAdd.length === 0}
                 style={{ 
-                  backgroundColor: '#0f172a', 
+                  backgroundColor: (isImporting || isCatalogLoading || availableToAdd.length === 0) ? '#94a3b8' : '#0f172a', 
                   color: '#fff', 
                   padding: '8px 12px', 
                   borderRadius: '8px', 
                   fontWeight: '800', 
                   fontSize: '0.8rem',
                   border: 'none', 
-                  cursor: isImporting ? 'wait' : 'pointer',
+                  cursor: (isImporting || isCatalogLoading || availableToAdd.length === 0) ? 'not-allowed' : 'pointer',
                   display: 'flex',
                   alignItems: 'center',
                   boxShadow: '0 4px 10px rgba(0,0,0,0.1)'
@@ -848,8 +863,25 @@ export default function InventoryTab({ shopData, masterCatalog, handleInventoryU
               style={searchInputStyle} 
             />
 
-            {availableToAdd.length === 0 ? (
+            {isCatalogLoading ? (
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '30px 10px', gap: '10px', color: '#0284c7' }}>
+                <div className="pio-spinner" style={{ width: '28px', height: '28px', border: '3px solid #bae6fd', borderTopColor: '#0284c7', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
+                <span style={{ fontSize: '0.88rem', fontWeight: '600' }}>Loading master catalog...</span>
+              </div>
+            ) : catalogError ? (
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '24px 10px', gap: '10px', textAlign: 'center' }}>
+                <span style={{ fontSize: '0.88rem', color: '#dc2626', fontWeight: '600' }}>⚠️ Could not load master catalog ({catalogError})</span>
+                <button 
+                  onClick={() => fetchMasterCatalog && fetchMasterCatalog()}
+                  style={{ padding: '8px 18px', backgroundColor: '#0284c7', color: 'white', border: 'none', borderRadius: '8px', fontWeight: '700', cursor: 'pointer', fontSize: '0.85rem' }}
+                >
+                  🔄 Retry Catalog
+                </button>
+              </div>
+            ) : availableToAdd.length === 0 ? (
               <div style={{ fontSize: '0.9rem', color: '#0284c7', marginTop: '15px', fontWeight: 'bold', textAlign: 'center' }}>🎉 You have added every available product!</div>
+            ) : filteredAvailable.length === 0 ? (
+              <div style={{ fontSize: '0.88rem', color: '#64748b', marginTop: '15px', fontWeight: '600', textAlign: 'center' }}>No products found matching "{searchMaster}".</div>
             ) : (
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: '10px', marginTop: '10px', maxHeight: '250px', overflowY: 'auto', paddingRight: '5px' }}>
                 {filteredAvailable.map(m => (
@@ -1027,7 +1059,12 @@ export default function InventoryTab({ shopData, masterCatalog, handleInventoryU
         </div>
       )}
 
-      {filteredInventory.length === 0 ? (
+      {isInventoryLoading && rawInventory.length === 0 ? (
+        <div style={{ textAlign: 'center', padding: '40px 20px', backgroundColor: 'white', borderRadius: '16px', color: '#0284c7', fontWeight: '600', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px' }}>
+          <div className="pio-spinner" style={{ width: '28px', height: '28px', border: '3px solid #bae6fd', borderTopColor: '#0284c7', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
+          <span>Loading store inventory...</span>
+        </div>
+      ) : filteredInventory.length === 0 ? (
         <div style={{ textAlign: 'center', padding: '40px 20px', backgroundColor: 'white', borderRadius: '16px', color: '#64748b', fontWeight: '600' }}>
           <div style={{ fontSize: '2rem', marginBottom: '10px' }}>🔍</div>
           <div>No items match your {appliedSearch ? 'search query' : 'selected filter'}.</div>

@@ -17,12 +17,21 @@ export const SORT_OPTIONS = [
   { id: 'rating_desc', label: 'Customer Rating' }
 ];
 
+// Cache for inferred product attributes so regex matching runs only once per product object
+const attributeCache = new WeakMap();
+
+// Cache for dynamic filter calculations
+const dynamicFiltersCache = new WeakMap();
+
 /**
  * Infer item attributes based on name, category, subCategory, searchTags, description, etc.
  * Resilient regex heuristics matching backend inferProductAttributes contract.
  */
 export function inferProductAttributes(product) {
-  if (!product) return {};
+  if (!product || typeof product !== 'object') return {};
+  if (product.attributes) return product.attributes;
+  const cached = attributeCache.get(product);
+  if (cached) return cached;
 
   const attrs = {};
   const tagsStr = Array.isArray(product.searchTags)
@@ -109,6 +118,7 @@ export function inferProductAttributes(product) {
     }
   }
 
+  attributeCache.set(product, attrs);
   return attrs;
 }
 
@@ -117,6 +127,22 @@ export function inferProductAttributes(product) {
  * Adapts dynamically to query and active category.
  */
 export function extractDynamicFilters(products = [], query = '', activeCategory = '') {
+  if (!Array.isArray(products) || products.length === 0) {
+    return {
+      query: query || '',
+      category: activeCategory || '',
+      sortOptions: SORT_OPTIONS,
+      priceRange: { min: 0, max: 500 },
+      filterPills: []
+    };
+  }
+
+  const cacheKey = `${query}::${activeCategory}`;
+  let arrayCache = dynamicFiltersCache.get(products);
+  if (arrayCache && arrayCache.has(cacheKey)) {
+    return arrayCache.get(cacheKey);
+  }
+
   const qLower = String(query || '').toLowerCase().trim();
   const catLower = String(activeCategory || '').toLowerCase().trim();
 
@@ -144,6 +170,7 @@ export function extractDynamicFilters(products = [], query = '', activeCategory 
   let g100ProductCount = 0;
 
   for (const item of products) {
+    if (!item || typeof item !== 'object') continue;
     const price = Number(item.sellingPrice !== undefined ? item.sellingPrice : (item.mrp || 0));
     if (price > 0) {
       if (price < minPrice) minPrice = price;
@@ -168,7 +195,9 @@ export function extractDynamicFilters(products = [], query = '', activeCategory 
     const brand = attrs.brand || item.brand;
     if (brand && String(brand).toLowerCase() !== 'nan') {
       const bKey = String(brand).trim();
-      brandCounts.set(bKey, (brandCounts.get(bKey) || 0) + 1);
+      if (bKey && bKey.toLowerCase() !== 'nan' && bKey.toLowerCase() !== 'undefined') {
+        brandCounts.set(bKey, (brandCounts.get(bKey) || 0) + 1);
+      }
     }
 
     // Unit price ranges
@@ -293,7 +322,7 @@ export function extractDynamicFilters(products = [], query = '', activeCategory 
     }
   }
 
-  return {
+  const result = {
     query: query || '',
     category: activeCategory || '',
     sortOptions: SORT_OPTIONS,
@@ -303,6 +332,14 @@ export function extractDynamicFilters(products = [], query = '', activeCategory 
     },
     filterPills
   };
+
+  if (!arrayCache) {
+    arrayCache = new Map();
+    dynamicFiltersCache.set(products, arrayCache);
+  }
+  arrayCache.set(cacheKey, result);
+
+  return result;
 }
 
 /**
@@ -316,64 +353,58 @@ export function extractDynamicFilters(products = [], query = '', activeCategory 
 export function applyFiltersAndSort(items = [], filters = {}, sortBy = 'relevance') {
   if (!Array.isArray(items)) return [];
 
+  // Pre-process active filters into fast Sets / numbers for O(1) matching per item
+  const categoryLower = filters.category ? String(filters.category).toLowerCase() : null;
+  const subCategoryLower = filters.subCategory ? String(filters.subCategory).toLowerCase() : null;
+
+  const rawGenders = filters.gender ? (Array.isArray(filters.gender) ? filters.gender : [filters.gender]) : [];
+  const genderSet = rawGenders.length > 0 ? new Set(rawGenders) : null;
+
+  const rawGrains = filters.grainType ? (Array.isArray(filters.grainType) ? filters.grainType : [filters.grainType]) : [];
+  const grainSet = rawGrains.length > 0 ? new Set(rawGrains) : null;
+
+  const rawBrands = filters.brand ? (Array.isArray(filters.brand) ? filters.brand : [filters.brand]) : [];
+  const brandSet = rawBrands.length > 0 ? new Set(rawBrands.map(b => String(b || '').trim().toLowerCase())) : null;
+
+  const minPriceNum = (filters.minPrice !== undefined && filters.minPrice !== null && filters.minPrice !== '') ? Number(filters.minPrice) : null;
+  const maxPriceNum = (filters.maxPrice !== undefined && filters.maxPrice !== null && filters.maxPrice !== '') ? Number(filters.maxPrice) : null;
+  const pricePerUnit = filters.pricePerUnit || null;
+
   let filtered = items.filter(item => {
     if (!item) return false;
-    const attrs = item.attributes || inferProductAttributes(item);
     const price = Number(item.sellingPrice !== undefined ? item.sellingPrice : (item.mrp || 0));
 
-    // Category filter
-    if (filters.category) {
+    // Fast numeric price bounds check first
+    if (minPriceNum !== null && price < minPriceNum) return false;
+    if (maxPriceNum !== null && price > maxPriceNum) return false;
+
+    // Fast category string checks
+    if (categoryLower) {
       const cat = String(item.category || '').toLowerCase();
-      if (!cat.includes(String(filters.category).toLowerCase())) return false;
+      if (!cat.includes(categoryLower)) return false;
     }
 
-    // SubCategory filter
-    if (filters.subCategory) {
+    if (subCategoryLower) {
       const sub = String(item.subCategory || '').toLowerCase();
-      if (!sub.includes(String(filters.subCategory).toLowerCase())) return false;
+      if (!sub.includes(subCategoryLower)) return false;
     }
 
-    // Gender filter (single or multi)
-    if (filters.gender) {
-      const activeGenders = Array.isArray(filters.gender) ? filters.gender : [filters.gender];
-      if (activeGenders.length > 0 && !activeGenders.includes(attrs.gender)) {
-        return false;
-      }
-    }
+    const attrs = item.attributes || inferProductAttributes(item);
 
-    // Grain Type filter
-    if (filters.grainType) {
-      const activeGrains = Array.isArray(filters.grainType) ? filters.grainType : [filters.grainType];
-      if (activeGrains.length > 0 && !activeGrains.includes(attrs.grainType)) {
-        return false;
-      }
-    }
+    // Fast Set checks for dynamic facets
+    if (genderSet && !genderSet.has(attrs.gender)) return false;
+    if (grainSet && !grainSet.has(attrs.grainType)) return false;
 
-    // Brand filter (multi-select)
-    if (filters.brand) {
-      const activeBrands = Array.isArray(filters.brand) ? filters.brand : [filters.brand];
-      if (activeBrands.length > 0) {
-        const itemBrand = String(attrs.brand || item.brand || '').trim();
-        const matchesBrand = activeBrands.some(b => itemBrand.toLowerCase() === String(b).trim().toLowerCase());
-        if (!matchesBrand) return false;
-      }
-    }
-
-    // Min Price
-    if (filters.minPrice !== undefined && filters.minPrice !== null && filters.minPrice !== '') {
-      if (price < Number(filters.minPrice)) return false;
-    }
-
-    // Max Price
-    if (filters.maxPrice !== undefined && filters.maxPrice !== null && filters.maxPrice !== '') {
-      if (price > Number(filters.maxPrice)) return false;
+    if (brandSet) {
+      const itemBrand = String(attrs.brand || item.brand || '').trim().toLowerCase();
+      if (!brandSet.has(itemBrand)) return false;
     }
 
     // Price Per Unit tier (e.g. 'under_50', '50_100', '100_150', '150_plus')
-    if (filters.pricePerUnit) {
+    if (pricePerUnit) {
       const unitPrice = attrs.unitPrice !== undefined ? attrs.unitPrice : item.unitPrice;
       if (unitPrice === undefined) return false;
-      switch (filters.pricePerUnit) {
+      switch (pricePerUnit) {
         case 'under_50':
           if (unitPrice >= 50) return false;
           break;
@@ -385,8 +416,8 @@ export function applyFiltersAndSort(items = [], filters = {}, sortBy = 'relevanc
           break;
         case '150_plus':
         case '100_plus':
-          if (filters.pricePerUnit === '150_plus' && unitPrice < 150) return false;
-          if (filters.pricePerUnit === '100_plus' && unitPrice < 100) return false;
+          if (pricePerUnit === '150_plus' && unitPrice < 150) return false;
+          if (pricePerUnit === '100_plus' && unitPrice < 100) return false;
           break;
         default:
           break;

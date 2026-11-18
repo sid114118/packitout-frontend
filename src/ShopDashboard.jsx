@@ -26,6 +26,9 @@ export default function ShopDashboard({ user, onExit }) {
   const [activeTab, setActiveTab] = useState("orders");
   const [orders, setOrders] = useState([]);
   const [masterCatalog, setMasterCatalog] = useState([]);
+  const [isCatalogLoading, setIsCatalogLoading] = useState(true);
+  const [catalogError, setCatalogError] = useState(null);
+  const [isInventoryLoading, setIsInventoryLoading] = useState(() => Boolean(!user?.inventory || user.inventory.length === 0));
   const [shopData, setShopData] = useState(user);
 
   const [parchiRequests, setParchiRequests] = useState([]);
@@ -49,11 +52,14 @@ export default function ShopDashboard({ user, onExit }) {
   // --- DATA FETCHING ---
   useEffect(() => {
     const fetchAllData = async () => {
-      await refreshShopData();
-      await fetchOrders();
-      await fetchMasterCatalog();
-      await fetchParchis();
-      await fetchKhataSummary();
+      // Parallelize fetches for fast initial dashboard hydration
+      await Promise.allSettled([
+        refreshShopData(),
+        fetchOrders(),
+        fetchMasterCatalog(),
+        fetchParchis(),
+        fetchKhataSummary()
+      ]);
     };
     fetchAllData();
 
@@ -118,20 +124,34 @@ export default function ShopDashboard({ user, onExit }) {
   };
 
   const fetchMasterCatalog = async () => {
+    setIsCatalogLoading(true);
+    setCatalogError(null);
     try {
       const res = await fetch(`${BASE_URL}/master-products`);
-      setMasterCatalog(await res.json());
-    } catch (err) { console.log(err); }
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
+      setMasterCatalog(Array.isArray(data) ? data : (data?.items || []));
+    } catch (err) {
+      console.log("Failed to load catalog:", err);
+      setCatalogError(err.message || "Failed to load catalog");
+    } finally {
+      setIsCatalogLoading(false);
+    }
   };
 
   const refreshShopData = async () => {
+    setIsInventoryLoading(true);
     try {
       const res = await fetch(`${BASE_URL}/shops/${shopData._id}/menu`);
       if (res.ok) {
         const updated = await res.json();
         setShopData(prev => ({ ...updated, sessionToken: prev?.sessionToken || shopData.sessionToken }));
       }
-    } catch (err) { console.log(err); }
+    } catch (err) {
+      console.log("Failed to refresh shop data:", err);
+    } finally {
+      setIsInventoryLoading(false);
+    }
   };
 
   const fetchParchis = async () => {
@@ -460,7 +480,19 @@ export default function ShopDashboard({ user, onExit }) {
         )}
         {activeTab === "orders" && <OrdersTab orders={orders} updateOrderStatus={updateOrderStatus} markOrderPaid={markOrderPaid} shopData={shopData} refreshOrders={fetchOrders} />}
         {activeTab === "parchis" && <ParchiTab parchiRequests={parchiRequests} selectedParchi={selectedParchi} setSelectedParchi={setSelectedParchi} parchiBill={parchiBill} setParchiBill={setParchiBill} handleAddToBill={handleAddToBill} handleSendBill={handleSendBill} shopData={shopData} />}
-        {activeTab === "inventory" && <InventoryTab shopData={shopData} masterCatalog={masterCatalog} handleInventoryUpdate={handleInventoryUpdate} handleInventoryRemove={handleInventoryRemove} onInventoryRefresh={refreshShopData} fetchMasterCatalog={fetchMasterCatalog} />}
+        {activeTab === "inventory" && (
+          <InventoryTab 
+            shopData={shopData} 
+            masterCatalog={masterCatalog} 
+            isCatalogLoading={isCatalogLoading}
+            catalogError={catalogError}
+            isInventoryLoading={isInventoryLoading}
+            handleInventoryUpdate={handleInventoryUpdate} 
+            handleInventoryRemove={handleInventoryRemove} 
+            onInventoryRefresh={refreshShopData} 
+            fetchMasterCatalog={fetchMasterCatalog} 
+          />
+        )}
         {activeTab === "requests" && <RequestsTab shopData={shopData} />}
         {activeTab === "combos" && <CombosTab shopData={shopData} masterCatalog={masterCatalog} onComboRefresh={refreshShopData} />}
         {activeTab === "reviews" && <ShopReviews shopId={shopData._id} shopRating={shopData.rating} totalReviews={shopData.totalReviews} />}
