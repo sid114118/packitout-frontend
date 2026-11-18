@@ -158,6 +158,17 @@ export default function GuestFeed({
           } catch (e) {}
           processMasterData(initialItems);
           setLoading(false);
+        } else {
+          // If limit=120 is empty, fallback to full catalog fetch
+          fetch(`${BASE_URL}/master-products`)
+            .then(res => res.ok ? res.json() : null)
+            .then(fullData => {
+              const fullItems = Array.isArray(fullData) ? fullData : (fullData?.items || []);
+              if (fullItems.length > 0) processMasterData(fullItems);
+            })
+            .catch(() => {})
+            .finally(() => setLoading(false));
+          return;
         }
 
         // 🐢 BACKGROUND HYDRATION: Fetch full master catalog for comprehensive category browsing
@@ -180,11 +191,11 @@ export default function GuestFeed({
             const items = Array.isArray(masterData) ? masterData : (masterData?.items || []);
             if (items.length > 0) {
               processMasterData(items);
-              setLoading(false);
             }
           })
-          .catch(() => {
-            if (!hasCached) setLoading(false);
+          .catch(() => {})
+          .finally(() => {
+            setLoading(false);
           });
       });
   }, []);

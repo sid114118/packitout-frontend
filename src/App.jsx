@@ -172,21 +172,30 @@ export default function App() {
 
   // 🔔 BASKET REMINDER CHECK
   useEffect(() => {
-    const notified = JSON.parse(sessionStorage.getItem('packitout_notified_baskets') || '[]');
-    let newlyNotified = [...notified];
+    try {
+      const raw = sessionStorage.getItem('packitout_notified_baskets');
+      const notified = raw ? JSON.parse(raw) : [];
+      let newlyNotified = Array.isArray(notified) ? [...notified] : [];
 
-    baskets.forEach(basket => {
-      if (basket.reminderDays > 0 && basket.lastOrderedAt) {
-        const daysSinceOrder = (Date.now() - basket.lastOrderedAt) / (1000 * 60 * 60 * 24);
-        if (daysSinceOrder >= basket.reminderDays && !notified.includes(basket.id)) {
-          toast(`Reminder: Time to reorder your "${basket.name}" basket! 🛒`, "info", 5000);
-          newlyNotified.push(basket.id);
-        }
+      if (Array.isArray(baskets)) {
+        baskets.forEach(basket => {
+          if (basket && basket.reminderDays > 0 && basket.lastOrderedAt) {
+            const daysSinceOrder = (Date.now() - basket.lastOrderedAt) / (1000 * 60 * 60 * 24);
+            if (daysSinceOrder >= basket.reminderDays && !newlyNotified.includes(basket.id)) {
+              toast(`Reminder: Time to reorder your "${basket.name}" basket! 🛒`, "info", 5000);
+              newlyNotified.push(basket.id);
+            }
+          }
+        });
       }
-    });
 
-    if (newlyNotified.length > notified.length) {
-      sessionStorage.setItem('packitout_notified_baskets', JSON.stringify(newlyNotified));
+      if (newlyNotified.length > (Array.isArray(notified) ? notified.length : 0)) {
+        try {
+          sessionStorage.setItem('packitout_notified_baskets', JSON.stringify(newlyNotified));
+        } catch (e) {}
+      }
+    } catch (e) {
+      console.warn("Basket reminder check skipped:", e);
     }
   }, [baskets]);
 
@@ -327,13 +336,14 @@ export default function App() {
         const shopId = pathPart;
         
         if (shopId) {
-          localStorage.setItem("packitout_guest_shop_id", shopId);
-          
-          if (queryPart) {
-            const params = new URLSearchParams(queryPart);
-            const pin = params.get("pin");
-            if (pin) localStorage.setItem("packitout_guest_pincode", pin);
-          }
+          try {
+            localStorage.setItem("packitout_guest_shop_id", shopId);
+            if (queryPart) {
+              const params = new URLSearchParams(queryPart);
+              const pin = params.get("pin");
+              if (pin) localStorage.setItem("packitout_guest_pincode", pin);
+            }
+          } catch (e) {}
           
           if (loggedInUser) {
             handleSetPrimaryShop(shopId);
@@ -355,11 +365,13 @@ export default function App() {
       else if (hash.startsWith("#/bill/")) {
         const [billPart, queryPart] = hash.replace("#/bill/", "").split("?");
         if (queryPart) {
-          const params = new URLSearchParams(queryPart);
-          const sid = params.get("s");
-          const pin = params.get("pin");
-          if (sid) localStorage.setItem("packitout_guest_shop_id", sid);
-          if (pin) localStorage.setItem("packitout_guest_pincode", pin);
+          try {
+            const params = new URLSearchParams(queryPart);
+            const sid = params.get("s");
+            const pin = params.get("pin");
+            if (sid) localStorage.setItem("packitout_guest_shop_id", sid);
+            if (pin) localStorage.setItem("packitout_guest_pincode", pin);
+          } catch (e) {}
           setGuestShopRevision(r => r + 1);
         }
         if (billPart) setCurrentView(`bill:${billPart}`);
@@ -376,7 +388,9 @@ export default function App() {
         setIsSearchOpen(false);
       }
       setViewingShop(null);
-      window.scrollTo(0, 0);
+      if (typeof window !== 'undefined' && typeof window.scrollTo === 'function') {
+        try { window.scrollTo(0, 0); } catch (e) {}
+      }
     };
     checkUrl();
     window.addEventListener("hashchange", checkUrl);
@@ -749,12 +763,13 @@ export default function App() {
       );
     }
 
-    const cartTotalItems = cart.reduce((sum, item) => {
+    const safeCart = Array.isArray(cart) ? cart : [];
+    const cartTotalItems = safeCart.reduce((sum, item) => {
       if (!item) return sum;
       return sum + (Number(item.qty) || 0);
     }, 0);
     
-    const cartTotalPrice = cart.reduce((sum, item) => {
+    const cartTotalPrice = safeCart.reduce((sum, item) => {
       if (!item) return sum;
       const price = Number(item.sellingPrice || item.mrp || 0);
       const qty = Number(item.qty || 0);
@@ -907,7 +922,7 @@ export default function App() {
   const showBottomNav = ["customer", "Customer", "nearby", "account", "orders", "cart", "success"].includes(currentView);
 
   // Total item count for the Cart tab badge — sum of qty across all cart items.
-  const navCartCount = cart.reduce((sum, item) => {
+  const navCartCount = (Array.isArray(cart) ? cart : []).reduce((sum, item) => {
     if (!item) return sum;
     return sum + (Number(item.qty) || 0);
   }, 0);
