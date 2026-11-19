@@ -6,7 +6,7 @@ export default function Footer() {
     <footer style={{ 
         backgroundColor: '#111827', // Premium dark slate background
         color: '#f8fafc', 
-        padding: '40px 20px 90px 20px', // 👈 90px bottom padding clears your sticky nav!
+        padding: '40px 20px 40px 20px', // 👈 90px bottom padding clears your sticky nav!
         marginTop: '20px',
         fontFamily: 'sans-serif'
     }}>
