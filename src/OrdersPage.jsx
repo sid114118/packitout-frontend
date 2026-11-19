@@ -228,9 +228,25 @@ export default function OrdersPage({ user, onExit, onAddToCart, cart, setCart })
       }, 400);
     });
     
+    // ⚡ Backup polling safety net (every 12s) in case Hostinger proxy drops or buffers SSE
+    const pollInterval = setInterval(() => {
+      if (document.visibilityState === 'visible') {
+        fetchOrders();
+      }
+    }, 12000);
+
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') fetchOrders();
+    };
+    window.addEventListener('focus', onVisible);
+    document.addEventListener('visibilitychange', onVisible);
+    
     return () => {
       clearTimeout(sseTimeout);
       clearTimeout(khataSseTimeout);
+      clearInterval(pollInterval);
+      window.removeEventListener('focus', onVisible);
+      document.removeEventListener('visibilitychange', onVisible);
       eventSource.close();
     };
   }, [user._id, user.sessionToken]);
@@ -244,6 +260,14 @@ export default function OrdersPage({ user, onExit, onAddToCart, cart, setCart })
       danger: true,
     });
     if (!ok) return;
+
+    // ⚡ Optimistic UI update: instantly show Cancelled on screen & in local cache (0ms perceived latency!)
+    const prevOrders = [...orders];
+    const cancelledStatus = 'Cancelled ❌ (by customer)';
+    const optimisticallyUpdated = orders.map(o => o._id === orderId ? { ...o, status: cancelledStatus } : o);
+    setOrders(optimisticallyUpdated);
+    try { localStorage.setItem(cacheKey, JSON.stringify(optimisticallyUpdated)); } catch {}
+
     // Cancel now routes through /user-cancel so coins are refunded (and any
     // UPI receipt is flagged for the shop to action manually). Requires the
     // session token issued at login — pre-token sessions need to log out and
@@ -257,6 +281,9 @@ export default function OrdersPage({ user, onExit, onAddToCart, cart, setCart })
         triggerToast("Order cancelled. Refund is being processed.");
         fetchOrders();
       } else {
+        // Rollback on rejection
+        setOrders(prevOrders);
+        try { localStorage.setItem(cacheKey, JSON.stringify(prevOrders)); } catch {}
         const err = await res.json().catch(() => ({}));
         if (res.status === 401) {
           triggerToast("Session expired — please log out and log back in.", "error");
@@ -265,6 +292,8 @@ export default function OrdersPage({ user, onExit, onAddToCart, cart, setCart })
         }
       }
     } catch (err) {
+      setOrders(prevOrders);
+      try { localStorage.setItem(cacheKey, JSON.stringify(prevOrders)); } catch {}
       triggerToast("Network error. Try again.", "error");
     }
   };

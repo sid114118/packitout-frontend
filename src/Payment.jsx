@@ -117,11 +117,33 @@ export default function Payment({ user, cart, targetShop, finalBill, useCoins, c
       if (onUserUpdate) onUserUpdate(next);
     }
     try {
-      sessionStorage.setItem('packitout_last_order', JSON.stringify({
+      const formattedNewOrder = {
         ...order,
-        shopId: { _id: targetShop._id, name: targetShop.name, phone: targetShop.phone },
+        shopId: {
+          _id: targetShop._id,
+          name: targetShop.name,
+          phone: targetShop.phone,
+          pincode: targetShop.pincode,
+          fullAddress: targetShop.fullAddress,
+          upiId: targetShop.upiId,
+          shopImage: targetShop.shopImage,
+        },
         userId: { _id: user._id, name: user.name, phone: user.phone },
-      }));
+      };
+      sessionStorage.setItem('packitout_last_order', JSON.stringify(formattedNewOrder));
+
+      // ⚡ Instantly update OrdersPage cache so track order shows the new order at 0ms!
+      const cacheKey = `packitout_orders_cache_v1_${user._id}`;
+      const existingRaw = localStorage.getItem(cacheKey);
+      let existingList = [];
+      if (existingRaw) {
+        try {
+          const parsed = JSON.parse(existingRaw);
+          if (Array.isArray(parsed)) existingList = parsed;
+        } catch {}
+      }
+      const updatedList = [formattedNewOrder, ...existingList.filter(o => o && o._id !== order._id)];
+      localStorage.setItem(cacheKey, JSON.stringify(updatedList));
     } catch { }
     return order;
   };

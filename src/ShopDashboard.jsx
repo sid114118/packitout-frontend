@@ -230,10 +230,30 @@ export default function ShopDashboard({ user, onExit }) {
       console.error("SSE connection error, browser will auto-reconnect.", err);
     };
 
+    // ⚡ Fallback polling (every 10s) so if Hostinger proxy buffers or drops SSE, orders still sync automatically
+    const pollInterval = setInterval(() => {
+      if (document.visibilityState === 'visible') {
+        fetchOrders();
+        fetchParchis();
+      }
+    }, 10000);
+
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') {
+        fetchOrders();
+        fetchParchis();
+      }
+    };
+    window.addEventListener('focus', onVisible);
+    document.addEventListener('visibilitychange', onVisible);
+
     return () => {
       clearTimeout(ordersTimeout);
       clearTimeout(parchisTimeout);
       clearTimeout(khataTimeout);
+      clearInterval(pollInterval);
+      window.removeEventListener('focus', onVisible);
+      document.removeEventListener('visibilitychange', onVisible);
       eventSource.close();
     };
   }, [shopData._id]);
