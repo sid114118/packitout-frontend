@@ -1,3 +1,4 @@
+```react
 import React, { useState } from 'react';
 
 const BASE_URL = (import.meta.env.VITE_API_BASE || "https://darkslategrey-snail-415133.hostingersite.com");
@@ -5,10 +6,13 @@ const BASE_URL = (import.meta.env.VITE_API_BASE || "https://darkslategrey-snail-
 export default function ShopLogin({ onLogin }) {
   const [form, setForm] = useState({ phone: "", password: "" });
   const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
 
   const handleLogin = async (e) => {
     e.preventDefault();
+    if (loading) return;
     setError("");
+    setLoading(true);
     try {
       const res = await fetch(`${BASE_URL}/shop-login`, {
         method: "POST",
@@ -20,6 +24,8 @@ export default function ShopLogin({ onLogin }) {
       else setError(data?.error || "Invalid Phone or Password");
     } catch {
       setError("Network error. Please try again.");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -27,12 +33,33 @@ export default function ShopLogin({ onLogin }) {
     <div style={{ padding: '50px', textAlign: 'center', background: '#1e272e', minHeight: '100vh', color: 'white' }}>
       <h2>🏪 Shop Partner Login</h2>
       <form onSubmit={handleLogin} style={{ maxWidth: '300px', margin: 'auto' }}>
-        <input type="tel" placeholder="Phone" onChange={e => setForm({...form, phone: e.target.value})} style={s} required />
-        <input type="password" placeholder="Password" onChange={e => setForm({...form, password: e.target.value})} style={s} required />
-        {error && <p style={{color: 'red'}}>{error}</p>}
-        <button type="submit" style={{padding: '10px 20px', cursor: 'pointer'}}>Login</button>
+        <input
+          type="tel"
+          placeholder="Phone"
+          onChange={e => setForm({ ...form, phone: e.target.value })}
+          style={s}
+          disabled={loading}
+          required
+        />
+        <input
+          type="password"
+          placeholder="Password"
+          onChange={e => setForm({ ...form, password: e.target.value })}
+          style={s}
+          disabled={loading}
+          required
+        />
+        {error && <p style={{ color: 'red' }}>{error}</p>}
+        <button
+          type="submit"
+          disabled={loading}
+          style={{ padding: '10px 20px', cursor: loading ? 'not-allowed' : 'pointer', opacity: loading ? 0.7 : 1 }}
+        >
+          {loading ? 'Logging in...' : 'Login'}
+        </button>
       </form>
     </div>
   );
 }
 const s = { width: '100%', padding: '10px', marginBottom: '10px', borderRadius: '5px' };
+```
