@@ -17,6 +17,9 @@ export const initAnalytics = (user) => {
       posthog.init(POSTHOG_KEY, {
         api_host: POSTHOG_HOST,
         capture_pageleave: false, // 🔋 PERFORMANCE: Disabled to save quota
+        autocapture: false, // 🔋 PERFORMANCE: Disabled to prevent freezing click events & DOM walking
+        disable_session_recording: true, // 🔋 PERFORMANCE: Prevent recording DOM mutations on button clicks
+        enable_recording_console_log: false,
         // Respect user's offline state (caches events in localStorage)
         persistence: 'localStorage+cookie', 
         loaded: (ph) => {

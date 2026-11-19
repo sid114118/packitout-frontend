@@ -20,6 +20,28 @@ import { cdnImage } from './utils/cloudinaryUrl.js';
 import { shopFetch, BASE_URL } from './utils/api.js';
 import { playArrivalBell } from './utils/orderAlarm.js';
 
+// ⚡ PERFORMANCE: Cache only lightweight item fields in sessionStorage (<50KB)
+// instead of serializing 6+ MB of full MongoDB BSON documents which blocks the main thread.
+const cacheSlimInventory = (shopId, inventory) => {
+  if (!shopId || !Array.isArray(inventory) || inventory.length === 0) return;
+  try {
+    const slim = inventory.slice(0, 250).map(item => ({
+      product: {
+        _id: item?.product?._id || item?.product,
+        name: item?.product?.name,
+        mrp: item?.product?.mrp,
+        image: item?.product?.image,
+        category: item?.product?.category,
+      },
+      sellingPrice: item?.sellingPrice,
+      inStock: item?.inStock,
+      isFeatured: item?.isFeatured,
+      featuredRank: item?.featuredRank,
+    }));
+    sessionStorage.setItem(`shop_inventory_${shopId}`, JSON.stringify(slim));
+  } catch {}
+};
+
 export default function ShopDashboard({ user, onExit }) {
   const toast = useToast();
   // --- STATE WITH INSTANT CACHE (0ms First Paint) ---
@@ -210,11 +232,7 @@ export default function ShopDashboard({ user, onExit }) {
       if (res.ok) {
         const updated = await res.json();
         updateShopDataSafe(updated);
-        try {
-          if (Array.isArray(updated.inventory) && updated.inventory.length > 0) {
-            sessionStorage.setItem(`shop_inventory_${shopData._id}`, JSON.stringify(updated.inventory));
-          }
-        } catch {}
+        cacheSlimInventory(shopData._id, updated.inventory);
       }
     } catch (err) {
       console.log(err);
@@ -367,11 +385,7 @@ export default function ShopDashboard({ user, onExit }) {
           combos: updated.combos ?? prev.combos,
           inventoryMode: updated.inventoryMode ?? prev.inventoryMode,
         }));
-        try {
-          if (Array.isArray(updated.inventory)) {
-            sessionStorage.setItem(`shop_inventory_${shopData._id}`, JSON.stringify(updated.inventory));
-          }
-        } catch {}
+        cacheSlimInventory(shopData._id, updated.inventory);
         toast("Store updated!");
       } else {
         const errorData = await res.json().catch(() => ({}));
@@ -403,11 +417,7 @@ export default function ShopDashboard({ user, onExit }) {
           combos: updated.combos ?? prev.combos,
           inventoryMode: updated.inventoryMode ?? prev.inventoryMode,
         }));
-        try {
-          if (Array.isArray(updated.inventory)) {
-            sessionStorage.setItem(`shop_inventory_${shopData._id}`, JSON.stringify(updated.inventory));
-          }
-        } catch {}
+        cacheSlimInventory(shopData._id, updated.inventory);
         toast("Item removed from store!");
       } else {
         const errorData = await res.json().catch(() => ({}));

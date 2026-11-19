@@ -60,8 +60,11 @@ html, body, #root {
 button { font-family: inherit; }
 input, select, textarea { font-family: inherit; }
 
-/* Crisp tap on mobile, hide gnarly tap highlight */
-button, a, [role="button"] { -webkit-tap-highlight-color: transparent; }
+/* Crisp tap on mobile, hide gnarly tap highlight, zero click delay */
+button, a, [role="button"] {
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
 
 /* Hide scrollbars on horizontal carousels (used by .premium-hide-scroll, .hide-scroll) */
 .premium-hide-scroll, .hide-scroll {
