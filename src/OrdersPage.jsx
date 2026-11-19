@@ -335,6 +335,62 @@ export default function OrdersPage({ user, onExit, onAddToCart, cart, setCart })
     }
   };
 
+  const [isRespondingKhata, setIsRespondingKhata] = useState(null);
+
+  const handleRespondKhata = async (orderId, action) => {
+    setIsRespondingKhata(orderId);
+    try {
+      const res = await userFetch(user, `/orders/${orderId}/khata-respond`, {
+        method: "POST",
+        body: JSON.stringify({ action }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok) {
+        if (action === "accept") {
+          triggerToast("Khata payment approved! Added to your Store Khata 📒", "success");
+          if (typeof navigator !== 'undefined' && navigator.vibrate) {
+            try { navigator.vibrate([100, 50, 100]); } catch (e) {}
+          }
+          setOrders(prev => prev.map(o => o._id === orderId ? {
+            ...o,
+            paymentMethod: 'KHATA',
+            paymentStatus: 'Paid',
+            khataAmount: Number(o.totalAmount || 0),
+            khataRequest: { ...(o.khataRequest || {}), status: 'accepted' }
+          } : o));
+          if (selectedOrder && selectedOrder._id === orderId) {
+            setSelectedOrder(prev => ({
+              ...prev,
+              paymentMethod: 'KHATA',
+              paymentStatus: 'Paid',
+              khataAmount: Number(prev.totalAmount || 0),
+              khataRequest: { ...(prev.khataRequest || {}), status: 'accepted' }
+            }));
+          }
+          if (fetchUserKhata) fetchUserKhata();
+        } else {
+          triggerToast("Khata request declined. You can pay via Cash/UPI at counter.", "info");
+          setOrders(prev => prev.map(o => o._id === orderId ? {
+            ...o,
+            khataRequest: { ...(o.khataRequest || {}), status: 'declined' }
+          } : o));
+          if (selectedOrder && selectedOrder._id === orderId) {
+            setSelectedOrder(prev => ({
+              ...prev,
+              khataRequest: { ...(prev.khataRequest || {}), status: 'declined' }
+            }));
+          }
+        }
+      } else {
+        triggerToast(data.error || "Failed to respond to Khata request.", "error");
+      }
+    } catch (err) {
+      triggerToast("Network error. Try again.", "error");
+    } finally {
+      setIsRespondingKhata(null);
+    }
+  };
+
   const handleReorderItem = (item) => {
     if (!onAddToCart) return;
     const product = itemToCartProduct(item);
@@ -735,6 +791,8 @@ export default function OrdersPage({ user, onExit, onAddToCart, cart, setCart })
                 onReorderItem={handleReorderItem}
                 onCustomerArrived={handleCustomerArrived}
                 onOpenChat={setChatOrder}
+                onRespondKhata={handleRespondKhata}
+                isRespondingKhata={isRespondingKhata}
               />
             ))}
             
@@ -801,6 +859,8 @@ export default function OrdersPage({ user, onExit, onAddToCart, cart, setCart })
                 onReorderItem={handleReorderItem}
                 onCustomerArrived={handleCustomerArrived}
                 onOpenChat={setChatOrder}
+                onRespondKhata={handleRespondKhata}
+                isRespondingKhata={isRespondingKhata}
               />
             ))}
           </div>
@@ -815,6 +875,8 @@ export default function OrdersPage({ user, onExit, onAddToCart, cart, setCart })
         user={user}
         onCustomerArrived={handleCustomerArrived}
         onOpenChat={setChatOrder}
+        onRespondKhata={handleRespondKhata}
+        isRespondingKhata={isRespondingKhata}
         onReviewsDeleted={(orderId) => {
           setOrders(prev => prev.map(o => o._id === orderId ? { ...o, isReviewed: false } : o));
           // Close the receipt modal too — the order just became review-able again,
@@ -904,7 +966,7 @@ function Stat({ label, value, icon, small, ellipsis }) {
 }
 
 // ─────────────────────────────────────────────────────────
-function OrderCard({ order, onOpen, onCancel, onReview, onReorderItem, onCustomerArrived, onOpenChat }) {
+function OrderCard({ order, onOpen, onCancel, onReview, onReorderItem, onCustomerArrived, onOpenChat, onRespondKhata, isRespondingKhata }) {
   const stage = stageOf(order.status);
   const live = stage !== 'delivered' && stage !== 'cancelled';
   const isPending = stage === 'pending';
@@ -1097,6 +1159,77 @@ function OrderCard({ order, onOpen, onCancel, onReview, onReorderItem, onCustome
               <span>📍</span> I'm at the Shop (दुकान पर पहुँच गए)
             </button>
           )}
+        </div>
+      )}
+
+      {/* 📒 LIVE KHATA BILLING REQUEST BANNER (Shopkeeper -> Customer) */}
+      {live && !isCancelled && order.khataRequest?.status === 'pending' && (
+        <div
+          onClick={(e) => e.stopPropagation()}
+          style={{
+            marginTop: '12px',
+            background: 'linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%)',
+            border: '2px solid #f59e0b',
+            borderRadius: '14px',
+            padding: '12px 14px',
+            boxShadow: '0 6px 18px rgba(245, 158, 11, 0.22)',
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px' }}>
+            <span style={{ fontSize: '1.4rem', lineHeight: 1 }}>📒</span>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontSize: '0.88rem', fontWeight: 900, color: '#92400e', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                Khata Billing Request
+                <span style={{ background: '#f59e0b', color: '#fff', fontSize: '0.65rem', padding: '1px 6px', borderRadius: '4px', fontWeight: 800 }}>ACTION NEEDED</span>
+              </div>
+              <div style={{ fontSize: '0.78rem', color: '#b45309', fontWeight: 600, marginTop: '2px' }}>
+                {order.shopId?.name || "The shop"} requested to add <strong>₹{order.khataRequest?.amount || order.totalAmount}</strong> for this order to your Store Khata.
+              </div>
+            </div>
+          </div>
+          <div style={{ display: 'flex', gap: '8px', marginTop: '10px' }}>
+            <button
+              onClick={() => onRespondKhata && onRespondKhata(order._id, 'accept')}
+              disabled={isRespondingKhata === order._id}
+              className="op-press"
+              style={{
+                flex: '1 1 auto',
+                padding: '9px 12px',
+                background: '#16a34a',
+                color: '#fff',
+                border: 'none',
+                borderRadius: '10px',
+                fontSize: '0.82rem',
+                fontWeight: 800,
+                cursor: 'pointer',
+                boxShadow: '0 3px 10px rgba(22, 163, 74, 0.3)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '6px',
+              }}
+            >
+              <span>✅</span> Accept & Add to Khata
+            </button>
+            <button
+              onClick={() => onRespondKhata && onRespondKhata(order._id, 'decline')}
+              disabled={isRespondingKhata === order._id}
+              className="op-press"
+              style={{
+                flex: '0 0 auto',
+                padding: '9px 12px',
+                background: '#fff',
+                color: '#dc2626',
+                border: '1px solid #fca5a5',
+                borderRadius: '10px',
+                fontSize: '0.82rem',
+                fontWeight: 700,
+                cursor: 'pointer',
+              }}
+            >
+              Pay Cash / UPI
+            </button>
+          </div>
         </div>
       )}
 

@@ -23,6 +23,49 @@ export default function OrdersTab({ orders, updateOrderStatus, markOrderPaid, sh
   const [showPastOrders, setShowPastOrders] = useState(false);
   const [pricingTarget, setPricingTarget] = useState(null); // { orderId, itemIndex, priceInput }
   const [isSavingPrice, setIsSavingPrice] = useState(false);
+  const [khataLoadingId, setKhataLoadingId] = useState(null);
+
+  const handleSendKhataRequest = async (orderId) => {
+    setKhataLoadingId(orderId);
+    try {
+      const res = await shopFetch(shopData, `/orders/${orderId}/khata-request`, {
+        method: 'POST',
+        body: JSON.stringify({}),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok) {
+        toast('📒 Khata billing request sent to customer!', 'success');
+        if (refreshOrders) refreshOrders();
+      } else {
+        toast(data.error || 'Could not send Khata request', 'error');
+      }
+    } catch (e) {
+      toast('Network error. Cannot reach server.', 'error');
+    } finally {
+      setKhataLoadingId(null);
+    }
+  };
+
+  const handleCancelKhataRequest = async (orderId) => {
+    setKhataLoadingId(orderId);
+    try {
+      const res = await shopFetch(shopData, `/orders/${orderId}/khata-cancel`, {
+        method: 'POST',
+        body: JSON.stringify({}),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok) {
+        toast('Khata request cancelled', 'info');
+        if (refreshOrders) refreshOrders();
+      } else {
+        toast(data.error || 'Could not cancel Khata request', 'error');
+      }
+    } catch (e) {
+      toast('Network error. Cannot reach server.', 'error');
+    } finally {
+      setKhataLoadingId(null);
+    }
+  };
 
   const handleSaveCustomPrice = async (orderId, itemIndex) => {
     const val = Number(pricingTarget?.priceInput);
@@ -98,12 +141,16 @@ export default function OrdersTab({ orders, updateOrderStatus, markOrderPaid, sh
         ? Number(order.khataAmount)
         : Math.max(0, (Number(order.totalAmount) || 0) - paidUpfront);
       if (isPaid) {
-        payBadge = { label: '✅ Khata Settled', bg: '#d1fae5', fg: '#059669', border: '#a7f3d0' };
+        payBadge = { label: '📒 Paid via Khata', bg: '#fef3c7', fg: '#92400e', border: '#fde68a' };
       } else if (paidUpfront > 0) {
         payBadge = { label: `⚖️ Split: ₹${paidUpfront} Paid / ₹${khataAmt} Khata`, bg: '#fef3c7', fg: '#92400e', border: '#fde68a' };
       } else {
         payBadge = { label: '📒 Khata Due', bg: '#fef3c7', fg: '#92400e', border: '#fde68a' };
       }
+    } else if (order.khataRequest?.status === 'pending') {
+      payBadge = { label: '⏳ Khata Requested', bg: '#fef9c3', fg: '#854d0e', border: '#fde68a' };
+    } else if (order.khataRequest?.status === 'declined') {
+      payBadge = { label: '❌ Khata Declined', bg: '#fef2f2', fg: '#991b1b', border: '#fecaca' };
     } else if (isPaid && order.paymentMethod === 'UPI') payBadge = { label: '💳 UPI Received', bg: '#d1fae5', fg: '#059669', border: '#a7f3d0' };
     else if (isPaid) payBadge = { label: '💵 Paid in Person', bg: '#d1fae5', fg: '#059669', border: '#a7f3d0' };
     else if (isUpiPending) payBadge = { label: '⏳ Awaiting UPI', bg: '#fef9c3', fg: '#854d0e', border: '#fde68a' };
@@ -637,6 +684,70 @@ export default function OrdersTab({ orders, updateOrderStatus, markOrderPaid, sh
             >
               ✅ Yes, I received the UPI payment
             </button>
+          </div>
+        )}
+
+        {/* 📒 KHATA BILLING CONTROLS FOR SHOPKEEPER (Active & Unpaid orders) */}
+        {isActive && !isPaid && (
+          <div style={{ marginTop: '12px' }}>
+            {order.khataRequest?.status === 'pending' ? (
+              <div style={{ backgroundColor: '#fffbeb', border: '1.5px solid #f59e0b', borderRadius: '10px', padding: '11px 13px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0 }}>
+                  <span style={{ fontSize: '1.25rem' }}>⏳</span>
+                  <div>
+                    <div style={{ fontSize: '0.84rem', color: '#92400e', fontWeight: 800 }}>
+                      Khata Request Sent to Customer
+                    </div>
+                    <div style={{ fontSize: '0.75rem', color: '#b45309', fontWeight: 500 }}>
+                      Waiting for customer to accept ₹{order.khataRequest?.amount || order.totalAmount}...
+                    </div>
+                  </div>
+                </div>
+                <button
+                  onClick={() => handleCancelKhataRequest(order._id)}
+                  disabled={khataLoadingId === order._id}
+                  style={{ padding: '6px 12px', backgroundColor: '#fff', color: '#dc2626', border: '1px solid #fca5a5', borderRadius: '8px', fontWeight: 800, cursor: 'pointer', fontSize: '0.78rem', flexShrink: 0 }}
+                >
+                  Cancel
+                </button>
+              </div>
+            ) : order.khataRequest?.status === 'declined' ? (
+              <div style={{ backgroundColor: '#fef2f2', border: '1px solid #fecaca', borderRadius: '10px', padding: '10px 12px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
+                <div style={{ fontSize: '0.78rem', color: '#991b1b', fontWeight: 700 }}>
+                  ❌ Customer declined Khata (Collect via Cash/UPI)
+                </div>
+                <button
+                  onClick={() => handleSendKhataRequest(order._id)}
+                  disabled={khataLoadingId === order._id}
+                  style={{ padding: '6px 12px', backgroundColor: '#f59e0b', color: '#fff', border: 'none', borderRadius: '8px', fontWeight: 800, cursor: 'pointer', fontSize: '0.78rem', flexShrink: 0 }}
+                >
+                  Retry Khata 📒
+                </button>
+              </div>
+            ) : (
+              <button
+                onClick={() => handleSendKhataRequest(order._id)}
+                disabled={khataLoadingId === order._id}
+                style={{
+                  width: '100%',
+                  padding: '9px 12px',
+                  backgroundColor: '#fffbeb',
+                  color: '#92400e',
+                  border: '1.5px dashed #f59e0b',
+                  borderRadius: '10px',
+                  fontWeight: 800,
+                  cursor: 'pointer',
+                  fontSize: '0.86rem',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '6px',
+                  transition: 'background 0.2s',
+                }}
+              >
+                <span>📒</span> Bill to Customer Khata (उधार खाता में लिखें)
+              </button>
+            )}
           </div>
         )}
 

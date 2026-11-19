@@ -27,7 +27,7 @@ try {
     'packitout_all_master_products'
   ];
   staleKeys.forEach(k => {
-    try { localStorage.removeItem(k); } catch {}
+    try { localStorage.removeItem(k); } catch { }
   });
 
   for (let i = localStorage.length - 1; i >= 0; i--) {
@@ -39,7 +39,7 @@ try {
       }
     }
   }
-} catch {}
+} catch { }
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
@@ -50,4 +50,4 @@ ReactDOM.createRoot(document.getElementById('root')).render(
     </DialogProvider>
   </React.StrictMode>,
 )
- 
+

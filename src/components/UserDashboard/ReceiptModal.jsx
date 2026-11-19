@@ -6,7 +6,7 @@ import ChatIcon from '../../ui/ChatIcon.jsx';
 import { extractKhataMeta, downloadReceiptPdf } from '../../utils/billReceiptGenerator.js';
 import { useToast } from '../../ui/DialogProvider.jsx';
 
-export default function ReceiptModal({ selectedOrder, setSelectedOrder, onReorderItem, user, onReviewsDeleted, onCustomerArrived, onOpenChat }) {
+export default function ReceiptModal({ selectedOrder, setSelectedOrder, onReorderItem, user, onReviewsDeleted, onCustomerArrived, onOpenChat, onRespondKhata, isRespondingKhata }) {
   const [isViewReviewModalOpen, setIsViewReviewModalOpen] = useState(false);
   const toast = useToast();
 
@@ -338,7 +338,70 @@ export default function ReceiptModal({ selectedOrder, setSelectedOrder, onReorde
                )
              )}
 
-             {/* 💬 WhatsApp Chat with Shopkeeper */}
+             {/* 📒 Live Khata Billing Request Banner inside Receipt */}
+              {!isDelivered && !isCancelled && selectedOrder.khataRequest?.status === 'pending' && (
+                <div style={{
+                  width: '100%',
+                  padding: '12px 14px',
+                  background: 'linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%)',
+                  border: '2px solid #f59e0b',
+                  borderRadius: '12px',
+                  boxShadow: '0 4px 15px rgba(245, 158, 11, 0.25)',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '8px'
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <span style={{ fontSize: '1.3rem' }}>📒</span>
+                    <div style={{ textAlign: 'left' }}>
+                      <div style={{ fontSize: '0.9rem', fontWeight: 900, color: '#92400e' }}>
+                        Khata Billing Request
+                      </div>
+                      <div style={{ fontSize: '0.78rem', color: '#b45309', fontWeight: 600 }}>
+                        {selectedOrder.shopId?.name || 'Shop'} wants to bill <strong>₹{selectedOrder.khataRequest?.amount || selectedOrder.totalAmount}</strong> to your Store Khata.
+                      </div>
+                    </div>
+                  </div>
+                  <div style={{ display: 'flex', gap: '8px', marginTop: '4px' }}>
+                    <button
+                      onClick={() => onRespondKhata && onRespondKhata(selectedOrder._id, 'accept')}
+                      disabled={isRespondingKhata === selectedOrder._id}
+                      style={{
+                        flex: 1,
+                        padding: '10px 8px',
+                        background: '#16a34a',
+                        color: '#fff',
+                        border: 'none',
+                        borderRadius: '9px',
+                        fontSize: '0.85rem',
+                        fontWeight: 800,
+                        cursor: 'pointer',
+                        boxShadow: '0 3px 8px rgba(22, 163, 74, 0.3)',
+                      }}
+                    >
+                      ✅ Accept & Add to Khata
+                    </button>
+                    <button
+                      onClick={() => onRespondKhata && onRespondKhata(selectedOrder._id, 'decline')}
+                      disabled={isRespondingKhata === selectedOrder._id}
+                      style={{
+                        padding: '10px 12px',
+                        background: '#fff',
+                        color: '#dc2626',
+                        border: '1px solid #fca5a5',
+                        borderRadius: '9px',
+                        fontSize: '0.82rem',
+                        fontWeight: 700,
+                        cursor: 'pointer',
+                      }}
+                    >
+                      Pay Cash / UPI
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* 💬 WhatsApp Chat with Shopkeeper */}
              {!isDelivered && !isCancelled && (
                <button
                  onClick={() => {
