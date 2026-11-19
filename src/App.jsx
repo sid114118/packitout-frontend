@@ -627,7 +627,8 @@ export default function App() {
     loadOneSignal()
       .then(OneSignal => OneSignal.logout())
       .catch(err => console.log("OneSignal Shop Logout Error", err));
-    window.location.hash = "";
+    setCurrentView("shop");
+    window.location.hash = "#shop";
   };
 
   const handleSetPrimaryShop = async (shopId) => {
