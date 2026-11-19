@@ -6,8 +6,15 @@ import { RankingProvider } from './ui/RankingProvider.jsx'
 import './styles.css'
 
 window.addEventListener('vite:preloadError', () => {
-  if (!sessionStorage.getItem('pio_chunk_reloaded')) {
-    sessionStorage.setItem('pio_chunk_reloaded', '1');
+  try {
+    const lastReloadStr = sessionStorage.getItem('pio_chunk_reloaded_at');
+    const now = Date.now();
+    // Allow auto-reload across multiple deploys while guarding against infinite reload loops (max 1 reload per 15s)
+    if (!lastReloadStr || (now - parseInt(lastReloadStr, 10)) > 15000) {
+      sessionStorage.setItem('pio_chunk_reloaded_at', String(now));
+      window.location.reload();
+    }
+  } catch {
     window.location.reload();
   }
 });

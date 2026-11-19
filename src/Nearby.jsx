@@ -15,19 +15,23 @@ export default function Nearby({ user, onSelectShop }) {
       return;
     }
     let cancelled = false;
+    let reqSeq = 0;
     setLoading(true);
 
     // Non-blocking geolocation: fetch shops immediately with pincode, then re-sort with coordinates in background if granted
     const fetchShops = (qs = '', showLoading = true) => {
+      const currentSeq = ++reqSeq;
       if (showLoading) setLoading(true);
       fetch(`${BASE_URL}/shops/all/${activePincode}${qs}`)
         .then(res => res.json())
         .then(data => {
-          if (cancelled) return;
+          if (cancelled || currentSeq < reqSeq) return; // Ignore stale responses
           setShops(Array.isArray(data) ? data : []);
           if (showLoading) setLoading(false);
         })
-        .catch(() => { if (!cancelled && showLoading) setLoading(false); });
+        .catch(() => {
+          if (!cancelled && currentSeq >= reqSeq && showLoading) setLoading(false);
+        });
     };
 
     fetchShops('', true);
