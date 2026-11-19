@@ -122,12 +122,72 @@ export default function ShopDashboard({ user, onExit }) {
     } catch (err) { console.log(err); }
   };
 
+  const fetchOrders = async () => {
+    try {
+      const res = await shopFetch(shopData, `/orders/shop/${shopData._id}`);
+      if (!res.ok) return;
+      const data = await res.json();
+      const list = Array.isArray(data) ? data : [];
+      setOrders(list);
+      try { sessionStorage.setItem(`shop_orders_${shopData._id}`, JSON.stringify(list)); } catch {}
+    } catch (err) { console.log(err); }
+  };
+
+  const fetchParchis = async () => {
+    try {
+      const res = await shopFetch(shopData, `/parchis/${shopData._id}`);
+      if (!res.ok) return;
+      const data = await res.json();
+      if (Array.isArray(data)) setParchiRequests(data);
+    } catch (err) { console.log(err); }
+  };
+
+  const refreshShopData = async () => {
+    try {
+      const res = await fetch(`${BASE_URL}/shops/${shopData._id}/menu`);
+      if (res.ok) {
+        const updated = await res.json();
+        updateShopDataSafe(updated);
+        cacheSlimInventory(shopData._id, updated.inventory);
+      }
+    } catch (err) {
+      console.log(err);
+    } finally {
+      setIsInventoryLoading(false);
+    }
+  };
+
+  const fetchMasterCatalog = async () => {
+    setCatalogError(null);
+    try {
+      // ⚡ Safe limit so it loads in ~100ms instead of 40 seconds
+      const res = await fetch(`${BASE_URL}/master-products?limit=150`);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
+      const items = Array.isArray(data) ? data : (data?.items || []);
+      setMasterCatalog(items);
+      try { sessionStorage.setItem(`shop_master_catalog`, JSON.stringify(items)); } catch {}
+    } catch (err) {
+      console.log(err);
+      setCatalogError(err.message || "Failed to load catalog");
+    } finally {
+      setIsCatalogLoading(false);
+    }
+  };
+
+  // ⚡ Stop sequential waterfall: load Orders, Parchis, Khata, and Menu simultaneously in parallel
+  const fetchAllData = () => {
+    Promise.allSettled([
+      fetchOrders(),
+      fetchParchis(),
+      fetchKhataSummary(),
+      refreshShopData(),
+    ]);
+  };
+
   // --- DATA FETCHING ---
   useEffect(() => {
-    // ⚡ FIX #3 — Load fast/critical data FIRST so orders appear immediately.
-    fetchOrders();
-    fetchParchis();
-    fetchKhataSummary();
+    fetchAllData();
 
     // Setup Server-Sent Events for real-time updates instead of polling
     // Native EventSource doesn't support custom headers, so we pass the token in the query string
@@ -180,66 +240,13 @@ export default function ShopDashboard({ user, onExit }) {
   // Shop-scoped fetch — was pulling every order on the platform every 10s and
   // filtering client-side, which leaked other shops' orders and got slower as
   // the platform grew. New endpoint enforces ownership server-side.
-  // ⚡ LAZY LOAD: Only fetch master catalog & full inventory when user opens Inventory, POS or Combos tabs
+  // ⚡ LAZY LOAD: Only fetch master catalog & full inventory when user opens Inventory, POS, Parchis or Combos tabs
   useEffect(() => {
-    if (activeTab === "inventory" || activeTab === "pos" || activeTab === "combos") {
+    if (activeTab === "inventory" || activeTab === "pos" || activeTab === "parchis" || activeTab === "combos") {
       if (masterCatalog.length === 0) fetchMasterCatalog();
       if (!shopData.inventory || shopData.inventory.length === 0) refreshShopData();
     }
   }, [activeTab]);
-
-  const fetchOrders = async () => {
-    try {
-      const res = await shopFetch(shopData, `/orders/shop/${shopData._id}`);
-      if (!res.ok) return;
-      const data = await res.json();
-      const list = Array.isArray(data) ? data : [];
-      setOrders(list);
-      try { sessionStorage.setItem(`shop_orders_${shopData._id}`, JSON.stringify(list)); } catch {}
-    } catch (err) { console.log(err); }
-  };
-
-  const fetchMasterCatalog = async () => {
-    setCatalogError(null);
-    try {
-      // ⚡ Safe limit so it loads in ~100ms instead of 40 seconds
-      const res = await fetch(`${BASE_URL}/master-products?limit=150`);
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const data = await res.json();
-      const items = Array.isArray(data) ? data : (data?.items || []);
-      setMasterCatalog(items);
-      try { sessionStorage.setItem(`shop_master_catalog`, JSON.stringify(items)); } catch {}
-    } catch (err) {
-      console.log(err);
-      setCatalogError(err.message || "Failed to load catalog");
-    } finally {
-      setIsCatalogLoading(false);
-    }
-  };
-
-  const refreshShopData = async () => {
-    try {
-      const res = await fetch(`${BASE_URL}/shops/${shopData._id}/menu`);
-      if (res.ok) {
-        const updated = await res.json();
-        updateShopDataSafe(updated);
-        cacheSlimInventory(shopData._id, updated.inventory);
-      }
-    } catch (err) {
-      console.log(err);
-    } finally {
-      setIsInventoryLoading(false);
-    }
-  };
-
-  const fetchParchis = async () => {
-    try {
-      const res = await shopFetch(shopData, `/parchis/${shopData._id}`);
-      if (!res.ok) return;
-      const data = await res.json();
-      if (Array.isArray(data)) setParchiRequests(data);
-    } catch (err) { console.log(err); }
-  };
 
   // --- LOGIC ---
   // ⚡ FIX #4 — mergeSlimShop: the server now returns a slim shop doc (no
