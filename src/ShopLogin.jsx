@@ -1,4 +1,3 @@
-```react
 import React, { useState } from 'react';
 
 const BASE_URL = (import.meta.env.VITE_API_BASE || "https://darkslategrey-snail-415133.hostingersite.com");
@@ -14,7 +13,7 @@ export default function ShopLogin({ onLogin }) {
     setError("");
     setLoading(true);
     try {
-      const res = await fetch(`${BASE_URL}/shop-login`, {
+      const res = await fetch(BASE_URL + "/shop-login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(form)
@@ -62,4 +61,3 @@ export default function ShopLogin({ onLogin }) {
   );
 }
 const s = { width: '100%', padding: '10px', marginBottom: '10px', borderRadius: '5px' };
-```
