@@ -100,19 +100,25 @@ export default function ManageBaskets({ onBack, onAddToCart, cart, setCart }) {
     toast("Basket deleted");
   };
 
+  const getItemId = (item) => String(item?._id || item?.id || '');
+
   const handleAdjustQty = (basketId, productId, delta) => {
+    const targetId = String(productId || '');
     const newBaskets = baskets.map(b => {
       if (b.id === basketId) {
-        return {
-          ...b,
-          items: b.items.map(i => {
-            if (i._id === productId) {
-              const newQty = Math.max(1, (i.qty || 1) + delta);
-              return { ...i, qty: newQty };
+        const updatedItems = [];
+        for (const i of (b.items || [])) {
+          if (getItemId(i) === targetId) {
+            const currentQty = Number(i.qty) || 1;
+            const newQty = currentQty + delta;
+            if (newQty > 0) {
+              updatedItems.push({ ...i, qty: newQty });
             }
-            return i;
-          })
-        };
+          } else {
+            updatedItems.push(i);
+          }
+        }
+        return { ...b, items: updatedItems };
       }
       return b;
     });
@@ -120,13 +126,15 @@ export default function ManageBaskets({ onBack, onAddToCart, cart, setCart }) {
   };
 
   const handleRemoveItem = (basketId, productId) => {
+    const targetId = String(productId || '');
     const newBaskets = baskets.map(b => {
       if (b.id === basketId) {
-        return { ...b, items: b.items.filter(i => i._id !== productId) };
+        return { ...b, items: (b.items || []).filter(i => getItemId(i) !== targetId) };
       }
       return b;
     });
     saveBaskets(newBaskets);
+    toast("Item removed from basket");
   };
 
   const handleSetReminder = (id, days) => {
@@ -345,28 +353,31 @@ export default function ManageBaskets({ onBack, onAddToCart, cart, setCart }) {
               {viewingBasketObj.items.length === 0 ? (
                 <div style={{ textAlign: 'center', color: '#94a3b8', fontSize: '0.9rem', padding: '20px', background: '#fff', borderRadius: '16px' }}>This basket is empty. Browse products and tap the heart icon to add items!</div>
               ) : (
-                viewingBasketObj.items.map(item => (
-                  <div key={item._id} style={{ display: 'flex', backgroundColor: '#fff', padding: '16px', borderRadius: '20px', boxShadow: '0 4px 12px rgba(15,23,42,0.03)', border: '1px solid #f1f5f9', gap: '16px', alignItems: 'center' }}>
-                    <div style={{ width: '80px', height: '80px', flexShrink: 0, backgroundColor: '#f8fafc', borderRadius: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
-                      {item.image ? <img src={cdnImage(item.image, 200)} alt={item.name} style={{ width: '100%', height: '100%', objectFit: 'contain' }} /> : <span style={{ fontSize: '2rem' }}>{item.emoji || '📦'}</span>}
-                    </div>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontSize: '0.95rem', fontWeight: 800, color: '#0f172a', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', marginBottom: '4px' }}>{item.name}</div>
-                      <div style={{ fontSize: '0.85rem', color: '#16a34a', fontWeight: 800, marginBottom: '12px' }}>₹{item.sellingPrice || item.mrp}</div>
-                      
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', background: '#f8fafc', borderRadius: '999px', border: '1px solid #e2e8f0' }}>
-                          <button onClick={() => handleAdjustQty(viewingBasketObj.id, item._id, -1)} style={{ background: 'none', border: 'none', padding: '6px 12px', fontSize: '1.2rem', color: '#475569', cursor: 'pointer' }}>-</button>
-                          <span style={{ fontSize: '0.95rem', fontWeight: 800, color: '#0f172a', width: '20px', textAlign: 'center' }}>{item.qty || 1}</span>
-                          <button onClick={() => handleAdjustQty(viewingBasketObj.id, item._id, 1)} style={{ background: 'none', border: 'none', padding: '6px 12px', fontSize: '1.2rem', color: '#475569', cursor: 'pointer' }}>+</button>
+                viewingBasketObj.items.map((item, idx) => {
+                  const itemId = getItemId(item) || idx;
+                  return (
+                    <div key={itemId} style={{ display: 'flex', backgroundColor: '#fff', padding: '16px', borderRadius: '20px', boxShadow: '0 4px 12px rgba(15,23,42,0.03)', border: '1px solid #f1f5f9', gap: '16px', alignItems: 'center' }}>
+                      <div style={{ width: '80px', height: '80px', flexShrink: 0, backgroundColor: '#f8fafc', borderRadius: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
+                        {item.image ? <img src={cdnImage(item.image, 200)} alt={item.name} style={{ width: '100%', height: '100%', objectFit: 'contain' }} /> : <span style={{ fontSize: '2rem' }}>{item.emoji || '📦'}</span>}
+                      </div>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontSize: '0.95rem', fontWeight: 800, color: '#0f172a', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', marginBottom: '4px' }}>{item.name}</div>
+                        <div style={{ fontSize: '0.85rem', color: '#16a34a', fontWeight: 800, marginBottom: '12px' }}>₹{item.sellingPrice || item.mrp}</div>
+                        
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', background: '#f8fafc', borderRadius: '999px', border: '1px solid #e2e8f0' }}>
+                            <button onClick={() => handleAdjustQty(viewingBasketObj.id, itemId, -1)} style={{ background: 'none', border: 'none', padding: '6px 12px', fontSize: '1.2rem', color: '#475569', cursor: 'pointer' }}>-</button>
+                            <span style={{ fontSize: '0.95rem', fontWeight: 800, color: '#0f172a', width: '20px', textAlign: 'center' }}>{item.qty || 1}</span>
+                            <button onClick={() => handleAdjustQty(viewingBasketObj.id, itemId, 1)} style={{ background: 'none', border: 'none', padding: '6px 12px', fontSize: '1.2rem', color: '#475569', cursor: 'pointer' }}>+</button>
+                          </div>
+                          <button onClick={() => handleRemoveItem(viewingBasketObj.id, itemId)} style={{ background: '#fef2f2', color: '#ef4444', border: 'none', width: '36px', height: '36px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                          </button>
                         </div>
-                        <button onClick={() => handleRemoveItem(viewingBasketObj.id, item._id)} style={{ background: '#fef2f2', color: '#ef4444', border: 'none', width: '36px', height: '36px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
-                          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
-                        </button>
                       </div>
                     </div>
-                  </div>
-                ))
+                  );
+                })
               )}
             </div>
 

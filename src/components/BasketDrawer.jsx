@@ -30,11 +30,12 @@ export default function BasketDrawer() {
 
   const handleToggleBasket = (basketId) => {
     let wasRemoved = false;
+    const targetId = String(product?._id || product?.id || '');
     const newBaskets = baskets.map(b => {
       if (b.id === basketId) {
-        if (b.items.some(i => i._id === product._id)) {
+        if (b.items.some(i => String(i._id || i.id || '') === targetId)) {
           wasRemoved = true;
-          return { ...b, items: b.items.filter(i => i._id !== product._id) };
+          return { ...b, items: b.items.filter(i => String(i._id || i.id || '') !== targetId) };
         }
         return { ...b, items: [...b.items, { ...product, qty: 1 }] };
       }
