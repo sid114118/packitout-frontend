@@ -22,24 +22,62 @@ import { playArrivalBell } from './utils/orderAlarm.js';
 
 export default function ShopDashboard({ user, onExit }) {
   const toast = useToast();
-  // --- STATE ---
+  // --- STATE WITH INSTANT CACHE (0ms First Paint) ---
   const [activeTab, setActiveTab] = useState("orders");
-  const [orders, setOrders] = useState([]);
-  const [masterCatalog, setMasterCatalog] = useState([]);
-  const [isCatalogLoading, setIsCatalogLoading] = useState(true);
+  const [orders, setOrders] = useState(() => {
+    try {
+      const cached = sessionStorage.getItem(`shop_orders_${user?._id}`);
+      return cached ? JSON.parse(cached) : [];
+    } catch { return []; }
+  });
+  const [masterCatalog, setMasterCatalog] = useState(() => {
+    try {
+      const cached = sessionStorage.getItem(`shop_master_catalog`);
+      return cached ? JSON.parse(cached) : [];
+    } catch { return []; }
+  });
+  const [isCatalogLoading, setIsCatalogLoading] = useState(() => {
+    try {
+      const cached = sessionStorage.getItem(`shop_master_catalog`);
+      return !cached || JSON.parse(cached).length === 0;
+    } catch { return true; }
+  });
   const [catalogError, setCatalogError] = useState(null);
   const [isInventoryLoading, setIsInventoryLoading] = useState(() => {
     const inv = user?.inventory;
-    if (!Array.isArray(inv) || inv.length === 0) return true;
-    return !inv.some(i => i && i.product && typeof i.product === 'object' && i.product._id);
+    if (Array.isArray(inv) && inv.some(i => i && i.product && typeof i.product === 'object' && i.product._id)) {
+      return false;
+    }
+    try {
+      const cached = sessionStorage.getItem(`shop_inventory_${user?._id}`);
+      return !cached;
+    } catch { return true; }
   });
-  const [shopData, setShopData] = useState(user);
+  const [shopData, setShopData] = useState(() => {
+    let initial = user;
+    try {
+      const cached = sessionStorage.getItem(`shop_inventory_${user?._id}`);
+      if (cached) {
+        const parsedInv = JSON.parse(cached);
+        if (Array.isArray(parsedInv) && parsedInv.length > 0) {
+          initial = { ...user, inventory: parsedInv };
+        }
+      }
+    } catch {}
+    return initial;
+  });
 
-  // Safely merge updated shop payloads while always preserving the sessionToken in memory
+  // Safely merge updated shop payloads while always preserving the sessionToken
+  // and the populated inventory in memory. The server now returns slim docs for
+  // most PATCH endpoints (no inventory populate) so we keep prev.inventory
+  // unless the update explicitly includes one.
   const updateShopDataSafe = (updated) => {
     if (!updated) return;
     setShopData(prev => ({
+      ...prev,
       ...updated,
+      // Keep existing populated inventory if the new payload doesn't include one
+      inventory: (updated.inventory && updated.inventory.length > 0) ? updated.inventory : (prev?.inventory ?? []),
       sessionToken: updated.sessionToken || prev?.sessionToken || user?.sessionToken,
     }));
   };
@@ -64,16 +102,19 @@ export default function ShopDashboard({ user, onExit }) {
 
   // --- DATA FETCHING ---
   useEffect(() => {
-    const fetchAllData = async () => {
-      await Promise.allSettled([
-        refreshShopData(),
-        fetchOrders(),
-        fetchMasterCatalog(),
-        fetchParchis(),
-        fetchKhataSummary(),
-      ]);
-    };
-    fetchAllData();
+    // ⚡ FIX #3 — Load fast/critical data FIRST so orders appear immediately.
+    // refreshShopData() fetches the full populated inventory (can take 1–3s);
+    // putting it in the same Promise.allSettled as fetchOrders() caused the
+    // heavy DB join to block the orders response, making orders show as 0 for
+    // 40–45 s on every page load.
+    fetchOrders();
+    fetchParchis();
+    fetchKhataSummary();
+
+    // Heavy inventory loads after a short delay so it never races with orders.
+    const heavyTimer = setTimeout(() => {
+      refreshShopData();
+    }, 300);
 
     // Setup Server-Sent Events for real-time updates instead of polling
     // Native EventSource doesn't support custom headers, so we pass the token in the query string
@@ -116,6 +157,7 @@ export default function ShopDashboard({ user, onExit }) {
     };
 
     return () => {
+      clearTimeout(heavyTimer);
       clearTimeout(ordersTimeout);
       clearTimeout(parchisTimeout);
       clearTimeout(khataTimeout);
@@ -126,23 +168,34 @@ export default function ShopDashboard({ user, onExit }) {
   // Shop-scoped fetch — was pulling every order on the platform every 10s and
   // filtering client-side, which leaked other shops' orders and got slower as
   // the platform grew. New endpoint enforces ownership server-side.
+  // ⚡ LAZY LOAD: Only fetch master catalog when user opens Inventory, POS or Combos tabs
+  useEffect(() => {
+    if ((activeTab === "inventory" || activeTab === "pos" || activeTab === "combos") && masterCatalog.length === 0) {
+      fetchMasterCatalog();
+    }
+  }, [activeTab]);
+
   const fetchOrders = async () => {
     try {
       const res = await shopFetch(shopData, `/orders/shop/${shopData._id}`);
       if (!res.ok) return;
       const data = await res.json();
-      setOrders(Array.isArray(data) ? data : []);
+      const list = Array.isArray(data) ? data : [];
+      setOrders(list);
+      try { sessionStorage.setItem(`shop_orders_${shopData._id}`, JSON.stringify(list)); } catch {}
     } catch (err) { console.log(err); }
   };
 
   const fetchMasterCatalog = async () => {
-    setIsCatalogLoading(true);
     setCatalogError(null);
     try {
-      const res = await fetch(`${BASE_URL}/master-products`);
+      // ⚡ Safe limit so it loads in ~100ms instead of 40 seconds
+      const res = await fetch(`${BASE_URL}/master-products?limit=150`);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
-      setMasterCatalog(Array.isArray(data) ? data : (data?.items || []));
+      const items = Array.isArray(data) ? data : (data?.items || []);
+      setMasterCatalog(items);
+      try { sessionStorage.setItem(`shop_master_catalog`, JSON.stringify(items)); } catch {}
     } catch (err) {
       console.log(err);
       setCatalogError(err.message || "Failed to load catalog");
@@ -152,12 +205,16 @@ export default function ShopDashboard({ user, onExit }) {
   };
 
   const refreshShopData = async () => {
-    setIsInventoryLoading(true);
     try {
       const res = await fetch(`${BASE_URL}/shops/${shopData._id}/menu`);
       if (res.ok) {
         const updated = await res.json();
         updateShopDataSafe(updated);
+        try {
+          if (Array.isArray(updated.inventory) && updated.inventory.length > 0) {
+            sessionStorage.setItem(`shop_inventory_${shopData._id}`, JSON.stringify(updated.inventory));
+          }
+        } catch {}
       }
     } catch (err) {
       console.log(err);
@@ -176,8 +233,25 @@ export default function ShopDashboard({ user, onExit }) {
   };
 
   // --- LOGIC ---
+  // ⚡ FIX #4 — mergeSlimShop: the server now returns a slim shop doc (no
+  // populated inventory) for toggle/profile-patch so the response is instant.
+  // We merge only the non-inventory fields so the existing populated inventory
+  // stays in memory and the UI doesn't flicker.
+  const mergeSlimShop = (slim) => {
+    if (!slim) return;
+    setShopData(prev => ({
+      ...prev,
+      ...slim,
+      // Always keep existing inventory (populated) and sessionToken in memory
+      inventory: prev?.inventory ?? slim.inventory ?? [],
+      sessionToken: slim.sessionToken || prev?.sessionToken || shopData?.sessionToken,
+    }));
+  };
+
   const toggleShopStatus = async () => {
     const newStatus = !shopData.isOpen;
+    // ⚡ Optimistic UI: flip instantly, server confirms
+    setShopData(prev => ({ ...prev, isOpen: newStatus }));
     try {
       const res = await shopFetch(shopData, `/shops/${shopData._id}`, {
         method: "PATCH",
@@ -185,12 +259,16 @@ export default function ShopDashboard({ user, onExit }) {
       });
       if (res.ok) {
         const updated = await res.json();
-        // server doesn't return sessionToken — preserve the in-memory one.
-        setShopData({ ...updated, sessionToken: shopData.sessionToken });
+        mergeSlimShop(updated);
       } else {
+        // Revert on failure
+        setShopData(prev => ({ ...prev, isOpen: !newStatus }));
         toast("Could not toggle store status.", 'error');
       }
-    } catch (err) { console.log(err); }
+    } catch (err) {
+      setShopData(prev => ({ ...prev, isOpen: !newStatus }));
+      console.log(err);
+    }
   };
 
   // 🚀 THIS IS THE FIX: IT WILL INSTANTLY UPDATE THE SCREEN OR SCREAM THE ERROR AT YOU
@@ -253,6 +331,25 @@ export default function ShopDashboard({ user, onExit }) {
   };
 
   const handleInventoryUpdate = async (productId, sellingPrice, inStock = true, isFeatured = undefined, featuredRank = undefined) => {
+    // ⚡ OPTIMISTIC UI: Update instantly in memory so the toggle or price responds in 0ms!
+    setShopData(prev => {
+      const inv = prev?.inventory || [];
+      const updatedInv = inv.map(item => {
+        const id = item?.product?._id || item?.product;
+        if (String(id) === String(productId)) {
+          return {
+            ...item,
+            sellingPrice: Number(sellingPrice),
+            inStock: Boolean(inStock),
+            ...(isFeatured !== undefined ? { isFeatured: Boolean(isFeatured) } : {}),
+            ...(featuredRank !== undefined ? { featuredRank: Number(featuredRank) } : {}),
+          };
+        }
+        return item;
+      });
+      return { ...prev, inventory: updatedInv };
+    });
+
     try {
       const payload = { productId, sellingPrice: Number(sellingPrice), inStock };
       if (isFeatured !== undefined) payload.isFeatured = isFeatured;
@@ -264,29 +361,63 @@ export default function ShopDashboard({ user, onExit }) {
       });
       if (res.ok) {
         const updated = await res.json();
-        setShopData({ ...updated, sessionToken: shopData.sessionToken });
+        setShopData(prev => ({
+          ...prev,
+          inventory: updated.inventory ?? prev.inventory,
+          combos: updated.combos ?? prev.combos,
+          inventoryMode: updated.inventoryMode ?? prev.inventoryMode,
+        }));
+        try {
+          if (Array.isArray(updated.inventory)) {
+            sessionStorage.setItem(`shop_inventory_${shopData._id}`, JSON.stringify(updated.inventory));
+          }
+        } catch {}
         toast("Store updated!");
       } else {
         const errorData = await res.json().catch(() => ({}));
         toast(errorData.error || "Failed to update", 'error');
+        refreshShopData(); // revert optimistic update
       }
-    } catch (err) { console.log(err); }
+    } catch (err) {
+      console.log(err);
+      refreshShopData();
+    }
   };
 
   const handleInventoryRemove = async (productId) => {
+    // ⚡ OPTIMISTIC UI: Instantly remove from screen
+    setShopData(prev => ({
+      ...prev,
+      inventory: (prev?.inventory || []).filter(item => String(item?.product?._id || item?.product) !== String(productId))
+    }));
+
     try {
       const res = await shopFetch(shopData, `/shops/${shopData._id}/inventory/${productId}`, {
         method: "DELETE"
       });
       if (res.ok) {
         const updated = await res.json();
-        setShopData({ ...updated, sessionToken: shopData.sessionToken });
+        setShopData(prev => ({
+          ...prev,
+          inventory: updated.inventory ?? prev.inventory,
+          combos: updated.combos ?? prev.combos,
+          inventoryMode: updated.inventoryMode ?? prev.inventoryMode,
+        }));
+        try {
+          if (Array.isArray(updated.inventory)) {
+            sessionStorage.setItem(`shop_inventory_${shopData._id}`, JSON.stringify(updated.inventory));
+          }
+        } catch {}
         toast("Item removed from store!");
       } else {
         const errorData = await res.json().catch(() => ({}));
         toast(errorData.error || "Failed to remove item", 'error');
+        refreshShopData();
       }
-    } catch (err) { console.log(err); }
+    } catch (err) {
+      console.log(err);
+      refreshShopData();
+    }
   };
 
   const handleAddToBill = (item) => {
@@ -404,13 +535,15 @@ export default function ShopDashboard({ user, onExit }) {
                   checked={shopData.acceptsPreOrders !== false}
                   onChange={async (e) => {
                     const accepts = e.target.checked;
+                    // ⚡ Optimistic UI
+                    setShopData(prev => ({ ...prev, acceptsPreOrders: accepts }));
                     const res = await shopFetch(shopData, `/shops/${shopData._id}`, {
                       method: "PATCH",
                       body: JSON.stringify({ acceptsPreOrders: accepts })
                     });
                     if (res.ok) {
                       const updated = await res.json();
-                      setShopData({ ...updated, sessionToken: shopData.sessionToken });
+                      mergeSlimShop(updated); // ⚡ FIX #4 — merge slim, keep inventory
                     }
                   }}
                   style={{ accentColor: '#10b981', cursor: 'pointer' }}

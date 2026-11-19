@@ -113,7 +113,7 @@ export default function Payment({ user, cart, targetShop, finalBill, useCoins, c
     if (debited > 0) {
       const newCoinBalance = Math.max(0, Math.round(Number(user.coins || 0) - debited));
       const next = { ...user, coins: newCoinBalance };
-      try { localStorage.setItem('packitout_user', JSON.stringify(next)); } catch {}
+      try { localStorage.setItem('packitout_user', JSON.stringify(next)); } catch { }
       if (onUserUpdate) onUserUpdate(next);
     }
     try {
@@ -122,7 +122,7 @@ export default function Payment({ user, cart, targetShop, finalBill, useCoins, c
         shopId: { _id: targetShop._id, name: targetShop.name, phone: targetShop.phone },
         userId: { _id: user._id, name: user.name, phone: user.phone },
       }));
-    } catch {}
+    } catch { }
     return order;
   };
 
@@ -138,11 +138,11 @@ export default function Payment({ user, cart, targetShop, finalBill, useCoins, c
     setStatus('⏳ Placing order…');
     try {
       await placeOrder('POP');
-      trackEvent('PURCHASE_COMPLETED', { 
-        method: 'POP', 
-        amount: safeFinalBill, 
+      trackEvent('PURCHASE_COMPLETED', {
+        method: 'POP',
+        amount: safeFinalBill,
         itemsCount: cart.length,
-        products: cart.filter(i=>i).map(i => i.name),
+        products: cart.filter(i => i).map(i => i.name),
         shopName: targetShop?.name,
         shopPincode: targetShop?.pincode,
         customerPincode: user?.pincode
@@ -179,11 +179,11 @@ export default function Payment({ user, cart, targetShop, finalBill, useCoins, c
     setStatus('⏳ Placing order…');
     try {
       await placeOrder('UPI');
-      trackEvent('PURCHASE_COMPLETED', { 
-        method: 'UPI', 
-        amount: safeFinalBill, 
+      trackEvent('PURCHASE_COMPLETED', {
+        method: 'UPI',
+        amount: safeFinalBill,
         itemsCount: cart.length,
-        products: cart.filter(i=>i).map(i => i.name),
+        products: cart.filter(i => i).map(i => i.name),
         shopName: targetShop?.name,
         shopPincode: targetShop?.pincode,
         customerPincode: user?.pincode

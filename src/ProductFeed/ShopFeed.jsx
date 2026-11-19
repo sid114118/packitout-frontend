@@ -15,9 +15,9 @@ import { cdnImage } from '../utils/cloudinaryUrl.js';
 import { triggerShopWelcome } from '../utils/shopWelcome.js';
 
 // 🌟 IMPORT OUR NEW BRAIN!
-import useShopFeedData from './useShopFeedData'; 
+import useShopFeedData from './useShopFeedData';
 // 🌟 IMPORT THE SKELETON
-import ProductSkeletonGrid from './ProductSkeletonGrid.jsx'; 
+import ProductSkeletonGrid from './ProductSkeletonGrid.jsx';
 
 export default function ShopFeed({
   user, onUserUpdate, onAddToCart, onRemoveFromCart, onViewCart, cart = [],
@@ -53,11 +53,11 @@ export default function ShopFeed({
   const rankedUnder99 = React.useMemo(() => applyBrandPriority(under99, rankingConfig), [under99, rankingConfig]);
   const rankedNewArrivals = React.useMemo(() => applyBrandPriority(newArrivals, rankingConfig), [newArrivals, rankingConfig]);
   const rankedBuyItAgain = React.useMemo(() => applyBrandPriority(buyItAgain, rankingConfig), [buyItAgain, rankingConfig]);
-  
-  const [selectedProductDetails, setSelectedProductDetails] = useState(null); 
+
+  const [selectedProductDetails, setSelectedProductDetails] = useState(null);
   const [selectedVariantProduct, setSelectedVariantProduct] = useState(null);
   const [selectedComboDetail, setSelectedComboDetail] = useState(null);
-  const [viewAll, setViewAll] = useState(null); 
+  const [viewAll, setViewAll] = useState(null);
   const [selectedCampaign, setSelectedCampaign] = useState(null);
 
   const BASE_URL = (import.meta.env.VITE_API_BASE || "https://darkslategrey-snail-415133.hostingersite.com");
@@ -90,7 +90,7 @@ export default function ShopFeed({
 
     try {
       const res = await userFetch(user, `/users/${user._id}`, { method: 'PATCH', body: JSON.stringify({ primaryShop: newShop._id }) });
-      if(res.ok) {
+      if (res.ok) {
         const updated = await res.json();
         if (onUserUpdate) onUserUpdate(updated, { clearCart: true });
         triggerShopWelcome({
@@ -131,7 +131,7 @@ export default function ShopFeed({
           <div className="skeleton-shimmer" style={{ width: '45%', height: '22px', borderRadius: '8px', backgroundColor: '#e2e8f0', marginBottom: '6px' }}></div>
           <div className="skeleton-shimmer" style={{ width: '25%', height: '14px', borderRadius: '6px', backgroundColor: '#e2e8f0' }}></div>
         </div>
-        
+
         {/* The Grid itself */}
         <ProductSkeletonGrid count={8} />
       </div>
@@ -140,13 +140,13 @@ export default function ShopFeed({
 
   let displayItems = items;
   let listTitle = "";
-  
-  if (viewAll) { displayItems = viewAll.items; listTitle = viewAll.title; } 
-  else if (selectedCategory) { displayItems = items.filter(i => (i.category || "").toLowerCase().includes(selectedCategory.toLowerCase())); listTitle = selectedCategory; } 
+
+  if (viewAll) { displayItems = viewAll.items; listTitle = viewAll.title; }
+  else if (selectedCategory) { displayItems = items.filter(i => (i.category || "").toLowerCase().includes(selectedCategory.toLowerCase())); listTitle = selectedCategory; }
   else if (selectedBrand) { displayItems = items.filter(i => i.brand === selectedBrand); listTitle = `Explore ${selectedBrand}`; }
-  else if (selectedCampaign) { 
-    displayItems = items.filter(i => i.inStock && selectedCampaign.keywords.some(kw => (i.name||"").toLowerCase().includes(kw.toLowerCase()) || (i.category||"").toLowerCase().includes(kw.toLowerCase()))); 
-    listTitle = selectedCampaign.title; 
+  else if (selectedCampaign) {
+    displayItems = items.filter(i => i.inStock && selectedCampaign.keywords.some(kw => (i.name || "").toLowerCase().includes(kw.toLowerCase()) || (i.category || "").toLowerCase().includes(kw.toLowerCase())));
+    listTitle = selectedCampaign.title;
   }
 
   const shopClosed = shopInfo && !shopInfo.isOpen;
@@ -154,7 +154,7 @@ export default function ShopFeed({
 
   return (
     <div style={{ padding: '0', maxWidth: '1000px', margin: '0 auto', overflowX: 'hidden', backgroundColor: '#f3f4f6' }}>
-      
+
       {isSearchOpen && (
         <SearchPage
           items={items}
@@ -254,20 +254,20 @@ export default function ShopFeed({
                     };
 
                     return (
-                      <div 
-                        key={combo._id} 
+                      <div
+                        key={combo._id}
                         onClick={() => setSelectedComboDetail(combo)}
-                        style={{ 
-                          minWidth: '250px', 
-                          maxWidth: '280px', 
-                          flexShrink: 0, 
-                          border: isOutOfStock ? '1.5px solid #cbd5e1' : '1.5px solid #fde68a', 
-                          borderRadius: '18px', 
-                          padding: '16px', 
-                          backgroundColor: '#fff', 
-                          display: 'flex', 
-                          flexDirection: 'column', 
-                          justifyContent: 'space-between', 
+                        style={{
+                          minWidth: '250px',
+                          maxWidth: '280px',
+                          flexShrink: 0,
+                          border: isOutOfStock ? '1.5px solid #cbd5e1' : '1.5px solid #fde68a',
+                          borderRadius: '18px',
+                          padding: '16px',
+                          backgroundColor: '#fff',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          justifyContent: 'space-between',
                           boxShadow: '0 4px 15px rgba(245, 158, 11, 0.08)',
                           cursor: 'pointer',
                           transition: 'transform 0.15s ease, box-shadow 0.15s ease',
@@ -294,20 +294,20 @@ export default function ShopFeed({
 
                           <div style={{ display: 'flex', gap: '6px', overflowX: 'auto', padding: '8px 0 6px' }} className="hide-scroll">
                             {comboItems.map((ci, idx) => (
-                              <div 
-                                key={idx} 
-                                title={ci.name} 
-                                style={{ 
-                                  width: '44px', 
-                                  height: '44px', 
-                                  borderRadius: '10px', 
-                                  border: '1px solid #e2e8f0', 
-                                  overflow: 'hidden', 
-                                  display: 'flex', 
-                                  justifyContent: 'center', 
-                                  alignItems: 'center', 
-                                  backgroundColor: '#f8fafc', 
-                                  flexShrink: 0 
+                              <div
+                                key={idx}
+                                title={ci.name}
+                                style={{
+                                  width: '44px',
+                                  height: '44px',
+                                  borderRadius: '10px',
+                                  border: '1px solid #e2e8f0',
+                                  overflow: 'hidden',
+                                  display: 'flex',
+                                  justifyContent: 'center',
+                                  alignItems: 'center',
+                                  backgroundColor: '#f8fafc',
+                                  flexShrink: 0
                                 }}
                               >
                                 {ci.image ? (
@@ -340,20 +340,20 @@ export default function ShopFeed({
                             </span>
                           </div>
 
-                          <button 
+                          <button
                             disabled={isOutOfStock}
                             onClick={handleAddComboToCart}
-                            style={{ 
-                              width: '100%', 
-                              padding: '10px', 
-                              background: isOutOfStock ? '#cbd5e1' : 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)', 
-                              color: isOutOfStock ? '#64748b' : '#fff', 
-                              border: 'none', 
-                              borderRadius: '10px', 
-                              fontWeight: '800', 
-                              fontSize: '0.88rem', 
-                              cursor: isOutOfStock ? 'not-allowed' : 'pointer', 
-                              boxShadow: isOutOfStock ? 'none' : '0 4px 10px rgba(245, 158, 11, 0.25)' 
+                            style={{
+                              width: '100%',
+                              padding: '10px',
+                              background: isOutOfStock ? '#cbd5e1' : 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
+                              color: isOutOfStock ? '#64748b' : '#fff',
+                              border: 'none',
+                              borderRadius: '10px',
+                              fontWeight: '800',
+                              fontSize: '0.88rem',
+                              cursor: isOutOfStock ? 'not-allowed' : 'pointer',
+                              boxShadow: isOutOfStock ? 'none' : '0 4px 10px rgba(245, 158, 11, 0.25)'
                             }}
                           >
                             {isOutOfStock ? 'Temporarily Unavailable' : 'Add Box To Cart 🛒'}

@@ -123,19 +123,46 @@ export default function InventoryTab({
     return new Set(safeInventory.map(i => String(i.product?._id || i.product || '')));
   }, [safeInventory]);
 
+  const [remoteSearchResults, setRemoteSearchResults] = useState(null);
+  const [isSearchingRemote, setIsSearchingRemote] = useState(false);
+
+  // ⚡ FAST SEARCH: Query server-side across all 5,800+ catalog items on demand
+  useEffect(() => {
+    const q = searchMaster.trim();
+    if (q.length < 2) {
+      setRemoteSearchResults(null);
+      return;
+    }
+    const timer = setTimeout(async () => {
+      setIsSearchingRemote(true);
+      try {
+        const res = await fetch(`${BASE_URL}/master-products?q=${encodeURIComponent(q)}&limit=50`);
+        if (res.ok) {
+          const data = await res.json();
+          const items = Array.isArray(data) ? data : (data?.items || []);
+          setRemoteSearchResults(items);
+        }
+      } catch {}
+      finally { setIsSearchingRemote(false); }
+    }, 250);
+    return () => clearTimeout(timer);
+  }, [searchMaster]);
+
   const availableToAdd = useMemo(() => {
     return safeCatalog.filter(m => m && !shopProductIdSet.has(String(m._id)));
   }, [safeCatalog, shopProductIdSet]);
 
   // ⚡ FAST TOKENIZED MASTER CATALOG SEARCH
   const filteredAvailable = useMemo(() => {
-    if (!searchMaster.trim()) return availableToAdd;
+    const pool = (remoteSearchResults !== null) ? remoteSearchResults : safeCatalog;
+    const candidates = pool.filter(m => m && !shopProductIdSet.has(String(m._id)));
+    if (!searchMaster.trim()) return candidates;
     const tokens = searchMaster.toLowerCase().trim().split(/\s+/);
-    return availableToAdd.filter(m => {
-      const text = `${m.name || ''} ${m.brand || ''} ${m.category || ''} ${m.barcode || ''} ${Array.isArray(m.searchTags) ? m.searchTags.join(' ') : (m.searchTags || '')}`.toLowerCase();
+    return candidates.filter(m => {
+      const text = `${m.name || ''} ${m.brand || ''} ${m.category || ''} ${m.barcode || ''}`.toLowerCase();
       return tokens.every(t => text.includes(t));
     });
-  }, [availableToAdd, searchMaster]);
+  }, [safeCatalog, remoteSearchResults, searchMaster, shopProductIdSet]);
 
   // ⚡ FAST TOKENIZED INVENTORY SEARCH WITH FILTER TABS
   const filteredInventory = useMemo(() => {
