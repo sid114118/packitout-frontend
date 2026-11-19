@@ -5,6 +5,13 @@ import DialogProvider from './ui/DialogProvider.jsx'
 import { RankingProvider } from './ui/RankingProvider.jsx'
 import './styles.css'
 
+window.addEventListener('vite:preloadError', () => {
+  if (!sessionStorage.getItem('pio_chunk_reloaded')) {
+    sessionStorage.setItem('pio_chunk_reloaded', '1');
+    window.location.reload();
+  }
+});
+
 // ⚡ PERFORMANCE: Purge legacy oversized storage keys from previous app versions
 // so normal browser profiles don't suffer synchronous storage thread locks.
 try {

@@ -183,6 +183,7 @@ export default function ShopDashboard({ user, onExit }) {
       fetchKhataSummary(),
       refreshShopData(),
     ]);
+    fetchMasterCatalog();
   };
 
   // --- DATA FETCHING ---

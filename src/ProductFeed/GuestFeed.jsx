@@ -22,6 +22,7 @@ export default function GuestFeed({
   const { config: rankingConfig } = useRankingConfig();
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [hasFullCatalog, setHasFullCatalog] = useState(false);
 
   // Modal & View States
   const [selectedProductDetails, setSelectedProductDetails] = useState(null);
@@ -50,80 +51,84 @@ export default function GuestFeed({
 
   const BASE_URL = (import.meta.env.VITE_API_BASE || "https://darkslategrey-snail-415133.hostingersite.com");
 
-  useEffect(() => {
-    const MASTER_KEY = 'packitout_master_products_v1';
+  const MASTER_KEY = 'packitout_master_products_v1';
 
-    const processMasterData = (masterData) => {
-      const groupedMap = new Map();
-      const finalItems = [];
+  const processMasterData = React.useCallback((masterData) => {
+    const groupedMap = new Map();
+    const finalItems = [];
 
-      masterData.forEach(p => {
-        const formattedItem = { 
-          ...p, 
-          sellingPrice: p.mrp, 
-          isDiscounted: false, 
-          discountPercent: 0, 
-          inStock: true, 
-          variants: [] 
-        };
+    masterData.forEach(p => {
+      const formattedItem = { 
+        ...p, 
+        sellingPrice: p.mrp, 
+        isDiscounted: false, 
+        discountPercent: 0, 
+        inStock: true, 
+        variants: [] 
+      };
 
-        // 🛡️ THE FIX: Safely check for group IDs and ignore "nan"
-        const rawId = p.itemGroupId ? String(p.itemGroupId).trim().toLowerCase() : "";
-        const groupId = (rawId === "" || rawId === "nan") ? null : rawId;
+      // 🛡️ THE FIX: Safely check for group IDs and ignore "nan"
+      const rawId = p.itemGroupId ? String(p.itemGroupId).trim().toLowerCase() : "";
+      const groupId = (rawId === "" || rawId === "nan") ? null : rawId;
 
-        if (groupId) {
-          if (!groupedMap.has(groupId)) {
-            formattedItem.variants = [formattedItem]; 
-            groupedMap.set(groupId, formattedItem);
-            finalItems.push(formattedItem);
-          } else {
-            groupedMap.get(groupId).variants.push(formattedItem);
-          }
-        } else {
-          // No valid group ID? Just push it normally!
-          formattedItem.variants = [formattedItem];
+      if (groupId) {
+        if (!groupedMap.has(groupId)) {
+          formattedItem.variants = [formattedItem]; 
+          groupedMap.set(groupId, formattedItem);
           finalItems.push(formattedItem);
+        } else {
+          groupedMap.get(groupId).variants.push(formattedItem);
         }
-      });
-      
-      setItems(finalItems);
-      setTrendingPlatform(finalItems.slice(0, 8)); 
-      setShopDeals([...finalItems].reverse().slice(0, 8)); 
-      setShopBestSellers(finalItems.slice(0, 8));
-      setUnder99(finalItems.filter(i => i.sellingPrice > 0 && i.sellingPrice < 100).slice(0, 8));
-      setNewArrivals([...finalItems].reverse().slice(0, 8)); 
-      setBuyItAgain(finalItems.slice(0, 8));
-
-      // 🕒 CLEVER SHOPKEEPER LOGIC: Time of Day Merchandising
-      const hour = new Date().getHours();
-      let timeTitle = ""; let timeSubtitle = ""; let keywords = [];
-
-      if (hour >= 5 && hour < 11) {
-        timeTitle = "🌤️ Breakfast & Dairy"; timeSubtitle = "Start your morning right";
-        keywords = ["dairy", "bread", "milk", "eggs", "breakfast", "tea", "coffee"];
-      } else if (hour >= 11 && hour < 16) {
-        timeTitle = "⚡ Mid-Day Energy Boost"; timeSubtitle = "Keep the momentum going";
-        keywords = ["snacks", "drinks", "beverages", "chips", "biscuit", "juice"];
-      } else if (hour >= 16 && hour < 22) {
-        timeTitle = "🌙 Evening Cravings"; timeSubtitle = "Perfect time for a snack";
-        keywords = ["ice cream", "maggi", "noodles", "chocolate", "chips", "dinner"];
       } else {
-        timeTitle = "🦉 Late Night Essentials"; timeSubtitle = "We are still awake for you";
-        keywords = ["snacks", "beverages", "noodles", "condoms", "personal"];
+        // No valid group ID? Just push it normally!
+        formattedItem.variants = [formattedItem];
+        finalItems.push(formattedItem);
       }
+    });
+    
+    setItems(finalItems);
+    setTrendingPlatform(finalItems.slice(0, 8)); 
+    setShopDeals([...finalItems].reverse().slice(0, 8)); 
+    setShopBestSellers(finalItems.slice(0, 8));
+    setUnder99(finalItems.filter(i => i.sellingPrice > 0 && i.sellingPrice < 100).slice(0, 8));
+    setNewArrivals([...finalItems].reverse().slice(0, 8)); 
+    setBuyItAgain(finalItems.slice(0, 8));
 
-      const matchedItems = finalItems.filter(i => {
-        const cat = (i.category || "").toLowerCase();
-        const name = (i.name || "").toLowerCase();
-        return keywords.some(kw => cat.includes(kw) || name.includes(kw));
-      });
+    // 🕒 CLEVER SHOPKEEPER LOGIC: Time of Day Merchandising
+    const hour = new Date().getHours();
+    let timeTitle = ""; let timeSubtitle = ""; let keywords = [];
 
-      setTimeBased({ 
-        title: timeTitle, 
-        subtitle: timeSubtitle,
-        items: matchedItems.length > 0 ? matchedItems.slice(0, 8) : finalItems.slice(0, 8) 
-      });
-    };
+    if (hour >= 5 && hour < 11) {
+      timeTitle = "🌤️ Breakfast & Dairy"; timeSubtitle = "Start your morning right";
+      keywords = ["dairy", "bread", "milk", "eggs", "breakfast", "tea", "coffee"];
+    } else if (hour >= 11 && hour < 16) {
+      timeTitle = "⚡ Mid-Day Energy Boost"; timeSubtitle = "Keep the momentum going";
+      keywords = ["snacks", "drinks", "beverages", "chips", "biscuit", "juice"];
+    } else if (hour >= 16 && hour < 22) {
+      timeTitle = "🌙 Evening Cravings"; timeSubtitle = "Perfect time for a snack";
+      keywords = ["ice cream", "maggi", "noodles", "chocolate", "chips", "dinner"];
+    } else {
+      timeTitle = "🦉 Late Night Essentials"; timeSubtitle = "We are still awake for you";
+      keywords = ["snacks", "beverages", "noodles", "condoms", "personal"];
+    }
+
+    const matchedItems = finalItems.filter(i => {
+      const cat = (i.category || "").toLowerCase();
+      const name = (i.name || "").toLowerCase();
+      return keywords.some(kw => cat.includes(kw) || name.includes(kw));
+    });
+
+    setTimeBased({ 
+      title: timeTitle, 
+      subtitle: timeSubtitle,
+      items: matchedItems.length > 0 ? matchedItems.slice(0, 8) : finalItems.slice(0, 8) 
+    });
+  }, []);
+
+  // ⚡ On mount, fetch ONLY paginated /master-products?limit=120&page=1 with AbortController
+  // Do NOT automatically fetch /master-products (unpaginated) in background on initial page load
+  useEffect(() => {
+    const controller = new AbortController();
 
     let hasCached = false;
     try {
@@ -134,30 +139,69 @@ export default function GuestFeed({
           processMasterData(parsed.data);
           setLoading(false);
           hasCached = true;
+          if (parsed.data.length > 150) {
+            setHasFullCatalog(true);
+          }
         }
       }
     } catch (e) {}
 
     if (!hasCached) setLoading(true);
 
-    fetch(`${BASE_URL}/master-products`)
+    fetch(`${BASE_URL}/master-products?limit=120&page=1`, { signal: controller.signal })
       .then(res => (res && res.ok) ? res.json() : null)
       .then(masterData => {
-        if (!Array.isArray(masterData)) {
+        const list = Array.isArray(masterData) ? masterData : (masterData?.items || []);
+        if (list.length === 0) {
           if (!hasCached) setLoading(false);
           return;
         }
         try {
-          localStorage.setItem(MASTER_KEY, JSON.stringify({ at: Date.now(), data: masterData }));
+          localStorage.setItem(MASTER_KEY, JSON.stringify({ at: Date.now(), data: list }));
         } catch (e) {}
-        processMasterData(masterData);
+        processMasterData(list);
         setLoading(false);
       })
       .catch((err) => {
-        console.log("Guest fetch error:", err);
-        if (!hasCached) setLoading(false);
+        if (err.name !== 'AbortError') {
+          console.log("Guest fetch error:", err);
+          if (!hasCached) setLoading(false);
+        }
       });
-  }, []);
+
+    return () => {
+      controller.abort();
+    };
+  }, [processMasterData, BASE_URL]);
+
+  // ⚡ Fetch the full /master-products catalog only when selectedCategory, isSearchOpen, or viewAll becomes truthy
+  useEffect(() => {
+    if (!selectedCategory && !isSearchOpen && !viewAll) return;
+    if (hasFullCatalog) return;
+
+    const controller = new AbortController();
+
+    fetch(`${BASE_URL}/master-products`, { signal: controller.signal })
+      .then(res => (res && res.ok) ? res.json() : null)
+      .then(masterData => {
+        const list = Array.isArray(masterData) ? masterData : (masterData?.items || []);
+        if (list.length === 0) return;
+        try {
+          localStorage.setItem(MASTER_KEY, JSON.stringify({ at: Date.now(), data: list }));
+        } catch (e) {}
+        processMasterData(list);
+        setHasFullCatalog(true);
+      })
+      .catch((err) => {
+        if (err.name !== 'AbortError') {
+          console.log("Full catalog fetch error:", err);
+        }
+      });
+
+    return () => {
+      controller.abort();
+    };
+  }, [selectedCategory, isSearchOpen, viewAll, hasFullCatalog, processMasterData, BASE_URL]);
 
   const handleQuickAdd = (item) => {
     if (item.variants && item.variants.length > 1) setSelectedVariantProduct(item);

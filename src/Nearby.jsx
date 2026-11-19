@@ -17,32 +17,31 @@ export default function Nearby({ user, onSelectShop }) {
     let cancelled = false;
     setLoading(true);
 
-    // Try the browser geolocation API once; if granted, the backend can sort
-    // shops by distance and attach a distanceKm field. If denied or absent,
-    // we fall back to the pincode-only listing (no distance shown).
-    const fetchShops = (qs = '') => {
+    // Non-blocking geolocation: fetch shops immediately with pincode, then re-sort with coordinates in background if granted
+    const fetchShops = (qs = '', showLoading = true) => {
+      if (showLoading) setLoading(true);
       fetch(`${BASE_URL}/shops/all/${activePincode}${qs}`)
         .then(res => res.json())
         .then(data => {
           if (cancelled) return;
           setShops(Array.isArray(data) ? data : []);
-          setLoading(false);
+          if (showLoading) setLoading(false);
         })
-        .catch(() => { if (!cancelled) setLoading(false); });
+        .catch(() => { if (!cancelled && showLoading) setLoading(false); });
     };
+
+    fetchShops('', true);
 
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
         (pos) => {
           if (cancelled) return;
           const { latitude, longitude } = pos.coords;
-          fetchShops(`?lat=${latitude}&lng=${longitude}`);
+          fetchShops(`?lat=${latitude}&lng=${longitude}`, false);
         },
-        () => { if (!cancelled) fetchShops(); }, // permission denied / unavailable
-        { enableHighAccuracy: false, timeout: 8000, maximumAge: 5 * 60 * 1000 }
+        () => {}, // permission denied / unavailable / timeout - already fetched without coords
+        { enableHighAccuracy: false, timeout: 5000, maximumAge: 5 * 60 * 1000 }
       );
-    } else {
-      fetchShops();
     }
 
     return () => { cancelled = true; };
