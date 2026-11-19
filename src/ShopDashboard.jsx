@@ -270,6 +270,11 @@ export default function ShopDashboard({ user, onExit }) {
         const updated = await res.json();
         mergeSlimShop(updated);
       } else {
+        if (res.status === 401) {
+          toast("Session expired. Please log in again.", 'error');
+          onExit?.();
+          return;
+        }
         // Revert on failure
         setShopData(prev => ({ ...prev, isOpen: !newStatus }));
         toast("Could not toggle store status.", 'error');
@@ -376,6 +381,11 @@ export default function ShopDashboard({ user, onExit }) {
         }
         toast("Store updated!");
       } else {
+        if (res.status === 401) {
+          toast("Session expired. Please log in again.", 'error');
+          onExit?.();
+          return;
+        }
         const errorData = await res.json().catch(() => ({}));
         toast(errorData.error || "Failed to update", 'error');
         refreshShopData(); // revert optimistic update
@@ -405,6 +415,11 @@ export default function ShopDashboard({ user, onExit }) {
         }
         toast("Item removed from store!");
       } else {
+        if (res.status === 401) {
+          toast("Session expired. Please log in again.", 'error');
+          onExit?.();
+          return;
+        }
         const errorData = await res.json().catch(() => ({}));
         toast(errorData.error || "Failed to remove item", 'error');
         refreshShopData();
