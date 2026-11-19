@@ -47,17 +47,36 @@ const BASE_URL = (import.meta.env.VITE_API_BASE || "https://darkslategrey-snail-
 // production app ID so existing deploys keep working if the env var hasn't
 // been set yet.
 const ONESIGNAL_APP_ID = (import.meta.env.VITE_ONESIGNAL_APP_ID || "1da2e78d-0874-4965-a895-42c9237ee92b");
+
+// Fallback dummy to prevent UI freezes or spam when OneSignal origin does not match
+const dummyOneSignal = {
+  login: async () => {},
+  logout: async () => {},
+  Slidedown: { promptPush: async () => {} },
+  User: { addTag: async () => {}, removeTag: async () => {} }
+};
+
 let onesignalPromise;
 const loadOneSignal = () => {
   if (!onesignalPromise) {
-    onesignalPromise = import('react-onesignal').then(async (m) => {
-      const OneSignal = m.default;
-      await OneSignal.init({
-        appId: ONESIGNAL_APP_ID,
-        allowLocalhostAsSecureOrigin: import.meta.env.DEV,
+    onesignalPromise = import('react-onesignal')
+      .then(async (m) => {
+        try {
+          const OneSignal = m.default;
+          await OneSignal.init({
+            appId: ONESIGNAL_APP_ID,
+            allowLocalhostAsSecureOrigin: import.meta.env.DEV,
+          });
+          return OneSignal;
+        } catch (initErr) {
+          console.warn("OneSignal disabled on this origin:", initErr?.message || initErr);
+          return dummyOneSignal;
+        }
+      })
+      .catch((err) => {
+        console.warn("OneSignal failed to load:", err?.message || err);
+        return dummyOneSignal;
       });
-      return OneSignal;
-    });
   }
   return onesignalPromise;
 };
