@@ -11,6 +11,7 @@ export default function Header({ user, onUserUpdate }) {
   const [loadingShops, setLoadingShops] = useState(false);
   const [selectedShopId, setSelectedShopId] = useState("");
   const [hasSearched, setHasSearched] = useState(false);
+  const [isSavingShop, setIsSavingShop] = useState(false);
   // 🟢 Check if shop is open
   const isShopOpen = user?.primaryShop?.isOpen !== false; 
 
@@ -35,31 +36,32 @@ export default function Header({ user, onUserUpdate }) {
   };
 
   const handleSaveShop = async () => {
-    if (!selectedShopId) return;
-
-    if (!user) {
-      localStorage.setItem("packitout_guest_shop_id", selectedShopId);
-      localStorage.setItem("packitout_guest_pincode", pincode);
-      const chosenShop = shops.find(s => s._id === selectedShopId);
-      const shopName = chosenShop?.name || "Guest Shop";
-      localStorage.setItem("packitout_guest_shop_name", shopName);
-      setActiveShopName(shopName);
-      setIsChanging(false);
-      setShops([]);
-      setHasSearched(false);
-      window.dispatchEvent(new CustomEvent('PACKITOUT_SHOP_CHANGED', {
-        detail: { shopId: selectedShopId, pincode, shopName }
-      }));
-      triggerShopWelcome({
-        name: shopName,
-        pincode: pincode,
-        isOpen: chosenShop?.isOpen,
-        shopImage: chosenShop?.shopImage
-      });
-      return;
-    }
+    if (!selectedShopId || isSavingShop) return;
+    setIsSavingShop(true);
 
     try {
+      if (!user) {
+        localStorage.setItem("packitout_guest_shop_id", selectedShopId);
+        localStorage.setItem("packitout_guest_pincode", pincode);
+        const chosenShop = shops.find(s => s._id === selectedShopId);
+        const shopName = chosenShop?.name || "Guest Shop";
+        localStorage.setItem("packitout_guest_shop_name", shopName);
+        setActiveShopName(shopName);
+        setIsChanging(false);
+        setShops([]);
+        setHasSearched(false);
+        window.dispatchEvent(new CustomEvent('PACKITOUT_SHOP_CHANGED', {
+          detail: { shopId: selectedShopId, pincode, shopName }
+        }));
+        triggerShopWelcome({
+          name: shopName,
+          pincode: pincode,
+          isOpen: chosenShop?.isOpen,
+          shopImage: chosenShop?.shopImage
+        });
+        return;
+      }
+
       const res = await userFetch(user, `/users/${user._id}`, {
         method: "PATCH",
         body: JSON.stringify({ pincode: pincode, primaryShop: selectedShopId })
@@ -92,6 +94,8 @@ export default function Header({ user, onUserUpdate }) {
     } catch (err) {
       console.log("Error saving shop", err);
       toast("Could not save shop. Try again.", 'error');
+    } finally {
+      setIsSavingShop(false);
     }
   };
 
@@ -254,9 +258,22 @@ export default function Header({ user, onUserUpdate }) {
               </select>
               <button 
                 onClick={handleSaveShop} 
-                style={{ width: '100%', padding: '14px', backgroundColor: '#111827', color: 'white', border: 'none', borderRadius: '10px', fontWeight: '800', cursor: 'pointer', fontSize: '1rem' }}
+                disabled={isSavingShop}
+                style={{ 
+                  width: '100%', 
+                  padding: '14px', 
+                  backgroundColor: isSavingShop ? '#64748b' : '#111827', 
+                  color: 'white', 
+                  border: 'none', 
+                  borderRadius: '10px', 
+                  fontWeight: '800', 
+                  cursor: isSavingShop ? 'not-allowed' : 'pointer', 
+                  fontSize: '1rem',
+                  opacity: isSavingShop ? 0.7 : 1,
+                  transition: 'all 0.2s ease'
+                }}
               >
-                Confirm Store
+                {isSavingShop ? 'Confirming Store...' : 'Confirm Store'}
               </button>
             </div>
           )}

@@ -17,7 +17,6 @@ window.addEventListener('vite:preloadError', () => {
 try {
   const staleKeys = [
     'packitout_guest_master_v1',
-    'packitout_master_products_v1',
     'packitout_all_master_products'
   ];
   staleKeys.forEach(k => {
