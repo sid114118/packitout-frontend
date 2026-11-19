@@ -125,18 +125,9 @@ export default function ShopDashboard({ user, onExit }) {
   // --- DATA FETCHING ---
   useEffect(() => {
     // ⚡ FIX #3 — Load fast/critical data FIRST so orders appear immediately.
-    // refreshShopData() fetches the full populated inventory (can take 1–3s);
-    // putting it in the same Promise.allSettled as fetchOrders() caused the
-    // heavy DB join to block the orders response, making orders show as 0 for
-    // 40–45 s on every page load.
     fetchOrders();
     fetchParchis();
     fetchKhataSummary();
-
-    // Heavy inventory loads after a short delay so it never races with orders.
-    const heavyTimer = setTimeout(() => {
-      refreshShopData();
-    }, 300);
 
     // Setup Server-Sent Events for real-time updates instead of polling
     // Native EventSource doesn't support custom headers, so we pass the token in the query string
@@ -179,7 +170,6 @@ export default function ShopDashboard({ user, onExit }) {
     };
 
     return () => {
-      clearTimeout(heavyTimer);
       clearTimeout(ordersTimeout);
       clearTimeout(parchisTimeout);
       clearTimeout(khataTimeout);
@@ -190,10 +180,11 @@ export default function ShopDashboard({ user, onExit }) {
   // Shop-scoped fetch — was pulling every order on the platform every 10s and
   // filtering client-side, which leaked other shops' orders and got slower as
   // the platform grew. New endpoint enforces ownership server-side.
-  // ⚡ LAZY LOAD: Only fetch master catalog when user opens Inventory, POS or Combos tabs
+  // ⚡ LAZY LOAD: Only fetch master catalog & full inventory when user opens Inventory, POS or Combos tabs
   useEffect(() => {
-    if ((activeTab === "inventory" || activeTab === "pos" || activeTab === "combos") && masterCatalog.length === 0) {
-      fetchMasterCatalog();
+    if (activeTab === "inventory" || activeTab === "pos" || activeTab === "combos") {
+      if (masterCatalog.length === 0) fetchMasterCatalog();
+      if (!shopData.inventory || shopData.inventory.length === 0) refreshShopData();
     }
   }, [activeTab]);
 
@@ -378,14 +369,11 @@ export default function ShopDashboard({ user, onExit }) {
         body: JSON.stringify(payload)
       });
       if (res.ok) {
-        const updated = await res.json();
-        setShopData(prev => ({
-          ...prev,
-          inventory: updated.inventory ?? prev.inventory,
-          combos: updated.combos ?? prev.combos,
-          inventoryMode: updated.inventoryMode ?? prev.inventoryMode,
-        }));
-        cacheSlimInventory(shopData._id, updated.inventory);
+        const updated = await res.json().catch(() => ({}));
+        if (Array.isArray(updated.inventory)) {
+          setShopData(prev => ({ ...prev, inventory: updated.inventory }));
+          cacheSlimInventory(shopData._id, updated.inventory);
+        }
         toast("Store updated!");
       } else {
         const errorData = await res.json().catch(() => ({}));
@@ -410,14 +398,11 @@ export default function ShopDashboard({ user, onExit }) {
         method: "DELETE"
       });
       if (res.ok) {
-        const updated = await res.json();
-        setShopData(prev => ({
-          ...prev,
-          inventory: updated.inventory ?? prev.inventory,
-          combos: updated.combos ?? prev.combos,
-          inventoryMode: updated.inventoryMode ?? prev.inventoryMode,
-        }));
-        cacheSlimInventory(shopData._id, updated.inventory);
+        const updated = await res.json().catch(() => ({}));
+        if (Array.isArray(updated.inventory)) {
+          setShopData(prev => ({ ...prev, inventory: updated.inventory }));
+          cacheSlimInventory(shopData._id, updated.inventory);
+        }
         toast("Item removed from store!");
       } else {
         const errorData = await res.json().catch(() => ({}));
