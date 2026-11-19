@@ -141,11 +141,11 @@ export default function OrdersTab({ orders, updateOrderStatus, markOrderPaid, sh
         ? Number(order.khataAmount)
         : Math.max(0, (Number(order.totalAmount) || 0) - paidUpfront);
       if (isPaid) {
-        payBadge = { label: '📒 Paid via Khata', bg: '#fef3c7', fg: '#92400e', border: '#fde68a' };
+        payBadge = { label: '✅ Khata Settled', bg: '#d1fae5', fg: '#059669', border: '#a7f3d0' };
       } else if (paidUpfront > 0) {
         payBadge = { label: `⚖️ Split: ₹${paidUpfront} Paid / ₹${khataAmt} Khata`, bg: '#fef3c7', fg: '#92400e', border: '#fde68a' };
       } else {
-        payBadge = { label: '📒 Khata Due', bg: '#fef3c7', fg: '#92400e', border: '#fde68a' };
+        payBadge = { label: `📒 Khata Due (₹${khataAmt})`, bg: '#fef3c7', fg: '#92400e', border: '#fde68a' };
       }
     } else if (order.khataRequest?.status === 'pending') {
       payBadge = { label: '⏳ Khata Requested', bg: '#fef9c3', fg: '#854d0e', border: '#fde68a' };
@@ -687,10 +687,27 @@ export default function OrdersTab({ orders, updateOrderStatus, markOrderPaid, sh
           </div>
         )}
 
-        {/* 📒 KHATA BILLING CONTROLS FOR SHOPKEEPER (Active & Unpaid orders) */}
-        {isActive && !isPaid && (
+        {/* 📒 KHATA BILLING CONTROLS FOR SHOPKEEPER (Active orders) */}
+        {isActive && (
           <div style={{ marginTop: '12px' }}>
-            {order.khataRequest?.status === 'pending' ? (
+            {order.paymentMethod === 'KHATA' ? (
+              <div style={{ backgroundColor: '#fffbeb', border: '1.5px solid #fde68a', borderRadius: '10px', padding: '11px 13px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <span style={{ fontSize: '1.25rem' }}>📒</span>
+                  <div>
+                    <div style={{ fontSize: '0.85rem', color: '#92400e', fontWeight: 800 }}>
+                      Billed to Customer Khata
+                    </div>
+                    <div style={{ fontSize: '0.75rem', color: '#b45309', fontWeight: 500 }}>
+                      ₹{order.khataAmount || order.totalAmount} added to Store Khata ledger ({isPaid ? '✅ Settled' : '⏳ Payment Pending'})
+                    </div>
+                  </div>
+                </div>
+                <span style={{ backgroundColor: isPaid ? '#dcfce7' : '#fef3c7', color: isPaid ? '#15803d' : '#92400e', border: `1px solid ${isPaid ? '#86efac' : '#fde68a'}`, fontSize: '0.72rem', fontWeight: 900, padding: '3px 8px', borderRadius: '6px', flexShrink: 0 }}>
+                  {isPaid ? '✅ Settled' : '⏳ Khata Due'}
+                </span>
+              </div>
+            ) : !isPaid && order.khataRequest?.status === 'pending' ? (
               <div style={{ backgroundColor: '#fffbeb', border: '1.5px solid #f59e0b', borderRadius: '10px', padding: '11px 13px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0 }}>
                   <span style={{ fontSize: '1.25rem' }}>⏳</span>
@@ -711,7 +728,7 @@ export default function OrdersTab({ orders, updateOrderStatus, markOrderPaid, sh
                   Cancel
                 </button>
               </div>
-            ) : order.khataRequest?.status === 'declined' ? (
+            ) : !isPaid && order.khataRequest?.status === 'declined' ? (
               <div style={{ backgroundColor: '#fef2f2', border: '1px solid #fecaca', borderRadius: '10px', padding: '10px 12px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
                 <div style={{ fontSize: '0.78rem', color: '#991b1b', fontWeight: 700 }}>
                   ❌ Customer declined Khata (Collect via Cash/UPI)
@@ -724,7 +741,7 @@ export default function OrdersTab({ orders, updateOrderStatus, markOrderPaid, sh
                   Retry Khata 📒
                 </button>
               </div>
-            ) : (
+            ) : !isPaid ? (
               <button
                 onClick={() => handleSendKhataRequest(order._id)}
                 disabled={khataLoadingId === order._id}
@@ -747,7 +764,7 @@ export default function OrdersTab({ orders, updateOrderStatus, markOrderPaid, sh
               >
                 <span>📒</span> Bill to Customer Khata (उधार खाता में लिखें)
               </button>
-            )}
+            ) : null}
           </div>
         )}
 

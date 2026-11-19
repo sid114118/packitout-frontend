@@ -354,7 +354,7 @@ export default function OrdersPage({ user, onExit, onAddToCart, cart, setCart })
           setOrders(prev => prev.map(o => o._id === orderId ? {
             ...o,
             paymentMethod: 'KHATA',
-            paymentStatus: 'Paid',
+            paymentStatus: 'Unpaid',
             khataAmount: Number(o.totalAmount || 0),
             khataRequest: { ...(o.khataRequest || {}), status: 'accepted' }
           } : o));
@@ -362,7 +362,7 @@ export default function OrdersPage({ user, onExit, onAddToCart, cart, setCart })
             setSelectedOrder(prev => ({
               ...prev,
               paymentMethod: 'KHATA',
-              paymentStatus: 'Paid',
+              paymentStatus: 'Unpaid',
               khataAmount: Number(prev.totalAmount || 0),
               khataRequest: { ...(prev.khataRequest || {}), status: 'accepted' }
             }));
@@ -1256,7 +1256,7 @@ function OrderCard({ order, onOpen, onCancel, onReview, onReorderItem, onCustome
                 </span>
               ) : (
                 <span style={{ display: 'inline-block', padding: '2px 8px', borderRadius: '999px', fontSize: '0.68rem', fontWeight: 900, background: '#fef3c7', color: '#92400e', border: '1px solid #fcd34d' }}>
-                  📒 Added to Store Khata{(order.khataSnapshot?.isFirstKhata || order.khataSnapshot?.isFirstTimeKhata) ? ' (1st Entry)' : ''}
+                  📒 Billed to Store Khata: ₹{order.khataAmount || order.totalAmount} Due{(order.khataSnapshot?.isFirstKhata || order.khataSnapshot?.isFirstTimeKhata) ? ' · 1st Entry' : ''}
                 </span>
               )}
             </div>

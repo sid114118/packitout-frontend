@@ -56,15 +56,15 @@ export default function ReceiptModal({ selectedOrder, setSelectedOrder, onReorde
       `}</style>
 
       <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.7)', zIndex: 1000, display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', padding: '20px', backdropFilter: 'blur(4px)' }}>
-        
+
         <div style={{ width: '100%', maxWidth: '360px', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-          
+
           {/* 🧾 THE PHYSICAL RECEIPT */}
           <div className="receipt-paper">
-            
+
             {/* INNER SCROLLABLE CONTENT (So it doesn't cut off the zig-zag!) */}
             <div style={{ padding: '30px 25px', overflowY: 'auto', maxHeight: '65vh', fontFamily: 'system-ui, -apple-system, sans-serif' }}>
-              
+
               {/* PRINTER HEADER */}
               <div style={{ textAlign: 'center', marginBottom: '10px' }}>
                 <span style={{ fontSize: '0.75rem', color: khata.isKhataBill ? '#b45309' : '#64748b', fontWeight: '800', letterSpacing: '2px', textTransform: 'uppercase' }}>
@@ -98,12 +98,12 @@ export default function ReceiptModal({ selectedOrder, setSelectedOrder, onReorde
               {/* 🏆 VERIFIED / PAID / KHATA DUE WATERMARK STAMP */}
               {showPaidWatermark && (
                 <div style={{ position: 'absolute', top: '25%', left: '50%', transform: 'translate(-50%, -50%) rotate(-20deg)', color: 'rgba(22, 163, 74, 0.15)', border: '6px solid rgba(22, 163, 74, 0.15)', padding: '10px 20px', borderRadius: '12px', fontSize: '2.5rem', fontWeight: '900', letterSpacing: '6px', zIndex: 0, pointerEvents: 'none', textTransform: 'uppercase' }}>
-                  VERIFIED<br/><span style={{ fontSize: '1.2rem', display: 'block', textAlign: 'center', letterSpacing: '2px', marginTop: '4px' }}>PAID</span>
+                  VERIFIED<br /><span style={{ fontSize: '1.2rem', display: 'block', textAlign: 'center', letterSpacing: '2px', marginTop: '4px' }}>PAID</span>
                 </div>
               )}
               {showKhataWatermark && (
                 <div style={{ position: 'absolute', top: '25%', left: '50%', transform: 'translate(-50%, -50%) rotate(-20deg)', color: 'rgba(217, 119, 6, 0.18)', border: '6px solid rgba(217, 119, 6, 0.18)', padding: '10px 20px', borderRadius: '12px', fontSize: '2.1rem', fontWeight: '900', letterSpacing: '4px', zIndex: 0, pointerEvents: 'none', textTransform: 'uppercase', textAlign: 'center' }}>
-                  KHATA<br/><span style={{ fontSize: '1.1rem', display: 'block', letterSpacing: '2px', marginTop: '4px' }}>{khata.isSplit ? 'PARTIAL DUE' : 'DUE'}</span>
+                  KHATA<br /><span style={{ fontSize: '1.1rem', display: 'block', letterSpacing: '2px', marginTop: '4px' }}>{khata.isSplit ? 'PARTIAL DUE' : 'DUE'}</span>
                 </div>
               )}
 
@@ -258,187 +258,187 @@ export default function ReceiptModal({ selectedOrder, setSelectedOrder, onReorde
 
           {/* 🌟 FLOATING ACTIONS BELOW THE RECEIPT */}
           <div style={{ marginTop: '25px', width: '100%', display: 'flex', flexDirection: 'column', gap: '10px', alignItems: 'center' }}>
-             <button
-               type="button"
-               onClick={async () => {
-                 try {
-                   toast('Generating PDF bill…', 'info');
-                   await downloadReceiptPdf(selectedOrder, selectedOrder.shopId);
-                   toast('📄 Official PDF Bill Downloaded!', 'success');
-                 } catch {
-                   toast('Could not download PDF bill', 'error');
-                 }
-               }}
-               style={{
-                 width: '100%',
-                 padding: '12px',
-                 background: '#ffffff',
-                 color: '#1d4ed8',
-                 border: 'none',
-                 borderRadius: '12px',
-                 fontSize: '0.92rem',
-                 fontWeight: '800',
-                 cursor: 'pointer',
-                 display: 'flex',
-                 alignItems: 'center',
-                 justifyContent: 'center',
-                 gap: '8px',
-                 boxShadow: '0 4px 14px rgba(0,0,0,0.18)',
-               }}
-             >
-               📄 Download Official PDF Bill
-             </button>
-             
-             {/* 📍 "I'm at the Shop" counter arrival button / banner - Only when ready or arrived */}
-             {!isDelivered && !isCancelled && (isReady || isArrived) && (
-               selectedOrder.customerArrivedAt ? (
-                 <div style={{
-                   width: '100%',
-                   padding: '12px 14px',
-                   background: 'linear-gradient(135deg, #fef3c7 0%, #fde68a 100%)',
-                   border: '2px solid #f59e0b',
-                   borderRadius: '12px',
-                   color: '#92400e',
-                   textAlign: 'center',
-                   boxShadow: '0 4px 15px rgba(245, 158, 11, 0.25)',
-                   display: 'flex',
-                   flexDirection: 'column',
-                   alignItems: 'center',
-                   gap: '2px'
-                 }}>
-                   <div style={{ fontSize: '0.92rem', fontWeight: 900, display: 'flex', alignItems: 'center', gap: '6px' }}>
-                     <span>🔔</span> Shopkeeper Alerted!
-                   </div>
-                   <div style={{ fontSize: '0.78rem', color: '#b45309', fontWeight: 700 }}>
-                     Show Token <strong>#{selectedOrder._id?.slice(-5).toUpperCase()}</strong> at counter
-                   </div>
-                 </div>
-               ) : (
-                 <button
-                   onClick={() => onCustomerArrived && onCustomerArrived(selectedOrder._id)}
-                   style={{
-                     width: '100%',
-                     padding: '13px',
-                     background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
-                     color: '#fff',
-                     border: 'none',
-                     borderRadius: '12px',
-                     fontSize: '0.95rem',
-                     fontWeight: '800',
-                     cursor: 'pointer',
-                     display: 'flex',
-                     alignItems: 'center',
-                     justifyContent: 'center',
-                     gap: '8px',
-                     boxShadow: '0 4px 16px rgba(245, 158, 11, 0.35)'
-                   }}
-                 >
-                   <span style={{ fontSize: '1.2rem' }}>📍</span> I'm at the Shop (दुकान पर पहुँच गए)
-                 </button>
-               )
-             )}
+            <button
+              type="button"
+              onClick={async () => {
+                try {
+                  toast('Generating PDF bill…', 'info');
+                  await downloadReceiptPdf(selectedOrder, selectedOrder.shopId);
+                  toast('📄 Official PDF Bill Downloaded!', 'success');
+                } catch {
+                  toast('Could not download PDF bill', 'error');
+                }
+              }}
+              style={{
+                width: '100%',
+                padding: '12px',
+                background: '#ffffff',
+                color: '#1d4ed8',
+                border: 'none',
+                borderRadius: '12px',
+                fontSize: '0.92rem',
+                fontWeight: '800',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '8px',
+                boxShadow: '0 4px 14px rgba(0,0,0,0.18)',
+              }}
+            >
+              📄 Download Official PDF Bill
+            </button>
 
-             {/* 📒 Live Khata Billing Request Banner inside Receipt */}
-              {!isDelivered && !isCancelled && selectedOrder.khataRequest?.status === 'pending' && (
+            {/* 📍 "I'm at the Shop" counter arrival button / banner - Only when ready or arrived */}
+            {!isDelivered && !isCancelled && (isReady || isArrived) && (
+              selectedOrder.customerArrivedAt ? (
                 <div style={{
                   width: '100%',
                   padding: '12px 14px',
-                  background: 'linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%)',
+                  background: 'linear-gradient(135deg, #fef3c7 0%, #fde68a 100%)',
                   border: '2px solid #f59e0b',
                   borderRadius: '12px',
+                  color: '#92400e',
+                  textAlign: 'center',
                   boxShadow: '0 4px 15px rgba(245, 158, 11, 0.25)',
                   display: 'flex',
                   flexDirection: 'column',
-                  gap: '8px'
+                  alignItems: 'center',
+                  gap: '2px'
                 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <span style={{ fontSize: '1.3rem' }}>📒</span>
-                    <div style={{ textAlign: 'left' }}>
-                      <div style={{ fontSize: '0.9rem', fontWeight: 900, color: '#92400e' }}>
-                        Khata Billing Request
-                      </div>
-                      <div style={{ fontSize: '0.78rem', color: '#b45309', fontWeight: 600 }}>
-                        {selectedOrder.shopId?.name || 'Shop'} wants to bill <strong>₹{selectedOrder.khataRequest?.amount || selectedOrder.totalAmount}</strong> to your Store Khata.
-                      </div>
-                    </div>
+                  <div style={{ fontSize: '0.92rem', fontWeight: 900, display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <span>🔔</span> Shopkeeper Alerted!
                   </div>
-                  <div style={{ display: 'flex', gap: '8px', marginTop: '4px' }}>
-                    <button
-                      onClick={() => onRespondKhata && onRespondKhata(selectedOrder._id, 'accept')}
-                      disabled={isRespondingKhata === selectedOrder._id}
-                      style={{
-                        flex: 1,
-                        padding: '10px 8px',
-                        background: '#16a34a',
-                        color: '#fff',
-                        border: 'none',
-                        borderRadius: '9px',
-                        fontSize: '0.85rem',
-                        fontWeight: 800,
-                        cursor: 'pointer',
-                        boxShadow: '0 3px 8px rgba(22, 163, 74, 0.3)',
-                      }}
-                    >
-                      ✅ Accept & Add to Khata
-                    </button>
-                    <button
-                      onClick={() => onRespondKhata && onRespondKhata(selectedOrder._id, 'decline')}
-                      disabled={isRespondingKhata === selectedOrder._id}
-                      style={{
-                        padding: '10px 12px',
-                        background: '#fff',
-                        color: '#dc2626',
-                        border: '1px solid #fca5a5',
-                        borderRadius: '9px',
-                        fontSize: '0.82rem',
-                        fontWeight: 700,
-                        cursor: 'pointer',
-                      }}
-                    >
-                      Pay Cash / UPI
-                    </button>
+                  <div style={{ fontSize: '0.78rem', color: '#b45309', fontWeight: 700 }}>
+                    Show Token <strong>#{selectedOrder._id?.slice(-5).toUpperCase()}</strong> at counter
                   </div>
                 </div>
-              )}
+              ) : (
+                <button
+                  onClick={() => onCustomerArrived && onCustomerArrived(selectedOrder._id)}
+                  style={{
+                    width: '100%',
+                    padding: '13px',
+                    background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
+                    color: '#fff',
+                    border: 'none',
+                    borderRadius: '12px',
+                    fontSize: '0.95rem',
+                    fontWeight: '800',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '8px',
+                    boxShadow: '0 4px 16px rgba(245, 158, 11, 0.35)'
+                  }}
+                >
+                  <span style={{ fontSize: '1.2rem' }}>📍</span> I'm at the Shop (दुकान पर पहुँच गए)
+                </button>
+              )
+            )}
 
-              {/* 💬 WhatsApp Chat with Shopkeeper */}
-             {!isDelivered && !isCancelled && (
-               <button
-                 onClick={() => {
-                   onOpenChat && onOpenChat(selectedOrder);
-                   setSelectedOrder(null);
-                 }}
-                 style={{
-                   width: '100%',
-                   padding: '13px',
-                   background: 'linear-gradient(135deg, #25d366 0%, #128c7e 100%)',
-                   color: '#fff',
-                   border: 'none',
-                   borderRadius: '12px',
-                   fontSize: '0.95rem',
-                   fontWeight: '800',
-                   cursor: 'pointer',
-                   display: 'flex',
-                   alignItems: 'center',
-                   justifyContent: 'center',
-                   gap: '8px',
-                   boxShadow: '0 4px 16px rgba(37, 211, 102, 0.35)'
-                 }}
-               >
-                 <ChatIcon size={18} color="#ffffff" /> Chat with Shopkeeper (दुकानदार से बात करें)
-               </button>
-             )}
+            {/* 📒 Live Khata Billing Request Banner inside Receipt */}
+            {!isDelivered && !isCancelled && selectedOrder.khataRequest?.status === 'pending' && (
+              <div style={{
+                width: '100%',
+                padding: '12px 14px',
+                background: 'linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%)',
+                border: '2px solid #f59e0b',
+                borderRadius: '12px',
+                boxShadow: '0 4px 15px rgba(245, 158, 11, 0.25)',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '8px'
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <span style={{ fontSize: '1.3rem' }}>📒</span>
+                  <div style={{ textAlign: 'left' }}>
+                    <div style={{ fontSize: '0.9rem', fontWeight: 900, color: '#92400e' }}>
+                      Khata Billing Request
+                    </div>
+                    <div style={{ fontSize: '0.78rem', color: '#b45309', fontWeight: 600 }}>
+                      {selectedOrder.shopId?.name || 'Shop'} wants to bill <strong>₹{selectedOrder.khataRequest?.amount || selectedOrder.totalAmount}</strong> to your Store Khata.
+                    </div>
+                  </div>
+                </div>
+                <div style={{ display: 'flex', gap: '8px', marginTop: '4px' }}>
+                  <button
+                    onClick={() => onRespondKhata && onRespondKhata(selectedOrder._id, 'accept')}
+                    disabled={isRespondingKhata === selectedOrder._id}
+                    style={{
+                      flex: 1,
+                      padding: '10px 8px',
+                      background: '#16a34a',
+                      color: '#fff',
+                      border: 'none',
+                      borderRadius: '9px',
+                      fontSize: '0.85rem',
+                      fontWeight: 800,
+                      cursor: 'pointer',
+                      boxShadow: '0 3px 8px rgba(22, 163, 74, 0.3)',
+                    }}
+                  >
+                    ✅ Accept & Add to Khata
+                  </button>
+                  <button
+                    onClick={() => onRespondKhata && onRespondKhata(selectedOrder._id, 'decline')}
+                    disabled={isRespondingKhata === selectedOrder._id}
+                    style={{
+                      padding: '10px 12px',
+                      background: '#fff',
+                      color: '#dc2626',
+                      border: '1px solid #fca5a5',
+                      borderRadius: '9px',
+                      fontSize: '0.82rem',
+                      fontWeight: 700,
+                      cursor: 'pointer',
+                    }}
+                  >
+                    Pay Cash / UPI
+                  </button>
+                </div>
+              </div>
+            )}
 
-             {isDelivered && isAlreadyReviewed && (
-               <button onClick={() => setIsViewReviewModalOpen(true)} style={{ width: '100%', padding: '14px', backgroundColor: '#fff', color: '#ef4444', border: 'none', borderRadius: '12px', fontSize: '1rem', fontWeight: '800', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', boxShadow: '0 4px 15px rgba(0,0,0,0.2)' }}>
-                 <span style={{ fontSize: '1.2rem' }}>⭐</span> View Your Rating
-               </button>
-             )}
+            {/* 💬 WhatsApp Chat with Shopkeeper */}
+            {!isDelivered && !isCancelled && (
+              <button
+                onClick={() => {
+                  onOpenChat && onOpenChat(selectedOrder);
+                  setSelectedOrder(null);
+                }}
+                style={{
+                  width: '100%',
+                  padding: '13px',
+                  background: 'linear-gradient(135deg, #25d366 0%, #128c7e 100%)',
+                  color: '#fff',
+                  border: 'none',
+                  borderRadius: '12px',
+                  fontSize: '0.95rem',
+                  fontWeight: '800',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '8px',
+                  boxShadow: '0 4px 16px rgba(37, 211, 102, 0.35)'
+                }}
+              >
+                <ChatIcon size={18} color="#ffffff" /> Chat with Shopkeeper (दुकानदार से बात करें)
+              </button>
+            )}
 
-             {/* Centered Close Button */}
-             <button onClick={() => setSelectedOrder(null)} style={{ background: 'rgba(255,255,255,0.2)', border: '1px solid rgba(255,255,255,0.4)', borderRadius: '30px', padding: '10px 24px', fontSize: '1rem', fontWeight: '700', cursor: 'pointer', display: 'flex', justifyContent: 'center', alignItems: 'center', color: '#fff', backdropFilter: 'blur(5px)' }}>
-               ✖ Close Receipt
-             </button>
+            {isDelivered && isAlreadyReviewed && (
+              <button onClick={() => setIsViewReviewModalOpen(true)} style={{ width: '100%', padding: '14px', backgroundColor: '#fff', color: '#ef4444', border: 'none', borderRadius: '12px', fontSize: '1rem', fontWeight: '800', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', boxShadow: '0 4px 15px rgba(0,0,0,0.2)' }}>
+                <span style={{ fontSize: '1.2rem' }}>⭐</span> View Your Rating
+              </button>
+            )}
+
+            {/* Centered Close Button */}
+            <button onClick={() => setSelectedOrder(null)} style={{ background: 'rgba(255,255,255,0.2)', border: '1px solid rgba(255,255,255,0.4)', borderRadius: '30px', padding: '10px 24px', fontSize: '1rem', fontWeight: '700', cursor: 'pointer', display: 'flex', justifyContent: 'center', alignItems: 'center', color: '#fff', backdropFilter: 'blur(5px)' }}>
+              ✖ Close Receipt
+            </button>
 
           </div>
 
@@ -454,4 +454,4 @@ export default function ReceiptModal({ selectedOrder, setSelectedOrder, onReorde
       />
     </>
   );
-        }
+}
