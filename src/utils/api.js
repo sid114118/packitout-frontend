@@ -29,16 +29,30 @@ export const exchangeIdTokenForSession = async (idToken) => {
 };
 
 export const userFetch = (user, path, init = {}) => {
+  let token = user?.sessionToken;
+  if (!token) {
+    try {
+      const u = localStorage.getItem("packitout_user");
+      if (u) token = JSON.parse(u)?.sessionToken;
+    } catch {}
+  }
   const headers = mergeHeaders(
-    user?.sessionToken ? { Authorization: `Bearer ${user.sessionToken}` } : {},
+    token ? { Authorization: `Bearer ${token}` } : {},
     init
   );
   return fetch(path.startsWith('http') ? path : `${BASE_URL}${path}`, { ...init, headers });
 };
 
 export const shopFetch = (shop, path, init = {}) => {
+  let token = shop?.sessionToken;
+  if (!token) {
+    try {
+      const s = localStorage.getItem("packitout_shop");
+      if (s) token = JSON.parse(s)?.sessionToken;
+    } catch {}
+  }
   const headers = mergeHeaders(
-    shop?.sessionToken ? { Authorization: `Bearer ${shop.sessionToken}` } : {},
+    token ? { Authorization: `Bearer ${token}` } : {},
     init
   );
   return fetch(path.startsWith('http') ? path : `${BASE_URL}${path}`, { ...init, headers });
