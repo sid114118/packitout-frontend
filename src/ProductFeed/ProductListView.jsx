@@ -5,17 +5,17 @@ import { cdnImage } from '../utils/cloudinaryUrl.js';
 import { useRankingConfig } from '../ui/RankingProvider.jsx';
 import { applyBrandPriority } from '../utils/rankingSort.js';
 
-export default function ProductListView({ 
-  title, 
-  items, 
-  onBack, 
-  shopClosed, 
-  onOpenDetails, 
-  onQuickAdd, 
-  cart = [], 
+export default function ProductListView({
+  title,
+  items,
+  onBack,
+  shopClosed,
+  onOpenDetails,
+  onQuickAdd,
+  cart = [],
   onRemoveFromCart,
-  onViewCart,     
-  onSearchClick   
+  onViewCart,
+  onSearchClick
 }) {
   const BOTTOM_NAV_HEIGHT = '75px';
   const { config: rankingConfig } = useRankingConfig();
@@ -45,9 +45,9 @@ export default function ProductListView({
 
     const handlePopState = (e) => {
       if (e.state?.name === 'listView') {
-        return; 
+        return;
       }
-      onBack(); 
+      onBack();
     };
 
     window.addEventListener('popstate', handlePopState);
@@ -244,15 +244,15 @@ export default function ProductListView({
   };
 
   return createPortal(
-    <div 
-      style={{ 
-        position: 'fixed', 
-        top: 0, 
-        left: 0, 
-        right: 0, 
-        bottom: BOTTOM_NAV_HEIGHT, 
-        backgroundColor: '#f4f6f8', 
-        zIndex: 2000, 
+    <div
+      style={{
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: BOTTOM_NAV_HEIGHT,
+        backgroundColor: '#f4f6f8',
+        zIndex: 2000,
         display: 'flex',
         flexDirection: 'column',
         animation: 'fadeIn 0.2s ease',
@@ -267,7 +267,7 @@ export default function ProductListView({
         .hide-scroll::-webkit-scrollbar { display: none; }
         .hide-scroll { -ms-overflow-style: none; scrollbar-width: none; }
       `}</style>
-      
+
       {/* 🌟 PREMIUM HEADER 🌟 */}
       <div style={{ flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'space-between', backgroundColor: '#fff', padding: '12px 16px', zIndex: 91, borderBottom: '1px solid rgba(0,0,0,0.05)' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
@@ -303,7 +303,7 @@ export default function ProductListView({
 
       {/* 🌟 SPLIT-SCREEN CONTENT AREA 🌟 */}
       <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
-        
+
         {/* ⬅️ THE LEFT SIDEBAR */}
         {hasSubcategories && (
           <div className="sidebar-scroll" style={{ width: '85px', backgroundColor: '#f8fafc', borderRight: '1px solid #e2e8f0', overflowY: 'auto', flexShrink: 0 }}>
@@ -386,8 +386,8 @@ export default function ProductListView({
                 <path d="m3 16 4 4 4-4" /><path d="M7 20V4" /><path d="m21 8-4-4-4 4" /><path d="M17 4v16" />
               </svg>
               {sortBy === 'price_asc' ? 'Price: Low to High' :
-               sortBy === 'price_desc' ? 'Price: High to Low' :
-               sortBy === 'discount_desc' ? '% Discount' : 'Sort ▾'}
+                sortBy === 'price_desc' ? 'Price: High to Low' :
+                  sortBy === 'discount_desc' ? '% Discount' : 'Sort ▾'}
             </button>
 
             {/* In-Stock Toggle */}
@@ -424,9 +424,9 @@ export default function ProductListView({
               }}
             >
               {selectedPriceRange === 'under_100' ? 'Under ₹100' :
-               selectedPriceRange === '100_300' ? '₹100 - ₹300' :
-               selectedPriceRange === '300_500' ? '₹300 - ₹500' :
-               selectedPriceRange === 'above_500' ? 'Above ₹500' : 'Price ▾'}
+                selectedPriceRange === '100_300' ? '₹100 - ₹300' :
+                  selectedPriceRange === '300_500' ? '₹300 - ₹500' :
+                    selectedPriceRange === 'above_500' ? 'Above ₹500' : 'Price ▾'}
               {selectedPriceRange && (
                 <span
                   onClick={(e) => { e.stopPropagation(); setSelectedPriceRange(null); }}
@@ -765,7 +765,7 @@ export default function ProductListView({
       {/* 🌟 PREMIUM FLOATING VIEW CART BAR 🌟 */}
       {cartTotalItems > 0 && (
         <div
-          onClick={() => { window.history.back(); setTimeout(() => { if (onViewCart) onViewCart(); }, 100); }} 
+          onClick={() => { window.history.back(); setTimeout(() => { if (onViewCart) onViewCart(); }, 100); }}
           style={{ position: 'fixed', bottom: `calc(${BOTTOM_NAV_HEIGHT} + 15px)`, left: '12px', right: '12px', zIndex: 99999, backgroundColor: '#16a34a', color: '#fff', padding: '12px 16px', borderRadius: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer', boxShadow: '0 8px 24px rgba(22, 163, 74, 0.3)', animation: 'fadeIn 0.2s ease' }}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>

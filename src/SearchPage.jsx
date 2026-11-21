@@ -13,12 +13,12 @@ const BASE_URL = (import.meta.env.VITE_API_BASE || "https://darkslategrey-snail-
 // Curated category prompts shown before the user types anything.
 // Each entry maps a friendly label to the search term we plug in.
 const POPULAR_CATEGORIES = [
-  { label: 'Milk',      query: 'milk',      emoji: '🥛' },
-  { label: 'Bread',     query: 'bread',     emoji: '🍞' },
-  { label: 'Eggs',      query: 'egg',       emoji: '🥚' },
-  { label: 'Chips',     query: 'chips',     emoji: '🍟' },
-  { label: 'Maggi',     query: 'maggi',     emoji: '🍜' },
-  { label: 'Cold drink',query: 'drink',     emoji: '🥤' },
+  { label: 'Milk', query: 'milk', emoji: '🥛' },
+  { label: 'Bread', query: 'bread', emoji: '🍞' },
+  { label: 'Eggs', query: 'egg', emoji: '🥚' },
+  { label: 'Chips', query: 'chips', emoji: '🍟' },
+  { label: 'Maggi', query: 'maggi', emoji: '🍜' },
+  { label: 'Cold drink', query: 'drink', emoji: '🥤' },
   { label: 'Chocolate', query: 'chocolate', emoji: '🍫' },
   { label: 'Ice cream', query: 'ice cream', emoji: '🍦' },
 ];
@@ -90,7 +90,7 @@ export default function SearchPage({
       const parsed = JSON.parse(savedSearches);
       if (Array.isArray(parsed)) setRecentSearches(parsed);
     } catch {
-      try { localStorage.removeItem('packitout_recent_searches'); } catch {}
+      try { localStorage.removeItem('packitout_recent_searches'); } catch { }
     }
   }, []);
 
@@ -108,7 +108,7 @@ export default function SearchPage({
       setRecentSearches(prev => {
         const term = debouncedQuery.trim();
         const updated = [term, ...prev.filter(q => q.toLowerCase() !== term.toLowerCase())].slice(0, 5);
-        try { localStorage.setItem('packitout_recent_searches', JSON.stringify(updated)); } catch {}
+        try { localStorage.setItem('packitout_recent_searches', JSON.stringify(updated)); } catch { }
         return updated;
       });
     }
@@ -194,7 +194,7 @@ export default function SearchPage({
           return typeof u.primaryShop === 'object' ? u.primaryShop._id : u.primaryShop;
         }
       }
-    } catch {}
+    } catch { }
     return null;
   })();
 
@@ -555,7 +555,7 @@ export default function SearchPage({
 
   const handleClearRecent = () => {
     setRecentSearches([]);
-    try { localStorage.removeItem('packitout_recent_searches'); } catch {}
+    try { localStorage.removeItem('packitout_recent_searches'); } catch { }
   };
 
   const applySuggestion = (term) => {
@@ -1080,8 +1080,8 @@ export default function SearchPage({
                     <path d="m3 16 4 4 4-4" /><path d="M7 20V4" /><path d="m21 8-4-4-4 4" /><path d="M17 4v16" />
                   </svg>
                   {sortBy === 'price_asc' ? 'Price: Low to High' :
-                   sortBy === 'price_desc' ? 'Price: High to Low' :
-                   sortBy === 'discount_desc' ? '% Discount' : 'Sort ▾'}
+                    sortBy === 'price_desc' ? 'Price: High to Low' :
+                      sortBy === 'discount_desc' ? '% Discount' : 'Sort ▾'}
                 </button>
 
                 {/* In-Stock Toggle */}
@@ -1116,9 +1116,9 @@ export default function SearchPage({
                   }}
                 >
                   {selectedPriceRange === 'under_100' ? 'Under ₹100' :
-                   selectedPriceRange === '100_300' ? '₹100 - ₹300' :
-                   selectedPriceRange === '300_500' ? '₹300 - ₹500' :
-                   selectedPriceRange === 'above_500' ? 'Above ₹500' : 'Price ▾'}
+                    selectedPriceRange === '100_300' ? '₹100 - ₹300' :
+                      selectedPriceRange === '300_500' ? '₹300 - ₹500' :
+                        selectedPriceRange === 'above_500' ? 'Above ₹500' : 'Price ▾'}
                   {selectedPriceRange && (
                     <span
                       onClick={(e) => { e.stopPropagation(); setSelectedPriceRange(null); }}

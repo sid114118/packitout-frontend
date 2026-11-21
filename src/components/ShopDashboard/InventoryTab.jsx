@@ -53,6 +53,76 @@ export default function InventoryTab({
   const [isCreatingProduct, setIsCreatingProduct] = useState(false);
   const [isUploadingImage, setIsUploadingImage] = useState(false);
 
+  // ⚖️ STATE FOR PRODUCT VARIANT MODAL
+  const [variantModalProduct, setVariantModalProduct] = useState(null);
+  const [variantForm, setVariantForm] = useState({ qnty: "", mrp: "", sellingPrice: "", name: "", barcode: "" });
+  const [isSubmittingVariant, setIsSubmittingVariant] = useState(false);
+
+  const handleOpenVariantModal = (p) => {
+    setVariantModalProduct(p);
+    setVariantForm({
+      qnty: "",
+      mrp: p.mrp ? String(p.mrp) : "",
+      sellingPrice: p.mrp ? String(p.mrp) : "",
+      name: p.name || "",
+      barcode: ""
+    });
+  };
+
+  const handleVariantQntyChange = (newQnty) => {
+    setVariantForm(prev => {
+      let updatedName = prev.name;
+      if (variantModalProduct) {
+        const base = variantModalProduct.name || "";
+        const oldQ = variantModalProduct.qnty || "";
+        if (oldQ && base.toLowerCase().includes(oldQ.toLowerCase())) {
+          updatedName = base.replace(new RegExp(oldQ.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i'), newQnty);
+        } else if (newQnty) {
+          updatedName = `${base} ${newQnty}`.trim();
+        }
+      }
+      return { ...prev, qnty: newQnty, name: updatedName };
+    });
+  };
+
+  const handleSubmitVariant = async (e) => {
+    e.preventDefault();
+    if (!variantForm.qnty.trim()) {
+      return toast("Please enter pack size or quantity (e.g. 35g, 500ml)", "error");
+    }
+    const sellPrice = Number(variantForm.sellingPrice);
+    if (!Number.isFinite(sellPrice) || sellPrice <= 0) {
+      return toast("Please enter a valid selling price", "error");
+    }
+    setIsSubmittingVariant(true);
+    try {
+      const res = await shopFetch(shopData, `/shops/${shopData._id}/add-variant`, {
+        method: "POST",
+        body: JSON.stringify({
+          baseProductId: variantModalProduct._id,
+          qnty: variantForm.qnty.trim(),
+          mrp: Number(variantForm.mrp) || sellPrice,
+          sellingPrice: sellPrice,
+          name: variantForm.name.trim() || variantModalProduct.name,
+          barcode: variantForm.barcode.trim()
+        })
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || "Failed to add variant");
+      }
+      toast(`Added ${variantForm.qnty} pack to your store!`);
+      setVariantModalProduct(null);
+      if (onInventoryRefresh) await onInventoryRefresh();
+      if (fetchMasterCatalog) await fetchMasterCatalog();
+    } catch (err) {
+      console.error(err);
+      toast(err.message, "error");
+    } finally {
+      setIsSubmittingVariant(false);
+    }
+  };
+
   const handleImageUpload = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -933,8 +1003,9 @@ export default function InventoryTab({
                           <div style={{ display: 'flex', gap: '5px' }}>
                             <button onClick={() => setAddingId(null)} style={{ flex: 1, padding: '6px', backgroundColor: '#f1f5f9', border: 'none', borderRadius: '6px', cursor: 'pointer' }}>❌</button>
                             <button
-                              onClick={() => {
-                                handleInventoryUpdate(m._id, tempPrice || m.mrp, true);
+                              onClick={async () => {
+                                await handleInventoryUpdate(m._id, tempPrice || m.mrp, true);
+                                if (onInventoryRefresh) onInventoryRefresh();
                                 setAddingId(null);
                                 setTempPrice("");
                               }}
@@ -944,9 +1015,29 @@ export default function InventoryTab({
                           </div>
                         </div>
                       ) : (
-                        <button onClick={() => { setAddingId(m._id); setTempPrice(m.mrp); }} style={{ width: '100%', padding: '8px 6px', backgroundColor: '#e0f2fe', color: '#0284c7', border: 'none', borderRadius: '8px', fontWeight: '800', cursor: 'pointer' }}>
-                          + Add to Store
-                        </button>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                          <button onClick={() => { setAddingId(m._id); setTempPrice(m.mrp); }} style={{ width: '100%', padding: '8px 6px', backgroundColor: '#e0f2fe', color: '#0284c7', border: 'none', borderRadius: '8px', fontWeight: '800', cursor: 'pointer' }}>
+                            + Add to Store
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleOpenVariantModal(m)}
+                            style={{
+                              width: '100%',
+                              padding: '5px 4px',
+                              backgroundColor: '#f8fafc',
+                              color: '#0369a1',
+                              border: '1px dashed #7dd3fc',
+                              borderRadius: '6px',
+                              fontSize: '0.72rem',
+                              fontWeight: '700',
+                              cursor: 'pointer'
+                            }}
+                            title="Add this product with different weight, pack size, or price (e.g. 35g for ₹10)"
+                          >
+                            ⚖️ Different Size?
+                          </button>
+                        </div>
                       )}
                     </div>
                   ))}
@@ -1228,7 +1319,31 @@ export default function InventoryTab({
                   {/* Details */}
                   <div style={{ flex: 1 }}>
                     <div style={{ fontWeight: '800', color: '#0f172a', fontSize: '0.95rem', lineHeight: '1.2' }}>{item.product.name}</div>
-                    <div style={{ fontSize: '0.75rem', color: '#64748b', marginBottom: '6px', fontWeight: '600' }}>{item.product.qnty} • MRP ₹{item.product.mrp}</div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', marginBottom: '6px' }}>
+                      <span style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: '600' }}>
+                        {item.product.qnty} • MRP ₹{item.product.mrp}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => handleOpenVariantModal(item.product)}
+                        style={{
+                          background: '#f0f9ff',
+                          border: '1px solid #bae6fd',
+                          color: '#0369a1',
+                          fontSize: '0.72rem',
+                          cursor: 'pointer',
+                          fontWeight: '800',
+                          padding: '2px 8px',
+                          borderRadius: '6px',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '3px'
+                        }}
+                        title="Add another pack size or weight for this product (e.g. 35g, 500g)"
+                      >
+                        <span>⚖️</span> + Add Size
+                      </button>
+                    </div>
 
                     {/* Inline Price Editor */}
                     {editingId === item.product._id ? (
@@ -1346,6 +1461,199 @@ export default function InventoryTab({
               📥 Load More Items ({filteredInventory.length - visibleCount} remaining)
             </button>
           )}
+        </div>
+      )}
+
+      {/* ⚖️ ADD VARIANT / PACK SIZE MODAL */}
+      {variantModalProduct && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(15, 23, 42, 0.65)',
+          backdropFilter: 'blur(3px)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 9999,
+          padding: '16px'
+        }}>
+          <div style={{
+            backgroundColor: 'white',
+            borderRadius: '16px',
+            maxWidth: '460px',
+            width: '100%',
+            padding: '22px',
+            boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.2), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
+            maxHeight: '90vh',
+            overflowY: 'auto'
+          }}>
+            {/* Header */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px' }}>
+              <div>
+                <h3 style={{ margin: 0, fontSize: '1.15rem', color: '#0f172a', fontWeight: '800' }}>
+                  ⚖️ Add Size / Variant
+                </h3>
+                <p style={{ margin: '4px 0 0 0', fontSize: '0.8rem', color: '#64748b' }}>
+                  Reuses master product photo & info. Enter your shop's pack size and price.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setVariantModalProduct(null)}
+                style={{ background: 'none', border: 'none', fontSize: '1.2rem', color: '#94a3b8', cursor: 'pointer', padding: '4px' }}
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Base Product Preview */}
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '12px',
+              backgroundColor: '#f8fafc',
+              border: '1px solid #e2e8f0',
+              borderRadius: '12px',
+              padding: '10px 12px',
+              marginBottom: '16px'
+            }}>
+              <div style={{ width: '44px', height: '44px', backgroundColor: '#fff', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, border: '1px solid #e2e8f0' }}>
+                {variantModalProduct.image ? (
+                  <img src={cdnImage(variantModalProduct.image, 100)} alt="" style={{ maxWidth: '36px', maxHeight: '36px', objectFit: 'contain' }} />
+                ) : (
+                  <span style={{ fontSize: '1.4rem' }}>{variantModalProduct.emoji || '📦'}</span>
+                )}
+              </div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: '0.88rem', fontWeight: '800', color: '#0f172a', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                  {variantModalProduct.name}
+                </div>
+                <div style={{ fontSize: '0.75rem', color: '#64748b', marginTop: '2px' }}>
+                  {variantModalProduct.brand ? `${variantModalProduct.brand} • ` : ''}Base Pack: {variantModalProduct.qnty || 'Standard'} (MRP ₹{variantModalProduct.mrp})
+                </div>
+              </div>
+            </div>
+
+            {/* Form */}
+            <form onSubmit={handleSubmitVariant} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: '800', color: '#334155', marginBottom: '4px' }}>
+                    Pack Size / Weight *
+                  </label>
+                  <input
+                    required
+                    type="text"
+                    placeholder="e.g. 35g, 500g, 1L"
+                    value={variantForm.qnty}
+                    onChange={(e) => handleVariantQntyChange(e.target.value)}
+                    style={{ ...searchInputStyle, padding: '10px 12px', fontSize: '0.88rem' }}
+                    autoFocus
+                  />
+                  <div style={{ fontSize: '0.7rem', color: '#94a3b8', marginTop: '3px' }}>e.g. 35g, 100g, 500ml</div>
+                </div>
+
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: '800', color: '#334155', marginBottom: '4px' }}>
+                    Pack MRP (₹)
+                  </label>
+                  <input
+                    type="number"
+                    placeholder="e.g. 10"
+                    value={variantForm.mrp}
+                    onChange={(e) => setVariantForm(prev => ({ ...prev, mrp: e.target.value }))}
+                    style={{ ...searchInputStyle, padding: '10px 12px', fontSize: '0.88rem' }}
+                  />
+                  <div style={{ fontSize: '0.7rem', color: '#94a3b8', marginTop: '3px' }}>Printed on pack</div>
+                </div>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: '800', color: '#16a34a', marginBottom: '4px' }}>
+                    Your Selling Price (₹) *
+                  </label>
+                  <input
+                    required
+                    type="number"
+                    placeholder="e.g. 10"
+                    value={variantForm.sellingPrice}
+                    onChange={(e) => setVariantForm(prev => ({ ...prev, sellingPrice: e.target.value }))}
+                    style={{ ...searchInputStyle, padding: '10px 12px', fontSize: '0.88rem', borderColor: '#86efac', backgroundColor: '#f0fdf4' }}
+                  />
+                </div>
+
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: '800', color: '#334155', marginBottom: '4px' }}>
+                    Barcode (Optional)
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="Scan or type barcode"
+                    value={variantForm.barcode}
+                    onChange={(e) => setVariantForm(prev => ({ ...prev, barcode: e.target.value }))}
+                    style={{ ...searchInputStyle, padding: '10px 12px', fontSize: '0.88rem' }}
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: '800', color: '#334155', marginBottom: '4px' }}>
+                  Variant Name
+                </label>
+                <input
+                  type="text"
+                  placeholder="Product Name with Size"
+                  value={variantForm.name}
+                  onChange={(e) => setVariantForm(prev => ({ ...prev, name: e.target.value }))}
+                  style={{ ...searchInputStyle, padding: '10px 12px', fontSize: '0.88rem' }}
+                />
+              </div>
+
+              {/* Actions */}
+              <div style={{ display: 'flex', gap: '10px', marginTop: '6px' }}>
+                <button
+                  type="button"
+                  onClick={() => setVariantModalProduct(null)}
+                  style={{
+                    flex: 1,
+                    padding: '10px',
+                    borderRadius: '10px',
+                    border: '1px solid #cbd5e1',
+                    backgroundColor: '#f8fafc',
+                    color: '#475569',
+                    fontWeight: '800',
+                    fontSize: '0.88rem',
+                    cursor: 'pointer'
+                  }}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSubmittingVariant}
+                  style={{
+                    flex: 2,
+                    padding: '10px',
+                    borderRadius: '10px',
+                    border: 'none',
+                    backgroundColor: '#0284c7',
+                    color: '#fff',
+                    fontWeight: '800',
+                    fontSize: '0.88rem',
+                    cursor: isSubmittingVariant ? 'wait' : 'pointer',
+                    boxShadow: '0 4px 10px rgba(2, 132, 199, 0.25)',
+                    opacity: isSubmittingVariant ? 0.7 : 1
+                  }}
+                >
+                  {isSubmittingVariant ? 'Adding to Store...' : '✨ Add Variant to Store'}
+                </button>
+              </div>
+            </form>
+          </div>
         </div>
       )}
     </div>

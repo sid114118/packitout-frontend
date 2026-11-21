@@ -146,7 +146,7 @@ export default function ProductModal({ product, isOpen, onClose, onAddToCart, on
     if (!Array.isArray(allItems) || !selectedVariant) return [];
     const cat = selectedVariant.category;
     const sameCat = allItems.filter(i => i && i._id !== selectedVariant._id && i.inStock !== false && i.category === cat);
-    const others  = allItems.filter(i => i && i._id !== selectedVariant._id && i.inStock !== false && i.category !== cat);
+    const others = allItems.filter(i => i && i._id !== selectedVariant._id && i.inStock !== false && i.category !== cat);
     return [...sameCat, ...others];
   }, [allItems, selectedVariant?._id, selectedVariant?.category]);
 
@@ -201,7 +201,7 @@ export default function ProductModal({ product, isOpen, onClose, onAddToCart, on
       </div>
 
       <div id="product-page-scroll" className="pm-hide-scroll" onScroll={handleExploreScroll} style={{ flex: 1, overflowY: 'auto', paddingBottom: '140px' }}>
-        
+
         {/* 🌟 PREMIUM IMAGE STAGE (FIXED HEIGHT) */}
         <div style={{ width: '100%', height: '240px', display: 'flex', justifyContent: 'center', alignItems: 'center', backgroundColor: '#f8fafc', borderBottomLeftRadius: '24px', borderBottomRightRadius: '24px', marginBottom: '20px', position: 'relative' }}>
           {isDiscounted && (
@@ -218,14 +218,14 @@ export default function ProductModal({ product, isOpen, onClose, onAddToCart, on
         <div style={{ padding: '0 20px' }}>
           {/* TITLE & QTY */}
           <h1 style={{ margin: '0 0 8px 0', fontSize: '1.3rem', fontWeight: '800', color: '#0f172a', lineHeight: '1.3' }}>{selectedVariant.name}</h1>
-          
+
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
-             <p style={{ fontSize: '0.88rem', color: '#64748b', margin: 0, fontWeight: '600' }}>{selectedVariant.qnty}</p>
-             {productReviews.length > 0 && (
-                <div style={{ display: 'flex', alignItems: 'center', gap: '4px', backgroundColor: '#f0fdf4', padding: '3px 8px', borderRadius: '8px', fontSize: '0.78rem', fontWeight: '800', color: '#16a34a' }}>
-                   ★ {(productReviews.reduce((a, b) => a + b.rating, 0) / productReviews.length).toFixed(1)}
-                </div>
-             )}
+            <p style={{ fontSize: '0.88rem', color: '#64748b', margin: 0, fontWeight: '600' }}>{selectedVariant.qnty}</p>
+            {productReviews.length > 0 && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: '4px', backgroundColor: '#f0fdf4', padding: '3px 8px', borderRadius: '8px', fontSize: '0.78rem', fontWeight: '800', color: '#16a34a' }}>
+                ★ {(productReviews.reduce((a, b) => a + b.rating, 0) / productReviews.length).toFixed(1)}
+              </div>
+            )}
           </div>
 
           {/* 🌟 BALANCED ACTION CARD */}
@@ -295,11 +295,11 @@ export default function ProductModal({ product, isOpen, onClose, onAddToCart, on
 
           {/* 🏷️ BRAND VIEW CARD (Softened) */}
           {selectedVariant.brand && selectedVariant.brand !== "nan" && (
-            <div 
+            <div
               onClick={() => {
-                if(onViewBrand) {
-                  window.history.back(); 
-                  setTimeout(() => onViewBrand(selectedVariant.brand), 100); 
+                if (onViewBrand) {
+                  window.history.back();
+                  setTimeout(() => onViewBrand(selectedVariant.brand), 100);
                 }
               }}
               style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px', backgroundColor: '#f8fafc', border: 'none', borderRadius: '20px', margin: '25px 0', cursor: 'pointer' }}
@@ -327,7 +327,7 @@ export default function ProductModal({ product, isOpen, onClose, onAddToCart, on
             <HighlightRow label="Dietary" value={selectedVariant.isVeg ? 'Veg' : 'Non-Veg'} />
             <HighlightRow label="Manufacturer" value={selectedVariant.manufacturer} />
             <HighlightRow label="Address" value={selectedVariant.manufactureraddress} />
-            
+
             {(() => {
               const nutrients = [
                 { label: 'Energy', value: selectedVariant.energy },
@@ -338,7 +338,7 @@ export default function ProductModal({ product, isOpen, onClose, onAddToCart, on
               ].filter(n => n.value && String(n.value).trim() !== "nan" && String(n.value).trim() !== "");
 
               if (nutrients.length === 0) return null;
-              
+
               return (
                 <div style={{ padding: '20px 0 0 0' }}>
                   <div style={{ color: '#0f172a', fontSize: '0.9rem', fontWeight: '800', marginBottom: '15px' }}>
@@ -366,16 +366,16 @@ export default function ProductModal({ product, isOpen, onClose, onAddToCart, on
         <div style={{ height: '8px', backgroundColor: '#f8fafc', margin: '20px 0' }} />
 
         <div style={{ padding: '0 20px' }}>
-          <CrossSellSlider 
-            allItems={allItems} 
-            currentProduct={selectedVariant} 
-            onAddToCart={onAddToCart} 
+          <CrossSellSlider
+            allItems={allItems}
+            currentProduct={selectedVariant}
+            onAddToCart={onAddToCart}
             onRemoveFromCart={onRemoveFromCart}
             cart={safeCart}
-            onProductClick={handleRelatedProductClick} 
+            onProductClick={handleRelatedProductClick}
           />
         </div>
-        
+
         {/* 🏷️ MORE FROM SAME BRAND */}
         {moreFromBrand.length > 0 && (
           <>
@@ -403,16 +403,16 @@ export default function ProductModal({ product, isOpen, onClose, onAddToCart, on
         )}
 
         <div style={{ marginTop: '30px', padding: '0 20px' }}>
-           <h3 style={{ fontSize: '1.1rem', fontWeight: '800', color: '#0f172a', marginBottom: '15px' }}>Ratings & Reviews</h3>
-           {loadingReviews ? (
-              <div style={{ fontSize: '0.85rem', color: '#94a3b8' }}>Loading reviews...</div>
-           ) : productReviews.length > 0 ? (
-              <ReviewSection reviews={productReviews} readOnly={true} />
-           ) : (
-              <div style={{ padding: '25px', textAlign: 'center', backgroundColor: '#f8fafc', borderRadius: '16px' }}>
-                 <p style={{ margin: 0, fontSize: '0.9rem', color: '#64748b', fontWeight: '600' }}>No reviews yet for this product.</p>
-              </div>
-           )}
+          <h3 style={{ fontSize: '1.1rem', fontWeight: '800', color: '#0f172a', marginBottom: '15px' }}>Ratings & Reviews</h3>
+          {loadingReviews ? (
+            <div style={{ fontSize: '0.85rem', color: '#94a3b8' }}>Loading reviews...</div>
+          ) : productReviews.length > 0 ? (
+            <ReviewSection reviews={productReviews} readOnly={true} />
+          ) : (
+            <div style={{ padding: '25px', textAlign: 'center', backgroundColor: '#f8fafc', borderRadius: '16px' }}>
+              <p style={{ margin: 0, fontSize: '0.9rem', color: '#64748b', fontWeight: '600' }}>No reviews yet for this product.</p>
+            </div>
+          )}
         </div>
 
         {/* 🌐 EXPLORE MORE — full grid, lazy-loaded */}
@@ -481,4 +481,4 @@ export default function ProductModal({ product, isOpen, onClose, onAddToCart, on
       )}
     </div>
   );
-                               }
+}

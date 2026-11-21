@@ -13,16 +13,16 @@ export function VariantBottomSheet({ product, onClose, onAddToCart, onRemoveFrom
   return createPortal(
     <>
       <div onClick={onClose} style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 9999998, backdropFilter: 'blur(4px)' }} />
-      
+
       <div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 9999999, display: 'flex', flexDirection: 'column', fontFamily: 'system-ui, -apple-system, sans-serif', animation: 'sheetSlideUp 0.3s cubic-bezier(0.25, 1, 0.5, 1)' }}>
-        
+
         <style>{`
           @keyframes sheetSlideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
         `}</style>
 
         {/* 🌟 NATIVE BOTTOM SHEET CONTAINER */}
         <div style={{ backgroundColor: '#fff', width: '100%', borderTopLeftRadius: '24px', borderTopRightRadius: '24px', padding: '0 0 20px 0', maxHeight: '85vh', display: 'flex', flexDirection: 'column', boxShadow: '0 -4px 20px rgba(0,0,0,0.1)' }}>
-          
+
           {/* 🌟 IOS/ANDROID DRAG HANDLE */}
           <div style={{ width: '100%', display: 'flex', justifyContent: 'center', paddingTop: '12px', paddingBottom: '8px' }}>
             <div style={{ width: '40px', height: '5px', backgroundColor: '#e2e8f0', borderRadius: '10px' }} />
@@ -45,17 +45,17 @@ export function VariantBottomSheet({ product, onClose, onAddToCart, onRemoveFrom
               const vDiscountPercent = vDiscounted ? Math.round(((variant.mrp - vPrice) / variant.mrp) * 100) : 0;
               const vCart = safeCart.find(c => String(c._id) === String(variant._id));
               const vQty = vCart ? (vCart.qty || 1) : 0;
-              
+
               return (
                 <div key={idx} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', backgroundColor: '#fff', padding: '12px', borderRadius: '16px', border: '1px solid #e2e8f0', boxShadow: '0 4px 10px rgba(0,0,0,0.02)' }}>
-                  
+
                   <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
                     {/* Image Stage */}
                     <div style={{ position: 'relative', width: '56px', height: '56px', backgroundColor: '#f8fafc', borderRadius: '12px', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
                       {vDiscounted && <span style={{ position: 'absolute', top: '-6px', left: '-6px', backgroundColor: '#ef4444', color: '#fff', fontSize: '0.6rem', fontWeight: '800', padding: '3px 6px', borderRadius: '6px' }}>{vDiscountPercent}% OFF</span>}
                       {variant.image ? <img src={cdnImage(variant.image, 150)} alt="" loading="lazy" decoding="async" style={{ maxWidth: '44px', maxHeight: '44px', objectFit: 'contain', mixBlendMode: 'multiply' }} /> : <span style={{ fontSize: '24px' }}>{variant.emoji}</span>}
                     </div>
-                    
+
                     {/* Size & Price */}
                     <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
                       <div style={{ fontSize: '0.85rem', color: '#64748b', fontWeight: '700', marginBottom: '2px' }}>{variant.qnty || 'Standard'}</div>
@@ -74,14 +74,14 @@ export function VariantBottomSheet({ product, onClose, onAddToCart, onRemoveFrom
                       <button onClick={() => onAddToCart && onAddToCart(variant)} style={{ flex: 1, height: '100%', border: 'none', background: 'transparent', color: '#fff', fontSize: '1.2rem', fontWeight: 'bold', cursor: 'pointer' }}>+</button>
                     </div>
                   ) : (
-                    <button 
-                      onClick={() => onAddToCart && onAddToCart(variant)} 
+                    <button
+                      onClick={() => onAddToCart && onAddToCart(variant)}
                       style={{ backgroundColor: '#fff', color: '#ef4444', border: '1px solid #fca5a5', borderRadius: '8px', padding: '6px 16px', fontSize: '0.85rem', fontWeight: '800', cursor: 'pointer', boxShadow: '0 2px 4px rgba(0,0,0,0.03)', textTransform: 'uppercase' }}
                     >
                       ADD
                     </button>
                   )}
-                  
+
                 </div>
               );
             })}
@@ -89,8 +89,8 @@ export function VariantBottomSheet({ product, onClose, onAddToCart, onRemoveFrom
 
           {/* BOTTOM DONE BUTTON */}
           <div style={{ padding: '10px 20px 0', borderTop: '1px solid #f1f5f9', display: 'flex', justifyContent: 'flex-end' }}>
-            <button 
-              onClick={onClose} 
+            <button
+              onClick={onClose}
               style={{ width: '100%', padding: '12px', backgroundColor: '#0f172a', color: '#fff', border: 'none', borderRadius: '12px', fontWeight: '800', cursor: 'pointer', fontSize: '0.95rem' }}
             >
               Done
@@ -110,23 +110,23 @@ const ModernProductCardBase = ({ item, isCarousel, shopClosed, onOpenDetails, on
   const isMultiVariant = item.variants && item.variants.length > 1;
   const safeCart = Array.isArray(cart) ? cart.filter(c => c !== null) : [];
 
-  const allVariantIds = isMultiVariant 
-    ? new Set(item.variants.map(v => String(v._id))) 
+  const allVariantIds = isMultiVariant
+    ? new Set(item.variants.map(v => String(v._id)))
     : new Set([String(item._id)]);
 
   const totalFamilyCartQty = safeCart
     .filter(c => c && allVariantIds.has(String(c._id)))
     .reduce((sum, c) => sum + (c.qty || 1), 0);
 
-  const minPrice = isMultiVariant 
+  const minPrice = isMultiVariant
     ? Math.min(...item.variants.map(v => Number(v.sellingPrice || v.mrp || 0)))
     : Number(item.sellingPrice || item.mrp || 0);
-  const maxPrice = isMultiVariant 
+  const maxPrice = isMultiVariant
     ? Math.max(...item.variants.map(v => Number(v.sellingPrice || v.mrp || 0)))
     : Number(item.sellingPrice || item.mrp || 0);
 
-  const priceLabel = (isMultiVariant && minPrice !== maxPrice) 
-    ? `₹${minPrice} - ₹${maxPrice}` 
+  const priceLabel = (isMultiVariant && minPrice !== maxPrice)
+    ? `₹${minPrice} - ₹${maxPrice}`
     : `₹${minPrice}`;
 
   const safeBrand = (item.brand && item.brand !== "nan") ? item.brand : "";
@@ -145,24 +145,24 @@ const ModernProductCardBase = ({ item, isCarousel, shopClosed, onOpenDetails, on
   });
 
   return (
-    <div 
+    <div
       onClick={() => {
         trackEvent('PRODUCT_CLICKED', getEventPayload());
         onOpenDetails(item);
-      }} 
-      style={{ 
-        minWidth: isCarousel ? '140px' : 'auto', 
-        maxWidth: isCarousel ? '150px' : 'auto', 
-        flexShrink: 0, 
+      }}
+      style={{
+        minWidth: isCarousel ? '140px' : 'auto',
+        maxWidth: isCarousel ? '150px' : 'auto',
+        flexShrink: 0,
         border: '1px solid #e2e8f0',
-        borderRadius: '16px', 
-        padding: 0, 
-        backgroundColor: '#fff', 
-        position: 'relative', 
-        opacity: isOutOfStock ? 0.6 : 1, 
-        filter: isOutOfStock ? 'grayscale(80%)' : 'none', 
-        cursor: 'pointer', 
-        boxShadow: '0 2px 8px rgba(0,0,0,0.03)', 
+        borderRadius: '16px',
+        padding: 0,
+        backgroundColor: '#fff',
+        position: 'relative',
+        opacity: isOutOfStock ? 0.6 : 1,
+        filter: isOutOfStock ? 'grayscale(80%)' : 'none',
+        cursor: 'pointer',
+        boxShadow: '0 2px 8px rgba(0,0,0,0.03)',
         scrollSnapAlign: 'start',
         fontFamily: 'system-ui, -apple-system, sans-serif',
         display: 'flex',
@@ -184,7 +184,7 @@ const ModernProductCardBase = ({ item, isCarousel, shopClosed, onOpenDetails, on
           <span style={{ fontSize: '42px' }}>{item.emoji}</span>
         )}
       </div>
-      
+
       {/* 📄 Product Info (Clean padding for content) */}
       <div style={{ display: 'flex', flexDirection: 'column', flexGrow: 1, justifyContent: 'space-between', padding: '8px 10px 10px 10px' }}>
         <div>
@@ -211,18 +211,18 @@ const ModernProductCardBase = ({ item, isCarousel, shopClosed, onOpenDetails, on
           <div onClick={(e) => e.stopPropagation()}>
             {!isOutOfStock && (
               isMultiVariant ? (
-                <button 
-                  onClick={() => { trackEvent('ADD_TO_CART', getEventPayload()); onQuickAdd(item); }} 
+                <button
+                  onClick={() => { trackEvent('ADD_TO_CART', getEventPayload()); onQuickAdd(item); }}
                   className="pio-product-add-btn"
-                  style={{ 
-                    backgroundColor: totalFamilyCartQty > 0 ? '#fef2f2' : '#fff', 
-                    color: '#ef4444', 
-                    border: totalFamilyCartQty > 0 ? '1.5px solid #ef4444' : '1px solid #fca5a5', 
-                    borderRadius: '8px', 
-                    padding: '6px 8px', 
-                    fontSize: '0.75rem', 
-                    fontWeight: '800', 
-                    cursor: 'pointer', 
+                  style={{
+                    backgroundColor: totalFamilyCartQty > 0 ? '#fef2f2' : '#fff',
+                    color: '#ef4444',
+                    border: totalFamilyCartQty > 0 ? '1.5px solid #ef4444' : '1px solid #fca5a5',
+                    borderRadius: '8px',
+                    padding: '6px 8px',
+                    fontSize: '0.75rem',
+                    fontWeight: '800',
+                    cursor: 'pointer',
                     boxShadow: '0 2px 4px rgba(0,0,0,0.04)',
                     whiteSpace: 'nowrap'
                   }}
@@ -237,8 +237,8 @@ const ModernProductCardBase = ({ item, isCarousel, shopClosed, onOpenDetails, on
                     <button onClick={() => { trackEvent('ADD_TO_CART', getEventPayload()); onQuickAdd(item); }} style={{ flex: 1, height: '100%', border: 'none', background: 'transparent', color: '#fff', fontSize: '1.2rem', fontWeight: 'bold', cursor: 'pointer' }}>+</button>
                   </div>
                 ) : (
-                  <button 
-                    onClick={() => { trackEvent('ADD_TO_CART', getEventPayload()); onQuickAdd(item); }} 
+                  <button
+                    onClick={() => { trackEvent('ADD_TO_CART', getEventPayload()); onQuickAdd(item); }}
                     className="pio-product-add-btn"
                     style={{ backgroundColor: '#fff', color: '#ef4444', border: '1px solid #fca5a5', borderRadius: '8px', padding: '6px 12px', fontSize: '0.75rem', fontWeight: '800', cursor: 'pointer', boxShadow: '0 2px 4px rgba(0,0,0,0.04)', textTransform: 'uppercase' }}
                   >
@@ -259,10 +259,10 @@ const areCardsEqual = (prevProps, nextProps) => {
   if (prevProps.item._id !== nextProps.item._id) return false;
   if (prevProps.shopClosed !== nextProps.shopClosed) return false;
 
-  const prevIds = prevProps.item.variants?.length > 1 
+  const prevIds = prevProps.item.variants?.length > 1
     ? new Set(prevProps.item.variants.map(v => String(v._id)))
     : new Set([String(prevProps.item._id)]);
-  const nextIds = nextProps.item.variants?.length > 1 
+  const nextIds = nextProps.item.variants?.length > 1
     ? new Set(nextProps.item.variants.map(v => String(v._id)))
     : new Set([String(nextProps.item._id)]);
 
@@ -272,7 +272,7 @@ const areCardsEqual = (prevProps, nextProps) => {
   const prevCount = safePrevCart.filter(c => c && prevIds.has(String(c._id))).reduce((sum, c) => sum + (c.qty || 1), 0);
   const nextCount = safeNextCart.filter(c => c && nextIds.has(String(c._id))).reduce((sum, c) => sum + (c.qty || 1), 0);
 
-  return prevCount === nextCount; 
+  return prevCount === nextCount;
 };
 
 export const ModernProductCard = memo(ModernProductCardBase, areCardsEqual);
@@ -283,7 +283,7 @@ export function ProductRow({ title, subtitle, items, onViewAll, shopClosed, onOp
 
   return (
     <div style={{ marginBottom: '16px', paddingTop: '15px', fontFamily: 'system-ui, -apple-system, sans-serif' }}>
-      
+
       <style>{`
         .premium-hide-scroll::-webkit-scrollbar { display: none !important; }
         .premium-hide-scroll { -ms-overflow-style: none !important; scrollbar-width: none !important; padding-bottom: 20px !important; margin-bottom: -20px !important; }
@@ -298,7 +298,7 @@ export function ProductRow({ title, subtitle, items, onViewAll, shopClosed, onOp
           <button onClick={() => onViewAll({ title, items })} style={{ background: 'none', color: '#ef4444', border: 'none', fontSize: '0.9rem', fontWeight: '700', cursor: 'pointer', padding: 0 }}>See All ›</button>
         )}
       </div>
-      
+
       <div className="premium-hide-scroll" style={{ display: 'flex', overflowX: 'auto', gap: '8px', padding: '0 12px 10px 12px', scrollSnapType: 'x mandatory' }}>
         {items.map((item, index) => (
           <ImpressionTracker key={`${item._id}-${index}`} product={item} listPosition={index} category={title}>
@@ -363,19 +363,19 @@ export function ComboDetailModal({ combo, items = [], onClose, onAddToCart }) {
 
   return createPortal(
     <>
-      <div 
-        onClick={onClose} 
-        style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 9999998, backdropFilter: 'blur(4px)' }} 
+      <div
+        onClick={onClose}
+        style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 9999998, backdropFilter: 'blur(4px)' }}
       />
 
       <div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 9999999, display: 'flex', flexDirection: 'column', fontFamily: 'system-ui, -apple-system, sans-serif', animation: 'sheetSlideUp 0.3s cubic-bezier(0.25, 1, 0.5, 1)' }}>
-        
+
         <style>{`
           @keyframes sheetSlideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
         `}</style>
 
         <div style={{ backgroundColor: '#fff', width: '100%', borderTopLeftRadius: '24px', borderTopRightRadius: '24px', padding: '0 0 24px 0', maxHeight: '88vh', display: 'flex', flexDirection: 'column', boxShadow: '0 -4px 25px rgba(0,0,0,0.15)' }}>
-          
+
           {/* DRAG HANDLE */}
           <div style={{ width: '100%', display: 'flex', justifyContent: 'center', paddingTop: '12px', paddingBottom: '6px' }}>
             <div style={{ width: '40px', height: '5px', backgroundColor: '#e2e8f0', borderRadius: '10px' }} />
@@ -401,8 +401,8 @@ export function ComboDetailModal({ combo, items = [], onClose, onAddToCart }) {
                 </span>
               </div>
             </div>
-            <button 
-              onClick={onClose} 
+            <button
+              onClick={onClose}
               style={{ backgroundColor: '#f8fafc', color: '#64748b', border: 'none', borderRadius: '50%', width: '34px', height: '34px', fontSize: '1.2rem', fontWeight: 'bold', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}
             >
               ✕
@@ -418,16 +418,16 @@ export function ComboDetailModal({ combo, items = [], onClose, onAddToCart }) {
             {comboItems.map((item, idx) => {
               const price = item.sellingPrice || item.mrp || 0;
               return (
-                <div 
-                  key={idx} 
-                  style={{ 
-                    display: 'flex', 
-                    alignItems: 'center', 
-                    justifyContent: 'space-between', 
-                    padding: '10px 14px', 
-                    borderRadius: '14px', 
-                    backgroundColor: '#f8fafc', 
-                    border: '1px solid #f1f5f9' 
+                <div
+                  key={idx}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    padding: '10px 14px',
+                    borderRadius: '14px',
+                    backgroundColor: '#f8fafc',
+                    border: '1px solid #f1f5f9'
                   }}
                 >
                   <div style={{ display: 'flex', alignItems: 'center', gap: '12px', minWidth: 0 }}>
@@ -487,7 +487,7 @@ export function ComboDetailModal({ combo, items = [], onClose, onAddToCart }) {
 
           {/* FOOTER ACTION BUTTON */}
           <div style={{ padding: '12px 20px 0', borderTop: '1px solid #f1f5f9' }}>
-            <button 
+            <button
               disabled={isOutOfStock}
               onClick={() => {
                 if (isOutOfStock) return;
@@ -511,16 +511,16 @@ export function ComboDetailModal({ combo, items = [], onClose, onAddToCart }) {
                 });
                 onClose();
               }}
-              style={{ 
-                width: '100%', 
-                padding: '14px', 
-                background: isOutOfStock ? '#cbd5e1' : 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)', 
-                color: isOutOfStock ? '#64748b' : '#fff', 
-                border: 'none', 
-                borderRadius: '14px', 
-                fontWeight: '800', 
-                fontSize: '1rem', 
-                cursor: isOutOfStock ? 'not-allowed' : 'pointer', 
+              style={{
+                width: '100%',
+                padding: '14px',
+                background: isOutOfStock ? '#cbd5e1' : 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
+                color: isOutOfStock ? '#64748b' : '#fff',
+                border: 'none',
+                borderRadius: '14px',
+                fontWeight: '800',
+                fontSize: '1rem',
+                cursor: isOutOfStock ? 'not-allowed' : 'pointer',
                 boxShadow: isOutOfStock ? 'none' : '0 4px 15px rgba(245, 158, 11, 0.35)',
                 display: 'flex',
                 justifyContent: 'center',
@@ -539,4 +539,4 @@ export function ComboDetailModal({ combo, items = [], onClose, onAddToCart }) {
     document.body
   );
 }
-                  
+
