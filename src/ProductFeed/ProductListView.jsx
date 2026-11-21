@@ -74,8 +74,8 @@ export default function ProductListView({
     return Array.isArray(items) ? items : [];
   }, [items]);
 
-  // 🧠 SMART EXTRACTOR — prefers subCategory, falls back to brand so the
-  // sidebar still shows on categories where subCategory is empty/"nan".
+  // 🧠 SMART EXTRACTOR — strictly uses subCategory for the left sidebar.
+  // Brands are never placed in the vertical sidebar; they stay in the horizontal filter bar.
   const { subcategories, groupingKey } = useMemo(() => {
     const isValid = (v) => {
       if (!v) return false;
@@ -95,14 +95,6 @@ export default function ProductListView({
     });
     if (subs.size > 1) {
       return { subcategories: ["All", ...Array.from(subs)], groupingKey: "subCategory" };
-    }
-
-    const brands = new Set();
-    sourceItems.forEach(item => {
-      if (isValid(item.brand)) brands.add(String(item.brand).trim());
-    });
-    if (brands.size > 1) {
-      return { subcategories: ["All", ...Array.from(brands)], groupingKey: "brand" };
     }
 
     return { subcategories: ["All"], groupingKey: "subCategory" };
@@ -157,9 +149,8 @@ export default function ProductListView({
   }, [sourceItems, selectedSub, groupingKey]);
 
   // 🏷️ BRAND CHIPS — derived from items in the current subcategory.
-  // Only show when sidebar isn't already grouping by brand AND there are 2+ brands.
+  // Brands ALWAYS show in the horizontal filter bar with Sort, In-Stock, and Price.
   const brandsWithCount = useMemo(() => {
-    if (groupingKey === "brand" && hasSubcategories) return [];
     const isValid = (v) => v && String(v).trim() && String(v).trim().toLowerCase() !== "nan";
     const map = new Map();
     filteredItems.forEach(item => {
@@ -171,7 +162,7 @@ export default function ProductListView({
     return Array.from(map.entries())
       .map(([name, count]) => ({ name, count }))
       .sort((a, b) => b.count - a.count);
-  }, [filteredItems, groupingKey, hasSubcategories]);
+  }, [filteredItems]);
 
   const showBrandBar = brandsWithCount.length > 0;
   const activeBrand = showBrandBar ? selectedBrand : "All Brands";
