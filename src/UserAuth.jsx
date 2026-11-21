@@ -24,6 +24,14 @@ const API_BASE = (import.meta.env.VITE_API_BASE || "https://darkslategrey-snail-
 
 const isValidEmail = (e) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(e || "").trim());
 const isValidPhone = (p) => /^[6-9]\d{9}$/.test(String(p || "").trim());
+const cleanPhone10 = (raw) => {
+  if (!raw) return "";
+  let digits = String(raw).replace(/\D/g, "");
+  if (digits.length === 12 && digits.startsWith("91")) digits = digits.slice(2);
+  else if (digits.length === 11 && digits.startsWith("0")) digits = digits.slice(1);
+  else if (digits.length > 10) digits = digits.slice(-10);
+  return digits.slice(0, 10);
+};
 
 // Friendly text for the Firebase error codes the user can actually trigger.
 const friendlyError = (err) => {
@@ -402,7 +410,7 @@ export default function UserAuth({ onLoginSuccess }) {
         {mode === "migrate-phone" && step === "phone" && (
           <>
             <form onSubmit={handleMigrateSendOtp} style={formStyle}>
-              <input type="tel" inputMode="numeric" maxLength={10} placeholder="Registered Phone Number" value={phone} onChange={e => setPhone(e.target.value.replace(/\D/g, ''))} required style={inputStyle} />
+              <input type="tel" inputMode="numeric" maxLength={10} placeholder="Registered Phone Number" value={phone} onChange={e => setPhone(cleanPhone10(e.target.value))} required style={inputStyle} />
               <button type="submit" disabled={busy} style={primaryBtn(busy)}>{busy ? "Sending…" : "Send OTP"}</button>
               <button type="button" onClick={() => reset("login")} style={ghostBtn}>← Cancel</button>
             </form>

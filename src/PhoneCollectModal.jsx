@@ -1,6 +1,19 @@
 import React, { useState } from 'react';
 import { userFetch } from './utils/api.js';
 
+const cleanPhone10 = (raw) => {
+  if (!raw) return "";
+  let digits = String(raw).replace(/\D/g, "");
+  if (digits.length === 12 && digits.startsWith("91")) {
+    digits = digits.slice(2);
+  } else if (digits.length === 11 && digits.startsWith("0")) {
+    digits = digits.slice(1);
+  } else if (digits.length > 10) {
+    digits = digits.slice(-10);
+  }
+  return digits;
+};
+
 // Plain-input phone modal — no OTP. Backend /users/:id/phone validates the
 // Indian mobile format and rejects collisions with another account.
 export default function PhoneCollectModal({ user, onSaved, onClose }) {
@@ -10,7 +23,7 @@ export default function PhoneCollectModal({ user, onSaved, onClose }) {
 
   const handleSave = async () => {
     setError("");
-    const digits = phone.replace(/\D/g, '').replace(/^91/, '');
+    const digits = cleanPhone10(phone);
     if (!/^[6-9]\d{9}$/.test(digits)) {
       setError("Enter a valid 10-digit Indian mobile number.");
       return;
@@ -60,7 +73,15 @@ export default function PhoneCollectModal({ user, onSaved, onClose }) {
             placeholder="10-digit mobile"
             value={phone}
             maxLength={10}
-            onChange={(e) => { setPhone(e.target.value.replace(/\D/g, '').slice(0, 10)); setError(""); }}
+            onChange={(e) => {
+              const val = e.target.value;
+              let digits = val.replace(/\D/g, "");
+              if (digits.length > 10) {
+                digits = cleanPhone10(digits);
+              }
+              setPhone(digits.slice(0, 10));
+              setError("");
+            }}
             style={{ flex: 1, padding: '12px 14px', border: '1px solid #cbd5e1', borderRadius: 10, fontSize: '1rem', outline: 'none' }}
           />
         </div>
