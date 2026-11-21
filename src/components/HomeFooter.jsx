@@ -52,6 +52,7 @@ const TRUST_HIGHLIGHTS = [
 
 export default function HomeFooter({ signInNudge = null }) {
   const [activeModal, setActiveModal] = useState(null); // 'privacy' | 'terms' | 'refund' | 'faq'
+  const [isTrustHighlightsExpanded, setIsTrustHighlightsExpanded] = useState(false);
   
   // Accordion state: all 4 link sections are collapsed by default
   const [expandedSections, setExpandedSections] = useState({
@@ -93,7 +94,7 @@ export default function HomeFooter({ signInNudge = null }) {
       background: '#ffffff',
       borderTop: '2px solid #e2e8f0',
       width: '100%',
-      padding: '24px 16px 130px',
+      padding: '24px 16px 20px',
       boxSizing: 'border-box',
       fontFamily: 'system-ui, -apple-system, sans-serif',
       marginTop: '10px',
@@ -178,49 +179,102 @@ export default function HomeFooter({ signInNudge = null }) {
           </button>
         </div>
 
-        {/* TRUST HIGHLIGHTS ROW */}
+        {/* TRUST HIGHLIGHTS ACCORDION */}
         <div style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))',
-          gap: '10px',
-          marginBottom: '22px',
+          background: '#f8fafc',
+          border: '1px solid #e2e8f0',
+          borderRadius: '14px',
+          overflow: 'hidden',
+          marginBottom: '20px',
         }}>
-          {TRUST_HIGHLIGHTS.map(b => (
-            <div
-              key={b.key}
+          <button
+            type="button"
+            onClick={() => setIsTrustHighlightsExpanded(prev => !prev)}
+            style={{
+              width: '100%',
+              padding: '14px 16px',
+              background: 'transparent',
+              border: 'none',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              cursor: 'pointer',
+              textAlign: 'left',
+            }}
+          >
+            <span style={{ fontSize: '0.88rem', fontWeight: 900, color: '#0f172a', display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <span>✨</span> 100% Local Dukaan & Quick Pickup
+            </span>
+            <svg
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="#64748b"
+              strokeWidth="2.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
               style={{
-                padding: '12px 10px',
-                background: '#f8fafc',
-                border: '1px solid #e2e8f0',
-                borderRadius: '14px',
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                gap: '6px',
-                textAlign: 'center',
+                transform: isTrustHighlightsExpanded ? 'rotate(180deg)' : 'rotate(0deg)',
+                transition: 'transform 0.2s ease',
+                flexShrink: 0,
               }}
             >
+              <polyline points="6 9 12 15 18 9" />
+            </svg>
+          </button>
+
+          {isTrustHighlightsExpanded && (
+            <div style={{
+              padding: '0 14px 16px',
+              borderTop: '1px solid #e2e8f0',
+              paddingTop: '14px',
+            }}>
               <div style={{
-                width: '38px',
-                height: '38px',
-                borderRadius: '50%',
-                background: '#fff',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                boxShadow: '0 2px 6px rgba(0,0,0,0.06)',
-                border: '1px solid #e2e8f0',
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))',
+                gap: '10px',
               }}>
-                {b.icon}
-              </div>
-              <div style={{ fontWeight: 800, fontSize: '0.78rem', color: '#0f172a', letterSpacing: '-0.1px' }}>
-                {b.title}
-              </div>
-              <div style={{ fontSize: '0.68rem', color: '#64748b', fontWeight: 600, lineHeight: 1.3 }}>
-                {b.subtitle}
+                {TRUST_HIGHLIGHTS.map(b => (
+                  <div
+                    key={b.key}
+                    style={{
+                      padding: '12px 10px',
+                      background: '#ffffff',
+                      border: '1px solid #e2e8f0',
+                      borderRadius: '14px',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      gap: '6px',
+                      textAlign: 'center',
+                      boxShadow: '0 1px 3px rgba(0,0,0,0.02)',
+                    }}
+                  >
+                    <div style={{
+                      width: '38px',
+                      height: '38px',
+                      borderRadius: '50%',
+                      background: '#f8fafc',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      boxShadow: '0 2px 6px rgba(0,0,0,0.04)',
+                      border: '1px solid #e2e8f0',
+                    }}>
+                      {b.icon}
+                    </div>
+                    <div style={{ fontWeight: 800, fontSize: '0.78rem', color: '#0f172a', letterSpacing: '-0.1px' }}>
+                      {b.title}
+                    </div>
+                    <div style={{ fontSize: '0.68rem', color: '#64748b', fontWeight: 600, lineHeight: 1.3 }}>
+                      {b.subtitle}
+                    </div>
+                  </div>
+                ))}
               </div>
             </div>
-          ))}
+          )}
         </div>
 
         {/* Sign In Nudge for Guests */}
