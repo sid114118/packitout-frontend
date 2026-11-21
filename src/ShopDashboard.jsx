@@ -144,7 +144,7 @@ export default function ShopDashboard({ user, onExit }) {
 
   const refreshShopData = async () => {
     try {
-      const res = await fetch(`${BASE_URL}/shops/${shopData._id}/menu`);
+      const res = await shopFetch(shopData, `/shops/${shopData._id}/menu`);
       if (res.ok) {
         const updated = await res.json();
         updateShopDataSafe(updated);
