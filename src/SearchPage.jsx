@@ -57,9 +57,11 @@ export default function SearchPage({
   const [inStockOnly, setInStockOnly] = useState(false);
   const [sortBy, setSortBy] = useState('relevance'); // 'relevance' | 'price_asc' | 'price_desc' | 'discount_desc'
 
-  // Modal bottom sheets for Sort & Price
+  // Modal bottom sheets for Sort & Price & Brand
   const [isSortModalOpen, setIsSortModalOpen] = useState(false);
   const [isPriceModalOpen, setIsPriceModalOpen] = useState(false);
+  const [isBrandModalOpen, setIsBrandModalOpen] = useState(false);
+  const [brandSearchQuery, setBrandSearchQuery] = useState('');
 
   // Suggestions accordion toggle
   const [isSuggestionsCollapsed, setIsSuggestionsCollapsed] = useState(false);
@@ -1125,29 +1127,30 @@ export default function SearchPage({
                   )}
                 </button>
 
-                {/* Brand Chips */}
-                {availableBrands.map(b => {
-                  const isBrandActive = selectedBrand === b.name;
-                  return (
-                    <button
-                      key={b.name}
-                      onClick={() => setSelectedBrand(isBrandActive ? null : b.name)}
-                      style={{
-                        display: 'inline-flex', alignItems: 'center', gap: '5px',
-                        padding: '7px 14px', borderRadius: '999px',
-                        fontSize: '0.82rem', fontWeight: 700, cursor: 'pointer',
-                        whiteSpace: 'nowrap', flexShrink: 0,
-                        backgroundColor: isBrandActive ? '#f0fdf4' : '#fff',
-                        border: isBrandActive ? '1.5px solid #16a34a' : '1px solid #e2e8f0',
-                        color: isBrandActive ? '#15803d' : '#334155',
-                        boxShadow: '0 1px 3px rgba(0,0,0,0.03)',
-                      }}
-                    >
-                      {isBrandActive && <span>✓ </span>}
-                      {b.name} ({b.count})
-                    </button>
-                  );
-                })}
+                {/* Brand Dropdown Button */}
+                {availableBrands.length > 0 && (
+                  <button
+                    onClick={() => setIsBrandModalOpen(true)}
+                    style={{
+                      display: 'inline-flex', alignItems: 'center', gap: '5px',
+                      padding: '7px 14px', borderRadius: '999px',
+                      fontSize: '0.82rem', fontWeight: 700, cursor: 'pointer',
+                      whiteSpace: 'nowrap', flexShrink: 0,
+                      backgroundColor: selectedBrand ? '#f0fdf4' : '#fff',
+                      border: selectedBrand ? '1.5px solid #16a34a' : '1px solid #e2e8f0',
+                      color: selectedBrand ? '#15803d' : '#334155',
+                      boxShadow: '0 1px 3px rgba(0,0,0,0.03)',
+                    }}
+                  >
+                    {selectedBrand ? `Brand: ${selectedBrand}` : 'Brand ▾'}
+                    {selectedBrand && (
+                      <span
+                        onClick={(e) => { e.stopPropagation(); setSelectedBrand(null); }}
+                        style={{ marginLeft: '4px', fontWeight: 900 }}
+                      >✕</span>
+                    )}
+                  </button>
+                )}
 
                 {/* Clear All Button */}
                 {hasActiveFilters && (
@@ -1364,6 +1367,108 @@ export default function SearchPage({
                   />
                 </div>
               ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 🏷️ BRAND BOTTOM SHEET MODAL */}
+      {isBrandModalOpen && (
+        <div
+          onClick={() => { setIsBrandModalOpen(false); setBrandSearchQuery(''); }}
+          style={{
+            position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.5)',
+            zIndex: 1000000, display: 'flex', alignItems: 'flex-end',
+            animation: 'fadeIn 0.15s ease',
+          }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              backgroundColor: '#fff', width: '100%',
+              borderTopLeftRadius: '22px', borderTopRightRadius: '22px',
+              padding: '20px 20px 30px', maxHeight: '80vh', overflowY: 'auto',
+              boxShadow: '0 -4px 25px rgba(0,0,0,0.15)',
+              animation: 'slideUp 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
+            }}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
+              <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 800, color: '#0f172a' }}>Filter by Brand</h3>
+              <button
+                onClick={() => { setIsBrandModalOpen(false); setBrandSearchQuery(''); }}
+                style={{ background: '#f1f5f9', border: 'none', width: '32px', height: '32px', borderRadius: '50%', cursor: 'pointer', fontSize: '1rem', color: '#64748b' }}
+              >✕</button>
+            </div>
+
+            {availableBrands.length > 5 && (
+              <div style={{ marginBottom: '12px' }}>
+                <input
+                  type="text"
+                  placeholder="Search brands…"
+                  value={brandSearchQuery}
+                  onChange={(e) => setBrandSearchQuery(e.target.value)}
+                  style={{
+                    width: '100%', padding: '10px 14px', borderRadius: '12px',
+                    border: '1px solid #e2e8f0', fontSize: '0.88rem', outline: 'none',
+                    boxSizing: 'border-box', backgroundColor: '#f8fafc',
+                    fontFamily: 'inherit',
+                  }}
+                />
+              </div>
+            )}
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              {!brandSearchQuery && (
+                <div
+                  onClick={() => { setSelectedBrand(null); setIsBrandModalOpen(false); setBrandSearchQuery(''); }}
+                  style={{
+                    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                    padding: '14px 16px', borderRadius: '14px', cursor: 'pointer',
+                    backgroundColor: !selectedBrand ? '#f0fdf4' : '#f8fafc',
+                    border: !selectedBrand ? '1.5px solid #16a34a' : '1px solid #e2e8f0',
+                    fontWeight: !selectedBrand ? 700 : 600,
+                    color: !selectedBrand ? '#15803d' : '#1e293b',
+                  }}
+                >
+                  <span>All Brands</span>
+                  <input
+                    type="radio"
+                    name="search_brand"
+                    checked={!selectedBrand}
+                    onChange={() => { setSelectedBrand(null); setIsBrandModalOpen(false); setBrandSearchQuery(''); }}
+                    style={{ accentColor: '#16a34a', width: '18px', height: '18px' }}
+                  />
+                </div>
+              )}
+
+              {availableBrands
+                .filter(b => !brandSearchQuery || b.name.toLowerCase().includes(brandSearchQuery.toLowerCase().trim()))
+                .map((b) => {
+                  const isSelected = selectedBrand && selectedBrand.toLowerCase() === b.name.toLowerCase();
+                  return (
+                    <div
+                      key={b.name}
+                      onClick={() => { setSelectedBrand(b.name); setIsBrandModalOpen(false); setBrandSearchQuery(''); }}
+                      style={{
+                        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                        padding: '14px 16px', borderRadius: '14px', cursor: 'pointer',
+                        backgroundColor: isSelected ? '#f0fdf4' : '#f8fafc',
+                        border: isSelected ? '1.5px solid #16a34a' : '1px solid #e2e8f0',
+                        fontWeight: isSelected ? 700 : 600,
+                        color: isSelected ? '#15803d' : '#1e293b',
+                      }}
+                    >
+                      <span>{b.name} <span style={{ fontSize: '0.8rem', color: isSelected ? '#166534' : '#64748b', fontWeight: 500 }}>({b.count})</span></span>
+                      <input
+                        type="radio"
+                        name="search_brand"
+                        checked={Boolean(isSelected)}
+                        onChange={() => { setSelectedBrand(b.name); setIsBrandModalOpen(false); setBrandSearchQuery(''); }}
+                        style={{ accentColor: '#16a34a', width: '18px', height: '18px' }}
+                      />
+                    </div>
+                  );
+                })}
             </div>
           </div>
         </div>
