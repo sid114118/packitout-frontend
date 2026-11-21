@@ -117,6 +117,13 @@ export default function SearchPage({
     onCloseRef.current = onClose;
   }, [onClose]);
 
+  const handleClose = () => {
+    if (window.history.state?.name === 'searchPage') {
+      window.history.back();
+    }
+    if (onCloseRef.current) onCloseRef.current();
+  };
+
   // 🛡️ MOBILE BACK BUTTON FIX
   useEffect(() => {
     if (window.history.state?.name !== 'searchPage') {
@@ -124,16 +131,14 @@ export default function SearchPage({
     }
 
     const handlePopState = (e) => {
-      if (e.state?.name === 'searchPage') return;
-      if (onCloseRef.current) onCloseRef.current();
+      if (e.state?.name !== 'searchPage') {
+        if (onCloseRef.current) onCloseRef.current();
+      }
     };
 
     window.addEventListener('popstate', handlePopState);
     return () => {
       window.removeEventListener('popstate', handlePopState);
-      if (window.history.state?.name === 'searchPage') {
-        window.history.back();
-      }
     };
   }, []);
 
@@ -612,7 +617,7 @@ export default function SearchPage({
           backgroundColor: '#f1f5f9', borderRadius: '12px',
           padding: '8px 12px',
         }}>
-          <button onClick={onClose} style={{
+          <button onClick={handleClose} style={{
             background: 'none', border: 'none', fontSize: '1.4rem',
             cursor: 'pointer', padding: '0 10px 0 0', color: '#475569',
             display: 'flex', alignItems: 'center',
@@ -1366,7 +1371,7 @@ export default function SearchPage({
 
       {/* FLOATING CART */}
       {cartTotalItems > 0 && (
-        <div onClick={() => { onClose(); if (onViewCart) onViewCart(); }} style={{
+        <div onClick={() => { handleClose(); if (onViewCart) onViewCart(); }} style={{
           position: 'fixed', bottom: `calc(${BOTTOM_NAV_HEIGHT} + 15px)`,
           left: '12px', right: '12px', zIndex: 101,
           backgroundColor: '#0c831f', color: '#fff',
