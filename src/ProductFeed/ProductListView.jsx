@@ -341,7 +341,7 @@ export default function ProductListView({
         <div
           id="product-grid-scroll"
           className="sidebar-scroll"
-          style={{ flex: 1, overflowY: 'auto', padding: '12px' }}
+          style={{ flex: 1, overflowY: 'auto', padding: '8px' }}
           onScroll={handleScroll} // ⚡ Scroll listener attached!
         >
           {/* 🎛️ STICKY FILTER & SORT CHIP BAR */}
@@ -349,18 +349,18 @@ export default function ProductListView({
             className="hide-scroll"
             style={{
               position: 'sticky',
-              top: '-12px',
-              marginInline: '-12px',
-              marginTop: '-12px',
-              marginBottom: '10px',
-              padding: '8px 12px',
+              top: '-8px',
+              marginInline: '-8px',
+              marginTop: '-8px',
+              marginBottom: '8px',
+              padding: '6px 8px',
               background: 'rgba(255, 255, 255, 0.95)',
               backdropFilter: 'saturate(180%) blur(8px)',
               WebkitBackdropFilter: 'saturate(180%) blur(8px)',
               borderBottom: '1px solid #e2e8f0',
               zIndex: 10,
               display: 'flex',
-              gap: '8px',
+              gap: '6px',
               overflowX: 'auto',
               scrollbarWidth: 'none',
               alignItems: 'center',
@@ -514,7 +514,7 @@ export default function ProductListView({
               ) : null}
             </div>
           ) : (
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '12px', paddingBottom: cartTotalItems > 0 ? '80px' : '20px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '8px', paddingBottom: cartTotalItems > 0 ? '80px' : '20px' }}>
 
               {/* ⚡ ONLY MAP THE SLICED ITEMS! */}
               {finalItems.slice(0, visibleCount).map((item, index) => (

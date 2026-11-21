@@ -424,7 +424,7 @@ export default function ProductModal({ product, isOpen, onClose, onAddToCart, on
                 <h3 style={{ fontSize: '1.1rem', fontWeight: '800', color: '#0f172a', margin: 0 }}>Explore more</h3>
                 <span style={{ fontSize: '0.75rem', color: '#94a3b8', fontWeight: '700' }}>{Math.min(exploreCount, exploreItems.length)} of {exploreItems.length}</span>
               </div>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '12px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '8px' }}>
                 {exploreItems.slice(0, exploreCount).map(item => (
                   <ModernProductCard
                     key={item._id}

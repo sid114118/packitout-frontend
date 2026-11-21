@@ -151,35 +151,42 @@ const ModernProductCardBase = ({ item, isCarousel, shopClosed, onOpenDetails, on
         onOpenDetails(item);
       }} 
       style={{ 
-        minWidth: isCarousel ? '145px' : 'auto', 
-        maxWidth: isCarousel ? '155px' : 'auto', 
+        minWidth: isCarousel ? '140px' : 'auto', 
+        maxWidth: isCarousel ? '150px' : 'auto', 
         flexShrink: 0, 
-        border: '1px solid #f1f5f9',
+        border: '1px solid #e2e8f0',
         borderRadius: '16px', 
-        padding: '10px', 
+        padding: 0, 
         backgroundColor: '#fff', 
         position: 'relative', 
         opacity: isOutOfStock ? 0.6 : 1, 
         filter: isOutOfStock ? 'grayscale(80%)' : 'none', 
         cursor: 'pointer', 
-        boxShadow: '0 4px 12px rgba(0,0,0,0.03)', 
+        boxShadow: '0 2px 8px rgba(0,0,0,0.03)', 
         scrollSnapAlign: 'start',
         fontFamily: 'system-ui, -apple-system, sans-serif',
         display: 'flex',
         flexDirection: 'column',
+        overflow: 'hidden',
       }}
     >
-      <div style={{ position: 'relative', height: '110px', width: '100%', display: 'flex', justifyContent: 'center', alignItems: 'center', backgroundColor: '#f8fafc', borderRadius: '12px', marginBottom: '12px' }}>
+      {/* 🖼️ Product Image (Flush to top, left, right - no padding!) */}
+      <div style={{ position: 'relative', height: isCarousel ? '120px' : '135px', width: '100%', display: 'flex', justifyContent: 'center', alignItems: 'center', backgroundColor: '#f8fafc', overflow: 'hidden' }}>
         {item.isDiscounted && !isOutOfStock && (
-          <span style={{ position: 'absolute', top: '0', left: '0', backgroundColor: '#ef4444', color: '#fff', fontSize: '0.65rem', fontWeight: '800', padding: '4px 8px', borderRadius: '12px 0 8px 0', zIndex: 1, textTransform: 'uppercase' }}>
+          <span style={{ position: 'absolute', top: 0, left: 0, backgroundColor: '#ef4444', color: '#fff', fontSize: '0.65rem', fontWeight: '800', padding: '3px 7px', borderRadius: '0 0 8px 0', zIndex: 1, textTransform: 'uppercase' }}>
             {item.discountPercent}% OFF
           </span>
         )}
         <HeartButton item={item} />
-        {item.image ? <img src={cdnImage(item.image, 300)} alt={safeName} loading="lazy" decoding="async" style={{ maxHeight: '85%', maxWidth: '85%', objectFit: 'contain', mixBlendMode: 'multiply' }} /> : <span style={{fontSize: '40px'}}>{item.emoji}</span>}
+        {item.image ? (
+          <img src={cdnImage(item.image, 300)} alt={safeName} loading="lazy" decoding="async" style={{ width: '100%', height: '100%', objectFit: 'contain', mixBlendMode: 'multiply' }} />
+        ) : (
+          <span style={{ fontSize: '42px' }}>{item.emoji}</span>
+        )}
       </div>
       
-      <div style={{ display: 'flex', flexDirection: 'column', flexGrow: 1, justifyContent: 'space-between' }}>
+      {/* 📄 Product Info (Clean padding for content) */}
+      <div style={{ display: 'flex', flexDirection: 'column', flexGrow: 1, justifyContent: 'space-between', padding: '8px 10px 10px 10px' }}>
         <div>
           <p style={{ fontSize: '0.75rem', color: isMultiVariant ? '#0284c7' : '#64748b', margin: '0 0 4px 0', fontWeight: '700' }}>
             {isMultiVariant ? `${item.variants.length} sizes available` : (item.qnty || "1 pc")}
@@ -282,7 +289,7 @@ export function ProductRow({ title, subtitle, items, onViewAll, shopClosed, onOp
         .premium-hide-scroll { -ms-overflow-style: none !important; scrollbar-width: none !important; padding-bottom: 20px !important; margin-bottom: -20px !important; }
       `}</style>
 
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', padding: '0 16px' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px', padding: '0 12px' }}>
         <div>
           <h2 style={{ fontSize: '1.15rem', margin: 0, color: '#0f172a', fontWeight: '800', letterSpacing: '-0.3px' }}>{title}</h2>
           {subtitle && <p style={{ fontSize: '0.8rem', margin: '4px 0 0 0', color: '#64748b', fontWeight: '500' }}>{subtitle}</p>}
@@ -292,7 +299,7 @@ export function ProductRow({ title, subtitle, items, onViewAll, shopClosed, onOp
         )}
       </div>
       
-      <div className="premium-hide-scroll" style={{ display: 'flex', overflowX: 'auto', gap: '16px', padding: '0 16px 10px 16px', scrollSnapType: 'x mandatory' }}>
+      <div className="premium-hide-scroll" style={{ display: 'flex', overflowX: 'auto', gap: '8px', padding: '0 12px 10px 12px', scrollSnapType: 'x mandatory' }}>
         {items.map((item, index) => (
           <ImpressionTracker key={`${item._id}-${index}`} product={item} listPosition={index} category={title}>
             <ModernProductCard

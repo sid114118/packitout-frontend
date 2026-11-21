@@ -838,7 +838,7 @@ export default function SearchPage({
           </>
         ) : isTyping ? (
           /* Skeleton loader while debounce settles */
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: '12px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: '8px' }}>
             {[1, 2, 3, 4, 5, 6].map((n) => (
               <div key={n} style={{
                 border: '1px solid #f1f5f9', borderRadius: '16px',
@@ -1211,7 +1211,7 @@ export default function SearchPage({
                   )}
                 </div>
 
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: '12px' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: '8px' }}>
                   {finalProducts.slice(0, visibleCount).map((item, index) => (
                     <ModernProductCard
                       key={`${item._id}-${index}`}
