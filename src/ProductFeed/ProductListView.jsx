@@ -21,6 +21,11 @@ export default function ProductListView({
   const { config: rankingConfig } = useRankingConfig();
   const [selectedSub, setSelectedSub] = useState("All");
   const [selectedBrand, setSelectedBrand] = useState("All Brands");
+  const [selectedPriceRange, setSelectedPriceRange] = useState(null);
+  const [inStockOnly, setInStockOnly] = useState(false);
+  const [sortBy, setSortBy] = useState('relevance');
+  const [isSortModalOpen, setIsSortModalOpen] = useState(false);
+  const [isPriceModalOpen, setIsPriceModalOpen] = useState(false);
 
   // 🚀 LAZY LOADING STATE: Only load 16 items at a time!
   const [visibleCount, setVisibleCount] = useState(16);
@@ -57,11 +62,12 @@ export default function ProductListView({
   useEffect(() => {
     setVisibleCount(16);
     setSelectedBrand("All Brands");
+    setSelectedPriceRange(null);
   }, [selectedSub]);
 
   useEffect(() => {
     setVisibleCount(16);
-  }, [selectedBrand]);
+  }, [selectedBrand, selectedPriceRange, inStockOnly, sortBy]);
 
   // 🚀 KEEP VARIANTS GROUPED FOR THE LIST / CATEGORY VIEW
   const sourceItems = useMemo(() => {
@@ -152,26 +158,88 @@ export default function ProductListView({
 
   // 🏷️ BRAND CHIPS — derived from items in the current subcategory.
   // Only show when sidebar isn't already grouping by brand AND there are 2+ brands.
-  const brandsInView = useMemo(() => {
+  const brandsWithCount = useMemo(() => {
     if (groupingKey === "brand" && hasSubcategories) return [];
     const isValid = (v) => v && String(v).trim() && String(v).trim().toLowerCase() !== "nan";
-    const set = new Set();
+    const map = new Map();
     filteredItems.forEach(item => {
-      if (isValid(item.brand)) set.add(String(item.brand).trim());
+      if (isValid(item.brand)) {
+        const b = String(item.brand).trim();
+        map.set(b, (map.get(b) || 0) + 1);
+      }
     });
-    if (set.size < 2) return [];
-    return ["All Brands", ...Array.from(set).sort((a, b) => a.localeCompare(b))];
-  }, [filteredItems, groupingKey]);
+    return Array.from(map.entries())
+      .map(([name, count]) => ({ name, count }))
+      .sort((a, b) => b.count - a.count);
+  }, [filteredItems, groupingKey, hasSubcategories]);
 
-  const showBrandBar = brandsInView.length > 0;
+  const showBrandBar = brandsWithCount.length > 0;
   const activeBrand = showBrandBar ? selectedBrand : "All Brands";
 
   const finalItems = useMemo(() => {
-    const base = (!showBrandBar || activeBrand === "All Brands")
-      ? filteredItems
-      : filteredItems.filter(item => String(item.brand || "").trim() === activeBrand);
-    return applyBrandPriority(base, rankingConfig);
-  }, [filteredItems, activeBrand, showBrandBar, rankingConfig]);
+    let list = filteredItems;
+
+    // Filter by Brand
+    if (showBrandBar && activeBrand !== "All Brands") {
+      list = list.filter(item => String(item.brand || "").trim().toLowerCase() === activeBrand.toLowerCase());
+    }
+
+    // Filter by In-Stock Only
+    if (inStockOnly) {
+      list = list.filter(item => item.inStock !== false);
+    }
+
+    // Filter by Price Range
+    if (selectedPriceRange) {
+      list = list.filter(i => {
+        const p = Number(i.sellingPrice !== undefined && i.sellingPrice !== null ? i.sellingPrice : (i.mrp || 0));
+        if (selectedPriceRange === 'under_100') return p < 100;
+        if (selectedPriceRange === '100_300') return p >= 100 && p <= 300;
+        if (selectedPriceRange === '300_500') return p > 300 && p <= 500;
+        if (selectedPriceRange === 'above_500') return p > 500;
+        return true;
+      });
+    }
+
+    // Sort
+    if (sortBy === 'price_asc') {
+      list = [...list].sort((a, b) => {
+        const pa = Number(a.sellingPrice !== undefined && a.sellingPrice !== null ? a.sellingPrice : (a.mrp || 0));
+        const pb = Number(b.sellingPrice !== undefined && b.sellingPrice !== null ? b.sellingPrice : (b.mrp || 0));
+        return pa - pb;
+      });
+    } else if (sortBy === 'price_desc') {
+      list = [...list].sort((a, b) => {
+        const pa = Number(a.sellingPrice !== undefined && a.sellingPrice !== null ? a.sellingPrice : (a.mrp || 0));
+        const pb = Number(b.sellingPrice !== undefined && b.sellingPrice !== null ? b.sellingPrice : (b.mrp || 0));
+        return pb - pa;
+      });
+    } else if (sortBy === 'discount_desc') {
+      list = [...list].sort((a, b) => {
+        const da = a.discountPercent || 0;
+        const db = b.discountPercent || 0;
+        return db - da;
+      });
+    } else {
+      list = applyBrandPriority(list, rankingConfig);
+    }
+
+    return list;
+  }, [filteredItems, activeBrand, showBrandBar, inStockOnly, selectedPriceRange, sortBy, rankingConfig]);
+
+  const hasActiveFilters = Boolean(
+    (showBrandBar && activeBrand !== "All Brands") ||
+    selectedPriceRange ||
+    inStockOnly ||
+    sortBy !== 'relevance'
+  );
+
+  const handleClearAllFilters = () => {
+    setSelectedBrand("All Brands");
+    setSelectedPriceRange(null);
+    setInStockOnly(false);
+    setSortBy('relevance');
+  };
 
   // ⚡ INFINITE SCROLL HANDLER ⚡
   const handleScroll = (e) => {
@@ -200,6 +268,7 @@ export default function ProductListView({
     >
       <style>{`
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
         .sidebar-scroll::-webkit-scrollbar { display: none; }
         .sidebar-scroll { -ms-overflow-style: none; scrollbar-width: none; }
         .hide-scroll::-webkit-scrollbar { display: none; }
@@ -213,7 +282,29 @@ export default function ProductListView({
           <h2 style={{ margin: 0, color: '#0f172a', fontSize: '1.15rem', fontWeight: '800', letterSpacing: '-0.3px' }}>{title}</h2>
         </div>
         {onSearchClick && (
-          <button onClick={onSearchClick} style={{ background: 'none', border: 'none', fontSize: '1.2rem', cursor: 'pointer', color: '#0f172a' }}>🔍</button>
+          <button
+            onClick={onSearchClick}
+            aria-label="Search"
+            style={{
+              background: '#f8fafc',
+              border: '1px solid #e2e8f0',
+              borderRadius: '50%',
+              width: '36px',
+              height: '36px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              cursor: 'pointer',
+              color: '#0f172a',
+              boxShadow: '0 1px 2px rgba(0,0,0,0.04)',
+              transition: 'background-color 0.15s ease'
+            }}
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.3" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <circle cx="11" cy="11" r="7" />
+              <line x1="21" y1="21" x2="16.65" y2="16.65" />
+            </svg>
+          </button>
         )}
       </div>
 
@@ -260,67 +351,182 @@ export default function ProductListView({
           style={{ flex: 1, overflowY: 'auto', padding: '12px' }}
           onScroll={handleScroll} // ⚡ Scroll listener attached!
         >
-          {/* 🏷️ BRAND FILTER CHIPS — sticky at top of grid */}
-          {showBrandBar && (
-            <div
-              className="hide-scroll"
+          {/* 🎛️ STICKY FILTER & SORT CHIP BAR */}
+          <div
+            className="hide-scroll"
+            style={{
+              position: 'sticky',
+              top: '-12px',
+              marginInline: '-12px',
+              marginTop: '-12px',
+              marginBottom: '10px',
+              padding: '8px 12px',
+              background: 'rgba(255, 255, 255, 0.95)',
+              backdropFilter: 'saturate(180%) blur(8px)',
+              WebkitBackdropFilter: 'saturate(180%) blur(8px)',
+              borderBottom: '1px solid #e2e8f0',
+              zIndex: 10,
+              display: 'flex',
+              gap: '8px',
+              overflowX: 'auto',
+              scrollbarWidth: 'none',
+              alignItems: 'center',
+              WebkitOverflowScrolling: 'touch',
+            }}
+          >
+            {/* Sort Button */}
+            <button
+              onClick={() => setIsSortModalOpen(true)}
               style={{
-                position: 'sticky',
-                top: '-12px',
-                marginInline: '-12px',
-                marginTop: '-12px',
-                marginBottom: '10px',
-                padding: '10px 12px',
-                background: 'rgba(244, 246, 248, 0.95)',
-                backdropFilter: 'saturate(180%) blur(8px)',
-                WebkitBackdropFilter: 'saturate(180%) blur(8px)',
-                borderBottom: '1px solid #e2e8f0',
-                zIndex: 5,
-                display: 'flex',
-                gap: '8px',
-                overflowX: 'auto',
-                scrollbarWidth: 'none'
+                display: 'inline-flex', alignItems: 'center', gap: '5px',
+                padding: '6px 12px', borderRadius: '999px',
+                fontSize: '0.78rem', fontWeight: 700, cursor: 'pointer',
+                whiteSpace: 'nowrap', flexShrink: 0,
+                backgroundColor: sortBy !== 'relevance' ? '#f0fdf4' : '#fff',
+                border: sortBy !== 'relevance' ? '1.5px solid #16a34a' : '1px solid #e2e8f0',
+                color: sortBy !== 'relevance' ? '#15803d' : '#334155',
+                boxShadow: '0 1px 3px rgba(0,0,0,0.03)',
+                fontFamily: 'inherit',
               }}
             >
-              {brandsInView.map((brand) => {
-                const isActive = activeBrand === brand;
-                const isAll = brand === "All Brands";
-                return (
-                  <button
-                    key={brand}
-                    onClick={() => setSelectedBrand(brand)}
-                    style={{
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: '6px',
-                      padding: '7px 14px',
-                      borderRadius: '999px',
-                      border: isActive ? '1px solid #16a34a' : '1px solid #e2e8f0',
-                      background: isActive ? '#16a34a' : '#fff',
-                      color: isActive ? '#fff' : '#0f172a',
-                      fontSize: '0.78rem',
-                      fontWeight: 700,
-                      cursor: 'pointer',
-                      whiteSpace: 'nowrap',
-                      flexShrink: 0,
-                      boxShadow: isActive ? '0 2px 8px rgba(22, 163, 74, 0.25)' : '0 1px 2px rgba(0,0,0,0.03)',
-                      fontFamily: 'inherit',
-                      transition: 'all 0.15s ease'
-                    }}
-                  >
-                    {isAll && <span aria-hidden="true">🏷️</span>}
-                    <span>{brand}</span>
-                  </button>
-                );
-              })}
-            </div>
-          )}
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+                <path d="m3 16 4 4 4-4" /><path d="M7 20V4" /><path d="m21 8-4-4-4 4" /><path d="M17 4v16" />
+              </svg>
+              {sortBy === 'price_asc' ? 'Price: Low to High' :
+               sortBy === 'price_desc' ? 'Price: High to Low' :
+               sortBy === 'discount_desc' ? '% Discount' : 'Sort ▾'}
+            </button>
+
+            {/* In-Stock Toggle */}
+            <button
+              onClick={() => setInStockOnly(prev => !prev)}
+              style={{
+                display: 'inline-flex', alignItems: 'center', gap: '5px',
+                padding: '6px 12px', borderRadius: '999px',
+                fontSize: '0.78rem', fontWeight: 700, cursor: 'pointer',
+                whiteSpace: 'nowrap', flexShrink: 0,
+                backgroundColor: inStockOnly ? '#f0fdf4' : '#fff',
+                border: inStockOnly ? '1.5px solid #16a34a' : '1px solid #e2e8f0',
+                color: inStockOnly ? '#15803d' : '#334155',
+                boxShadow: '0 1px 3px rgba(0,0,0,0.03)',
+                fontFamily: 'inherit',
+              }}
+            >
+              {inStockOnly ? '✓ In-Stock' : '⚡ In-Stock'}
+            </button>
+
+            {/* Price Range Button */}
+            <button
+              onClick={() => setIsPriceModalOpen(true)}
+              style={{
+                display: 'inline-flex', alignItems: 'center', gap: '5px',
+                padding: '6px 12px', borderRadius: '999px',
+                fontSize: '0.78rem', fontWeight: 700, cursor: 'pointer',
+                whiteSpace: 'nowrap', flexShrink: 0,
+                backgroundColor: selectedPriceRange ? '#f0fdf4' : '#fff',
+                border: selectedPriceRange ? '1.5px solid #16a34a' : '1px solid #e2e8f0',
+                color: selectedPriceRange ? '#15803d' : '#334155',
+                boxShadow: '0 1px 3px rgba(0,0,0,0.03)',
+                fontFamily: 'inherit',
+              }}
+            >
+              {selectedPriceRange === 'under_100' ? 'Under ₹100' :
+               selectedPriceRange === '100_300' ? '₹100 - ₹300' :
+               selectedPriceRange === '300_500' ? '₹300 - ₹500' :
+               selectedPriceRange === 'above_500' ? 'Above ₹500' : 'Price ▾'}
+              {selectedPriceRange && (
+                <span
+                  onClick={(e) => { e.stopPropagation(); setSelectedPriceRange(null); }}
+                  style={{ marginLeft: '4px', fontWeight: 900 }}
+                >✕</span>
+              )}
+            </button>
+
+            {/* Brand Chips */}
+            {showBrandBar && (
+              <>
+                <button
+                  onClick={() => setSelectedBrand("All Brands")}
+                  style={{
+                    display: 'inline-flex', alignItems: 'center', gap: '4px',
+                    padding: '6px 12px', borderRadius: '999px',
+                    fontSize: '0.78rem', fontWeight: 700, cursor: 'pointer',
+                    whiteSpace: 'nowrap', flexShrink: 0,
+                    backgroundColor: activeBrand === "All Brands" ? '#f0fdf4' : '#fff',
+                    border: activeBrand === "All Brands" ? '1.5px solid #16a34a' : '1px solid #e2e8f0',
+                    color: activeBrand === "All Brands" ? '#15803d' : '#334155',
+                    boxShadow: '0 1px 3px rgba(0,0,0,0.03)',
+                    fontFamily: 'inherit',
+                  }}
+                >
+                  All Brands
+                </button>
+                {brandsWithCount.map((b) => {
+                  const isBrandActive = activeBrand.toLowerCase() === b.name.toLowerCase();
+                  return (
+                    <button
+                      key={b.name}
+                      onClick={() => setSelectedBrand(isBrandActive ? "All Brands" : b.name)}
+                      style={{
+                        display: 'inline-flex', alignItems: 'center', gap: '4px',
+                        padding: '6px 12px', borderRadius: '999px',
+                        fontSize: '0.78rem', fontWeight: 700, cursor: 'pointer',
+                        whiteSpace: 'nowrap', flexShrink: 0,
+                        backgroundColor: isBrandActive ? '#f0fdf4' : '#fff',
+                        border: isBrandActive ? '1.5px solid #16a34a' : '1px solid #e2e8f0',
+                        color: isBrandActive ? '#15803d' : '#334155',
+                        boxShadow: '0 1px 3px rgba(0,0,0,0.03)',
+                        fontFamily: 'inherit',
+                      }}
+                    >
+                      {isBrandActive && <span>✓ </span>}
+                      {b.name} ({b.count})
+                    </button>
+                  );
+                })}
+              </>
+            )}
+
+            {/* Clear All Button */}
+            {hasActiveFilters && (
+              <button
+                onClick={handleClearAllFilters}
+                style={{
+                  display: 'inline-flex', alignItems: 'center', gap: '4px',
+                  padding: '6px 10px', borderRadius: '999px',
+                  fontSize: '0.78rem', fontWeight: 700, cursor: 'pointer',
+                  whiteSpace: 'nowrap', flexShrink: 0,
+                  backgroundColor: '#fee2e2', border: '1px solid #fecaca',
+                  color: '#b91c1c', fontFamily: 'inherit',
+                }}
+              >
+                ✕ Clear All
+              </button>
+            )}
+          </div>
 
           {finalItems.length === 0 ? (
             <div style={{ textAlign: 'center', padding: '40px 20px', color: '#94a3b8' }}>
               <div style={{ fontSize: '2.5rem', marginBottom: '10px' }}>🔍</div>
-              <div style={{ fontWeight: '700' }}>No items found</div>
-              {showBrandBar && activeBrand !== "All Brands" && (
+              <div style={{ fontWeight: '700', color: '#0f172a', marginBottom: '6px' }}>No items found</div>
+              {hasActiveFilters ? (
+                <div>
+                  <p style={{ fontSize: '0.85rem', color: '#64748b', margin: '0 0 14px' }}>
+                    No products match the selected filters.
+                  </p>
+                  <button
+                    onClick={handleClearAllFilters}
+                    style={{
+                      padding: '8px 18px', borderRadius: '999px',
+                      border: 'none', background: '#16a34a', color: '#fff',
+                      fontWeight: 700, fontSize: '0.82rem', cursor: 'pointer', fontFamily: 'inherit',
+                      boxShadow: '0 2px 8px rgba(22, 163, 74, 0.25)'
+                    }}
+                  >
+                    Reset Filters
+                  </button>
+                </div>
+              ) : showBrandBar && activeBrand !== "All Brands" ? (
                 <button
                   onClick={() => setSelectedBrand("All Brands")}
                   style={{
@@ -331,7 +537,7 @@ export default function ProductListView({
                 >
                   Show all brands
                 </button>
-              )}
+              ) : null}
             </div>
           ) : (
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '12px', paddingBottom: cartTotalItems > 0 ? '80px' : '20px' }}>
@@ -354,6 +560,131 @@ export default function ProductListView({
           )}
         </div>
       </div>
+
+      {/* 🔃 SORT BOTTOM SHEET MODAL */}
+      {isSortModalOpen && (
+        <div
+          onClick={() => setIsSortModalOpen(false)}
+          style={{
+            position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.5)',
+            zIndex: 1000000, display: 'flex', alignItems: 'flex-end',
+            animation: 'fadeIn 0.15s ease',
+          }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              backgroundColor: '#fff', width: '100%',
+              borderTopLeftRadius: '22px', borderTopRightRadius: '22px',
+              padding: '20px 20px 30px', maxHeight: '80vh', overflowY: 'auto',
+              boxShadow: '0 -4px 25px rgba(0,0,0,0.15)',
+              animation: 'slideUp 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
+            }}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '18px' }}>
+              <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 800, color: '#0f172a' }}>Sort By</h3>
+              <button
+                onClick={() => setIsSortModalOpen(false)}
+                style={{ background: '#f1f5f9', border: 'none', width: '32px', height: '32px', borderRadius: '50%', cursor: 'pointer', fontSize: '1rem', color: '#64748b' }}
+              >✕</button>
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              {[
+                { id: 'relevance', label: 'Relevance (Recommended)' },
+                { id: 'price_asc', label: 'Price: Low to High' },
+                { id: 'price_desc', label: 'Price: High to Low' },
+                { id: 'discount_desc', label: 'Discount: Highest First' },
+              ].map((opt) => (
+                <div
+                  key={opt.id}
+                  onClick={() => { setSortBy(opt.id); setIsSortModalOpen(false); }}
+                  style={{
+                    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                    padding: '14px 16px', borderRadius: '14px', cursor: 'pointer',
+                    backgroundColor: sortBy === opt.id ? '#f0fdf4' : '#f8fafc',
+                    border: sortBy === opt.id ? '1.5px solid #16a34a' : '1px solid #e2e8f0',
+                    fontWeight: sortBy === opt.id ? 700 : 600,
+                    color: sortBy === opt.id ? '#15803d' : '#1e293b',
+                  }}
+                >
+                  <span>{opt.label}</span>
+                  <input
+                    type="radio"
+                    name="category_sort"
+                    checked={sortBy === opt.id}
+                    onChange={() => { setSortBy(opt.id); setIsSortModalOpen(false); }}
+                    style={{ accentColor: '#16a34a', width: '18px', height: '18px' }}
+                  />
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 💰 PRICE RANGE BOTTOM SHEET MODAL */}
+      {isPriceModalOpen && (
+        <div
+          onClick={() => setIsPriceModalOpen(false)}
+          style={{
+            position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.5)',
+            zIndex: 1000000, display: 'flex', alignItems: 'flex-end',
+            animation: 'fadeIn 0.15s ease',
+          }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              backgroundColor: '#fff', width: '100%',
+              borderTopLeftRadius: '22px', borderTopRightRadius: '22px',
+              padding: '20px 20px 30px', maxHeight: '80vh', overflowY: 'auto',
+              boxShadow: '0 -4px 25px rgba(0,0,0,0.15)',
+              animation: 'slideUp 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
+            }}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '18px' }}>
+              <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 800, color: '#0f172a' }}>Filter by Price</h3>
+              <button
+                onClick={() => setIsPriceModalOpen(false)}
+                style={{ background: '#f1f5f9', border: 'none', width: '32px', height: '32px', borderRadius: '50%', cursor: 'pointer', fontSize: '1rem', color: '#64748b' }}
+              >✕</button>
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              {[
+                { id: null, label: 'All Prices' },
+                { id: 'under_100', label: 'Under ₹100' },
+                { id: '100_300', label: '₹100 - ₹300' },
+                { id: '300_500', label: '₹300 - ₹500' },
+                { id: 'above_500', label: 'Above ₹500' },
+              ].map((opt) => (
+                <div
+                  key={String(opt.id)}
+                  onClick={() => { setSelectedPriceRange(opt.id); setIsPriceModalOpen(false); }}
+                  style={{
+                    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                    padding: '14px 16px', borderRadius: '14px', cursor: 'pointer',
+                    backgroundColor: selectedPriceRange === opt.id ? '#f0fdf4' : '#f8fafc',
+                    border: selectedPriceRange === opt.id ? '1.5px solid #16a34a' : '1px solid #e2e8f0',
+                    fontWeight: selectedPriceRange === opt.id ? 700 : 600,
+                    color: selectedPriceRange === opt.id ? '#15803d' : '#1e293b',
+                  }}
+                >
+                  <span>{opt.label}</span>
+                  <input
+                    type="radio"
+                    name="category_price"
+                    checked={selectedPriceRange === opt.id}
+                    onChange={() => { setSelectedPriceRange(opt.id); setIsPriceModalOpen(false); }}
+                    style={{ accentColor: '#16a34a', width: '18px', height: '18px' }}
+                  />
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* 🌟 PREMIUM FLOATING VIEW CART BAR 🌟 */}
       {cartTotalItems > 0 && (
