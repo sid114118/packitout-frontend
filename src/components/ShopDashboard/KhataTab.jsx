@@ -7,6 +7,8 @@ import {
   downloadReceiptPdf,
   sendBillToCustomerWhatsApp,
   extractKhataMeta,
+  enrichTransactionsWithRunningBalance,
+  KHATA_LAUNCH_DATE,
 } from '../../utils/billReceiptGenerator.js';
 import { getPublicBillUrl } from '../../utils/whatsappShare.js';
 
@@ -20,6 +22,7 @@ function buildFallbackKhataFromOrders(orders = []) {
 
   for (const o of orders) {
     if (!o || /cancel|reject/i.test(o.status || '')) continue;
+    if (o.createdAt && new Date(o.createdAt) < KHATA_LAUNCH_DATE) continue;
     const isKhata = o.paymentMethod === 'KHATA' || Number(o.khataAmount || 0) > 0;
     if (!isKhata) continue;
     const phone = String(o.customerPhone || o.userId?.phone || '').replace(/\D/g, '').slice(-10) || String(o._id);
@@ -544,16 +547,21 @@ export default function KhataTab({
     return list;
   }, [khataData.accounts, filterMode, searchQuery, sortBy]);
 
-  // Filtered passbook transactions
+  // Filtered passbook transactions enriched with running balance
+  const enrichedPassbook = useMemo(() => {
+    return enrichTransactionsWithRunningBalance(detailTransactions);
+  }, [detailTransactions]);
+
   const filteredTransactions = useMemo(() => {
+    const list = [...enrichedPassbook.transactions].reverse();
     if (txFilter === 'BILLS') {
-      return detailTransactions.filter((t) => t.type === 'CREDIT_BILL' || t.type === 'MANUAL_CREDIT');
+      return list.filter((t) => t.type === 'CREDIT_BILL' || t.type === 'MANUAL_CREDIT');
     }
     if (txFilter === 'PAYMENTS') {
-      return detailTransactions.filter((t) => t.type === 'PAYMENT_CASH' || t.type === 'PAYMENT_UPI');
+      return list.filter((t) => t.type === 'PAYMENT_CASH' || t.type === 'PAYMENT_UPI');
     }
-    return detailTransactions;
-  }, [detailTransactions, txFilter]);
+    return list;
+  }, [enrichedPassbook, txFilter]);
 
   // Identify the oldest credit entry ID in this passbook to badge "FIRST KHATA ENTRY"
   const oldestCreditTxId = useMemo(() => {
@@ -1663,7 +1671,7 @@ export default function KhataTab({
                                 </div>
                                 {!isPending && !isRejected && (
                                   <div style={{ fontSize: '0.7rem', color: '#64748b', fontWeight: 700 }}>
-                                    Bal: ₹{r2(tx.balanceAfter)}
+                                    Bal: ₹{r2(tx.computedBalanceAfter !== undefined ? tx.computedBalanceAfter : tx.balanceAfter)}
                                   </div>
                                 )}
                               </div>

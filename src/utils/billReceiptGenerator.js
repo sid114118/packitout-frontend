@@ -18,6 +18,53 @@ function resolveShop(order, shopData) {
 
 const r2 = (n) => Math.round((Number(n) || 0) * 100) / 100;
 
+export const KHATA_LAUNCH_DATE = new Date('2026-11-01T00:00:00.000Z');
+
+/**
+ * Enforces mathematically continuous chronological running balance across a list of transactions.
+ * Filters out pre-November legacy test records, rejected transactions, and zero-balance artifacts.
+ */
+export function enrichTransactionsWithRunningBalance(transactions = []) {
+  const valid = (Array.isArray(transactions) ? transactions : []).filter((t) => {
+    if (!t || t.verificationStatus === 'Rejected') return false;
+    if (t.createdAt && new Date(t.createdAt) < KHATA_LAUNCH_DATE) return false;
+    if (Number(t.balanceBefore) === 0 && Number(t.balanceAfter) === 0 && (!t.amount || Number(t.amount) === 0)) return false;
+    return true;
+  });
+
+  // Sort chronological (oldest to newest) to trace true running balance
+  const sorted = [...valid].sort((a, b) => new Date(a.createdAt || 0) - new Date(b.createdAt || 0));
+
+  let runningBal = 0;
+  let totalCredit = 0;
+  let totalSettled = 0;
+
+  const enriched = sorted.map((tx) => {
+    const isCredit = tx.type === 'CREDIT_BILL' || tx.type === 'MANUAL_CREDIT';
+    const amt = r2(tx.amount);
+    const bBefore = runningBal;
+    if (isCredit) {
+      runningBal = r2(runningBal + amt);
+      totalCredit = r2(totalCredit + amt);
+    } else if (tx.verificationStatus !== 'PendingVerification') {
+      runningBal = Math.max(0, r2(runningBal - amt));
+      totalSettled = r2(totalSettled + amt);
+    }
+    return {
+      ...tx,
+      computedBalanceBefore: bBefore,
+      computedBalanceAfter: runningBal,
+    };
+  });
+
+  return {
+    transactions: enriched,
+    totalCredit,
+    totalSettled,
+    netPending: runningBal,
+  };
+}
+
 /**
  * Classifies an order into one of the explicit Khata scenarios so PDFs,
  * Web Bills, Thermal Printouts, Order Cards, and Receipts render uniformly.
@@ -661,23 +708,40 @@ export async function createKhataStatementPdfFile(account, transactions = [], sh
 
   const custName = account?.customerName || account?.userId?.name || 'Customer';
   const custPhone = account?.customerPhone || '';
-  const currentBal = r2(account?.currentBalance);
-  const totalCredit = r2(account?.totalCreditGiven);
-  const totalSettled = r2(account?.totalSettled);
   const paymentTx = options?.paymentTx || null;
 
-  const confirmedTxns = (Array.isArray(transactions) ? transactions : [])
-    .filter(t => t && t.verificationStatus !== 'Rejected')
-    .slice(0, 28);
+  // Enrich transactions with mathematically continuous chronological running balance
+  const enrichedLedger = enrichTransactionsWithRunningBalance(transactions);
+
+  // Use reconciled ledger numbers if transactions exist, else fallback to account doc
+  const totalCredit = enrichedLedger.transactions.length > 0 ? enrichedLedger.totalCredit : r2(account?.totalCreditGiven);
+  const totalSettled = enrichedLedger.transactions.length > 0 ? enrichedLedger.totalSettled : r2(account?.totalSettled);
+  const currentBal = enrichedLedger.transactions.length > 0 ? enrichedLedger.netPending : r2(account?.currentBalance);
+
+  // Take the most recent 28 transactions for receipt printing (chronological order)
+  const confirmedTxns = enrichedLedger.transactions.slice(-28);
+
+  // If this is a Jama receipt (paymentTx), find its enriched running balance
+  let effectivePaymentTx = paymentTx;
+  if (paymentTx) {
+    const found = enrichedLedger.transactions.find((t) => String(t._id || '') === String(paymentTx._id || ''));
+    if (found) {
+      effectivePaymentTx = {
+        ...paymentTx,
+        balanceBefore: found.computedBalanceBefore,
+        balanceAfter: found.computedBalanceAfter,
+      };
+    }
+  }
 
   const storefrontUrl = getShopStorefrontUrl(shopId, shopPincode);
   const cleanNameTag = (custName || 'Customer').replace(/[^a-zA-Z0-9]/g, '_').slice(0, 18);
-  const safeFilename = paymentTx
+  const safeFilename = effectivePaymentTx
     ? `Khata_Receipt_${cleanNameTag}_${Date.now().toString().slice(-4)}.pdf`
     : `Khata_Statement_${cleanNameTag}.pdf`;
 
   let estHeight = 105 + confirmedTxns.length * 9;
-  if (paymentTx) estHeight += 28;
+  if (effectivePaymentTx) estHeight += 28;
   if (shopAddress) estHeight += 6;
   if (storefrontUrl) estHeight += 9;
   estHeight = Math.max(130, Math.ceil(estHeight));
@@ -696,7 +760,7 @@ export async function createKhataStatementPdfFile(account, transactions = [], sh
   pdf.setFontSize(7);
   pdf.setTextColor(100, 116, 139);
   pdf.text(
-    paymentTx ? 'KHATA PAYMENT RECEIPT (JAMA PARCHI)' : 'OFFICIAL STORE KHATA STATEMENT',
+    effectivePaymentTx ? 'KHATA PAYMENT RECEIPT (JAMA PARCHI)' : 'OFFICIAL STORE KHATA STATEMENT',
     widthMm / 2,
     y,
     { align: 'center' }
@@ -747,11 +811,11 @@ export async function createKhataStatementPdfFile(account, transactions = [], sh
 
   // Jama Parchi highlight box if generated for a specific payment
   pdf.setLineDashPattern([], 0);
-  if (paymentTx) {
-    const payAmt = r2(paymentTx.amount);
-    const balBefore = r2(paymentTx.balanceBefore);
-    const balAfter = r2(paymentTx.balanceAfter);
-    const mode = paymentTx.paymentMode || (paymentTx.type === 'PAYMENT_UPI' ? 'UPI' : 'CASH');
+  if (effectivePaymentTx) {
+    const payAmt = r2(effectivePaymentTx.amount);
+    const balBefore = r2(effectivePaymentTx.balanceBefore);
+    const balAfter = r2(effectivePaymentTx.balanceAfter);
+    const mode = effectivePaymentTx.paymentMode || (effectivePaymentTx.type === 'PAYMENT_UPI' ? 'UPI' : 'CASH');
 
     pdf.setFillColor(240, 253, 244);
     pdf.setDrawColor(22, 163, 74);
@@ -839,7 +903,8 @@ export async function createKhataStatementPdfFile(account, transactions = [], sh
 
       pdf.setFont('helvetica', 'normal');
       pdf.setTextColor(71, 85, 105);
-      pdf.text(`Rs.${r2(tx.balanceAfter)}`, 73, y, { align: 'right' });
+      const rowBal = tx.computedBalanceAfter !== undefined ? r2(tx.computedBalanceAfter) : r2(tx.balanceAfter);
+      pdf.text(`Rs.${rowBal}`, 73, y, { align: 'right' });
 
       y += Math.max(descLines.length * 3.3, 4.8) + 1.5;
     }
@@ -876,7 +941,14 @@ export async function createKhataStatementPdfFile(account, transactions = [], sh
     file.name = safeFilename;
   }
 
-  return { blob, file, filename: safeFilename, pdf };
+  const effectiveAccount = {
+    ...account,
+    totalCreditGiven: totalCredit,
+    totalSettled,
+    currentBalance: currentBal,
+  };
+
+  return { blob, file, filename: safeFilename, pdf, effectiveAccount, effectivePaymentTx };
 }
 
 export async function downloadKhataStatementPdf(account, transactions = [], shopData = {}, options = {}) {
@@ -936,20 +1008,24 @@ export function buildKhataWhatsAppMessage(account, shopData = {}, options = {}) 
 
 export async function sendKhataStatementWhatsApp(account, transactions = [], shopData = {}, { toast = null, paymentTx = null } = {}) {
   const cleanPhone = toWhatsAppPhone(account?.customerPhone || account?.userId?.phone);
-  const captionText = buildKhataWhatsAppMessage(account, shopData, { paymentTx });
 
   try {
     const pdfRes = await createKhataStatementPdfFile(account, transactions, shopData, { paymentTx });
+    const effAccount = pdfRes?.effectiveAccount || account;
+    const effPaymentTx = pdfRes?.effectivePaymentTx || paymentTx;
+    const captionText = buildKhataWhatsAppMessage(effAccount, shopData, { paymentTx: effPaymentTx });
+
     return await dispatchPdfViaWhatsApp({
       pdfRes,
       cleanPhone,
-      shareTitle: paymentTx ? `Khata Payment Receipt - ${shopData?.name || 'Store'}` : `Khata Statement - ${shopData?.name || 'Store'}`,
+      shareTitle: effPaymentTx ? `Khata Payment Receipt - ${shopData?.name || 'Store'}` : `Khata Statement - ${shopData?.name || 'Store'}`,
       captionText,
       toast,
-      docLabel: paymentTx ? 'Khata Payment Receipt PDF' : 'Khata Statement PDF',
+      docLabel: effPaymentTx ? 'Khata Payment Receipt PDF' : 'Khata Statement PDF',
     });
   } catch (err) {
     console.error('Error sharing Khata PDF on WhatsApp:', err);
+    const captionText = buildKhataWhatsAppMessage(account, shopData, { paymentTx });
     if (toast) toast('Opening WhatsApp…', 'info');
     openWhatsAppChat(cleanPhone, captionText);
     return false;

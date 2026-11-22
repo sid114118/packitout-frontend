@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { userFetch, BASE_URL } from '../../utils/api.js';
 import { useToast } from '../../ui/DialogProvider.jsx';
 import { openWhatsAppChat } from '../../utils/whatsappShare.js';
-import { downloadKhataStatementPdf, downloadReceiptPdf, extractKhataMeta } from '../../utils/billReceiptGenerator.js';
+import { downloadKhataStatementPdf, downloadReceiptPdf, extractKhataMeta, enrichTransactionsWithRunningBalance } from '../../utils/billReceiptGenerator.js';
 
 const r2 = (n) => Math.round((Number(n) || 0) * 100) / 100;
 
@@ -119,20 +119,25 @@ export default function MyKhataModal({ open, onClose, user, onKhataUpdated }) {
     };
   }, [open, user?._id, user?.sessionToken, selectedAccountId, fetchOverview, fetchDetail]);
 
+  const enrichedPassbook = useMemo(() => {
+    return enrichTransactionsWithRunningBalance(detailTransactions);
+  }, [detailTransactions]);
+
   const filteredTransactions = useMemo(() => {
+    const list = [...enrichedPassbook.transactions].reverse();
     if (txFilter === 'BILLS') {
-      return detailTransactions.filter((t) => t.type === 'CREDIT_BILL' || t.type === 'MANUAL_CREDIT');
+      return list.filter((t) => t.type === 'CREDIT_BILL' || t.type === 'MANUAL_CREDIT');
     }
     if (txFilter === 'PAYMENTS') {
-      return detailTransactions.filter((t) => t.type === 'PAYMENT_CASH' || t.type === 'PAYMENT_UPI');
+      return list.filter((t) => t.type === 'PAYMENT_CASH' || t.type === 'PAYMENT_UPI');
     }
-    return detailTransactions;
-  }, [detailTransactions, txFilter]);
+    return list;
+  }, [enrichedPassbook, txFilter]);
 
   const oldestCreditTxId = useMemo(() => {
-    const credits = detailTransactions.filter((t) => t.type === 'CREDIT_BILL' || t.type === 'MANUAL_CREDIT');
-    return credits.length > 0 ? credits[credits.length - 1]._id : null;
-  }, [detailTransactions]);
+    const credits = enrichedPassbook.transactions.filter((t) => t.type === 'CREDIT_BILL' || t.type === 'MANUAL_CREDIT');
+    return credits.length > 0 ? credits[0]._id : null;
+  }, [enrichedPassbook]);
 
   const pendingClaimsInAccount = useMemo(
     () => detailTransactions.filter((t) => t.verificationStatus === 'PendingVerification'),
@@ -143,7 +148,9 @@ export default function MyKhataModal({ open, onClose, user, onKhataUpdated }) {
 
   const shop = detailAccount?.shopId || {};
   const hasShopUpi = Boolean(shop?.upiId && String(shop.upiId).includes('@'));
-  const currentBal = r2(detailAccount?.currentBalance);
+  const currentBal = enrichedPassbook.transactions.length > 0 ? enrichedPassbook.netPending : r2(detailAccount?.currentBalance);
+  const totalCreditGiven = enrichedPassbook.transactions.length > 0 ? enrichedPassbook.totalCredit : r2(detailAccount?.totalCreditGiven);
+  const totalSettled = enrichedPassbook.transactions.length > 0 ? enrichedPassbook.totalSettled : r2(detailAccount?.totalSettled);
   const validPayAmt = Math.min(currentBal, Math.max(0, r2(payAmount)));
   const upiDeepLink = hasShopUpi && validPayAmt > 0
     ? `upi://pay?pa=${encodeURIComponent(shop.upiId)}&pn=${encodeURIComponent(shop.name || 'Store')}&am=${validPayAmt}&cu=INR&tn=${encodeURIComponent(`Khata Pay ${user.name || user.phone || ''}`)}`
@@ -363,7 +370,7 @@ export default function MyKhataModal({ open, onClose, user, onKhataUpdated }) {
                           {currentBal > 0 ? `₹${currentBal}` : '₹0 — All Dues Cleared ✅'}
                         </div>
                         <div style={{ fontSize: '0.74rem', color: '#475569', fontWeight: 700, marginTop: '4px' }}>
-                          Total Credit Used: ₹{r2(detailAccount.totalCreditGiven)} • Total Paid: ₹{r2(detailAccount.totalSettled)}
+                          Total Credit Used: ₹{totalCreditGiven} • Total Paid: ₹{totalSettled}
                         </div>
                       </div>
 
@@ -638,7 +645,7 @@ export default function MyKhataModal({ open, onClose, user, onKhataUpdated }) {
                                   </div>
                                   {!isPending && !isRejected && (
                                     <div style={{ fontSize: '0.68rem', color: '#64748b', fontWeight: 700 }}>
-                                      Bal: ₹{r2(tx.balanceAfter)}
+                                      Bal: ₹{r2(tx.computedBalanceAfter !== undefined ? tx.computedBalanceAfter : tx.balanceAfter)}
                                     </div>
                                   )}
                                 </div>
