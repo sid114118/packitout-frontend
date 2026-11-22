@@ -7,6 +7,13 @@ import { applyBrandPriority } from './utils/rankingSort.js';
 import { trackEvent } from './utils/analyticsEngine.js';
 import VoiceSearchModal from './components/VoiceSearchModal.jsx';
 import { translateDevanagari } from './utils/voiceSearchCleaner.js';
+import {
+  cleanAndStemQuery,
+  expandQueryTokens,
+  detectCategoryIntent,
+  scoreProduct,
+  getSmartLiveSuggestions
+} from './utils/grocerySearchEngine.js';
 
 const BASE_URL = (import.meta.env.VITE_API_BASE || "https://darkslategrey-snail-415133.hostingersite.com");
 
@@ -242,68 +249,71 @@ export default function SearchPage({
   }, [flatItems]);
 
   const displayItems = useMemo(() => {
-    const q = normalizedQuery.trim();
-    if (q.length === 0) return [];
+    const rawQ = normalizedQuery.trim();
+    if (rawQ.length === 0) return [];
 
-    const tokens = q.toLowerCase().split(/\s+/).filter(Boolean);
+    const { cleanString, tokens } = cleanAndStemQuery(rawQ);
+    const expandedTokens = expandQueryTokens(tokens);
+    const categoryIntent = detectCategoryIntent(tokens);
+
+    const scoredItems = [];
     const seenFamilyIds = new Set();
-    const exactMatches = [];
-    const tokenMatches = [];
 
-    // 1. Precise Scan across all flatItems (exact prefix & token intersection)
+    // 1. Precise scoring via next-gen grocery search engine (Direct, Stemmed, Hinglish Synonyms, Category Intent)
     for (const it of flatItems) {
       if (!it) continue;
       const famId = it._familyId || String(it._id);
       if (seenFamilyIds.has(famId)) continue;
 
-      const nameLower = (it.name || '').toLowerCase();
-      const brandLower = (it.brand || '').toLowerCase();
-      const catLower = (it.category || '').toLowerCase();
-      const subLower = (it.subCategory || '').toLowerCase();
-      const tagsStr = Array.isArray(it.searchTags) ? it.searchTags.join(' ').toLowerCase() : String(it.searchTags || '').toLowerCase();
-      const barcodeStr = String(it.barcode || '').toLowerCase();
-
-      // Top tier: exact match or startsWith on name/brand
-      if (nameLower.startsWith(q.toLowerCase()) || brandLower.startsWith(q.toLowerCase())) {
+      const score = scoreProduct(it, rawQ, tokens, expandedTokens, categoryIntent);
+      if (score > 0) {
         seenFamilyIds.add(famId);
-        exactMatches.push(it);
-        continue;
-      }
-
-      // Strong tier: all tokens present across name, brand, category, subCategory, tags, barcode
-      const hay = `${nameLower} ${brandLower} ${catLower} ${subLower} ${barcodeStr} ${tagsStr}`;
-      if (tokens.every(t => hay.includes(t))) {
-        seenFamilyIds.add(famId);
-        tokenMatches.push(it);
+        scoredItems.push({
+          ...it,
+          _searchScore: score
+        });
       }
     }
 
     // 2. Fuzzy matches via Fuse.js for typo tolerance (e.g. "powdr", "majji")
-    const fuzzyMatches = [];
-    const fuseResults = fuse.search(q);
-    for (const r of fuseResults) {
-      const it = r.item;
-      const famId = it._familyId || String(it._id);
-      if (!seenFamilyIds.has(famId)) {
-        seenFamilyIds.add(famId);
-        fuzzyMatches.push(it);
+    // Activates if direct/stemmed/synonym matches are fewer than 15
+    if (scoredItems.length < 15 && fuse) {
+      const fuseQuery = cleanString || rawQ;
+      const fuseResults = fuse.search(fuseQuery);
+      for (const r of fuseResults) {
+        const it = r.item;
+        const famId = it._familyId || String(it._id);
+        if (!seenFamilyIds.has(famId)) {
+          seenFamilyIds.add(famId);
+          const baseScore = scoreProduct(it, rawQ, tokens, expandedTokens, categoryIntent);
+          const fuzzyScore = baseScore > 0 ? baseScore : Math.round((1 - (r.score || 0.4)) * 60);
+          scoredItems.push({
+            ...it,
+            _searchScore: fuzzyScore
+          });
+        }
       }
     }
 
     // 3. Merge server-side search results cleanly
-    const serverMatched = [];
     for (const sItem of serverResults) {
       if (sItem && sItem._id) {
         const famId = sItem.itemGroupId || String(sItem._id);
         if (!seenFamilyIds.has(famId)) {
           seenFamilyIds.add(famId);
-          serverMatched.push(sItem);
+          const sScore = sItem._score || scoreProduct(sItem, rawQ, tokens, expandedTokens, categoryIntent);
+          scoredItems.push({
+            ...sItem,
+            _searchScore: sScore > 0 ? sScore : 30
+          });
         }
       }
     }
 
-    const consolidated = [...exactMatches, ...tokenMatches, ...fuzzyMatches, ...serverMatched];
-    return applyBrandPriority(consolidated, rankingConfig);
+    // Sort strictly by relevance score descending
+    scoredItems.sort((a, b) => (b._searchScore || 0) - (a._searchScore || 0));
+
+    return applyBrandPriority(scoredItems, rankingConfig);
   }, [normalizedQuery, fuse, flatItems, serverResults, rankingConfig]);
 
   // 🏷️ SMART INTENT / CATEGORY DISAMBIGUATION SUGGESTIONS (like Blinkit / Zepto)
@@ -471,36 +481,11 @@ export default function SearchPage({
     );
   };
 
-  // Type-ahead chips while typing. Pulls unique product names/brands that
-  // start with or contain the live (un-debounced) query so it feels instant.
-  // Capped at 6 to keep the UI tight.
+  // ⚡ Smart Type-ahead chips while typing powered by GrocerySearchEngine
+  // Immediately surfaces translated Hinglish concepts (e.g. "haldi" -> "Turmeric (Haldi)")
+  // and clean in-stock product/brand names without ugly packaging text.
   const liveSuggestions = useMemo(() => {
-    const raw = translateDevanagari(query).trim().toLowerCase();
-    if (raw.length === 0) return [];
-    const seen = new Set();
-    const out = [];
-    // Prioritize "starts with" over "contains"
-    const startsWith = [];
-    const contains = [];
-    for (const item of flatItems) {
-      const candidates = [item.name, item.brand, item.category].filter(Boolean);
-      for (const cand of candidates) {
-        const key = String(cand).trim();
-        const lc = key.toLowerCase();
-        if (seen.has(lc) || lc === raw) continue;
-        if (lc.startsWith(raw)) {
-          seen.add(lc);
-          startsWith.push(key);
-        } else if (lc.includes(raw)) {
-          seen.add(lc);
-          contains.push(key);
-        }
-      }
-      if (startsWith.length >= 6) break;
-    }
-    out.push(...startsWith.slice(0, 6));
-    if (out.length < 6) out.push(...contains.slice(0, 6 - out.length));
-    return out.slice(0, 6);
+    return getSmartLiveSuggestions(query, flatItems, 6);
   }, [query, flatItems]);
 
   // Log missed searches once per term per session (only after server search finishes)
