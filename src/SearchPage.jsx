@@ -558,13 +558,21 @@ export default function SearchPage({
     try { localStorage.removeItem('packitout_recent_searches'); } catch { }
   };
 
+  const dismissKeyboard = () => {
+    if (document.activeElement && typeof document.activeElement.blur === 'function') {
+      document.activeElement.blur();
+    }
+    inputRef.current?.blur();
+  };
+
   const applySuggestion = (term) => {
     setQuery(term);
     setDebouncedQuery(term);
-    inputRef.current?.focus();
+    dismissKeyboard();
   };
 
   const handleScroll = (e) => {
+    dismissKeyboard();
     const { scrollTop, clientHeight, scrollHeight } = e.target;
     if (scrollHeight - scrollTop <= clientHeight * 1.5) {
       setVisibleCount(prev => prev + 16);
@@ -589,6 +597,7 @@ export default function SearchPage({
   return createPortal(
     <div
       onScroll={handleScroll}
+      onTouchMove={dismissKeyboard}
       style={{
         position: 'fixed', top: 0, left: 0, right: 0, bottom: BOTTOM_NAV_HEIGHT,
         backgroundColor: '#fff', zIndex: 999999, overflowY: 'auto',
@@ -681,7 +690,7 @@ export default function SearchPage({
 
         {/* Live type-ahead row — appears the instant the user starts typing */}
         {query.trim().length > 0 && liveSuggestions.length > 0 && (
-          <div className="hide-scroll" style={{
+          <div className="hide-scroll" onTouchMove={dismissKeyboard} style={{
             display: 'flex', gap: '8px', overflowX: 'auto',
             marginTop: '10px', paddingBottom: '2px',
           }}>
@@ -969,6 +978,7 @@ export default function SearchPage({
                         <div
                           key={`${s.key}-${idx}`}
                           onClick={() => {
+                            dismissKeyboard();
                             if (s.isAll) {
                               setSelectedSubCategory(null);
                             } else {
