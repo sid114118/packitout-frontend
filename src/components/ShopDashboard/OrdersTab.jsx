@@ -158,6 +158,7 @@ export default function OrdersTab({ orders, updateOrderStatus, markOrderPaid, sh
     // 🕒 Pickup time (set by customer at checkout)
     const isUrgent = Boolean(order.isUrgent);
     const isArrived = Boolean(order.customerArrivedAt) && isActive;
+    const isReadyForPickup = /ready|collect|arrived/i.test(order.status || '') || isArrived;
     const shortId = (order._id || '').slice(-5).toUpperCase();
     const pickupAt = order.pickupTime ? new Date(order.pickupTime) : null;
     const pickupValid = pickupAt && !Number.isNaN(pickupAt.getTime());
@@ -733,37 +734,58 @@ export default function OrdersTab({ orders, updateOrderStatus, markOrderPaid, sh
                 <div style={{ fontSize: '0.78rem', color: '#991b1b', fontWeight: 700 }}>
                   ❌ Customer declined Khata (Collect via Cash/UPI)
                 </div>
+                {isReadyForPickup && (
+                  <button
+                    onClick={() => handleSendKhataRequest(order._id)}
+                    disabled={khataLoadingId === order._id}
+                    style={{ padding: '6px 12px', backgroundColor: '#f59e0b', color: '#fff', border: 'none', borderRadius: '8px', fontWeight: 800, cursor: 'pointer', fontSize: '0.78rem', flexShrink: 0 }}
+                  >
+                    Retry Khata 📒
+                  </button>
+                )}
+              </div>
+            ) : !isPaid ? (
+              isReadyForPickup ? (
                 <button
                   onClick={() => handleSendKhataRequest(order._id)}
                   disabled={khataLoadingId === order._id}
-                  style={{ padding: '6px 12px', backgroundColor: '#f59e0b', color: '#fff', border: 'none', borderRadius: '8px', fontWeight: 800, cursor: 'pointer', fontSize: '0.78rem', flexShrink: 0 }}
+                  style={{
+                    width: '100%',
+                    padding: '9px 12px',
+                    backgroundColor: '#fffbeb',
+                    color: '#92400e',
+                    border: '1.5px dashed #f59e0b',
+                    borderRadius: '10px',
+                    fontWeight: 800,
+                    cursor: 'pointer',
+                    fontSize: '0.86rem',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '6px',
+                    transition: 'background 0.2s',
+                  }}
                 >
-                  Retry Khata 📒
+                  <span>📒</span> Bill to Customer Khata (उधार खाता में लिखें)
                 </button>
-              </div>
-            ) : !isPaid ? (
-              <button
-                onClick={() => handleSendKhataRequest(order._id)}
-                disabled={khataLoadingId === order._id}
-                style={{
-                  width: '100%',
-                  padding: '9px 12px',
-                  backgroundColor: '#fffbeb',
-                  color: '#92400e',
-                  border: '1.5px dashed #f59e0b',
+              ) : (
+                <div style={{
+                  padding: '8px 12px',
+                  backgroundColor: '#f8fafc',
+                  border: '1px dashed #cbd5e1',
                   borderRadius: '10px',
-                  fontWeight: 800,
-                  cursor: 'pointer',
-                  fontSize: '0.86rem',
+                  fontSize: '0.78rem',
+                  color: '#64748b',
+                  fontWeight: 600,
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
                   gap: '6px',
-                  transition: 'background 0.2s',
-                }}
-              >
-                <span>📒</span> Bill to Customer Khata (उधार खाता में लिखें)
-              </button>
+                }}>
+                  <span>🛍️</span>
+                  <span>Mark <strong>'Ready'</strong> to request Khata billing</span>
+                </div>
+              )
             ) : null}
           </div>
         )}
