@@ -59,7 +59,7 @@ export function getPublicBillUrl(orderId, shopId = '', pincode = '', { autoPdf =
   if (!orderId) return '';
   const origin = typeof window !== 'undefined' && window.location?.origin
     ? window.location.origin
-    : 'https://packitout.app';
+    : 'https://packitout.in';
   const params = new URLSearchParams();
   if (shopId) params.set('s', String(shopId));
   if (pincode) params.set('pin', String(pincode));
@@ -72,7 +72,7 @@ export function getShopStorefrontUrl(shopId, pincode = '') {
   if (!shopId) return '';
   const origin = typeof window !== 'undefined' && window.location?.origin
     ? window.location.origin
-    : 'https://packitout.app';
+    : 'https://packitout.in';
   const qs = pincode ? `?pin=${encodeURIComponent(pincode)}` : '';
   return `${origin}/#/s/${shopId}${qs}`;
 }

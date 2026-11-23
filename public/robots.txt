@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://packitout.in/sitemap.xml
