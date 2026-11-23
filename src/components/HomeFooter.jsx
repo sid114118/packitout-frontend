@@ -760,7 +760,7 @@ export default function HomeFooter({ signInNudge = null }) {
           </div>
 
           <div style={{ fontSize: '0.75rem', color: '#94a3b8', fontWeight: 600 }}>
-            © {new Date().getFullYear()} <strong>PackItOut</strong> Technologies Pvt. Ltd. All rights reserved.
+            © {new Date().getFullYear()} <strong>Agentic Services</strong> Pvt. Ltd. All rights reserved.
           </div>
         </div>
 
