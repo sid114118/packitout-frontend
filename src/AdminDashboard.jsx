@@ -44,7 +44,7 @@ export default function AdminDashboard({ onExit }) {
   const [userForm, setUserForm] = useState({ name: "", phone: "", password: "", pincode: "" });
 
   const BASE_URL = (import.meta.env.VITE_API_BASE || "https://darkslategrey-snail-415133.hostingersite.com");
-  const CATEGORIES = ["Breakfast Cereals","Dairy, Bread & Eggs", "Fruits & Veg", "Atta, Rice & Dal", "Chips & Namkeen", "Drinks & Juices", "Sweets & Chocolates", "Ice Creams", "Instant Food","Spices & Condiments", "Dry Fruits & Cereals","Bath & Body", "Health & Pharma"];
+  const CATEGORIES = ["Breakfast Cereals","Dairy, Bread & Eggs", "Fruits & Veg", "Atta & Rice","Dal & Pulses","Chips & Namkeen", "Drinks & Juices", "Sweets & Chocolates", "Ice Creams", "Instant Food","Spices & Condiments", "Dry Fruits & Cereals","Bath & Body", "Health & Pharma"];
 
   useEffect(() => {
     let cancelled = false;
