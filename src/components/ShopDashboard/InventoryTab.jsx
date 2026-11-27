@@ -16,6 +16,7 @@ export default function InventoryTab({
   handleInventoryRemove,
   onInventoryRefresh,
   fetchMasterCatalog,
+  masterCatalogTotal = 0,
 }) {
   const toast = useToast();
   const confirmDialog = useConfirm();
@@ -979,10 +980,102 @@ export default function InventoryTab({
                   🔄 Retry Catalog
                 </button>
               </div>
+            ) : searchMaster.trim() ? (
+              filteredAvailable.length === 0 ? (
+                <div style={{ fontSize: '0.88rem', color: '#64748b', marginTop: '15px', fontWeight: '600', textAlign: 'center' }}>No unadded products found matching "{searchMaster}".</div>
+              ) : (
+                <>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: '10px', marginTop: '10px', maxHeight: '280px', overflowY: 'auto', paddingRight: '5px' }}>
+                    {filteredAvailable.slice(0, visibleAvailableCount).map(m => (
+                      <div key={m._id} style={{ backgroundColor: 'white', padding: '10px', borderRadius: '12px', border: '1px solid #bae6fd', textAlign: 'center', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+
+                        {/* Product Info */}
+                        <div style={{ marginBottom: '10px' }}>
+                          <div style={{ fontSize: '24px', marginBottom: '5px' }}>{m.image ? <img src={cdnImage(m.image, 100)} alt="" loading="lazy" decoding="async" style={{ height: '30px', objectFit: 'contain' }} /> : m.emoji}</div>
+                          <div style={{ fontSize: '0.8rem', fontWeight: 'bold', color: '#0f172a', lineHeight: '1.2', height: '30px', overflow: 'hidden' }}>{m.name}</div>
+                          <div style={{ fontSize: '0.75rem', color: '#64748b', marginTop: '4px', fontWeight: '600' }}>MRP: ₹{m.mrp}</div>
+                        </div>
+
+                        {/* Inline Add Action */}
+                        {addingId === m._id ? (
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                            <input type="number" placeholder={`₹${m.mrp}`} value={tempPrice} onChange={e => setTempPrice(e.target.value)} style={{ padding: '6px', borderRadius: '6px', border: '2px solid #0284c7', outline: 'none', fontSize: '0.9rem', textAlign: 'center', fontWeight: 'bold' }} autoFocus />
+                            <div style={{ display: 'flex', gap: '5px' }}>
+                              <button onClick={() => setAddingId(null)} style={{ flex: 1, padding: '6px', backgroundColor: '#f1f5f9', border: 'none', borderRadius: '6px', cursor: 'pointer' }}>❌</button>
+                              <button
+                                onClick={async () => {
+                                  await handleInventoryUpdate(m._id, tempPrice || m.mrp, true);
+                                  if (onInventoryRefresh) onInventoryRefresh();
+                                  setAddingId(null);
+                                  setTempPrice("");
+                                }}
+                                style={{ flex: 1, padding: '6px', backgroundColor: '#0284c7', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold' }}>
+                                Save
+                              </button>
+                            </div>
+                          </div>
+                        ) : (
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                            <button onClick={() => { setAddingId(m._id); setTempPrice(m.mrp); }} style={{ width: '100%', padding: '8px 6px', backgroundColor: '#e0f2fe', color: '#0284c7', border: 'none', borderRadius: '8px', fontWeight: '800', cursor: 'pointer' }}>
+                              + Add to Store
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleOpenVariantModal(m)}
+                              style={{
+                                width: '100%',
+                                padding: '5px 4px',
+                                backgroundColor: '#f8fafc',
+                                color: '#0369a1',
+                                border: '1px dashed #7dd3fc',
+                                borderRadius: '6px',
+                                fontSize: '0.72rem',
+                                fontWeight: '700',
+                                cursor: 'pointer'
+                              }}
+                              title="Add this product with different weight, pack size, or price (e.g. 35g for ₹10)"
+                            >
+                              ⚖️ Different Size?
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                  {filteredAvailable.length > visibleAvailableCount && (
+                    <button
+                      type="button"
+                      onClick={() => setVisibleAvailableCount(prev => prev + 40)}
+                      style={{
+                        width: '100%',
+                        marginTop: '10px',
+                        padding: '8px',
+                        backgroundColor: '#e0f2fe',
+                        color: '#0369a1',
+                        border: '1px solid #7dd3fc',
+                        borderRadius: '8px',
+                        fontWeight: '800',
+                        fontSize: '0.82rem',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      Show More Available Products ({filteredAvailable.length - visibleAvailableCount} more)
+                    </button>
+                  )}
+                </>
+              )
+            ) : (masterCatalogTotal > 0 && shopProductIdSet.size >= masterCatalogTotal) ? (
+              <div style={{ fontSize: '0.9rem', color: '#0284c7', marginTop: '15px', fontWeight: 'bold', textAlign: 'center' }}>🎉 You have added every available product! ({masterCatalogTotal} items)</div>
             ) : availableToAdd.length === 0 ? (
-              <div style={{ fontSize: '0.9rem', color: '#0284c7', marginTop: '15px', fontWeight: 'bold', textAlign: 'center' }}>🎉 You have added every available product!</div>
-            ) : filteredAvailable.length === 0 ? (
-              <div style={{ fontSize: '0.88rem', color: '#64748b', marginTop: '15px', fontWeight: '600', textAlign: 'center' }}>No products found matching "{searchMaster}".</div>
+              <div style={{ fontSize: '0.88rem', color: '#475569', marginTop: '15px', textAlign: 'center', backgroundColor: '#f0f9ff', padding: '14px', borderRadius: '10px', border: '1px solid #bae6fd' }}>
+                <span style={{ fontWeight: '700', color: '#0369a1' }}>All suggested quick-pick items are already in your store!</span>
+                <div style={{ fontSize: '0.8rem', color: '#64748b', marginTop: '4px' }}>
+                  Your store has <b>{shopProductIdSet.size}</b> items out of <b>{masterCatalogTotal || '5,900+'}</b> products in the master catalog.
+                </div>
+                <div style={{ fontSize: '0.8rem', color: '#0284c7', marginTop: '6px', fontWeight: '600' }}>
+                  🔍 Search in the box above to find and add any remaining product.
+                </div>
+              </div>
             ) : (
               <>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: '10px', marginTop: '10px', maxHeight: '280px', overflowY: 'auto', paddingRight: '5px' }}>

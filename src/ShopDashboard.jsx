@@ -58,6 +58,12 @@ export default function ShopDashboard({ user, onExit }) {
       return cached ? JSON.parse(cached) : [];
     } catch { return []; }
   });
+  const [masterCatalogTotal, setMasterCatalogTotal] = useState(() => {
+    try {
+      const cached = sessionStorage.getItem(`shop_master_catalog_total`);
+      return cached ? Number(cached) : 0;
+    } catch { return 0; }
+  });
   const [isCatalogLoading, setIsCatalogLoading] = useState(() => {
     try {
       const cached = sessionStorage.getItem(`shop_master_catalog`);
@@ -166,6 +172,10 @@ export default function ShopDashboard({ user, onExit }) {
       const data = await res.json();
       const items = Array.isArray(data) ? data : (data?.items || []);
       setMasterCatalog(items);
+      if (typeof data?.total === 'number') {
+        setMasterCatalogTotal(data.total);
+        try { sessionStorage.setItem(`shop_master_catalog_total`, String(data.total)); } catch {}
+      }
       try { sessionStorage.setItem(`shop_master_catalog`, JSON.stringify(items)); } catch {}
     } catch (err) {
       console.log(err);
@@ -667,6 +677,7 @@ export default function ShopDashboard({ user, onExit }) {
           <InventoryTab
             shopData={shopData}
             masterCatalog={masterCatalog}
+            masterCatalogTotal={masterCatalogTotal}
             isCatalogLoading={isCatalogLoading}
             catalogError={catalogError}
             isInventoryLoading={isInventoryLoading}
