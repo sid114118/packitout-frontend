@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { adminFetch } from '../../utils/api.js';
 import { useToast } from '../../ui/DialogProvider.jsx';
 
-export default function ShopsTab({ shops, shopForm, setShopForm, handleShopSubmit, editingShopId, startEditingShop, cancelEditShop, onShopsChanged }) {
+export default function ShopsTab({ shops, shopForm, setShopForm, handleShopSubmit, isSavingShop = false, editingShopId, startEditingShop, cancelEditShop, onShopsChanged }) {
   const toast = useToast();
   const [togglingKey, setTogglingKey] = useState(null);
 
@@ -35,7 +35,22 @@ export default function ShopsTab({ shops, shopForm, setShopForm, handleShopSubmi
           {editingShopId ? "✏️ Edit Shop Partner" : "🏪 Register New Shop Partner"}
         </h3>
         {editingShopId && (
-          <button onClick={cancelEditShop} style={{ backgroundColor: '#ef4444', color: 'white', border: 'none', padding: '8px 16px', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold' }}>Cancel Edit</button>
+          <button 
+            type="button"
+            disabled={isSavingShop}
+            onClick={cancelEditShop} 
+            style={{ 
+              backgroundColor: isSavingShop ? '#94a3b8' : '#ef4444', 
+              color: 'white', 
+              border: 'none', 
+              padding: '8px 16px', 
+              borderRadius: '8px', 
+              cursor: isSavingShop ? 'not-allowed' : 'pointer', 
+              fontWeight: 'bold' 
+            }}
+          >
+            Cancel Edit
+          </button>
         )}
       </div>
 
@@ -99,8 +114,34 @@ export default function ShopsTab({ shops, shopForm, setShopForm, handleShopSubmi
           </label>
         </div>
 
-        <button type="submit" style={{ width: '100%', padding: '15px', marginTop: '15px', backgroundColor: editingShopId ? '#3b82f6' : '#10b981', color: 'white', border: 'none', borderRadius: '8px', fontWeight: 'bold', fontSize: '1.1rem', cursor: 'pointer' }}>
-          {editingShopId ? "💾 Save Shop Updates" : "🏪 Register Shop Partner"}
+        <button 
+          type="submit" 
+          disabled={isSavingShop}
+          style={{ 
+            width: '100%', 
+            padding: '15px', 
+            marginTop: '15px', 
+            backgroundColor: isSavingShop ? '#94a3b8' : (editingShopId ? '#3b82f6' : '#10b981'), 
+            color: 'white', 
+            border: 'none', 
+            borderRadius: '8px', 
+            fontWeight: 'bold', 
+            fontSize: '1.1rem', 
+            cursor: isSavingShop ? 'not-allowed' : 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '8px'
+          }}
+        >
+          {isSavingShop ? (
+            <>
+              <div className="pio-spinner" style={{ width: '18px', height: '18px', border: '2px solid white', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
+              <span>Saving Shop...</span>
+            </>
+          ) : (
+            editingShopId ? "💾 Save Shop Updates" : "🏪 Register Shop Partner"
+          )}
         </button>
       </form>
 

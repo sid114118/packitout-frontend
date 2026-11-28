@@ -3,7 +3,7 @@ import { useToast } from '../../ui/DialogProvider.jsx';
 import { cdnImage } from '../../utils/cloudinaryUrl.js';
 import { adminFetch } from '../../utils/api.js';
 
-export default function ProductsTab({ products, form, setForm, handleProductSubmit, CATEGORIES, editingProductId, startEditingProduct, cancelEdit, onProductsChanged }) {
+export default function ProductsTab({ products, form, setForm, handleProductSubmit, isSavingProduct = false, CATEGORIES, editingProductId, startEditingProduct, cancelEdit, onProductsChanged }) {
   const toast = useToast();
 
   // 🌟 BULK UPLOAD STATES
@@ -69,6 +69,7 @@ export default function ProductsTab({ products, form, setForm, handleProductSubm
 
   const handleSubmitVariant = async (e) => {
     e.preventDefault();
+    if (isSubmittingVariant) return;
     if (!variantForm.qnty.trim()) {
       return toast("Please enter pack size or quantity (e.g. 500g, 1L, 250ml)", "warn");
     }
@@ -175,6 +176,7 @@ export default function ProductsTab({ products, form, setForm, handleProductSubm
 
   // 🚀 THE BULK UPLOAD HANDLER
   const handleBulkUpload = async () => {
+    if (uploading) return;
     if (!file) {
       toast('Please select a CSV file first! 📁', 'warn');
       return;
@@ -240,7 +242,20 @@ export default function ProductsTab({ products, form, setForm, handleProductSubm
           {editingProductId ? "✏️ Edit Product in Catalog" : "Add New Product to Master Catalog"}
         </h3>
         {editingProductId && (
-          <button onClick={cancelEdit} style={{ backgroundColor: '#ef4444', color: 'white', border: 'none', padding: '8px 16px', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold' }}>
+          <button 
+            type="button"
+            disabled={isSavingProduct}
+            onClick={cancelEdit} 
+            style={{ 
+              backgroundColor: isSavingProduct ? '#94a3b8' : '#ef4444', 
+              color: 'white', 
+              border: 'none', 
+              padding: '8px 16px', 
+              borderRadius: '8px', 
+              cursor: isSavingProduct ? 'not-allowed' : 'pointer', 
+              fontWeight: 'bold' 
+            }}
+          >
             Cancel Edit
           </button>
         )}
@@ -257,6 +272,8 @@ export default function ProductsTab({ products, form, setForm, handleProductSubm
             <option value="">Select Category</option>
             {CATEGORIES.map(cat => <option key={cat} value={cat}>{cat}</option>)}
           </select>
+          <input type="text" placeholder="Sub Category (e.g., Noodles, Biscuits)" value={form.subCategory || ""} onChange={e => setForm({...form, subCategory: e.target.value})} style={inputStyle} />
+          <input type="text" placeholder="Barcode (e.g., 8901030...)" value={form.barcode || ""} onChange={e => setForm({...form, barcode: e.target.value})} style={inputStyle} />
           <input required type="number" placeholder="MRP (₹)" value={form.mrp || ""} onChange={e => setForm({...form, mrp: e.target.value})} style={inputStyle} />
           <input required type="text" placeholder="Unit/Quantity (e.g., 70g)" value={form.qnty || ""} onChange={e => setForm({...form, qnty: e.target.value})} style={inputStyle} />
           <input type="text" placeholder="Image URL (Optional)" value={form.image || ""} onChange={e => setForm({...form, image: e.target.value})} style={inputStyle} />
@@ -316,8 +333,34 @@ export default function ProductsTab({ products, form, setForm, handleProductSubm
 
         </div>
 
-        <button type="submit" style={{ width: '100%', padding: '12px', backgroundColor: editingProductId ? '#3b82f6' : '#10b981', color: 'white', border: 'none', borderRadius: '8px', fontWeight: 'bold', fontSize: '1.1rem', cursor: 'pointer' }}>
-          {editingProductId ? "💾 Save Changes" : "➕ Save Product to Database"}
+        <button 
+          type="submit" 
+          disabled={isSavingProduct}
+          style={{ 
+            width: '100%', 
+            padding: '12px', 
+            backgroundColor: isSavingProduct ? '#94a3b8' : (editingProductId ? '#3b82f6' : '#10b981'), 
+            color: 'white', 
+            border: 'none', 
+            borderRadius: '8px', 
+            fontWeight: 'bold', 
+            fontSize: '1.1rem', 
+            cursor: isSavingProduct ? 'not-allowed' : 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '8px',
+            boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+          }}
+        >
+          {isSavingProduct ? (
+            <>
+              <div className="pio-spinner" style={{ width: '18px', height: '18px', border: '2px solid white', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
+              <span>{editingProductId ? "Saving Changes..." : "Saving Product..."}</span>
+            </>
+          ) : (
+            editingProductId ? "💾 Save Changes" : "➕ Save Product to Database"
+          )}
         </button>
       </form>
 

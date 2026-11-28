@@ -26,12 +26,14 @@ export default function AdminDashboard({ onExit }) {
   const [loading, setLoading] = useState(true);
 
   const initialProductForm = { 
-    name: "", brand: "", category: "", mrp: "", qnty: "", emoji: "", image: "", searchTags: "", 
+    name: "", brand: "", category: "", subCategory: "", barcode: "", mrp: "", qnty: "", emoji: "", image: "", searchTags: "", 
     description: "", manufacturer: "", energy: "", protein: "", carbs: "", sugar: "", fat: "",
     itemGroupId: "", relatedProducts: [], substitutes: [] 
   };
   const [form, setForm] = useState(initialProductForm);
   const [editingProductId, setEditingProductId] = useState(null); 
+  const [isSavingProduct, setIsSavingProduct] = useState(false);
+  const [isSavingShop, setIsSavingShop] = useState(false); 
   
   const initialShopForm = { 
     name: "", phone: "", password: "", pincode: "",
@@ -114,6 +116,8 @@ export default function AdminDashboard({ onExit }) {
   // --- UPGRADED PRODUCT LOGIC --- 
   const handleProductSubmit = async (e) => {
     e.preventDefault(); 
+    if (isSavingProduct) return;
+    setIsSavingProduct(true);
 
     try {
       // searchTags is a comma-separated string in the form but the backend
@@ -154,6 +158,8 @@ export default function AdminDashboard({ onExit }) {
     } catch (err) {
       console.error(err);
       toast("Failed to save product. Check your connection.", 'error');
+    } finally {
+      setIsSavingProduct(false);
     }
   };
 
@@ -162,11 +168,13 @@ export default function AdminDashboard({ onExit }) {
       name: product.name || "",
       brand: product.brand || "",
       category: product.category || "",
+      subCategory: product.subCategory || "",
+      barcode: product.barcode || "",
       mrp: product.mrp || "",
       qnty: product.qnty || "",
       emoji: product.emoji || "",
       image: product.image || "",
-      searchTags: product.searchTags || "",
+      searchTags: Array.isArray(product.searchTags) ? product.searchTags.join(', ') : (product.searchTags || ""),
       description: product.description || "",
       manufacturer: product.manufacturer || "",
       energy: product.energy || "",
@@ -190,6 +198,8 @@ export default function AdminDashboard({ onExit }) {
   // --- SHOP LOGIC ---
   const handleShopSubmit = async (e) => {
     e.preventDefault();
+    if (isSavingShop) return;
+    setIsSavingShop(true);
     try {
       if (editingShopId) {
         const res = await adminFetch(`/shops/${editingShopId}/admin-edit`, {
@@ -214,6 +224,9 @@ export default function AdminDashboard({ onExit }) {
       setEditingShopId(null);
       fetchData();
     } catch (err) { toast("Something went wrong.", 'error'); }
+    finally {
+      setIsSavingShop(false);
+    }
   };
 
   const startEditingShop = (shop) => {
@@ -256,9 +269,9 @@ export default function AdminDashboard({ onExit }) {
         {loading ? <div style={{ textAlign: 'center', marginTop: '50px', color: '#64748b' }}>Loading data...</div> : (
           <>
             {/* 🔀 ROUTING: This tells React which component to show based on the active tab */}
-            {activeTab === "products" && <ProductsTab products={products} form={form} setForm={setForm} handleProductSubmit={handleProductSubmit} CATEGORIES={CATEGORIES} editingProductId={editingProductId} startEditingProduct={startEditingProduct} cancelEdit={cancelEditProduct} onProductsChanged={fetchData} />}
+            {activeTab === "products" && <ProductsTab products={products} form={form} setForm={setForm} handleProductSubmit={handleProductSubmit} isSavingProduct={isSavingProduct} CATEGORIES={CATEGORIES} editingProductId={editingProductId} startEditingProduct={startEditingProduct} cancelEdit={cancelEditProduct} onProductsChanged={fetchData} />}
 
-            {activeTab === "shops" && <ShopsTab shops={shops} shopForm={shopForm} setShopForm={setShopForm} handleShopSubmit={handleShopSubmit} editingShopId={editingShopId} startEditingShop={startEditingShop} cancelEditShop={cancelEditShop} onShopsChanged={fetchData} />}
+            {activeTab === "shops" && <ShopsTab shops={shops} shopForm={shopForm} setShopForm={setShopForm} handleShopSubmit={handleShopSubmit} isSavingShop={isSavingShop} editingShopId={editingShopId} startEditingShop={startEditingShop} cancelEditShop={cancelEditShop} onShopsChanged={fetchData} />}
 
             {activeTab === "users" && <UsersTab users={users} onUsersChanged={fetchData} />}
             
